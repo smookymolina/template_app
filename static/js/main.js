@@ -1,0 +1,448 @@
+/**
+ * Archivo principal JavaScript para la aplicación
+ * Inicializa todos los módulos y gestiona la lógica principal
+ */
+import CONFIG from './config.js';
+import Auth from './auth.js';
+import Reclutas from './reclutas.js';
+import UI from './ui.js';
+import Calendar from './calendar.js';
+import { showNotification, showError, showSuccess } from './notifications.js';
+
+// Estado global de la aplicación
+let appState = {
+    initialized: false,
+    currentSection: 'reclutas-section'
+};
+
+/**
+ * Inicializa la aplicación cuando el DOM está completamente cargado
+ */
+document.addEventListener('DOMContentLoaded', async function() {
+    // Comprobar si hay un tema guardado y aplicarlo
+    UI.loadSavedTheme();
+    
+    // Inicializar elementos comunes de la interfaz
+    UI.initCommonEvents();
+    UI.initNavigation();
+    UI.initColorSelectors();
+    
+    // Comprobar si hay una sesión activa
+    try {
+        const user = await Auth.checkAuth();
+        if (user) {
+            // Usuario autenticado, mostrar dashboard
+            loginSuccess(user);
+        } else {
+            // No hay sesión, mostrar login
+            showLoginScreen();
+        }
+    } catch (error) {
+        console.error('Error en la inicialización:', error);
+        showLoginScreen();
+    }
+    
+    // Configurar eventos de formularios
+    setupFormEvents();
+});
+
+/**
+ * Configura los eventos para formularios y acciones principales
+ */
+function setupFormEvents() {
+    // Login form
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            login();
+        });
+    }
+    
+    // Login button
+    const loginButton = document.getElementById('login-button');
+    if (loginButton) {
+        loginButton.addEventListener('click', login);
+    }
+    
+    // También permitir login con Enter en los campos
+    const emailField = document.getElementById('email');
+    const passwordField = document.getElementById('password');
+    
+    if (emailField) {
+        emailField.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+    }
+    
+    if (passwordField) {
+        passwordField.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                login();
+            }
+        });
+    }
+    
+    // Logout button
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', logout);
+    }
+    
+    // Cambio de contraseña
+    const changePasswordBtn = document.getElementById('change-password-btn');
+    if (changePasswordBtn) {
+        changePasswordBtn.addEventListener('click', changePassword);
+    }
+    
+    // Actualizar perfil
+    const updateProfileBtn = document.getElementById('update-profile-btn');
+    if (updateProfileBtn) {
+        updateProfileBtn.addEventListener('click', updateProfile);
+    }
+    
+    // Manejo de foto de perfil
+    const profileUpload = document.getElementById('profile-upload');
+    if (profileUpload) {
+        profileUpload.addEventListener('change', handleProfileImageChange);
+    }
+}
+
+/**
+ * Función de login
+ */
+async function login() {
+    const email = document.getElementById('email')?.value;
+    const password = document.getElementById('password')?.value;
+
+    if (!email || !password) {
+        showNotification('Completa los campos de usuario y contraseña', 'warning');
+        return;
+    }
+
+    const loginButton = document.getElementById('login-button');
+    if (loginButton) {
+        loginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+        loginButton.disabled = true;
+    }
+
+    try {
+        const user = await Auth.login(email, password);
+        loginSuccess(user);
+    } catch (error) {
+        console.error('Error de login:', error);
+        showNotification('Usuario o contraseña incorrectos', 'error');
+    } finally {
+        if (loginButton) {
+            loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar Sesión';
+            loginButton.disabled = false;
+        }
+    }
+}
+
+/**
+ * Acciones a realizar tras un login exitoso
+ * @param {Object} usuario - Datos del usuario autenticado
+ */
+function loginSuccess(usuario) {
+    // Actualizar usuario actual
+    Auth.currentUser = usuario;
+    
+    // Cambiar de pantalla: ocultar login, mostrar dashboard
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('dashboard-section').style.display = 'block';
+    
+    // Actualizar información de usuario en la UI
+    updateUserInfo(usuario);
+    
+    // Inicializar módulos principales solo la primera vez
+    if (!appState.initialized) {
+        initializeModules();
+        appState.initialized = true;
+    }
+    
+    // Mostrar notificación de bienvenida
+    showSuccess(`¡Bienvenido ${usuario.nombre || usuario.email}!`);
+}
+
+/**
+ * Actualiza la información del usuario en la interfaz
+ * @param {Object} usuario - Datos del usuario
+ */
+function updateUserInfo(usuario) {
+    // Nombre en el header y dropdown
+    const gerenteName = document.getElementById('gerente-name');
+    const dropdownUserName = document.getElementById('dropdown-user-name');
+    
+    if (gerenteName) gerenteName.textContent = usuario.nombre || usuario.email;
+    if (dropdownUserName) dropdownUserName.textContent = usuario.nombre || usuario.email;
+    
+    // Foto de perfil
+    const profilePic = document.getElementById('dashboard-profile-pic');
+    if (profilePic) {
+        profilePic.src = usuario.foto_url || '/api/placeholder/100/100';
+    }
+    
+    // Campos del formulario de perfil
+    const userName = document.getElementById('user-name');
+    const userEmail = document.getElementById('user-email');
+    const userPhone = document.getElementById('user-phone');
+    
+    if (userName) userName.value = usuario.nombre || '';
+    if (userEmail) userEmail.value = usuario.email || '';
+    if (userPhone) userPhone.value = usuario.telefono || '';
+}
+
+/**
+ * Inicializa los módulos principales de la aplicación
+ */
+function initializeModules() {
+    // Inicializar módulo de reclutas
+    Reclutas.init();
+    
+    // Inicializar módulo de calendario
+    Calendar.init();
+    
+    // Inicializar estadísticas
+    loadEstadisticas();
+}
+
+/**
+ * Carga las estadísticas del sistema
+ */
+async function loadEstadisticas() {
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/estadisticas`);
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            updateEstadisticasUI(data);
+        }
+    } catch (error) {
+        console.error('Error al cargar estadísticas:', error);
+    }
+}
+
+/**
+ * Actualiza la UI con las estadísticas
+ * @param {Object} data - Datos de estadísticas
+ */
+function updateEstadisticasUI(data) {
+    // Actualizar tarjetas de estadísticas
+    const stats = {
+        totalReclutas: document.querySelector('.stat-card:nth-child(1) .stat-number'),
+        reclutasActivos: document.querySelector('.stat-card:nth-child(2) .stat-number'),
+        enProceso: document.querySelector('.stat-card:nth-child(3) .stat-number'),
+        entrevistasPendientes: document.querySelector('.stat-card:nth-child(4) .stat-number')
+    };
+    
+    if (stats.totalReclutas) stats.totalReclutas.textContent = data.reclutas.total;
+    if (stats.reclutasActivos) stats.reclutasActivos.textContent = data.reclutas.activos;
+    if (stats.enProceso) stats.enProceso.textContent = data.reclutas.en_proceso;
+    if (stats.entrevistasPendientes) stats.entrevistasPendientes.textContent = data.entrevistas.pendientes;
+    
+    // Aquí se podría agregar código para actualizar gráficas si se implementan
+}
+
+/**
+ * Cierra la sesión del usuario
+ */
+async function logout() {
+    try {
+        await Auth.logout();
+        Auth.currentUser = null;
+        
+        // Cambiar a la pantalla de login
+        showLoginScreen();
+        
+        // Limpiar campos
+        const emailField = document.getElementById('email');
+        const passwordField = document.getElementById('password');
+        
+        if (emailField) emailField.value = '';
+        if (passwordField) passwordField.value = '';
+        
+        showSuccess('Sesión cerrada correctamente');
+    } catch (error) {
+        console.error('Error al cerrar sesión:', error);
+        showError('Error al cerrar sesión');
+    }
+}
+
+/**
+ * Muestra la pantalla de login
+ */
+function showLoginScreen() {
+    document.getElementById('login-section').style.display = 'block';
+    document.getElementById('dashboard-section').style.display = 'none';
+}
+
+/**
+ * Cambia la contraseña del usuario
+ */
+async function changePassword() {
+    const currentPassword = document.getElementById('current-password')?.value;
+    const newPassword = document.getElementById('new-password')?.value;
+    const confirmPassword = document.getElementById('confirm-password')?.value;
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        showError('Por favor, completa todos los campos');
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        showError('Las contraseñas nuevas no coinciden');
+        return;
+    }
+    
+    const button = document.getElementById('change-password-btn');
+    if (button) {
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cambiando...';
+        button.disabled = true;
+    }
+    
+    try {
+        await Auth.changePassword(currentPassword, newPassword);
+        
+        // Limpiar campos
+        document.getElementById('current-password').value = '';
+        document.getElementById('new-password').value = '';
+        document.getElementById('confirm-password').value = '';
+        
+        showSuccess('Contraseña cambiada correctamente');
+    } catch (error) {
+        console.error('Error al cambiar contraseña:', error);
+        showError('Error al cambiar la contraseña: ' + error.message);
+    } finally {
+        if (button) {
+            button.innerHTML = '<i class="fas fa-key"></i> Cambiar Contraseña';
+            button.disabled = false;
+        }
+    }
+}
+
+/**
+ * Actualiza perfil del usuario
+ */
+async function updateProfile() {
+    const nombre = document.getElementById('user-name')?.value;
+    const telefono = document.getElementById('user-phone')?.value;
+    
+    if (!nombre) {
+        showError('El nombre es requerido');
+        return;
+    }
+    
+    const button = document.getElementById('update-profile-btn');
+    if (button) {
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        button.disabled = true;
+    }
+    
+    try {
+        // Crear FormData si hay foto
+        let data;
+        if (window.profileImage) {
+            data = new FormData();
+            data.append('nombre', nombre);
+            if (telefono) data.append('telefono', telefono);
+            data.append('foto', window.profileImage);
+        } else {
+            data = { nombre, telefono };
+        }
+        
+        // Actualizar en API
+        const response = await fetch(`${CONFIG.API_URL}/perfil`, {
+            method: 'PUT',
+            body: data instanceof FormData ? data : JSON.stringify(data),
+            headers: data instanceof FormData ? undefined : {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const responseData = await response.json();
+        if (responseData.success) {
+            // Actualizar usuario actual
+            Auth.currentUser = responseData.usuario;
+            
+            // Actualizar UI
+            updateUserInfo(responseData.usuario);
+            
+            // Limpiar variable de imagen
+            window.profileImage = null;
+            
+            showSuccess('Perfil actualizado correctamente');
+        } else {
+            throw new Error(responseData.message || 'Error al actualizar perfil');
+        }
+    } catch (error) {
+        console.error('Error al actualizar perfil:', error);
+        showError('Error al actualizar perfil: ' + error.message);
+    } finally {
+        if (button) {
+            button.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+            button.disabled = false;
+        }
+    }
+}
+
+/**
+ * Maneja cambios en la imagen de perfil
+ * @param {Event} event - Evento de cambio de archivo
+ */
+function handleProfileImageChange(event) {
+    if (!event || !event.target || !event.target.files || !event.target.files[0]) return;
+    
+    const file = event.target.files[0];
+    const profilePic = document.getElementById('dashboard-profile-pic');
+    
+    if (!profilePic) return;
+    
+    // Validar tamaño
+    if (file.size > CONFIG.MAX_UPLOAD_SIZE) {
+        showError(`La imagen es demasiado grande. Máximo ${CONFIG.MAX_UPLOAD_SIZE / (1024 * 1024)}MB.`);
+        event.target.value = '';
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        if (!e || !e.target || !e.target.result) return;
+        
+        profilePic.src = e.target.result;
+        window.profileImage = file;
+        
+        // Notificar al usuario
+        showNotification('Foto de perfil actualizada. No olvides guardar los cambios.', 'info');
+        
+        // Asegurarse de que existe el botón de guardar
+        const configSection = document.querySelector('.config-section:first-child');
+        const existingButton = document.getElementById('update-profile-btn');
+        
+        if (configSection && !existingButton) {
+            const saveButton = document.createElement('button');
+            saveButton.id = 'update-profile-btn';
+            saveButton.className = 'btn-primary';
+            saveButton.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+            saveButton.onclick = updateProfile;
+            configSection.appendChild(saveButton);
+        }
+    };
+    
+    reader.readAsDataURL(file);
+}
+
+// Exponer algunas funciones al ámbito global para usarlas en el HTML
+window.login = login;
+window.logout = logout;
+window.loginSuccess = loginSuccess;
