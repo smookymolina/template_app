@@ -1,0 +1,68 @@
+# Archivos y directorios específicos del proyecto
+*.db
+*.sqlite
+*.sqlite3
+database.db
+static/uploads/
+app.log
+admin_activity.log
+*.log
+.admin_hash
+.env
+.env.*
+.flaskenv
+
+# Entorno virtual
+venv/
+env/
+ENV/
+
+# Caché de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+
+# Archivos de distribución
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyCharm, VSCode y otros IDEs/editores
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Archivos de respaldo de pruebas
+.coverage
+htmlcov/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
