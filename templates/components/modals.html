@@ -1,0 +1,331 @@
+<!-- Modal para agregar reclutas -->
+<div id="add-recluta-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Agregar Nuevo Recluta</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <form id="add-recluta-form">
+                <div class="profile-section">
+                    <div class="profile-pic-container modal-profile">
+                        <div id="recluta-pic-preview" class="profile-pic-preview">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="profile-pic-overlay">
+                            <label for="recluta-upload" class="profile-pic-edit">
+                                <i class="fas fa-camera"></i>
+                            </label>
+                            <input type="file" id="recluta-upload" accept="image/*" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="recluta-nombre">Nombre completo</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="recluta-nombre" placeholder="Nombre y apellidos" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="recluta-email">Correo electrónico</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="recluta-email" placeholder="Correo electrónico" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="recluta-telefono">Teléfono</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-phone"></i>
+                            <input type="tel" id="recluta-telefono" placeholder="Número de teléfono" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="recluta-puesto">Puesto al que aplica</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-briefcase"></i>
+                            <input type="text" id="recluta-puesto" placeholder="Puesto o cargo">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="recluta-estado">Estado</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-clipboard-check"></i>
+                            <select id="recluta-estado" required>
+                                <option value="En proceso">En proceso</option>
+                                <option value="Activo">Activo</option>
+                                <option value="Rechazado">Rechazado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="recluta-notas">Notas</label>
+                    <textarea id="recluta-notas" placeholder="Notas adicionales sobre el candidato..."></textarea>
+                </div>
+            </form>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn-secondary">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button class="btn-primary">
+                <i class="fas fa-save"></i> Guardar Recluta
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para ver/editar detalles de recluta -->
+<div id="view-recluta-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Detalles del Recluta</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <div class="recluta-details">
+                <div class="recluta-details-header">
+                    <div class="profile-pic-container modal-profile">
+                        <img id="detail-recluta-pic" class="profile-pic" src="/api/placeholder/100/100" alt="Foto del recluta">
+                    </div>
+                    <div class="recluta-info">
+                        <h4 id="detail-recluta-nombre">Nombre del Recluta</h4>
+                        <p id="detail-recluta-puesto">Puesto al que aplica</p>
+                        <span id="detail-recluta-estado" class="badge badge-warning">En proceso</span>
+                    </div>
+                </div>
+                
+                <div class="recluta-details-content">
+                    <div class="detail-row">
+                        <div class="detail-label"><i class="fas fa-envelope"></i> Email:</div>
+                        <div class="detail-value" id="detail-recluta-email">email@ejemplo.com</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label"><i class="fas fa-phone"></i> Teléfono:</div>
+                        <div class="detail-value" id="detail-recluta-telefono">555-1234</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label"><i class="fas fa-calendar-alt"></i> Fecha de registro:</div>
+                        <div class="detail-value" id="detail-recluta-fecha">04/04/2025</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="detail-label"><i class="fas fa-sticky-note"></i> Notas:</div>
+                        <div class="detail-value" id="detail-recluta-notas">Notas sobre el candidato...</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="view-mode-buttons" id="view-mode-buttons">
+                <button class="btn-secondary">
+                    <i class="fas fa-edit"></i> Editar
+                </button>
+                <button class="btn-danger">
+                    <i class="fas fa-trash-alt"></i> Eliminar
+                </button>
+                <button class="btn-primary">
+                    <i class="fas fa-calendar-plus"></i> Programar Entrevista
+                </button>
+            </div>
+            
+            <div class="edit-mode-form" id="edit-mode-form" style="display: none;">
+                <!-- Formulario similar al de agregar, pero con los campos llenos -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-recluta-nombre">Nombre completo</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="edit-recluta-nombre" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-recluta-email">Correo electrónico</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="edit-recluta-email" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-recluta-telefono">Teléfono</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-phone"></i>
+                            <input type="tel" id="edit-recluta-telefono" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-recluta-puesto">Puesto al que aplica</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-briefcase"></i>
+                            <input type="text" id="edit-recluta-puesto">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-recluta-estado">Estado</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-clipboard-check"></i>
+                            <select id="edit-recluta-estado" required>
+                                <option value="En proceso">En proceso</option>
+                                <option value="Activo">Activo</option>
+                                <option value="Rechazado">Rechazado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-recluta-notas">Notas</label>
+                    <textarea id="edit-recluta-notas"></textarea>
+                </div>
+                
+                <div class="edit-mode-buttons">
+                    <button class="btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button class="btn-primary">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación -->
+<div id="confirm-modal" class="modal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h3 id="confirm-title">Confirmar acción</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <p id="confirm-message">¿Estás seguro de que deseas realizar esta acción?</p>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn-secondary">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button id="confirm-action-btn" class="btn-danger">
+                <i class="fas fa-check"></i> Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para programar entrevista -->
+<div id="schedule-interview-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Programar Entrevista</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <div class="interview-candidate">
+                <img id="interview-candidate-pic" class="recluta-foto" src="/api/placeholder/40/40" alt="Foto del candidato">
+                <div class="interview-candidate-info">
+                    <h4 id="interview-candidate-name">Nombre del Candidato</h4>
+                    <p id="interview-candidate-puesto">Puesto al que aplica</p>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="interview-date">Fecha</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-calendar"></i>
+                        <input type="date" id="interview-date" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="interview-time">Hora</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-clock"></i>
+                        <input type="time" id="interview-time" required>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="interview-duration">Duración</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-hourglass-half"></i>
+                        <select id="interview-duration">
+                            <option value="30">30 minutos</option>
+                            <option value="60" selected>1 hora</option>
+                            <option value="90">1 hora 30 minutos</option>
+                            <option value="120">2 horas</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="interview-type">Tipo de entrevista</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-video"></i>
+                        <select id="interview-type">
+                            <option value="presencial">Presencial</option>
+                            <option value="virtual">Virtual (Videollamada)</option>
+                            <option value="telefonica">Telefónica</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="interview-location">Ubicación / Enlace</label>
+                <div class="input-icon-wrapper">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <input type="text" id="interview-location" placeholder="Dirección o enlace para la entrevista">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="interview-notes">Notas adicionales</label>
+                <textarea id="interview-notes" placeholder="Detalles adicionales sobre la entrevista..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="send-invitation" checked>
+                    <span class="checkbox-label">Enviar invitación por correo electrónico</span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn-secondary">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button class="btn-primary">
+                <i class="fas fa-calendar-check"></i> Programar
+            </button>
+        </div>
+    </div>
+</div>

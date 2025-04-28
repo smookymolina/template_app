@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sistema de Gestión de Reclutas{% endblock %}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <div class="login-container">
+                <i class="fas fa-users-cog"></i>
+                <h1>SISTEMA DE GESTIÓN DE RECLUTAS</h1>
+            </div>
+            <div class="header-buttons">
+                <button id="dark-mode-toggle" class="header-button">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button id="help-button" class="header-button">
+                    <i class="fas fa-question-circle"></i> Ayuda
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Notificaciones -->
+        <div id="notification" class="notification">
+            <span id="notification-message"></span>
+            <button id="notification-close"><i class="fas fa-times"></i></button>
+        </div>
+
+        {% block content %}{% endblock %}
+    </div>
+
+    {% block modals %}{% endblock %}
+
+    {% block scripts %}
+    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% endblock %}
+</body>
+</html>
