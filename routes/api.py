@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from models import db, DatabaseError
 from models.recluta import Recluta
+from models.usuario import Usuario
 from models.entrevista import Entrevista
 from utils.helpers import guardar_archivo, eliminar_archivo
 from utils.validators import validate_recluta_data, validate_entrevista_data, ValidationError
@@ -12,6 +13,23 @@ import os
 api_bp = Blueprint('api', __name__)
 
 # ----- API DE RECLUTAS -----
+
+@api_bp.route('/asesores', methods=['GET'])
+@login_required
+def get_asesores():
+    """
+    Obtiene la lista de usuarios que pueden ser asesores.
+    """
+    try:
+        asesores = Usuario.query.filter_by(is_active=True).all()
+        
+        return jsonify({
+            "success": True,
+            "asesores": [a.serialize() for a in asesores]
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener asesores: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al obtener asesores: {str(e)}"}), 500
 
 @api_bp.route('/reclutas', methods=['GET'])
 @login_required

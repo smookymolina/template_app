@@ -7,6 +7,7 @@ import UI from './ui.js';
 
 const Reclutas = {
     reclutas: [],
+    asesores: [],
     currentPage: 1,
     totalPages: 1,
     itemsPerPage: CONFIG.DEFAULT_PAGE_SIZE,
@@ -21,7 +22,31 @@ const Reclutas = {
     /**
      * Carga la lista de reclutas con paginación y filtros
      * @returns {Promise<Array>} - Lista de reclutas
+     * 
+     * * Carga la lista de asesores disponibles
+     * @returns {Promise<Array>} - Lista de asesores
      */
+    loadAsesores: async function() {
+        try {
+            const response = await fetch(`${CONFIG.API_URL}/asesores`);
+            
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            if (data.success) {
+                this.asesores = data.asesores;
+                return this.asesores;
+            } else {
+                throw new Error(data.message || 'Error al obtener asesores');
+            }
+        } catch (error) {
+            console.error('Error al cargar asesores:', error);
+            throw error;
+        }
+    },
+    
     loadReclutas: async function() {
         try {
             const queryParams = new URLSearchParams({
@@ -85,6 +110,47 @@ const Reclutas = {
         }
     },
     
+    /**
+     * Rellena los selectores de asesores en los formularios
+     */
+    populateAsesorSelectors: function() {
+        const addSelector = document.getElementById('recluta-asesor');
+        const editSelector = document.getElementById('edit-recluta-asesor');
+        
+        if (!this.asesores || this.asesores.length === 0) {
+            // Si no hay asesores, intentar cargarlos
+            this.loadAsesores()
+                .then(() => this.populateAsesorSelectors())
+                .catch(error => console.error('No se pudieron cargar los asesores:', error));
+            return;
+        }
+        
+        // Función para rellenar un selector
+        const fillSelector = (selector) => {
+            if (!selector) return;
+            
+            // Mantener la opción por defecto
+            const defaultOption = selector.querySelector('option[value=""]');
+            selector.innerHTML = '';
+            
+            if (defaultOption) {
+                selector.appendChild(defaultOption);
+            }
+            
+            // Añadir opciones para cada asesor
+            this.asesores.forEach(asesor => {
+                const option = document.createElement('option');
+                option.value = asesor.id;
+                option.textContent = asesor.nombre || asesor.email;
+                selector.appendChild(option);
+            });
+        };
+        
+        // Rellenar ambos selectores
+        fillSelector(addSelector);
+        fillSelector(editSelector);
+    },
+
     /**
      * Añade un nuevo recluta
      * @param {Object} reclutaData - Datos del recluta
@@ -294,7 +360,7 @@ const Reclutas = {
         if (!this.reclutas || this.reclutas.length === 0) {
             container.innerHTML = `
                 <tr>
-                    <td colspan="6" class="text-center">
+                    <td colspan="7" class="text-center"> <!-- Actualizado a 7 columnas -->
                         No se encontraron reclutas. ¡Agrega tu primer recluta!
                     </td>
                 </tr>
@@ -317,6 +383,7 @@ const Reclutas = {
                 <td>${recluta.email}</td>
                 <td>${recluta.telefono}</td>
                 <td id="estado-cell-${recluta.id}"></td>
+                <td>${recluta.asesor_nombre || 'No asignado'}</td> <!-- Nueva columna para asesor -->
                 <td>
                     <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
                         <i class="fas fa-eye"></i>
@@ -391,6 +458,7 @@ const Reclutas = {
                 notas: document.getElementById('detail-recluta-notas'),
                 pic: document.getElementById('detail-recluta-pic'),
                 estado: document.getElementById('detail-recluta-estado'),
+                asesor: document.getElementById('detail-recluta-asesor'), // Nuevo elemento
                 viewButtons: document.getElementById('view-mode-buttons'),
                 editForm: document.getElementById('edit-mode-form')
             };
@@ -402,6 +470,13 @@ const Reclutas = {
             if (elements.telefono) elements.telefono.textContent = recluta.telefono;
             if (elements.fecha) elements.fecha.textContent = UI.formatDate(recluta.fecha_registro);
             if (elements.notas) elements.notas.textContent = recluta.notas || 'Sin notas';
+            
+            // Mostrar asesor si existe
+            if (elements.asesor) {
+                elements.asesor.textContent = recluta.asesor_nombre || 'No asignado';
+            }
+            
+            // Resto del código igual...
             
             // Foto
             if (elements.pic) {
@@ -463,6 +538,7 @@ const Reclutas = {
                 puesto: document.getElementById('edit-recluta-puesto'),
                 estado: document.getElementById('edit-recluta-estado'),
                 notas: document.getElementById('edit-recluta-notas'),
+                asesor: document.getElementById('edit-recluta-asesor'), // Nuevo elemento
                 viewButtons: document.getElementById('view-mode-buttons'),
                 editForm: document.getElementById('edit-mode-form')
             };
@@ -482,6 +558,18 @@ const Reclutas = {
             if (formElements.estado) formElements.estado.value = recluta.estado;
             if (formElements.notas) formElements.notas.value = recluta.notas || '';
             
+            // Rellenar selector de asesor
+            if (formElements.asesor) {
+                // Asegurarse de que tenemos la lista de asesores
+                if (!this.asesores || this.asesores.length === 0) {
+                    await this.loadAsesores();
+                    this.populateAsesorSelectors();
+                }
+                
+                // Seleccionar el asesor actual
+                formElements.asesor.value = recluta.asesor_id || '';
+            }
+            
             // Ocultar vista y mostrar edición
             formElements.viewButtons.style.display = 'none';
             formElements.editForm.style.display = 'block';
@@ -490,7 +578,7 @@ const Reclutas = {
             showError('Error al cargar datos para edición');
         }
     },
-    
+
     /**
      * Solicita confirmación para eliminar un recluta
      * @param {number} id - ID del recluta
@@ -637,6 +725,15 @@ const Reclutas = {
         if (addButton) {
             addButton.addEventListener('click', () => {
                 this.openAddReclutaModal();
+
+                // Cargar asesores si no están cargados
+            if (!this.asesores || this.asesores.length === 0) {
+                this.loadAsesores()
+                    .then(() => this.populateAsesorSelectors())
+                    .catch(error => console.error('No se pudieron cargar los asesores:', error));
+            } else {
+                this.populateAsesorSelectors();
+            }
             });
         }
         
@@ -663,7 +760,7 @@ const Reclutas = {
         // Input de foto
         const fotoInput = document.getElementById('recluta-upload');
         if (fotoInput) {
-            fotoInput.addEventListener('change', this.handleReclutaImageChange);
+        fotoInput.addEventListener('change', this.handleReclutaImageChange);
         }
     },
     
@@ -725,13 +822,14 @@ const Reclutas = {
      */
     saveNewRecluta: async function() {
         try {
-            // Obtener datos del formulario
+            // Obtener datos del formulario (incluir el nuevo campo de asesor)
             const nombre = document.getElementById('recluta-nombre')?.value;
             const email = document.getElementById('recluta-email')?.value;
             const telefono = document.getElementById('recluta-telefono')?.value;
             const estado = document.getElementById('recluta-estado')?.value;
             const puesto = document.getElementById('recluta-puesto')?.value;
             const notas = document.getElementById('recluta-notas')?.value;
+            const asesor_id = document.getElementById('recluta-asesor')?.value || null;
             
             // Validar campos obligatorios
             if (!nombre || !email || !telefono || !estado) {
@@ -746,8 +844,11 @@ const Reclutas = {
                 telefono,
                 estado,
                 puesto: puesto || '',
-                notas: notas || ''
+                notas: notas || '',
+                asesor_id: asesor_id || null
             };
+            
+            // Resto del código igual...
             
             // Obtener foto si existe
             const fotoInput = document.getElementById('recluta-upload');
@@ -794,7 +895,7 @@ const Reclutas = {
         }
         
         try {
-            // Obtener elementos del formulario
+            // Obtener elementos del formulario (incluir el nuevo campo de asesor)
             const formElements = {
                 nombre: document.getElementById('edit-recluta-nombre'),
                 email: document.getElementById('edit-recluta-email'),
@@ -802,6 +903,7 @@ const Reclutas = {
                 puesto: document.getElementById('edit-recluta-puesto'),
                 estado: document.getElementById('edit-recluta-estado'),
                 notas: document.getElementById('edit-recluta-notas'),
+                asesor: document.getElementById('edit-recluta-asesor'),
                 saveButton: document.querySelector('.edit-mode-buttons .btn-primary')
             };
             
@@ -817,14 +919,15 @@ const Reclutas = {
                 return;
             }
             
-            // Construir objeto de datos
+            // Construir objeto de datos (incluir asesor_id)
             const reclutaData = {
                 nombre: formElements.nombre.value,
                 email: formElements.email.value,
                 telefono: formElements.telefono.value,
                 estado: formElements.estado.value,
                 puesto: formElements.puesto ? formElements.puesto.value : '',
-                notas: formElements.notas ? formElements.notas.value : ''
+                notas: formElements.notas ? formElements.notas.value : '',
+                asesor_id: formElements.asesor && formElements.asesor.value ? formElements.asesor.value : null
             };
             
             // Mostrar estado de carga
@@ -907,44 +1010,6 @@ const Reclutas = {
             elements.estado.textContent = '';
             elements.estado.appendChild(UI.createBadge(recluta.estado));
         }
-    },
-    
-    /**
-     * Inicializa todos los elementos y eventos de gestión de reclutas
-     */
-    init: async function() {
-        // Inicializar filtros y eventos
-        this.initFilters();
-        
-        // Inicializar formulario de añadir recluta
-        this.initAddReclutaForm();
-        
-        // Eventos para botones de acción en el modal de detalles
-        const cancelEditBtn = document.querySelector('.edit-mode-buttons .btn-secondary');
-        if (cancelEditBtn) {
-            cancelEditBtn.addEventListener('click', () => this.cancelEdit());
-        }
-        
-        const saveChangesBtn = document.querySelector('.edit-mode-buttons .btn-primary');
-        if (saveChangesBtn) {
-            saveChangesBtn.addEventListener('click', () => this.saveReclutaChanges());
-        }
-        
-        // Cargar datos iniciales
-        try {
-            await this.loadAndDisplayReclutas();
-        } catch (error) {
-            console.error('Error al inicializar módulo de reclutas:', error);
-            showError('Error al cargar datos de reclutas');
-        }
-        
-        // Registrarse para eventos de cambio de sección
-        document.addEventListener('sectionChanged', (e) => {
-            if (e.detail.section === 'reclutas-section') {
-                this.loadAndDisplayReclutas();
-            }
-        });
     }
-};
-
+}
 export default Reclutas;
