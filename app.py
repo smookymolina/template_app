@@ -1,10 +1,7 @@
 import os
 from flask import Flask
-from routes.auth import auth_bp
 from app_factory import create_app
 from dotenv import load_dotenv
-
-app = Flask(__name__)
 
 # Cargar variables de entorno desde .env si existe
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -21,4 +18,3 @@ if __name__ == '__main__':
     debug = env == 'development'
     
     app.run(host=host, port=port, debug=debug)
-    
