@@ -116,14 +116,14 @@
 
 <!-- Modal para acceso de clientes -->
 <div id="cliente-modal" class="modal">
-    <div class="modal-content modal-sm">
+    <div class="modal-content">
         <div class="modal-header">
             <h3>Acceso para Clientes</h3>
             <span class="close-modal">&times;</span>
         </div>
         
         <div class="modal-body">
-            <form id="cliente-form">
+            <form id="tracking-form">
                 <div class="form-group">
                     <label for="folio">Folio de Seguimiento</label>
                     <div class="input-icon-wrapper">
@@ -136,6 +136,11 @@
                     <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para dar seguimiento a tu proceso de contratación.
                 </p>
             </form>
+            
+            <!-- Contenedor para mostrar los resultados (inicialmente oculto) -->
+            <div id="tracking-results" style="display: none;">
+                <!-- Los resultados se cargarán dinámicamente aquí -->
+            </div>
         </div>
         
         <div class="modal-footer">

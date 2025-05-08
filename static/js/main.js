@@ -7,6 +7,8 @@ import Auth from './auth.js';
 import Reclutas from './reclutas.js';
 import UI from './ui.js';
 import Calendar from './calendar.js';
+import Client from './client.js';
+import Timeline from './timeline.js';
 import { showNotification, showError, showSuccess } from './notifications.js';
 
 // Estado global de la aplicación
@@ -16,30 +18,7 @@ let appState = {
 };
 
 // Inicializar timeline
-function initTimeline() {
-    const statusSelect = document.getElementById('timeline-status');
-    const updateButton = document.getElementById('update-status');
-    
-    if (!statusSelect || !updateButton) return;
-    
-    // Actualizar la timeline al cargar la página (si hay estado guardado)
-    updateTimelineStatus(localStorage.getItem('currentStatus') || 'recibida');
-    
-    // Establecer el valor seleccionado
-    statusSelect.value = localStorage.getItem('currentStatus') || 'recibida';
-    
-    // Evento para actualizar el estado
-    updateButton.addEventListener('click', function() {
-        const newStatus = statusSelect.value;
-        updateTimelineStatus(newStatus);
-        
-        // Guardar estado
-        localStorage.setItem('currentStatus', newStatus);
-        
-        // Mostrar notificación
-        showNotification('Estado actualizado correctamente', 'success');
-    });
-}
+Timeline.init();
 
 // Actualizar la visualización de la timeline según el estado
 function updateTimelineStatus(status) {
@@ -74,6 +53,9 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Inicializar timeline
     initTimeline();
+
+    // Inicializar módulo de cliente
+    Client.init();
     
     // Inicializar elementos comunes de la interfaz
     UI.initCommonEvents();
