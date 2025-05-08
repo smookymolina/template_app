@@ -17,8 +17,45 @@ let appState = {
     currentSection: 'reclutas-section'
 };
 
-// Inicializar timeline
-Timeline.init();
+/**
+ * Inicializa los componentes de timeline en la interfaz
+ */
+function initTimeline() {
+    // Obtener los elementos de la timeline
+    const timelineItems = document.querySelectorAll('.timeline-item');
+    const statusSelect = document.getElementById('timeline-status');
+    const updateButton = document.getElementById('update-status');
+    
+    // Si no hay elementos de timeline, salir
+    if (!timelineItems.length) return;
+    
+    // Cargar el estado guardado o usar el valor por defecto
+    const savedStatus = localStorage.getItem('currentStatus') || 'recibida';
+    
+    // Actualizar la visualización inicial de la timeline
+    updateTimelineStatus(savedStatus);
+    
+    // Establecer el valor seleccionado en el selector de estado
+    if (statusSelect) {
+        statusSelect.value = savedStatus;
+    }
+    
+    // Configurar evento para el botón de actualizar estado
+    if (updateButton) {
+        updateButton.addEventListener('click', function() {
+            const newStatus = statusSelect ? statusSelect.value : 'recibida';
+            
+            // Actualizar visualización de la timeline
+            updateTimelineStatus(newStatus);
+            
+            // Guardar estado en localStorage
+            localStorage.setItem('currentStatus', newStatus);
+            
+            // Mostrar notificación
+            showSuccess(`Estado de proceso actualizado a "${newStatus}"`);
+        });
+    }
+}
 
 // Actualizar la visualización de la timeline según el estado
 function updateTimelineStatus(status) {
@@ -50,9 +87,6 @@ function updateTimelineStatus(status) {
 document.addEventListener('DOMContentLoaded', async function() {
     // Comprobar si hay un tema guardado y aplicarlo
     UI.loadSavedTheme();
-
-    // Inicializar timeline
-    initTimeline();
 
     // Inicializar módulo de cliente
     Client.init();

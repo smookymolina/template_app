@@ -97,7 +97,7 @@ const Reclutas = {
                 sort_order: this.filters.sortOrder
             });
 
-            const response = await fetch(`<span class="math-inline">\{CONFIG\.API\_URL\}/reclutas?</span>{queryParams}`);
+            const response = await fetch(`${CONFIG.API_URL}/reclutas?${queryParams}`);
 
             if (!response.ok) {
                 if (response.status === 401) {
@@ -131,7 +131,7 @@ const Reclutas = {
      */
     getRecluta: async function(id) {
         try {
-            const response = await fetch(`<span class="math-inline">\{CONFIG\.API\_URL\}/reclutas/</span>{id}`);
+            const response = await fetch(`${CONFIG.API_URL}/reclutas/${id}`);
 
             if (!response.ok) {
                 throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -270,13 +270,13 @@ const Reclutas = {
                 // Añadir foto
                 formData.append('foto', foto);
 
-                response = await fetch(`<span class="math-inline">\{CONFIG\.API\_URL\}/reclutas/</span>{id}`, {
+                response = await fetch(`${CONFIG.API_URL}/reclutas/${id}`, {
                     method: 'PUT',
                     body: formData
                 });
             } else {
                 // Sin foto, usar JSON
-                response = await fetch(`<span class="math-inline">\{CONFIG\.API\_URL\}/reclutas/</span>{id}`, {
+                response = await fetch(`${CONFIG.API_URL}/reclutas/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(reclutaData)

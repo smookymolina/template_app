@@ -1,4 +1,41 @@
 /**
+ * Inicializa el componente de timeline
+ */
+function initTimeline() {
+    // Obtener elementos de la timeline
+    const timelineItems = document.querySelectorAll('.timeline-item');
+    const statusSelect = document.getElementById('timeline-status');
+    
+    if (!timelineItems.length) return;
+    
+    // Cargar el estado guardado si existe
+    const savedStatus = localStorage.getItem('currentStatus') || 'recibida';
+    
+    // Actualizar la visualización inicial de la timeline
+    updateTimelineStatus(savedStatus);
+    
+    // Establecer el valor seleccionado en el dropdown si existe
+    if (statusSelect) {
+        statusSelect.value = savedStatus;
+        
+        // Configurar evento para el botón de actualizar estado
+        const updateButton = document.getElementById('update-status');
+        if (updateButton) {
+            updateButton.addEventListener('click', function() {
+                const newStatus = statusSelect.value;
+                updateTimelineStatus(newStatus);
+                
+                // Guardar estado en localStorage
+                localStorage.setItem('currentStatus', newStatus);
+                
+                // Mostrar notificación de éxito
+                showSuccess('Estado de proceso actualizado correctamente');
+            });
+        }
+    }
+}
+
+/**
  * Módulo para gestionar la funcionalidad de la timeline
  */
 
