@@ -15,12 +15,65 @@ let appState = {
     currentSection: 'reclutas-section'
 };
 
+// Inicializar timeline
+function initTimeline() {
+    const statusSelect = document.getElementById('timeline-status');
+    const updateButton = document.getElementById('update-status');
+    
+    if (!statusSelect || !updateButton) return;
+    
+    // Actualizar la timeline al cargar la página (si hay estado guardado)
+    updateTimelineStatus(localStorage.getItem('currentStatus') || 'recibida');
+    
+    // Establecer el valor seleccionado
+    statusSelect.value = localStorage.getItem('currentStatus') || 'recibida';
+    
+    // Evento para actualizar el estado
+    updateButton.addEventListener('click', function() {
+        const newStatus = statusSelect.value;
+        updateTimelineStatus(newStatus);
+        
+        // Guardar estado
+        localStorage.setItem('currentStatus', newStatus);
+        
+        // Mostrar notificación
+        showNotification('Estado actualizado correctamente', 'success');
+    });
+}
+
+// Actualizar la visualización de la timeline según el estado
+function updateTimelineStatus(status) {
+    const timelineItems = document.querySelectorAll('.timeline-item');
+    if (!timelineItems.length) return;
+    
+    const statusOrder = ['recibida', 'revision', 'entrevista', 'evaluacion', 'finalizada'];
+    const currentIndex = statusOrder.indexOf(status);
+    
+    if (currentIndex === -1) return;
+    
+    timelineItems.forEach((item, index) => {
+        // Eliminar clases anteriores
+        item.classList.remove('active', 'completed');
+        
+        if (index < currentIndex) {
+            // Estados completados
+            item.classList.add('completed');
+        } else if (index === currentIndex) {
+            // Estado actual
+            item.classList.add('active');
+        }
+    });
+}
+
 /**
  * Inicializa la aplicación cuando el DOM está completamente cargado
  */
 document.addEventListener('DOMContentLoaded', async function() {
     // Comprobar si hay un tema guardado y aplicarlo
     UI.loadSavedTheme();
+
+    // Inicializar timeline
+    initTimeline();
     
     // Inicializar elementos comunes de la interfaz
     UI.initCommonEvents();
@@ -560,6 +613,8 @@ async function updateProfile() {
         }
     }
 }
+
+
 
 /**
  * Maneja cambios en la imagen de perfil

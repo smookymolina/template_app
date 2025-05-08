@@ -74,13 +74,14 @@
         
         <!-- Menú de navegación del dashboard -->
         <nav class="dashboard-nav">
-            <ul>
-                <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Reclutas</a></li>
-                <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Estadísticas</a></li>
-                <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
-                <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Configuración</a></li>
-            </ul>
-        </nav>
+    <ul>
+        <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Reclutas</a></li>
+        <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Estadísticas</a></li>
+        <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
+        <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Configuración</a></li>
+        <li><a href="#" data-section="timeline-section"><i class="fas fa-stream"></i> Estado</a></li>
+    </ul>
+</nav>
         
         <!-- Dropdown de perfil -->
         <div class="profile-dropdown">
@@ -105,6 +106,7 @@
         {% include "components/seccion_estadisticas.html" %}
         {% include "components/seccion_calendario.html" %}
         {% include "components/seccion_configuracion.html" %}
+        {% include "components/seccion_timeline.html" %}
     </div>
 </div>
 {% endblock %}

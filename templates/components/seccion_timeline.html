@@ -1,0 +1,69 @@
+<!-- Sección de timeline -->
+<div id="timeline-section" class="dashboard-content-section">
+    <div class="section-header">
+        <h3><i class="fas fa-stream"></i> Estado del Proceso</h3>
+    </div>
+    
+    <div class="timeline-container">
+        <div class="timeline">
+            <div class="timeline-item" data-status="recibida">
+                <div class="timeline-marker"></div>
+                <div clCCass="timeline-content">
+                    <h4>Recibida</h4>
+                    <p>Documentación recibida y registrada en el sistema.</p>
+                </div>
+            </div>
+            
+            <div class="timeline-item" data-status="revision">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <h4>En revisión</h4>
+                    <p>Evaluación inicial de requisitos y perfil.</p>
+                </div>
+            </div>
+            
+            <div class="timeline-item" data-status="entrevista">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <h4>Entrevista</h4>
+                    <p>Programación y realización de entrevistas.</p>
+                </div>
+            </div>
+            
+            <div class="timeline-item" data-status="evaluacion">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <h4>Evaluación</h4>
+                    <p>Análisis de resultados y toma de decisiones.</p>
+                </div>
+            </div>
+            
+            <div class="timeline-item" data-status="finalizada">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <h4>Finalizada</h4>
+                    <p>Proceso completado con decisión final.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="timeline-controls">
+            <div class="form-group">
+                <label for="timeline-status">Estado actual:</label>
+                <div class="input-icon-wrapper">
+                    <i class="fas fa-check-circle"></i>
+                    <select id="timeline-status">
+                        <option value="recibida">Recibida</option>
+                        <option value="revision">En revisión</option>
+                        <option value="entrevista">Entrevista</option>
+                        <option value="evaluacion">Evaluación</option>
+                        <option value="finalizada">Finalizada</option>
+                    </select>
+                </div>
+            </div>
+            <button id="update-status" class="btn-primary">
+                <i class="fas fa-save"></i> Actualizar estado
+            </button>
+        </div>
+    </div>
+</div>
