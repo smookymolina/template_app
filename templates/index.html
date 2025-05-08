@@ -41,6 +41,15 @@
                 <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
             </button>
         </form>
+        
+        <!-- Botón para acceso de clientes -->
+        <div class="login-divider">
+            <span>o</span>
+        </div>
+        
+        <button id="cliente-button" class="btn-secondary">
+            <i class="fas fa-user"></i> Acceso para Clientes
+        </button>
     </div>
 </div>
 
@@ -102,4 +111,88 @@
 
 {% block modals %}
 {% include "components/modals.html" %}
+
+<!-- Modal para acceso de clientes -->
+<div id="cliente-modal" class="modal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h3>Acceso para Clientes</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <form id="cliente-form">
+                <div class="form-group">
+                    <label for="folio">Folio de Seguimiento</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-file-alt"></i>
+                        <input type="text" id="folio" placeholder="Ingresa tu folio de seguimiento" required>
+                    </div>
+                </div>
+                
+                <p class="modal-info">
+                    <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para dar seguimiento a tu proceso de contratación.
+                </p>
+            </form>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn-secondary close-modal-btn">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button class="btn-primary" id="consultar-folio-btn">
+                <i class="fas fa-search"></i> Consultar
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Script para el modal de clientes
+    document.addEventListener('DOMContentLoaded', function() {
+        const clienteButton = document.getElementById('cliente-button');
+        const clienteModal = document.getElementById('cliente-modal');
+        const closeModalBtns = clienteModal.querySelectorAll('.close-modal, .close-modal-btn');
+        
+        // Abrir modal de cliente
+        clienteButton.addEventListener('click', function() {
+            clienteModal.style.display = 'block';
+        });
+        
+        // Cerrar modal
+        closeModalBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                clienteModal.style.display = 'none';
+            });
+        });
+        
+        // Cerrar al hacer clic fuera del contenido
+        window.addEventListener('click', function(event) {
+            if (event.target === clienteModal) {
+                clienteModal.style.display = 'none';
+            }
+        });
+        
+        // Consultar folio
+        const consultarFolioBtn = document.getElementById('consultar-folio-btn');
+        consultarFolioBtn.addEventListener('click', function() {
+            const folio = document.getElementById('folio').value;
+            if (!folio) {
+                showNotification('Por favor, ingresa un folio', 'warning');
+                return;
+            }
+            
+            // Aquí iría la lógica para consultar el folio
+            showNotification('Consultando folio...', 'info');
+            
+            // Simulación de consulta (esto sería reemplazado por la llamada a la API)
+            setTimeout(function() {
+                showNotification('Folio consultado correctamente', 'success');
+                clienteModal.style.display = 'none';
+            }, 1500);
+        });
+    });
+</script>
 {% endblock %}

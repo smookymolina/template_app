@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import SQLAlchemyError
+import uuid  # Añadir esta importación
 
 # Instancia de SQLAlchemy para ser importada por otros módulos
 db = SQLAlchemy()

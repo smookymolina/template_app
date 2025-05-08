@@ -1,5 +1,6 @@
 from datetime import datetime
 from models import db, DatabaseError
+import uuid 
 
 class Recluta(db.Model):
     """
@@ -12,6 +13,7 @@ class Recluta(db.Model):
     estado = db.Column(db.String(20), nullable=False)  # Activo, En proceso, Rechazado
     puesto = db.Column(db.String(100), nullable=True)
     notas = db.Column(db.Text, nullable=True)
+    folio = db.Column(db.String(20), unique=True, nullable=False)
     foto_url = db.Column(db.String(255), nullable=True)
     fecha_registro = db.Column(db.DateTime, default=datetime.utcnow)
     ultima_actualizacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -40,6 +42,8 @@ class Recluta(db.Model):
     def save(self):
         """Guarda el recluta en la base de datos de forma segura"""
         try:
+            if not self.folio:
+                self.folio = f"REC-{uuid.uuid4().hex[:8].upper()}"
             if not self.id:  # Si es un nuevo recluta
                 db.session.add(self)
             db.session.commit()

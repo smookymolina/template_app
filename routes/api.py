@@ -419,3 +419,41 @@ def get_perfil():
     except Exception as e:
         current_app.logger.error(f"Error al obtener perfil: {str(e)}")
         return jsonify({"success": False, "message": f"Error al obtener perfil: {str(e)}"}), 500
+    
+@api_bp.route('/tracking/<folio>', methods=['GET'])
+def track_by_folio(folio):
+    """
+    Obtiene información básica y estado de un recluta por su folio.
+    No requiere autenticación, pues es accesible públicamente.
+    """
+    try:
+        recluta = Recluta.query.filter_by(folio=folio).first()
+        
+        if not recluta:
+            return jsonify({"success": False, "message": "Folio no encontrado"}), 404
+        
+        # Devolver solo información limitada por seguridad
+        tracking_info = {
+            "nombre": recluta.nombre,
+            "estado": recluta.estado,
+            "fecha_registro": recluta.fecha_registro.strftime('%d/%m/%Y') if recluta.fecha_registro else None,
+            "ultima_actualizacion": recluta.ultima_actualizacion.strftime('%d/%m/%Y') if recluta.ultima_actualizacion else None
+        }
+        
+        # Obtener entrevistas próximas
+        entrevistas = Entrevista.query.filter_by(
+            recluta_id=recluta.id, 
+            estado='pendiente'
+        ).order_by(Entrevista.fecha).all()
+        
+        if entrevistas:
+            tracking_info["proxima_entrevista"] = {
+                "fecha": entrevistas[0].fecha.strftime('%d/%m/%Y'),
+                "hora": entrevistas[0].hora,
+                "tipo": entrevistas[0].tipo
+            }
+        
+        return jsonify({"success": True, "tracking_info": tracking_info})
+    except Exception as e:
+        current_app.logger.error(f"Error al buscar por folio: {str(e)}")
+        return jsonify({"success": False, "message": "Error al procesar la solicitud"}), 500    

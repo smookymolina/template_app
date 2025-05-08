@@ -46,6 +46,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     setupFormEvents();
 });
 
+
+
 /**
  * Configura los eventos para formularios y acciones principales
  */
@@ -207,6 +209,169 @@ function initializeModules() {
     
     // Inicializar estadísticas
     loadEstadisticas();
+}
+
+// Alternar entre login y seguimiento
+const adminLoginTab = document.getElementById('admin-login-tab');
+const trackingTab = document.getElementById('tracking-tab');
+const loginForm = document.getElementById('login-form');
+const trackingForm = document.getElementById('tracking-form');
+const trackingResults = document.getElementById('tracking-results');
+
+if (adminLoginTab && trackingTab) {
+    adminLoginTab.addEventListener('click', function() {
+        adminLoginTab.classList.add('active');
+        trackingTab.classList.remove('active');
+        loginForm.classList.add('active');
+        trackingForm.classList.remove('active');
+        trackingResults.style.display = 'none';
+    });
+    
+    trackingTab.addEventListener('click', function() {
+        trackingTab.classList.add('active');
+        adminLoginTab.classList.remove('active');
+        trackingForm.classList.add('active');
+        loginForm.classList.remove('active');
+    });
+}
+
+// Manejar envío del formulario de seguimiento
+const trackingButton = document.getElementById('tracking-button');
+if (trackingForm) {
+    trackingForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        trackFolio();
+    });
+}
+
+// Función para realizar el seguimiento por folio
+async function trackFolio() {
+    const folio = document.getElementById('folio')?.value;
+    
+    if (!folio) {
+        showNotification('Por favor, ingresa un número de folio', 'warning');
+        return;
+    }
+    
+    // Mostrar estado de carga
+    const trackingButton = document.getElementById('tracking-button');
+    if (trackingButton) {
+        trackingButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
+        trackingButton.disabled = true;
+    }
+    
+    try {
+        const response = await fetch(`/api/tracking/${folio}`);
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            displayTrackingResults(data.tracking_info);
+        } else {
+            showNotification(data.message || 'No se encontró información para este folio', 'error');
+            trackingResults.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error de seguimiento:', error);
+        showNotification('Error al consultar el folio. Intenta más tarde.', 'error');
+    } finally {
+        if (trackingButton) {
+            trackingButton.innerHTML = '<i class="fas fa-search"></i> Consultar Estado';
+            trackingButton.disabled = false;
+        }
+    }
+}
+
+// Función para mostrar los resultados del seguimiento
+function displayTrackingResults(info) {
+    if (!info) return;
+    
+    // Obtener el contenedor de resultados
+    const resultsContainer = document.getElementById('tracking-results');
+    if (!resultsContainer) return;
+    
+    // Crear contenido de resultados
+    resultsContainer.innerHTML = `
+        <div class="tracking-result-card">
+            <h3>Información de Proceso</h3>
+            <div class="tracking-info">
+                <div class="tracking-row">
+                    <div class="tracking-label">Candidato:</div>
+                    <div class="tracking-value">${info.nombre}</div>
+                </div>
+                <div class="tracking-row">
+                    <div class="tracking-label">Estado:</div>
+                    <div class="tracking-value">
+                        <span class="badge ${getBadgeClass(info.estado)}">${info.estado}</span>
+                    </div>
+                </div>
+                <div class="tracking-row">
+                    <div class="tracking-label">Fecha de registro:</div>
+                    <div class="tracking-value">${info.fecha_registro || 'No disponible'}</div>
+                </div>
+                <div class="tracking-row">
+                    <div class="tracking-label">Última actualización:</div>
+                    <div class="tracking-value">${info.ultima_actualizacion || 'No disponible'}</div>
+                </div>
+                ${info.proxima_entrevista ? `
+                <div class="tracking-section">
+                    <h4>Próxima Entrevista</h4>
+                    <div class="tracking-row">
+                        <div class="tracking-label">Fecha:</div>
+                        <div class="tracking-value">${info.proxima_entrevista.fecha}</div>
+                    </div>
+                    <div class="tracking-row">
+                        <div class="tracking-label">Hora:</div>
+                        <div class="tracking-value">${info.proxima_entrevista.hora}</div>
+                    </div>
+                    <div class="tracking-row">
+                        <div class="tracking-label">Tipo:</div>
+                        <div class="tracking-value">${getEntrevistaType(info.proxima_entrevista.tipo)}</div>
+                    </div>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+    
+    // Mostrar el contenedor de resultados
+    resultsContainer.style.display = 'block';
+    
+    // Ocultar el formulario
+    const trackingForm = document.getElementById('tracking-form');
+    if (trackingForm) {
+        trackingForm.style.display = 'none';
+    }
+    
+    // Añadir botón para volver
+    const backButton = document.createElement('button');
+    backButton.className = 'btn-secondary';
+    backButton.innerHTML = '<i class="fas fa-arrow-left"></i> Realizar otra consulta';
+    backButton.onclick = function() {
+        resultsContainer.style.display = 'none';
+        if (trackingForm) trackingForm.style.display = 'block';
+    };
+    
+    resultsContainer.appendChild(backButton);
+}
+
+// Función para obtener la clase del badge según el estado
+function getBadgeClass(estado) {
+    switch(estado) {
+        case 'Activo': return 'badge-success';
+        case 'En proceso': return 'badge-warning';
+        case 'Rechazado': return 'badge-danger';
+        default: return 'badge-secondary';
+    }
+}
+
+// Función para obtener el texto del tipo de entrevista
+function getEntrevistaType(tipo) {
+    switch(tipo) {
+        case 'presencial': return 'Presencial';
+        case 'virtual': return 'Virtual (Videollamada)';
+        case 'telefonica': return 'Telefónica';
+        default: return tipo;
+    }
 }
 
 /**
