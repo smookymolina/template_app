@@ -21,4 +21,4 @@ if __name__ == '__main__':
     debug = env == 'development'
     
     app.run(host=host, port=port, debug=debug)
-    app.register_blueprint(auth_bp)
+    
