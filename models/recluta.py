@@ -1,5 +1,6 @@
 from datetime import datetime
 from models import db, DatabaseError
+import uuid 
 
 class Recluta(db.Model):
     """
@@ -12,13 +13,15 @@ class Recluta(db.Model):
     estado = db.Column(db.String(20), nullable=False)  # Activo, En proceso, Rechazado
     puesto = db.Column(db.String(100), nullable=True)
     notas = db.Column(db.Text, nullable=True)
+    folio = db.Column(db.String(20), unique=True, nullable=False)
     foto_url = db.Column(db.String(255), nullable=True)
     fecha_registro = db.Column(db.DateTime, default=datetime.utcnow)
     ultima_actualizacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relación con entrevistas
     entrevistas = db.relationship('Entrevista', backref='recluta', lazy='dynamic', cascade="all, delete-orphan")
-
+    asesor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    asesor = db.relationship('Usuario', backref='reclutas_asignados')
     def serialize(self):
         """Retorna una representación serializable del recluta"""
         return {
@@ -31,12 +34,16 @@ class Recluta(db.Model):
             'notas': self.notas,
             'foto_url': self.foto_url,
             'fecha_registro': self.fecha_registro.isoformat() if self.fecha_registro else None,
-            'ultima_actualizacion': self.ultima_actualizacion.isoformat() if self.ultima_actualizacion else None
+            'ultima_actualizacion': self.ultima_actualizacion.isoformat() if self.ultima_actualizacion else None,
+            'asesor_id': self.asesor_id,
+            'asesor_nombre': self.asesor.nombre if self.asesor else (self.asesor.email if self.asesor else None)
         }
     
     def save(self):
         """Guarda el recluta en la base de datos de forma segura"""
         try:
+            if not self.folio:
+                self.folio = f"REC-{uuid.uuid4().hex[:8].upper()}"
             if not self.id:  # Si es un nuevo recluta
                 db.session.add(self)
             db.session.commit()

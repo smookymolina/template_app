@@ -1,11 +1,27 @@
-<!-- Modal para agregar reclutas -->
+<template id="base-modal-template">
+    <div class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title"></h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <slot name="body"></slot>
+            </div>
+            <div class="modal-footer">
+                <slot name="footer"></slot>
+            </div>
+        </div>
+    </div>
+</template>
+
 <div id="add-recluta-modal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
             <h3>Agregar Nuevo Recluta</h3>
             <span class="close-modal">&times;</span>
         </div>
-        
+
         <div class="modal-body">
             <form id="add-recluta-form">
                 <div class="profile-section">
@@ -21,7 +37,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="recluta-nombre">Nombre completo</label>
@@ -31,7 +47,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="recluta-email">Correo electrónico</label>
@@ -40,7 +56,7 @@
                             <input type="email" id="recluta-email" placeholder="Correo electrónico" required>
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="recluta-telefono">Teléfono</label>
                         <div class="input-icon-wrapper">
@@ -49,7 +65,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="recluta-puesto">Puesto al que aplica</label>
@@ -58,7 +74,7 @@
                             <input type="text" id="recluta-puesto" placeholder="Puesto o cargo">
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="recluta-estado">Estado</label>
                         <div class="input-icon-wrapper">
@@ -71,33 +87,47 @@
                         </div>
                     </div>
                 </div>
-                
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="recluta-asesor">Asesor asignado</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-user-tie"></i>
+                            <select id="recluta-asesor">
+                                <option value="">-- Seleccionar asesor --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <!-- Grupo vacío para mantener el diseño de dos columnas -->
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label for="recluta-notas">Notas</label>
                     <textarea id="recluta-notas" placeholder="Notas adicionales sobre el candidato..."></textarea>
                 </div>
             </form>
         </div>
-        
+
         <div class="modal-footer">
-            <button class="btn-secondary">
+            <button type="button" class="btn-secondary close-modal">
                 <i class="fas fa-times"></i> Cancelar
             </button>
-            <button class="btn-primary">
+            <button type="submit" class="btn-primary">
                 <i class="fas fa-save"></i> Guardar Recluta
             </button>
         </div>
     </div>
 </div>
 
-<!-- Modal para ver/editar detalles de recluta -->
 <div id="view-recluta-modal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
             <h3>Detalles del Recluta</h3>
             <span class="close-modal">&times;</span>
         </div>
-        
+
         <div class="modal-body">
             <div class="recluta-details">
                 <div class="recluta-details-header">
@@ -110,7 +140,7 @@
                         <span id="detail-recluta-estado" class="badge badge-warning">En proceso</span>
                     </div>
                 </div>
-                
+
                 <div class="recluta-details-content">
                     <div class="detail-row">
                         <div class="detail-label"><i class="fas fa-envelope"></i> Email:</div>
@@ -120,6 +150,12 @@
                         <div class="detail-label"><i class="fas fa-phone"></i> Teléfono:</div>
                         <div class="detail-value" id="detail-recluta-telefono">555-1234</div>
                     </div>
+
+                    <div class="detail-row">
+                        <div class="detail-label"><i class="fas fa-user-tie"></i> Asesor:</div>
+                        <div class="detail-value" id="detail-recluta-asesor">No asignado</div>
+                    </div>
+
                     <div class="detail-row">
                         <div class="detail-label"><i class="fas fa-calendar-alt"></i> Fecha de registro:</div>
                         <div class="detail-value" id="detail-recluta-fecha">04/04/2025</div>
@@ -130,21 +166,20 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="view-mode-buttons" id="view-mode-buttons">
-                <button class="btn-secondary">
+                <button type="button" class="btn-secondary" data-action="edit">
                     <i class="fas fa-edit"></i> Editar
                 </button>
-                <button class="btn-danger">
+                <button type="button" class="btn-danger" data-action="delete">
                     <i class="fas fa-trash-alt"></i> Eliminar
                 </button>
-                <button class="btn-primary">
+                <button type="button" class="btn-primary" data-action="schedule-interview">
                     <i class="fas fa-calendar-plus"></i> Programar Entrevista
                 </button>
             </div>
-            
-            <div class="edit-mode-form" id="edit-mode-form" style="display: none;">
-                <!-- Formulario similar al de agregar, pero con los campos llenos -->
+
+            <form class="edit-mode-form" id="edit-mode-form" style="display: none;">
                 <div class="form-row">
                     <div class="form-group">
                         <label for="edit-recluta-nombre">Nombre completo</label>
@@ -154,7 +189,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="edit-recluta-email">Correo electrónico</label>
@@ -163,7 +198,7 @@
                             <input type="email" id="edit-recluta-email" required>
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="edit-recluta-telefono">Teléfono</label>
                         <div class="input-icon-wrapper">
@@ -172,7 +207,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="form-row">
                     <div class="form-group">
                         <label for="edit-recluta-puesto">Puesto al que aplica</label>
@@ -181,52 +216,54 @@
                             <input type="text" id="edit-recluta-puesto">
                         </div>
                     </div>
-                    
+                </div>
+
+                <div class="form-row">
                     <div class="form-group">
-                        <label for="edit-recluta-estado">Estado</label>
+                        <label for="edit-recluta-asesor">Asesor asignado</label>
                         <div class="input-icon-wrapper">
-                            <i class="fas fa-clipboard-check"></i>
-                            <select id="edit-recluta-estado" required>
-                                <option value="En proceso">En proceso</option>
-                                <option value="Activo">Activo</option>
-                                <option value="Rechazado">Rechazado</option>
+                            <i class="fas fa-user-tie"></i>
+                            <select id="edit-recluta-asesor">
+                                <option value="">-- Seleccionar asesor --</option>
                             </select>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <!-- Grupo vacío para mantener el diseño de dos columnas -->
+                    </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="edit-recluta-notas">Notas</label>
                     <textarea id="edit-recluta-notas"></textarea>
                 </div>
-                
+
                 <div class="edit-mode-buttons">
-                    <button class="btn-secondary">
+                    <button type="button" class="btn-secondary" data-action="cancel-edit">
                         <i class="fas fa-times"></i> Cancelar
                     </button>
-                    <button class="btn-primary">
+                    <button type="submit" class="btn-primary">
                         <i class="fas fa-save"></i> Guardar Cambios
                     </button>
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 </div>
 
-<!-- Modal de confirmación -->
 <div id="confirm-modal" class="modal">
     <div class="modal-content modal-sm">
         <div class="modal-header">
             <h3 id="confirm-title">Confirmar acción</h3>
             <span class="close-modal">&times;</span>
         </div>
-        
+
         <div class="modal-body">
             <p id="confirm-message">¿Estás seguro de que deseas realizar esta acción?</p>
         </div>
-        
+
         <div class="modal-footer">
-            <button class="btn-secondary">
+            <button type="button" class="btn-secondary close-modal">
                 <i class="fas fa-times"></i> Cancelar
             </button>
             <button id="confirm-action-btn" class="btn-danger">
@@ -236,14 +273,13 @@
     </div>
 </div>
 
-<!-- Modal para programar entrevista -->
 <div id="schedule-interview-modal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
             <h3>Programar Entrevista</h3>
             <span class="close-modal">&times;</span>
         </div>
-        
+
         <div class="modal-body">
             <div class="interview-candidate">
                 <img id="interview-candidate-pic" class="recluta-foto" src="/api/placeholder/40/40" alt="Foto del candidato">
@@ -252,7 +288,7 @@
                     <p id="interview-candidate-puesto">Puesto al que aplica</p>
                 </div>
             </div>
-            
+
             <div class="form-row">
                 <div class="form-group">
                     <label for="interview-date">Fecha</label>
@@ -261,7 +297,7 @@
                         <input type="date" id="interview-date" required>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="interview-time">Hora</label>
                     <div class="input-icon-wrapper">
@@ -270,7 +306,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="form-row">
                 <div class="form-group">
                     <label for="interview-duration">Duración</label>
@@ -284,7 +320,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="interview-type">Tipo de entrevista</label>
                     <div class="input-icon-wrapper">
@@ -297,7 +333,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label for="interview-location">Ubicación / Enlace</label>
                 <div class="input-icon-wrapper">
@@ -305,12 +341,12 @@
                     <input type="text" id="interview-location" placeholder="Dirección o enlace para la entrevista">
                 </div>
             </div>
-            
+
             <div class="form-group">
                 <label for="interview-notes">Notas adicionales</label>
                 <textarea id="interview-notes" placeholder="Detalles adicionales sobre la entrevista..."></textarea>
             </div>
-            
+
             <div class="form-group">
                 <label class="checkbox-container">
                     <input type="checkbox" id="send-invitation" checked>
@@ -318,12 +354,12 @@
                 </label>
             </div>
         </div>
-        
+
         <div class="modal-footer">
-            <button class="btn-secondary">
+            <button type="button" class="btn-secondary close-modal">
                 <i class="fas fa-times"></i> Cancelar
             </button>
-            <button class="btn-primary">
+            <button type="button" class="btn-primary">
                 <i class="fas fa-calendar-check"></i> Programar
             </button>
         </div>

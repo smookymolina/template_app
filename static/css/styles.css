@@ -1518,3 +1518,194 @@ input:checked + .slider:before {
         flex-direction: column;
     }
 }
+
+/* Estilos para las pestañas en la pantalla de login */
+.login-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 20px;
+}
+
+.login-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--text-light);
+    transition: var(--transition);
+}
+
+.login-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Estilos para los resultados de seguimiento */
+.tracking-result-card {
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.dark-mode .tracking-result-card {
+    background-color: var(--light-color);
+}
+
+.tracking-result-card h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+    font-weight: 600;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tracking-result-card h4 {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.tracking-info {
+    margin-bottom: 20px;
+}
+
+.tracking-row {
+    display: flex;
+    margin-bottom: 12px;
+}
+
+.tracking-label {
+    width: 140px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.tracking-value {
+    flex: 1;
+}
+
+.tracking-section {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Estilos responsive */
+@media (max-width: 576px) {
+    .tracking-row {
+        flex-direction: column;
+    }
+    
+    .tracking-label {
+        width: 100%;
+        margin-bottom: 4px;
+    }
+}
+
+/* Divider entre botones */
+.login-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 20px 0;
+    color: var(--text-light);
+}
+
+.login-divider::before,
+.login-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.login-divider span {
+    padding: 0 10px;
+    font-size: 14px;
+}
+
+/* Ajustes para el botón de cliente */
+#cliente-button {
+    margin-top: 0; /* Elimina el margen superior ya que el divider proporciona espacio */
+    background-color: var(--secondary-color);
+}
+
+#cliente-button:hover {
+    background-color: #5a6268;
+}
+
+/* Estilos para el modal de cliente */
+.modal-info {
+    background-color: rgba(0, 123, 255, 0.1);
+    border-left: 4px solid var(--primary-color);
+    padding: 10px;
+    margin-top: 15px;
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.modal-info i {
+    color: var(--primary-color);
+    margin-right: 5px;
+}
+
+/* Modal con tamaño más reducido para el formulario simple */
+.modal-sm {
+    max-width: 400px;
+}
+
+/* Asegura que los enlaces en el modal funcionen correctamente */
+#cliente-modal a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+#cliente-modal a:hover {
+    text-decoration: underline;
+}
+
+/* Alineación de botones en el footer del modal */
+#cliente-modal .modal-footer {
+    justify-content: space-between;
+}
+
+/* Estilos para el botón de consultar */
+#consultar-folio-btn {
+    width: auto;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+/* Ajustes responsive */
+@media (max-width: 576px) {
+    #cliente-modal .modal-footer {
+        flex-direction: column-reverse;
+        gap: 10px;
+    }
+    
+    #cliente-modal .modal-footer button {
+        width: 100%;
+    }
+}
+
+/* Modo oscuro */
+.dark-mode .modal-info {
+    background-color: rgba(0, 123, 255, 0.05);
+}

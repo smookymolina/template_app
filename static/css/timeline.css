@@ -1,0 +1,174 @@
+/* Estilos para la timeline */
+.timeline-container {
+    padding: 20px 0;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.timeline {
+    position: relative;
+    padding: 20px 0;
+    margin-bottom: 30px;
+}
+
+/* Línea central */
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50px;
+    height: 100%;
+    width: 4px;
+    background: var(--border-color);
+    z-index: 1;
+}
+
+.dark-mode .timeline::before {
+    background: #3f3f3f;
+}
+
+/* Elementos de la timeline */
+.timeline-item {
+    position: relative;
+    margin-bottom: 30px;
+    padding-left: 100px;
+}
+
+.timeline-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Marcador circular */
+.timeline-marker {
+    position: absolute;
+    left: 42px;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--light-color);
+    border: 4px solid var(--border-color);
+    z-index: 2;
+    transform: translateX(-50%);
+    transition: var(--transition);
+}
+
+.dark-mode .timeline-marker {
+    background: var(--primary-light);
+    border-color: #3f3f3f;
+}
+
+/* Estado completado */
+.timeline-item.completed .timeline-marker {
+    background: var(--success-color);
+    border-color: var(--success-color);
+}
+
+/* Estado activo (en progreso) */
+.timeline-item.active .timeline-marker {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.2);
+}
+
+/* Contenido de cada elemento */
+.timeline-content {
+    padding: 15px;
+    border-radius: var(--border-radius);
+    background: white;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.dark-mode .timeline-content {
+    background: var(--light-color);
+}
+
+.timeline-item.completed .timeline-content {
+    border-left: 4px solid var(--success-color);
+}
+
+.timeline-item.active .timeline-content {
+    border-left: 4px solid var(--primary-color);
+    box-shadow: var(--shadow-md);
+}
+
+.timeline-content h4 {
+    margin: 0 0 8px;
+    color: var(--text-color);
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.timeline-content p {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.timeline-item.active .timeline-content h4 {
+    color: var(--primary-color);
+}
+
+.timeline-item.completed .timeline-content h4 {
+    color: var(--success-color);
+}
+
+/* Controles de la timeline */
+.timeline-controls {
+    max-width: 500px;
+    margin: 40px auto 20px;
+    padding: 20px;
+    border-radius: var(--border-radius);
+    background: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.dark-mode .timeline-controls {
+    background: var(--light-color);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .timeline::before {
+        left: 30px;
+    }
+    
+    .timeline-item {
+        padding-left: 60px;
+    }
+    
+    .timeline-marker {
+        left: 22px;
+        width: 16px;
+        height: 16px;
+    }
+}
+
+@media (max-width: 576px) {
+    .timeline::before {
+        left: 20px;
+    }
+    
+    .timeline-item {
+        padding-left: 45px;
+    }
+    
+    .timeline-marker {
+        left: 12px;
+        width: 14px;
+        height: 14px;
+    }
+    
+    .timeline-content {
+        padding: 12px;
+    }
+    
+    .timeline-content h4 {
+        font-size: 16px;
+    }
+    
+    .timeline-content p {
+        font-size: 12px;
+    }
+}

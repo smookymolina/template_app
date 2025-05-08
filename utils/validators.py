@@ -140,15 +140,36 @@ def validate_recluta_data(data, is_update=False):
     if estado and estado not in ['Activo', 'En proceso', 'Rechazado']:
         errors['estado'] = 'El estado debe ser Activo, En proceso o Rechazado'
     
+    # Validar asesor_id si está presente
+    if 'asesor_id' in data and data['asesor_id']:
+        try:
+            asesor_id = int(data['asesor_id'])
+            from models.usuario import Usuario
+            if not Usuario.query.get(asesor_id):
+                errors['asesor_id'] = 'El asesor especificado no existe'
+        except (ValueError, TypeError):
+            errors['asesor_id'] = 'ID de asesor inválido'
+    
     if errors:
         raise ValidationError(errors)
     
     # Construir diccionario de datos validados
     validated_data = {}
     
-    for field in ['nombre', 'email', 'telefono', 'estado', 'puesto', 'notas']:
+    # Añadir todos los campos al diccionario de datos validados
+    for field in ['nombre', 'email', 'telefono', 'estado', 'puesto', 'notas', 'asesor_id']:
         if field in data and data[field] is not None:
-            validated_data[field] = data[field].strip() if isinstance(data[field], str) else data[field]
+            # Para asesor_id, asegurarse de que sea un entero o None
+            if field == 'asesor_id':
+                if data[field] == '' or data[field] is None:
+                    validated_data[field] = None
+                else:
+                    try:
+                        validated_data[field] = int(data[field])
+                    except (ValueError, TypeError):
+                        validated_data[field] = None
+            else:
+                validated_data[field] = data[field].strip() if isinstance(data[field], str) else data[field]
     
     return validated_data
 
