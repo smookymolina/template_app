@@ -20,5 +20,5 @@ if __name__ == '__main__':
     host = os.environ.get('HOST', '0.0.0.0')
     debug = env == 'development'
     
-    app.run(host=host, port=port, debug=debug)
+    app.run(host='0.0.0.0', port=port, debug=debug)
     app.register_blueprint(auth_bp)
