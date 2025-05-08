@@ -403,6 +403,194 @@ def get_estadisticas():
         current_app.logger.error(f"Error al obtener estadísticas: {str(e)}")
         return jsonify({"success": False, "message": f"Error al obtener estadísticas: {str(e)}"}), 500
 
+# ----- API DE SEGUIMIENTO DE FOLIOS -----
+
+@api_bp.route('/tracking/<folio>', methods=['GET'])
+def track_by_folio(folio):
+    """
+    Obtiene información básica y estado de un recluta por su folio.
+    No requiere autenticación, pues es accesible públicamente.
+    """
+    try:
+        recluta = Recluta.query.filter_by(folio=folio).first()
+        
+        if not recluta:
+            return jsonify({"success": False, "message": "Folio no encontrado"}), 404
+        
+        # Devolver solo información limitada por seguridad
+        tracking_info = {
+            "nombre": recluta.nombre,
+            "estado": recluta.estado,
+            "fecha_registro": recluta.fecha_registro.strftime('%d/%m/%Y') if recluta.fecha_registro else None,
+            "ultima_actualizacion": recluta.ultima_actualizacion.strftime('%d/%m/%Y') if recluta.ultima_actualizacion else None
+        }
+        
+        # Obtener entrevistas próximas
+        entrevistas = Entrevista.query.filter_by(
+            recluta_id=recluta.id, 
+            estado='pendiente'
+        ).order_by(Entrevista.fecha).all()
+        
+        if entrevistas:
+            tracking_info["proxima_entrevista"] = {
+                "fecha": entrevistas[0].fecha.strftime('%d/%m/%Y'),
+                "hora": entrevistas[0].hora,
+                "tipo": entrevistas[0].tipo
+            }
+        
+        return jsonify({"success": True, "tracking_info": tracking_info})
+    except Exception as e:
+        current_app.logger.error(f"Error al buscar por folio: {str(e)}")
+        return jsonify({"success": False, "message": "Error al procesar la solicitud"}), 500
+
+@api_bp.route('/tracking/<folio>/estado', methods=['GET'])
+def get_estado_folio(folio):
+    """
+    Obtiene sólo el estado actual de un recluta por su folio.
+    Útil para verificaciones rápidas del estado.
+    """
+    try:
+        recluta = Recluta.query.filter_by(folio=folio).first()
+        
+        if not recluta:
+            return jsonify({"success": False, "message": "Folio no encontrado"}), 404
+        
+        # Mapear estado del sistema a estado de la timeline
+        estados_timeline = {
+            'En proceso': 'revision',
+            'Activo': 'finalizada',
+            'Rechazado': 'finalizada'
+        }
+        
+        # Obtener el último estado registrado en la base de datos
+        estado_actual = recluta.estado
+        estado_timeline = estados_timeline.get(estado_actual, 'recibida')
+        
+        return jsonify({
+            "success": True, 
+            "estado": estado_actual,
+            "estado_timeline": estado_timeline,
+            "ultima_actualizacion": recluta.ultima_actualizacion.strftime('%d/%m/%Y %H:%M') if recluta.ultima_actualizacion else None
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener estado del folio: {str(e)}")
+        return jsonify({"success": False, "message": "Error al procesar la solicitud"}), 500
+
+@api_bp.route('/tracking/<folio>/timeline', methods=['GET'])
+def get_timeline_folio(folio):
+    """
+    Obtiene la información completa de la timeline para un recluta.
+    Incluye todos los estados y fechas de cambio de estado.
+    """
+    try:
+        recluta = Recluta.query.filter_by(folio=folio).first()
+        
+        if not recluta:
+            return jsonify({"success": False, "message": "Folio no encontrado"}), 404
+        
+        # Mapear estado del sistema a estado de la timeline
+        estados_timeline = {
+            'En proceso': 'revision',
+            'Activo': 'finalizada',
+            'Rechazado': 'finalizada'
+        }
+        
+        estado_timeline = estados_timeline.get(recluta.estado, 'recibida')
+        
+        # Definir la estructura completa de la timeline
+        timeline_items = [
+            {
+                "id": "recibida",
+                "title": "Recibida",
+                "description": "Documentación recibida y registrada en el sistema.",
+                "completed": True,
+                "active": estado_timeline == 'recibida',
+                "date": recluta.fecha_registro.strftime('%d/%m/%Y') if recluta.fecha_registro else None
+            },
+            {
+                "id": "revision",
+                "title": "En revisión",
+                "description": "Evaluación inicial de requisitos y perfil.",
+                "completed": estado_timeline in ['revision', 'entrevista', 'evaluacion', 'finalizada'],
+                "active": estado_timeline == 'revision',
+                "date": recluta.ultima_actualizacion.strftime('%d/%m/%Y') if recluta.ultima_actualizacion and estado_timeline != 'recibida' else None
+            },
+            {
+                "id": "entrevista",
+                "title": "Entrevista",
+                "description": "Programación y realización de entrevistas.",
+                "completed": estado_timeline in ['entrevista', 'evaluacion', 'finalizada'],
+                "active": estado_timeline == 'entrevista',
+                "date": None
+            },
+            {
+                "id": "evaluacion",
+                "title": "Evaluación",
+                "description": "Análisis de resultados y toma de decisiones.",
+                "completed": estado_timeline in ['evaluacion', 'finalizada'],
+                "active": estado_timeline == 'evaluacion',
+                "date": None
+            },
+            {
+                "id": "finalizada",
+                "title": "Finalizada",
+                "description": "Proceso completado con decisión final.",
+                "completed": estado_timeline == 'finalizada',
+                "active": estado_timeline == 'finalizada',
+                "date": None
+            }
+        ]
+        
+        # Obtener fechas de entrevistas si existen
+        entrevistas = Entrevista.query.filter_by(recluta_id=recluta.id).order_by(Entrevista.fecha).all()
+        
+        for entrevista in entrevistas:
+            # Si hay entrevista y está en estado completada, actualizar la fecha del ítem de entrevista
+            if entrevista.estado == 'completada':
+                for item in timeline_items:
+                    if item["id"] == "entrevista":
+                        item["date"] = entrevista.fecha.strftime('%d/%m/%Y')
+                        break
+        
+        # Verificar si el estado es "finalizada" y actualizar la fecha correspondiente
+        if estado_timeline == 'finalizada':
+            for item in timeline_items:
+                if item["id"] == "finalizada":
+                    item["date"] = recluta.ultima_actualizacion.strftime('%d/%m/%Y') if recluta.ultima_actualizacion else None
+        
+        return jsonify({
+            "success": True,
+            "folio": folio,
+            "nombre_candidato": recluta.nombre,
+            "estado_actual": recluta.estado,
+            "estado_timeline": estado_timeline,
+            "timeline_items": timeline_items
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener timeline del folio: {str(e)}")
+        return jsonify({"success": False, "message": "Error al procesar la solicitud"}), 500
+
+@api_bp.route('/verificar-folio/<folio>', methods=['GET'])
+def verificar_folio(folio):
+    """
+    Verifica si un folio existe en el sistema.
+    Útil para validaciones rápidas sin devolver datos sensibles.
+    """
+    try:
+        recluta = Recluta.query.filter_by(folio=folio).first()
+        
+        if not recluta:
+            return jsonify({"success": False, "exists": False, "message": "Folio no encontrado"}), 404
+        
+        return jsonify({
+            "success": True,
+            "exists": True,
+            "message": "Folio válido"
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al verificar folio: {str(e)}")
+        return jsonify({"success": False, "message": "Error al procesar la solicitud"}), 500
+
 # ----- API DE PERFIL -----
 
 @api_bp.route('/perfil', methods=['GET'])
