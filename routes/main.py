@@ -49,7 +49,7 @@ def perfil():
 @main_bp.route('/seguimiento')
 def seguimiento():
     """
-    Página pública para que los clientes consulten su estado.
+    Página pública para que los candidatos consulten su estado.
     No requiere autenticación.
     
     Returns:

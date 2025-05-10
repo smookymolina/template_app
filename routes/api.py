@@ -443,39 +443,6 @@ def track_by_folio(folio):
         current_app.logger.error(f"Error al buscar por folio: {str(e)}")
         return jsonify({"success": False, "message": "Error al procesar la solicitud"}), 500
 
-@api_bp.route('/tracking/<folio>/estado', methods=['GET'])
-def get_estado_folio(folio):
-    """
-    Obtiene sólo el estado actual de un recluta por su folio.
-    Útil para verificaciones rápidas del estado.
-    """
-    try:
-        recluta = Recluta.query.filter_by(folio=folio).first()
-        
-        if not recluta:
-            return jsonify({"success": False, "message": "Folio no encontrado"}), 404
-        
-        # Mapear estado del sistema a estado de la timeline
-        estados_timeline = {
-            'En proceso': 'revision',
-            'Activo': 'finalizada',
-            'Rechazado': 'finalizada'
-        }
-        
-        # Obtener el último estado registrado en la base de datos
-        estado_actual = recluta.estado
-        estado_timeline = estados_timeline.get(estado_actual, 'recibida')
-        
-        return jsonify({
-            "success": True, 
-            "estado": estado_actual,
-            "estado_timeline": estado_timeline,
-            "ultima_actualizacion": recluta.ultima_actualizacion.strftime('%d/%m/%Y %H:%M') if recluta.ultima_actualizacion else None
-        })
-    except Exception as e:
-        current_app.logger.error(f"Error al obtener estado del folio: {str(e)}")
-        return jsonify({"success": False, "message": "Error al procesar la solicitud"}), 500
-
 @api_bp.route('/tracking/<folio>/timeline', methods=['GET'])
 def get_timeline_folio(folio):
     """
@@ -607,3 +574,83 @@ def get_perfil():
     except Exception as e:
         current_app.logger.error(f"Error al obtener perfil: {str(e)}")
         return jsonify({"success": False, "message": f"Error al obtener perfil: {str(e)}"}), 500
+
+@api_bp.route('/perfil', methods=['PUT'])
+@login_required
+def update_perfil():
+    """
+    Actualiza el perfil del usuario actual.
+    """
+    try:
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form.to_dict()
+        
+        # Validar campos básicos
+        usuario = current_user
+        
+        # Actualizar campos
+        if 'nombre' in data:
+            usuario.nombre = data['nombre']
+        
+        if 'telefono' in data:
+            usuario.telefono = data['telefono']
+        
+        # Procesar foto si existe
+        if 'foto' in request.files:
+            archivo = request.files['foto']
+            if archivo and archivo.filename:
+                # Eliminar foto anterior si existe
+                if usuario.foto_url:
+                    eliminar_archivo(usuario.foto_url)
+                    
+                ruta_relativa = guardar_archivo(archivo, 'usuario')
+                if ruta_relativa:
+                    usuario.foto_url = ruta_relativa
+        
+        # Guardar cambios
+        try:
+            usuario.save()
+            current_app.logger.info(f"Perfil actualizado: {usuario.id} - {usuario.email}")
+            return jsonify({
+                "success": True,
+                "usuario": usuario.serialize()
+            })
+        except DatabaseError as e:
+            return jsonify({"success": False, "message": str(e)}), 500
+            
+    except Exception as e:
+        current_app.logger.error(f"Error al actualizar perfil: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al actualizar perfil: {str(e)}"}), 500
+
+@api_bp.route('/usuario', methods=['GET'])
+@login_required
+def get_usuario_actual():
+    """
+    Obtiene información del usuario autenticado actualmente.
+    """
+    try:
+        return jsonify(current_user.serialize())
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener usuario actual: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
+@api_bp.route('/check-auth', methods=['GET'])
+def check_auth():
+    """
+    Verifica si hay un usuario autenticado actualmente.
+    """
+    try:
+        if current_user.is_authenticated:
+            return jsonify({
+                "authenticated": True,
+                "usuario": current_user.serialize()
+            })
+        else:
+            return jsonify({
+                "authenticated": False
+            })
+    except Exception as e:
+        current_app.logger.error(f"Error al verificar autenticación: {str(e)}")
+        return jsonify({"authenticated": False, "error": str(e)}), 500

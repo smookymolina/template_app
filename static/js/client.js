@@ -91,6 +91,7 @@ const Client = {
         }
         
         try {
+            // Usar la ruta correcta del backend
             const response = await fetch(`/api/tracking/${folio}`);
             
             if (!response.ok) {
@@ -114,6 +115,55 @@ const Client = {
                 consultarBtn.innerHTML = '<i class="fas fa-search"></i> Consultar';
                 consultarBtn.disabled = false;
             }
+        }
+    },
+    
+    /**
+     * Obtiene la información detallada de la timeline para un folio
+     * @param {string} folio - Folio a consultar
+     * @returns {Promise<Object>} - Información de timeline
+     */
+    getTimelineInfo: async function(folio) {
+        try {
+            // Usar la ruta correcta para la timeline
+            const response = await fetch(`/api/tracking/${folio}/timeline`);
+            
+            if (!response.ok) {
+                throw new Error(response.status === 404 ? 'Folio no encontrado' : 'Error en la consulta');
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                return data;
+            } else {
+                throw new Error(data.message || 'No se encontró información para este folio');
+            }
+        } catch (error) {
+            console.error('Error al obtener timeline:', error);
+            throw error;
+        }
+    },
+    
+    /**
+     * Verifica si un folio existe en el sistema sin obtener todos sus datos
+     * @param {string} folio - Folio a verificar
+     * @returns {Promise<boolean>} - True si el folio existe
+     */
+    verificarFolio: async function(folio) {
+        try {
+            // Usar la ruta correcta para verificación
+            const response = await fetch(`/api/verificar-folio/${folio}`);
+            
+            if (!response.ok) {
+                return false;
+            }
+            
+            const data = await response.json();
+            return data.success && data.exists;
+        } catch (error) {
+            console.error('Error al verificar folio:', error);
+            return false;
         }
     },
     
@@ -321,4 +371,4 @@ const Client = {
     }
 };
 
-export default Client;  
+export default Client;
