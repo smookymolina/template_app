@@ -305,82 +305,117 @@ showLoadingResults: function() {
         }
     },
     
-    /**
-     * Muestra los resultados del seguimiento
-     * @param {Object} info - Información del seguimiento
-     */
-    displayTrackingResults: function(info) {
-        if (!info) return;
+
+/**
+ * Muestra los resultados del seguimiento
+ * @param {Object} info - Información del seguimiento
+ */
+displayTrackingResults: function(info) {
+    // Verificar que la información existe y es válida
+    if (!info) {
+        this.setFormState('error', 'No se encontró información para este folio');
         
-        // Obtener los contenedores
-        const trackingForm = document.getElementById('tracking-form');
+        // Ocultar resultados si se están mostrando
         const resultsContainer = document.getElementById('tracking-results');
-        
-        if (!resultsContainer) return;
-        
-        // Ocultar formulario
-        if (trackingForm) {
-            trackingForm.style.display = 'none';
+        if (resultsContainer) {
+            resultsContainer.style.display = 'none';
         }
-        
-        // Crear contenido de resultados
-        resultsContainer.innerHTML = `
-            <div class="tracking-result-card">
-                <h3>Información de Proceso</h3>
-                <div class="tracking-info">
-                    <div class="tracking-row">
-                        <div class="tracking-label">Candidato:</div>
-                        <div class="tracking-value">${info.nombre}</div>
-                    </div>
-                    <div class="tracking-row">
-                        <div class="tracking-label">Estado:</div>
-                        <div class="tracking-value">
-                            <span class="badge ${Client.getBadgeClass(info.estado)}">${info.estado}</span>
-                        </div>
-                    </div>
-                    <div class="tracking-row">
-                        <div class="tracking-label">Fecha de registro:</div>
-                        <div class="tracking-value">${info.fecha_registro || 'No disponible'}</div>
-                    </div>
-                    <div class="tracking-row">
-                        <div class="tracking-label">Última actualización:</div>
-                        <div class="tracking-value">${info.ultima_actualizacion || 'No disponible'}</div>
-                    </div>
-                    ${info.proxima_entrevista ? `
-                    <div class="tracking-section">
-                        <h4>Próxima Entrevista</h4>
-                        <div class="tracking-row">
-                            <div class="tracking-label">Fecha:</div>
-                            <div class="tracking-value">${info.proxima_entrevista.fecha}</div>
-                        </div>
-                        <div class="tracking-row">
-                            <div class="tracking-label">Hora:</div>
-                            <div class="tracking-value">${info.proxima_entrevista.hora}</div>
-                        </div>
-                        <div class="tracking-row">
-                            <div class="tracking-label">Tipo:</div>
-                            <div class="tracking-value">${Client.getEntrevistaType(info.proxima_entrevista.tipo)}</div>
-                        </div>
-                    </div>
-                    ` : ''}
-                </div>
-            </div>
-            
-            <div class="timeline-container">
-                <div class="timeline">
-                    ${Client.renderTimelineItems(info.estado)}
-                </div>
-            </div>
-            
-            <button class="btn-secondary new-query-btn">
-                <i class="fas fa-arrow-left"></i> Realizar otra consulta
-            </button>
-        `;
-        
-        // Mostrar el contenedor de resultados
-        resultsContainer.style.display = 'block';
-    },
+        return;
+    }
     
+    // Obtener los contenedores
+    const trackingForm = document.getElementById('tracking-form');
+    const resultsContainer = document.getElementById('tracking-results');
+    
+    if (!resultsContainer) {
+        console.error('Error: No se encontró el contenedor de resultados');
+        this.setFormState('error', 'Error interno al mostrar resultados');
+        return;
+    }
+    
+    // Ocultar formulario
+    if (trackingForm) {
+        trackingForm.style.display = 'none';
+    }
+    
+    // Determinar estado para badge
+    const estadoBadge = info.estado ? this.getBadgeClass(info.estado) : 'badge-secondary';
+    
+    // Crear contenido de resultados con validación de datos
+    resultsContainer.innerHTML = `
+        <div class="tracking-result-card">
+            <h3>Información de Proceso</h3>
+            <div class="tracking-info">
+                <div class="tracking-row">
+                    <div class="tracking-label">Candidato:</div>
+                    <div class="tracking-value">${info.nombre || 'No disponible'}</div>
+                </div>
+                <div class="tracking-row">
+                    <div class="tracking-label">Estado:</div>
+                    <div class="tracking-value">
+                        <span class="badge ${estadoBadge}">${info.estado || 'Desconocido'}</span>
+                    </div>
+                </div>
+                <div class="tracking-row">
+                    <div class="tracking-label">Fecha de registro:</div>
+                    <div class="tracking-value">${info.fecha_registro || 'No disponible'}</div>
+                </div>
+                <div class="tracking-row">
+                    <div class="tracking-label">Última actualización:</div>
+                    <div class="tracking-value">${info.ultima_actualizacion || 'No disponible'}</div>
+                </div>
+                ${this.renderEntrevistaSection(info.proxima_entrevista)}
+            </div>
+        </div>
+        
+        <div class="timeline-container">
+            <div class="timeline">
+                ${this.renderTimelineItems(info.estado || 'Desconocido')}
+            </div>
+        </div>
+        
+        <button class="btn-secondary new-query-btn">
+            <i class="fas fa-arrow-left"></i> Realizar otra consulta
+        </button>
+    `;
+    
+    // Mostrar el contenedor de resultados
+    resultsContainer.style.display = 'block';
+}, // Aquí estaba faltando la coma para separar los métodos del objeto
+
+/**
+ * Renderiza la sección de entrevista próxima si existe
+ * @param {Object} entrevista - Datos de la entrevista
+ * @returns {string} - HTML de la sección de entrevista
+ */
+renderEntrevistaSection: function(entrevista) {
+    if (!entrevista) return '';
+    
+    return `
+    <div class="tracking-section">
+        <h4>Próxima Entrevista</h4>
+        <div class="tracking-row">
+            <div class="tracking-label">Fecha:</div>
+            <div class="tracking-value">${entrevista.fecha || 'No especificada'}</div>
+        </div>
+        <div class="tracking-row">
+            <div class="tracking-label">Hora:</div>
+            <div class="tracking-value">${entrevista.hora || 'No especificada'}</div>
+        </div>
+        <div class="tracking-row">
+            <div class="tracking-label">Tipo:</div>
+            <div class="tracking-value">${entrevista.tipo ? this.getEntrevistaType(entrevista.tipo) : 'No especificado'}</div>
+        </div>
+        ${entrevista.ubicacion ? `
+        <div class="tracking-row">
+            <div class="tracking-label">Ubicación:</div>
+            <div class="tracking-value">${entrevista.ubicacion}</div>
+        </div>
+        ` : ''}
+    </div>
+    `;
+},
+
     /**
      * Reinicia el formulario de consulta
      */
