@@ -46,6 +46,17 @@ def perfil():
     """
     return render_template('perfil.html')
 
+@main_bp.route('/seguimiento')
+def seguimiento():
+    """
+    Página pública para que los clientes consulten su estado.
+    No requiere autenticación.
+    
+    Returns:
+        Template HTML renderizado
+    """
+    return render_template('seguimiento.html')
+
 @main_bp.errorhandler(404)
 def page_not_found(e):
     """

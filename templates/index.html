@@ -1,119 +1,3 @@
-{% extends "base.html" %}
-
-{% block content %}
-<!-- Sección de inicio de sesión -->
-<div id="login-section">
-    <div class="login-card">
-        <div class="card-header">
-            <i class="fas fa-user-lock"></i>
-            <h2>Acceso Reclutadores</h2>
-        </div>
-        
-        <form id="login-form">
-            <div class="form-group">
-                <label for="email">Correo electrónico</label>
-                <div class="input-icon-wrapper">
-                    <i class="fas fa-envelope"></i>
-                    <input type="email" id="email" placeholder="Ingresa tu correo electrónico" required>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Contraseña</label>
-                <div class="input-icon-wrapper">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="password" placeholder="Ingresa tu contraseña" required>
-                    <button type="button" id="toggle-password" class="toggle-password">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="remember-forgot">
-                <div class="checkbox-container">
-                    <input type="checkbox" id="remember-me">
-                    <label for="remember-me">Recordarme</label>
-                </div>
-                <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
-            </div>
-            
-            <button type="submit" id="login-button" class="btn-primary">
-                <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-            </button>
-        </form>
-        
-        <!-- Botón para acceso de clientes -->
-        <div class="login-divider">
-            <span>o</span>
-        </div>
-        
-        <button id="cliente-button" class="btn-secondary">
-            <i class="fas fa-user"></i> Acceso para Clientes
-        </button>
-    </div>
-</div>
-
-<!-- Sección del dashboard (visible después del inicio de sesión) -->
-<div id="dashboard-section" style="display:none;">
-    <div class="dashboard-header">
-        <div class="profile-section">
-            <div class="profile-pic-container">
-                <img id="dashboard-profile-pic" class="profile-pic" src="/api/placeholder/100/100" alt="Foto de perfil">
-                <div class="profile-pic-overlay">
-                    <label for="profile-upload" class="profile-pic-edit">
-                        <i class="fas fa-camera"></i>
-                    </label>
-                    <input type="file" id="profile-upload" accept="image/*" style="display: none;">
-                </div>
-            </div>
-            <div class="profile-info">
-                <h2>Bienvenido, <span id="gerente-name"></span></h2>
-                <p class="profile-role">Gerente de Reclutamiento</p>
-            </div>
-        </div>
-        
-        <!-- Menú de navegación del dashboard -->
-        <nav class="dashboard-nav">
-    <ul>
-        <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Reclutas</a></li>
-        <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Estadísticas</a></li>
-        <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
-        <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Configuración</a></li>
-        <li><a href="#" data-section="timeline-section"><i class="fas fa-stream"></i> Estado</a></li>
-    </ul>
-</nav>
-        
-        <!-- Dropdown de perfil -->
-        <div class="profile-dropdown">
-            <button class="profile-dropdown-button" id="profile-dropdown-button">
-                <i class="fas fa-user-circle"></i>
-                <span id="dropdown-user-name">Usuario</span>
-                <i class="fas fa-chevron-down"></i>
-            </button>
-            <div class="dropdown-content" id="profile-dropdown-content">
-                <a href="#" data-section="configuracion-section"><i class="fas fa-user-cog"></i> Mi perfil</a>
-                <a href="#" data-section="configuracion-section"><i class="fas fa-sliders-h"></i> Preferencias</a>
-                <a href="#" id="help-link"><i class="fas fa-question-circle"></i> Ayuda</a>
-                <div class="dropdown-divider"></div>
-                <a href="#" id="logout-button"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Contenedor principal de las secciones del dashboard -->
-    <div class="dashboard-content">
-        {% include "components/seccion_reclutas.html" %}
-        {% include "components/seccion_estadisticas.html" %}
-        {% include "components/seccion_calendario.html" %}
-        {% include "components/seccion_configuracion.html" %}
-        {% include "components/seccion_timeline.html" %}
-    </div>
-</div>
-{% endblock %}
-
-{% block modals %}
-{% include "components/modals.html" %}
-
 <!-- Modal para acceso de clientes -->
 <div id="cliente-modal" class="modal">
     <div class="modal-content">
@@ -153,53 +37,208 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_scripts %}
-<script>
-    // Script para el modal de clientes
-    document.addEventListener('DOMContentLoaded', function() {
-        const clienteButton = document.getElementById('cliente-button');
-        const clienteModal = document.getElementById('cliente-modal');
-        const closeModalBtns = clienteModal.querySelectorAll('.close-modal, .close-modal-btn');
-        
-        // Abrir modal de cliente
-        clienteButton.addEventListener('click', function() {
-            clienteModal.style.display = 'block';
-        });
-        
-        // Cerrar modal
-        closeModalBtns.forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                clienteModal.style.display = 'none';
-            });
-        });
-        
-        // Cerrar al hacer clic fuera del contenido
-        window.addEventListener('click', function(event) {
-            if (event.target === clienteModal) {
-                clienteModal.style.display = 'none';
-            }
-        });
-        
-        // Consultar folio
-        const consultarFolioBtn = document.getElementById('consultar-folio-btn');
-        consultarFolioBtn.addEventListener('click', function() {
-            const folio = document.getElementById('folio').value;
-            if (!folio) {
-                showNotification('Por favor, ingresa un folio', 'warning');
-                return;
-            }
-            
-            // Aquí iría la lógica para consultar el folio
-            showNotification('Consultando folio...', 'info');
-            
-            // Simulación de consulta (esto sería reemplazado por la llamada a la API)
-            setTimeout(function() {
-                showNotification('Folio consultado correctamente', 'success');
-                clienteModal.style.display = 'none';
-            }, 1500);
-        });
-    });
-</script>
-{% endblock %}
+<!-- Estilos adicionales para resultados y timeline -->
+<style>
+/* Estilos para el resultado del tracking */
+.tracking-result-card {
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: var(--transition);
+}
+
+.dark-mode .tracking-result-card {
+    background-color: var(--light-color);
+}
+
+.tracking-result-card h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+    font-weight: 600;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tracking-info {
+    margin-bottom: 20px;
+}
+
+.tracking-row {
+    display: flex;
+    margin-bottom: 12px;
+}
+
+.tracking-label {
+    width: 140px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.tracking-value {
+    flex: 1;
+}
+
+.tracking-section {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+.tracking-section h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+/* Estilos para timeline */
+.timeline-container {
+    padding: 20px 0;
+    margin-bottom: 30px;
+}
+
+.timeline {
+    position: relative;
+    padding: 20px 0;
+    margin-bottom: 30px;
+}
+
+/* Línea central */
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50px;
+    height: 100%;
+    width: 4px;
+    background: var(--border-color);
+    z-index: 1;
+}
+
+.dark-mode .timeline::before {
+    background: #3f3f3f;
+}
+
+/* Elementos de la timeline */
+.timeline-item {
+    position: relative;
+    margin-bottom: 30px;
+    padding-left: 100px;
+}
+
+.timeline-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Marcador circular */
+.timeline-marker {
+    position: absolute;
+    left: 42px;
+    top: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--light-color);
+    border: 4px solid var(--border-color);
+    z-index: 2;
+    transform: translateX(-50%);
+    transition: var(--transition);
+}
+
+.dark-mode .timeline-marker {
+    background: var(--primary-light);
+    border-color: #3f3f3f;
+}
+
+/* Estado completado */
+.timeline-item.completed .timeline-marker {
+    background: var(--success-color);
+    border-color: var(--success-color);
+}
+
+/* Estado activo (en progreso) */
+.timeline-item.active .timeline-marker {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.2);
+}
+
+/* Contenido de cada elemento */
+.timeline-content {
+    padding: 15px;
+    border-radius: var(--border-radius);
+    background: white;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.dark-mode .timeline-content {
+    background: var(--light-color);
+}
+
+.timeline-item.completed .timeline-content {
+    border-left: 4px solid var(--success-color);
+}
+
+.timeline-item.active .timeline-content {
+    border-left: 4px solid var(--primary-color);
+    box-shadow: var(--shadow-md);
+}
+
+.timeline-content h4 {
+    margin: 0 0 8px;
+    color: var(--text-color);
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.timeline-content p {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.timeline-item.active .timeline-content h4 {
+    color: var(--primary-color);
+}
+
+.timeline-item.completed .timeline-content h4 {
+    color: var(--success-color);
+}
+
+/* Botones */
+.new-query-btn {
+    display: inline-block;
+    margin-top: 15px;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .tracking-row {
+        flex-direction: column;
+    }
+    
+    .tracking-label {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    
+    .timeline::before {
+        left: 30px;
+    }
+    
+    .timeline-item {
+        padding-left: 70px;
+    }
+    
+    .timeline-marker {
+        left: 22px;
+        width: 16px;
+        height: 16px;
+    }
+}
+</style>

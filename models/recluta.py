@@ -39,18 +39,24 @@ class Recluta(db.Model):
             'asesor_nombre': self.asesor.nombre if self.asesor else (self.asesor.email if self.asesor else None)
         }
     
-    def save(self):
-        """Guarda el recluta en la base de datos de forma segura"""
-        try:
-            if not self.folio:
-                self.folio = f"REC-{uuid.uuid4().hex[:8].upper()}"
-            if not self.id:  # Si es un nuevo recluta
-                db.session.add(self)
-            db.session.commit()
-            return True
-        except Exception as e:
-            db.session.rollback()
-            raise DatabaseError(f"Error al guardar recluta: {str(e)}")
+def save(self):
+    """Guarda el recluta en la base de datos de forma segura"""
+    try:
+        if not self.folio:
+            # Asegurar que el folio sea único
+            while True:
+                temp_folio = f"REC-{uuid.uuid4().hex[:8].upper()}"
+                if Recluta.query.filter_by(folio=temp_folio).first() is None:
+                    self.folio = temp_folio
+                    break
+                
+        if not self.id:  # Si es un nuevo recluta
+            db.session.add(self)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        raise DatabaseError(f"Error al guardar recluta: {str(e)}")
     
     def delete(self):
         """Elimina el recluta de la base de datos de forma segura"""

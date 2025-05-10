@@ -1,0 +1,473 @@
+{% extends "base.html" %}
+
+{% block title %}Seguimiento de Proceso | Sistema de Gestión de Reclutas{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+        color: white;
+        padding: 60px 0;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .hero-section h1 {
+        font-size: 2.5rem;
+        margin-bottom: 15px;
+    }
+    
+    .hero-section p {
+        font-size: 1.2rem;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .tracking-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .dark-mode .tracking-container {
+        background-color: var(--light-color);
+    }
+    
+    .tracking-form {
+        margin-bottom: 30px;
+    }
+    
+    .tracking-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .tracking-header h2 {
+        color: var(--primary-color);
+        margin-bottom: 10px;
+    }
+    
+    .tracking-header p {
+        color: var(--text-light);
+    }
+    
+    .help-text {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: rgba(0, 123, 255, 0.1);
+        border-left: 4px solid var(--primary-color);
+        border-radius: 4px;
+    }
+    
+    .tracking-contact {
+        margin-top: 40px;
+        text-align: center;
+    }
+    
+    .dark-mode .help-text {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+    
+    /* Botón del formulario centrado */
+    .form-button {
+        text-align: center;
+        margin-top: 20px;
+    }
+    
+    .form-button .btn-primary {
+        min-width: 180px;
+    }
+    
+    /* Estilos para la mini FAQ */
+    .faq-section {
+        margin-top: 40px;
+    }
+    
+    .faq-item {
+        margin-bottom: 20px;
+    }
+    
+    .faq-question {
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 8px;
+    }
+    
+    .faq-answer {
+        color: var(--text-color);
+    }
+    
+    /* Estado inactivo de la navegación */
+    .header-nav {
+        display: flex;
+        gap: 20px;
+    }
+    
+    .header-nav a {
+        color: white;
+        opacity: 0.8;
+        text-decoration: none;
+        font-weight: 500;
+        transition: var(--transition);
+    }
+    
+    .header-nav a:hover, .header-nav a.active {
+        opacity: 1;
+    }
+    
+    /* Footer simple */
+    .simple-footer {
+        margin-top: 60px;
+        text-align: center;
+        padding: 20px;
+        color: var(--text-light);
+        border-top: 1px solid var(--border-color);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container">
+        <h1>Seguimiento de Proceso</h1>
+        <p>Consulta el estado de tu proceso de reclutamiento de manera fácil y rápida</p>
+        
+        <div class="header-nav">
+            <a href="{{ url_for('main.index') }}">Inicio</a>
+            <a href="{{ url_for('main.seguimiento') }}" class="active">Seguimiento</a>
+            <a href="#contacto">Contacto</a>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="tracking-container">
+        <div class="tracking-header">
+            <h2>Consulta tu Estado</h2>
+            <p>Ingresa tu número de folio para conocer el estado actual de tu proceso</p>
+        </div>
+        
+        <div id="tracking-form" class="tracking-form">
+            <div class="form-group">
+                <label for="folio">Folio de Seguimiento</label>
+                <div class="input-icon-wrapper">
+                    <i class="fas fa-file-alt"></i>
+                    <input type="text" id="folio" placeholder="Ingresa tu folio de seguimiento" required>
+                </div>
+            </div>
+            
+            <div class="form-button">
+                <button id="consultar-btn" class="btn-primary">
+                    <i class="fas fa-search"></i> Consultar Estado
+                </button>
+            </div>
+            
+            <div class="help-text">
+                <i class="fas fa-info-circle"></i> 
+                El número de folio se te proporcionó al iniciar tu proceso. Si no cuentas con él, 
+                comunícate con tu asesor o al correo <a href="mailto:contacto@empresa.com">contacto@empresa.com</a>.
+            </div>
+        </div>
+        
+        <!-- Contenedor para mostrar los resultados (inicialmente oculto) -->
+        <div id="tracking-results" style="display: none;">
+            <!-- Los resultados se cargarán dinámicamente aquí -->
+        </div>
+        
+        <div class="faq-section">
+            <h3>Preguntas Frecuentes</h3>
+            
+            <div class="faq-item">
+                <div class="faq-question">¿Cómo obtengo mi número de folio?</div>
+                <div class="faq-answer">
+                    El número de folio se proporciona al iniciar tu proceso de reclutamiento. 
+                    Puedes encontrarlo en el correo de confirmación que recibiste al postularte.
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">¿Con qué frecuencia se actualiza la información?</div>
+                <div class="faq-answer">
+                    La información se actualiza en tiempo real. Cada vez que hay un avance en tu proceso, 
+                    podrás consultarlo inmediatamente en esta plataforma.
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">¿Qué hago si olvidé mi número de folio?</div>
+                <div class="faq-answer">
+                    Si olvidaste tu número de folio, comunícate con tu asesor asignado o escribe a 
+                    <a href="mailto:contacto@empresa.com">contacto@empresa.com</a> proporcionando 
+                    tu nombre completo y correo electrónico con el que te registraste.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="contacto" class="tracking-contact">
+        <h3>¿Necesitas ayuda?</h3>
+        <p>Estamos para apoyarte en tu proceso de reclutamiento.</p>
+        <p>Correo: <a href="mailto:contacto@empresa.com">contacto@empresa.com</a> | Teléfono: (55) 1234-5678</p>
+    </div>
+    
+    <div class="simple-footer">
+        <p>&copy; 2025 Sistema de Gestión de Reclutas. Todos los derechos reservados.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Obtener elementos del DOM
+        const folioInput = document.getElementById('folio');
+        const consultarBtn = document.getElementById('consultar-btn');
+        const trackingForm = document.getElementById('tracking-form');
+        const trackingResults = document.getElementById('tracking-results');
+        
+        // Función para mostrar notificaciones
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const notificationMessage = document.getElementById('notification-message');
+            
+            if (!notification || !notificationMessage) return;
+            
+            notificationMessage.textContent = message;
+            
+            // Configurar tipo de notificación
+            notification.className = 'notification';
+            notification.classList.add(type);
+            notification.classList.add('show');
+            
+            // Auto-ocultar después de 5 segundos
+            setTimeout(function() {
+                notification.classList.remove('show');
+            }, 5000);
+        }
+        
+        // Función para obtener la clase del badge según el estado
+        function getBadgeClass(estado) {
+            switch(estado) {
+                case 'Activo': return 'badge-success';
+                case 'En proceso': return 'badge-warning';
+                case 'Rechazado': return 'badge-danger';
+                default: return 'badge-secondary';
+            }
+        }
+        
+        // Función para obtener el texto del tipo de entrevista
+        function getEntrevistaType(tipo) {
+            switch(tipo) {
+                case 'presencial': return 'Presencial';
+                case 'virtual': return 'Virtual (Videollamada)';
+                case 'telefonica': return 'Telefónica';
+                default: return tipo;
+            }
+        }
+        
+        // Función para renderizar los items de la timeline según el estado
+        function renderTimelineItems(currentStatus) {
+            // Mapear estados del sistema a estados de la timeline
+            const statusMap = {
+                'En proceso': 'revision',
+                'Activo': 'finalizada',
+                'Rechazado': 'finalizada'
+            };
+            
+            // Estado mapeado o por defecto
+            const timelineStatus = statusMap[currentStatus] || 'recibida';
+            
+            // Orden de los estados
+            const statusOrder = ['recibida', 'revision', 'entrevista', 'evaluacion', 'finalizada'];
+            const currentIndex = statusOrder.indexOf(timelineStatus);
+            
+            // Generar los items
+            let timelineHTML = '';
+            
+            statusOrder.forEach((status, index) => {
+                // Determinar clase según el estado actual
+                let itemClass = 'timeline-item';
+                if (index < currentIndex) {
+                    itemClass += ' completed';
+                } else if (index === currentIndex) {
+                    itemClass += ' active';
+                }
+                
+                // Contenido según el estado
+                let content = '';
+                switch(status) {
+                    case 'recibida':
+                        content = `
+                            <h4>Recibida</h4>
+                            <p>Documentación recibida y registrada en el sistema.</p>
+                        `;
+                        break;
+                    case 'revision':
+                        content = `
+                            <h4>En revisión</h4>
+                            <p>Evaluación inicial de requisitos y perfil.</p>
+                        `;
+                        break;
+                    case 'entrevista':
+                        content = `
+                            <h4>Entrevista</h4>
+                            <p>Programación y realización de entrevistas.</p>
+                        `;
+                        break;
+                    case 'evaluacion':
+                        content = `
+                            <h4>Evaluación</h4>
+                            <p>Análisis de resultados y toma de decisiones.</p>
+                        `;
+                        break;
+                    case 'finalizada':
+                        content = `
+                            <h4>Finalizada</h4>
+                            <p>Proceso completado con decisión final.</p>
+                        `;
+                        break;
+                }
+                
+                // Generar HTML del item
+                timelineHTML += `
+                    <div class="${itemClass}" data-status="${status}">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-content">
+                            ${content}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            return timelineHTML;
+        }
+        
+        // Función para mostrar los resultados del seguimiento
+        function displayTrackingResults(info) {
+            if (!info) return;
+            
+            // Ocultar formulario
+            trackingForm.style.display = 'none';
+            
+            // Crear contenido de resultados
+            trackingResults.innerHTML = `
+                <div class="tracking-result-card">
+                    <h3>Información de Proceso</h3>
+                    <div class="tracking-info">
+                        <div class="tracking-row">
+                            <div class="tracking-label">Candidato:</div>
+                            <div class="tracking-value">${info.nombre}</div>
+                        </div>
+                        <div class="tracking-row">
+                            <div class="tracking-label">Estado:</div>
+                            <div class="tracking-value">
+                                <span class="badge ${getBadgeClass(info.estado)}">${info.estado}</span>
+                            </div>
+                        </div>
+                        <div class="tracking-row">
+                            <div class="tracking-label">Fecha de registro:</div>
+                            <div class="tracking-value">${info.fecha_registro || 'No disponible'}</div>
+                        </div>
+                        <div class="tracking-row">
+                            <div class="tracking-label">Última actualización:</div>
+                            <div class="tracking-value">${info.ultima_actualizacion || 'No disponible'}</div>
+                        </div>
+                        ${info.proxima_entrevista ? `
+                        <div class="tracking-section">
+                            <h4>Próxima Entrevista</h4>
+                            <div class="tracking-row">
+                                <div class="tracking-label">Fecha:</div>
+                                <div class="tracking-value">${info.proxima_entrevista.fecha}</div>
+                            </div>
+                            <div class="tracking-row">
+                                <div class="tracking-label">Hora:</div>
+                                <div class="tracking-value">${info.proxima_entrevista.hora}</div>
+                            </div>
+                            <div class="tracking-row">
+                                <div class="tracking-label">Tipo:</div>
+                                <div class="tracking-value">${getEntrevistaType(info.proxima_entrevista.tipo)}</div>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <div class="timeline-container">
+                    <div class="timeline">
+                        ${renderTimelineItems(info.estado)}
+                    </div>
+                </div>
+                
+                <button class="btn-secondary" id="new-query-btn">
+                    <i class="fas fa-arrow-left"></i> Realizar otra consulta
+                </button>
+            `;
+            
+            // Mostrar el contenedor de resultados
+            trackingResults.style.display = 'block';
+            
+            // Evento para el botón de nueva consulta
+            document.getElementById('new-query-btn').addEventListener('click', function() {
+                trackingResults.style.display = 'none';
+                trackingForm.style.display = 'block';
+                folioInput.value = '';
+                folioInput.focus();
+            });
+        }
+        
+        // Función para consultar el folio
+        function consultarFolio() {
+            const folio = folioInput.value.trim();
+            
+            if (!folio) {
+                showNotification('Por favor, ingresa un número de folio', 'warning');
+                return;
+            }
+            
+            // Mostrar estado de carga
+            consultarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
+            consultarBtn.disabled = true;
+            
+            // Realizar petición al servidor
+            fetch(`/api/tracking/${folio}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(response.status === 404 ? 'Folio no encontrado' : 'Error en la consulta');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        displayTrackingResults(data.tracking_info);
+                        showNotification('Información obtenida correctamente', 'success');
+                    } else {
+                        showNotification(data.message || 'No se encontró información para este folio', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification(error.message || 'Error al consultar el folio. Intenta más tarde.', 'error');
+                })
+                .finally(() => {
+                    // Restaurar botón
+                    consultarBtn.innerHTML = '<i class="fas fa-search"></i> Consultar Estado';
+                    consultarBtn.disabled = false;
+                });
+        }
+        
+        // Evento para el botón de consulta
+        consultarBtn.addEventListener('click', consultarFolio);
+        
+        // Evento para la tecla Enter en el input
+        folioInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                consultarFolio();
+            }
+        });
+    });
+</script>
+{% endblock %}

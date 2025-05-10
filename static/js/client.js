@@ -92,9 +92,14 @@ const Client = {
         
         try {
             const response = await fetch(`/api/tracking/${folio}`);
+            
+            if (!response.ok) {
+                throw new Error(response.status === 404 ? 'Folio no encontrado' : 'Error en la consulta');
+            }
+            
             const data = await response.json();
             
-            if (response.ok && data.success) {
+            if (data.success) {
                 Client.displayTrackingResults(data.tracking_info);
                 showSuccess('Información obtenida correctamente');
             } else {
@@ -102,7 +107,7 @@ const Client = {
             }
         } catch (error) {
             console.error('Error de seguimiento:', error);
-            showError('Error al consultar el folio. Intenta más tarde.');
+            showError(error.message || 'Error al consultar el folio. Intenta más tarde.');
         } finally {
             // Restaurar botón
             if (consultarBtn) {
@@ -316,4 +321,4 @@ const Client = {
     }
 };
 
-export default Client;
+export default Client;  
