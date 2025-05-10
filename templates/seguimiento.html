@@ -54,6 +54,73 @@
         color: var(--text-light);
     }
     
+    /* Estilos para las instrucciones del folio */
+    .folio-guide {
+        background-color: rgba(0, 123, 255, 0.05);
+        border-radius: var(--border-radius);
+        padding: 20px;
+        margin-bottom: 30px;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .dark-mode .folio-guide {
+        background-color: rgba(0, 123, 255, 0.03);
+    }
+    
+    .folio-guide h3 {
+        font-size: 18px;
+        color: var(--primary-color);
+        margin-top: 0;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .folio-guide h3 i {
+        margin-right: 10px;
+    }
+    
+    .folio-guide h4 {
+        font-size: 16px;
+        margin: 20px 0 10px;
+        color: var(--text-color);
+        display: flex;
+        align-items: center;
+    }
+    
+    .folio-guide h4 i {
+        margin-right: 8px;
+        color: var(--primary-color);
+    }
+    
+    .folio-guide p {
+        margin-bottom: 10px;
+    }
+    
+    .folio-guide ul {
+        padding-left: 20px;
+        margin-bottom: 15px;
+    }
+    
+    .folio-guide li {
+        margin-bottom: 8px;
+        position: relative;
+        padding-left: 5px;
+    }
+    
+    .folio-guide .folio-example {
+        font-family: monospace;
+        background-color: rgba(0, 0, 0, 0.05);
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+    
+    .folio-guide .contact-info {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px dashed var(--border-color);
+    }
+    
     .help-text {
         margin-top: 20px;
         padding: 15px;
@@ -337,12 +404,45 @@
             <p>Ingresa tu número de folio para conocer el estado actual de tu proceso</p>
         </div>
         
+        <!-- Guía sobre el folio de seguimiento -->
+        <div class="folio-guide">
+            <h3><i class="fas fa-info-circle"></i> Guía del Folio de Seguimiento</h3>
+            
+            <p>El folio de seguimiento es un código único que te permite consultar el estado de tu postulación en nuestro sistema de reclutamiento. A continuación te explicamos cómo obtenerlo y utilizarlo:</p>
+            
+            <h4><i class="fas fa-id-card"></i> ¿Cómo obtener tu folio?</h4>
+            <ul>
+                <li>El folio se genera automáticamente cuando tu currículum es registrado en nuestro sistema.</li>
+                <li>Recibirás un correo electrónico de confirmación con el folio al iniciar tu proceso.</li>
+                <li>También puedes obtenerlo directamente de tu asesor de reclutamiento asignado.</li>
+                <li>Si completaste un formulario de solicitud de empleo en nuestro sitio web, el folio se muestra en la pantalla de confirmación y se envía a tu correo electrónico.</li>
+            </ul>
+            
+            <h4><i class="fas fa-keyboard"></i> Formato del folio</h4>
+            <p>El folio siempre tiene el siguiente formato: <span class="folio-example">REC-XXXXXXXX</span> donde las X son una combinación de letras (A-F) y números (0-9).</p>
+            <p>Ejemplos: <span class="folio-example">REC-1A2B3C4D</span>, <span class="folio-example">REC-5E6F7890</span></p>
+            
+            <h4><i class="fas fa-search"></i> ¿No encuentras tu folio?</h4>
+            <ul>
+                <li>Revisa la carpeta de spam o correo no deseado de tu email.</li>
+                <li>Si aplicaste recientemente, espera al menos 24 horas para recibir tu folio.</li>
+                <li>Contacta a tu asesor asignado o al departamento de recursos humanos.</li>
+            </ul>
+            
+            <div class="contact-info">
+                <p><strong>¿Necesitas ayuda?</strong> Comunícate con nosotros:</p>
+                <p>📧 Email: <a href="mailto:contacto@empresa.com">contacto@empresa.com</a><br>
+                📞 Teléfono: (55) 1234-5678<br>
+                ⏰ Horario de atención: Lunes a Viernes de 9:00 a 18:00</p>
+            </div>
+        </div>
+        
         <div id="tracking-form" class="tracking-form">
             <div class="form-group">
                 <label for="folio">Folio de Seguimiento</label>
                 <div class="input-icon-wrapper">
                     <i class="fas fa-file-alt"></i>
-                    <input type="text" id="folio" placeholder="Ingresa tu folio de seguimiento" required>
+                    <input type="text" id="folio" placeholder="Ingresa tu folio (Ejemplo: REC-1A2B3C4D)" required>
                 </div>
             </div>
             
@@ -368,10 +468,14 @@
             <h3>Preguntas Frecuentes</h3>
             
             <div class="faq-item">
-                <div class="faq-question">¿Cómo obtengo mi número de folio?</div>
+                <div class="faq-question">¿Qué información necesito para obtener mi folio?</div>
                 <div class="faq-answer">
-                    El número de folio se proporciona al iniciar tu proceso de reclutamiento. 
-                    Puedes encontrarlo en el correo de confirmación que recibiste al postularte.
+                    Tu folio se genera automáticamente cuando registramos tu aplicación. Para obtenerlo necesitarás:
+                    <ul>
+                        <li>Haber completado tu postulación o entregado tu currículum</li>
+                        <li>Proporcionar un correo electrónico válido donde recibirás el folio</li>
+                        <li>En algunos casos, completar un formulario inicial de solicitud</li>
+                    </ul>
                 </div>
             </div>
             
@@ -386,9 +490,20 @@
             <div class="faq-item">
                 <div class="faq-question">¿Qué hago si olvidé mi número de folio?</div>
                 <div class="faq-answer">
-                    Si olvidaste tu número de folio, comunícate con tu asesor asignado o escribe a 
-                    <a href="mailto:contacto@empresa.com">contacto@empresa.com</a> proporcionando 
-                    tu nombre completo y correo electrónico con el que te registraste.
+                    Si olvidaste tu número de folio, tienes varias opciones:
+                    <ul>
+                        <li>Revisa el correo que recibiste al iniciar tu proceso</li>
+                        <li>Comunícate con tu asesor asignado</li>
+                        <li>Envía un correo a <a href="mailto:contacto@empresa.com">contacto@empresa.com</a> proporcionando tu nombre completo y correo electrónico con el que te registraste</li>
+                        <li>Llama al (55) 1234-5678 en horario de oficina</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="faq-item">
+                <div class="faq-question">¿El folio tiene fecha de expiración?</div>
+                <div class="faq-answer">
+                    No, tu folio de seguimiento permanece activo durante todo el proceso de reclutamiento y hasta 6 meses después de finalizado, lo que te permite consultar tu estatus en cualquier momento durante este período.
                 </div>
             </div>
         </div>
@@ -414,6 +529,51 @@
         const consultarBtn = document.getElementById('consultar-btn');
         const trackingForm = document.getElementById('tracking-form');
         const trackingResults = document.getElementById('tracking-results');
+        
+        // Verificar si hay un folio en la URL (en caso de ser compartida)
+        const urlParams = new URLSearchParams(window.location.search);
+        const folioParam = urlParams.get('folio');
+        if (folioParam) {
+            folioInput.value = folioParam;
+            // Si también está presente el parámetro auto_consulta, realizar la consulta automáticamente
+            if (urlParams.get('auto_consulta') === 'true') {
+                setTimeout(() => consultarFolio(), 500); // Pequeño retraso para mejor UX
+            }
+        }
+        
+        // Función para compartir el resultado
+        function shareResultado(folio) {
+            // Crear URL con el folio y el parámetro de auto consulta
+            const shareUrl = `${window.location.origin}${window.location.pathname}?folio=${folio}&auto_consulta=true`;
+            
+            // Verificar si la API de compartir está disponible
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Seguimiento de proceso de reclutamiento',
+                    text: 'Consulta el estado de mi proceso de reclutamiento',
+                    url: shareUrl
+                })
+                .catch(error => {
+                    console.error('Error al compartir:', error);
+                    // Fallback: copiar al portapapeles
+                    copyToClipboard(shareUrl);
+                });
+            } else {
+                // Fallback: copiar al portapapeles
+                copyToClipboard(shareUrl);
+            }
+        }
+        
+        // Función auxiliar para copiar al portapapeles
+        function copyToClipboard(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showNotification('Enlace copiado al portapapeles. ¡Compártelo!', 'success');
+        }
         
         // Función para mostrar notificaciones
         function showNotification(message, type = 'info') {
@@ -453,6 +613,35 @@
                 case 'telefonica': return 'Telefónica';
                 default: return tipo;
             }
+        }
+        
+        // Función para validar el formato del folio
+        function validateFolio(folio) {
+            if (!folio) {
+                return {
+                    valid: false,
+                    message: "Por favor, ingresa un número de folio"
+                };
+            }
+            
+            // Eliminar espacios y convertir a mayúsculas
+            folio = folio.trim().toUpperCase();
+            
+            // Validar formato: REC-XXXXXXXX donde X son caracteres hexadecimales
+            const folioPattern = /^REC-[0-9A-F]{8}$/;
+            
+            if (!folioPattern.test(folio)) {
+                return {
+                    valid: false,
+                    message: "Formato de folio inválido. El formato correcto es REC-XXXXXXXX"
+                };
+            }
+            
+            return {
+                valid: true,
+                message: "",
+                folio: folio
+            };
         }
         
         // Función para renderizar los items de la timeline según el estado
@@ -532,6 +721,58 @@
             return timelineHTML;
         }
         
+        // Función para consultar el folio
+        function consultarFolio() {
+            const folioText = folioInput.value.trim();
+            
+            // Validar el folio
+            const validation = validateFolio(folioText);
+            if (!validation.valid) {
+                showNotification(validation.message, 'warning');
+                folioInput.classList.add('input-error');
+                setTimeout(() => folioInput.classList.remove('input-error'), 3000);
+                return;
+            }
+            
+            const folio = validation.folio;
+            
+            // Mostrar estado de carga
+            consultarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
+            consultarBtn.disabled = true;
+            folioInput.disabled = true;
+            
+            // Realizar petición al servidor
+            fetch(`/api/tracking/${folio}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(response.status === 404 ? 'Folio no encontrado' : 'Error en la consulta');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        displayTrackingResults(data.tracking_info);
+                        showNotification('Información obtenida correctamente', 'success');
+                    } else {
+                        showNotification(data.message || 'No se encontró información para este folio', 'error');
+                        folioInput.classList.add('input-error');
+                        setTimeout(() => folioInput.classList.remove('input-error'), 3000);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification(error.message || 'Error al consultar el folio. Intenta más tarde.', 'error');
+                    folioInput.classList.add('input-error');
+                    setTimeout(() => folioInput.classList.remove('input-error'), 3000);
+                })
+                .finally(() => {
+                    // Restaurar botón
+                    consultarBtn.innerHTML = '<i class="fas fa-search"></i> Consultar Estado';
+                    consultarBtn.disabled = false;
+                    folioInput.disabled = false;
+                });
+        }
+        
         // Función para mostrar los resultados del seguimiento
         function displayTrackingResults(info) {
             if (!info) return;
@@ -588,8 +829,13 @@
                     </div>
                 </div>
                 
-                <button class="btn-secondary" id="new-query-btn">
+                <button class="btn-secondary new-query-btn">
                     <i class="fas fa-arrow-left"></i> Realizar otra consulta
+                </button>
+                
+                <!-- Botón para compartir el resultado -->
+                <button class="btn-primary share-result-btn" style="margin-left: 10px;">
+                    <i class="fas fa-share-alt"></i> Compartir resultado
                 </button>
             `;
             

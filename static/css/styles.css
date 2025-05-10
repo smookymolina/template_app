@@ -1832,6 +1832,8 @@ input:checked + .slider:before {
     cursor: not-allowed;
 }
 
+
+
 /* Estilo para el modal de cliente en modo oscuro */
 .dark-mode .loading-spinner {
     border-color: rgba(0, 123, 255, 0.05);

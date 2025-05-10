@@ -7,17 +7,31 @@
         </div>
         
         <div class="modal-body">
+            <!-- Instrucciones sobre el folio de seguimiento -->
+            <div class="folio-instructions">
+                <h4><i class="fas fa-info-circle"></i> ¿Qué es el folio de seguimiento?</h4>
+                <p>El folio de seguimiento es un identificador único asignado al iniciar su proceso de reclutamiento. Con este código puede consultar el estado actual de su aplicación en cualquier momento.</p>
+                
+                <h5><i class="fas fa-question-circle"></i> ¿Cómo obtener mi folio?</h5>
+                <ul>
+                    <li>El folio se proporciona automáticamente por correo electrónico cuando su postulación es registrada en nuestro sistema.</li>
+                    <li>El formato del folio es <strong>REC-XXXXXXXX</strong> (por ejemplo: REC-1A2B3C4D).</li>
+                    <li>Si no ha recibido su folio, revise la carpeta de spam o comuníquese con su asesor asignado.</li>
+                </ul>
+            </div>
+
             <form id="tracking-form">
                 <div class="form-group">
                     <label for="folio">Folio de Seguimiento</label>
                     <div class="input-icon-wrapper">
                         <i class="fas fa-file-alt"></i>
-                        <input type="text" id="folio" placeholder="Ingresa tu folio de seguimiento" required>
+                        <input type="text" id="folio" placeholder="Ingrese su folio (formato: REC-XXXXXXXX)" required>
                     </div>
                 </div>
                 
                 <p class="modal-info">
-                    <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para dar seguimiento a tu proceso de contratación.
+                    <i class="fas fa-info-circle"></i> Ingrese el folio proporcionado para dar seguimiento a su proceso de contratación.
+                    Si no cuenta con un folio, comuníquese al correo <a href="mailto:contacto@empresa.com">contacto@empresa.com</a> o al teléfono (55) 1234-5678.
                 </p>
             </form>
             
@@ -37,6 +51,64 @@
         </div>
     </div>
 </div>
+
+<!-- Estilos adicionales para las instrucciones del folio -->
+<style>
+.folio-instructions {
+    background-color: rgba(0, 123, 255, 0.05);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.dark-mode .folio-instructions {
+    background-color: rgba(0, 123, 255, 0.03);
+}
+
+.folio-instructions h4 {
+    font-size: 16px;
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.folio-instructions h4 i {
+    margin-right: 8px;
+}
+
+.folio-instructions h5 {
+    font-size: 14px;
+    margin: 15px 0 8px;
+    display: flex;
+    align-items: center;
+}
+
+.folio-instructions h5 i {
+    margin-right: 8px;
+}
+
+.folio-instructions p {
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.folio-instructions ul {
+    padding-left: 25px;
+    margin-bottom: 10px;
+}
+
+.folio-instructions li {
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.folio-instructions strong {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+</style>
 
 <div class="modal-body">
     <form id="tracking-form">
