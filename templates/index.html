@@ -38,6 +38,28 @@
     </div>
 </div>
 
+<div class="modal-body">
+    <form id="tracking-form">
+        <div class="form-group">
+            <label for="folio">Folio de Seguimiento</label>
+            <div class="input-icon-wrapper">
+                <i class="fas fa-file-alt"></i>
+                <input type="text" id="folio" placeholder="Ingresa tu folio (formato: REC-XXXXXXXX)" required>
+            </div>
+        </div>
+        
+        <p class="modal-info">
+            <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para dar seguimiento a tu proceso de contratación.
+            El formato del folio es REC-XXXXXXXX (por ejemplo: REC-1A2B3C4D).
+        </p>
+    </form>
+    
+    <!-- Contenedor para mostrar los resultados (inicialmente oculto) -->
+    <div id="tracking-results" style="display: none;">
+        <!-- Los resultados se cargarán dinámicamente aquí -->
+    </div>
+</div>
+
 <!-- Estilos adicionales para resultados y timeline -->
 <style>
 /* Estilos para el resultado del tracking */

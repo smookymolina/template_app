@@ -1693,6 +1693,162 @@ input:checked + .slider:before {
     padding-right: 20px;
 }
 
+/* Estilos para estados de formulario de consulta */
+#tracking-form {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+#tracking-form.state-loading {
+    opacity: 0.7;
+}
+
+#tracking-form.state-error {
+    animation: pulse-error 1s ease;
+}
+
+#tracking-form.state-success {
+    animation: pulse-success 1s ease;
+}
+
+/* Estilos para inputs con estados */
+.input-error {
+    border-color: var(--danger-color) !important;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25) !important;
+}
+
+.input-success {
+    border-color: var(--success-color) !important;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25) !important;
+}
+
+/* Animaciones */
+@keyframes pulse-error {
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.2); }
+    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
+
+@keyframes pulse-success {
+    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.2); }
+    70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+}
+
+/* Animación de vibración para errores */
+.shake-animation {
+    animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+    transform: translate3d(0, 0, 0);
+}
+
+@keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+/* Mensajes de formulario */
+.form-message {
+    margin-top: 15px;
+    padding: 10px 15px;
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    transform: translateY(-10px);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.form-message.show-message {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.form-message i {
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+.message-error {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-left: 4px solid var(--danger-color);
+    color: var(--danger-color);
+}
+
+.message-success {
+    background-color: rgba(40, 167, 69, 0.1);
+    border-left: 4px solid var(--success-color);
+    color: var(--success-color);
+}
+
+.message-info {
+    background-color: rgba(0, 123, 255, 0.1);
+    border-left: 4px solid var(--primary-color);
+    color: var(--primary-color);
+}
+
+/* Animación de carga en resultados */
+.loading-results {
+    text-align: center;
+    padding: 30px 0;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(0, 123, 255, 0.1);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-results p {
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+/* Transición suave para mostrar/ocultar resultados */
+#tracking-results {
+    transition: opacity 0.3s ease;
+}
+
+/* Mejora del diseño para el botón de consulta */
+#consultar-folio-btn {
+    min-width: 120px;
+    transition: all 0.3s ease;
+}
+
+#consultar-folio-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Estilo para el modal de cliente en modo oscuro */
+.dark-mode .loading-spinner {
+    border-color: rgba(0, 123, 255, 0.05);
+}
+
+.dark-mode .message-error {
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.dark-mode .message-success {
+    background-color: rgba(40, 167, 69, 0.05);
+}
+
+.dark-mode .message-info {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
 /* Ajustes responsive */
 @media (max-width: 576px) {
     #cliente-modal .modal-footer {
