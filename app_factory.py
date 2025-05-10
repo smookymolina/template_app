@@ -5,6 +5,7 @@ import os
 from config import config
 from models import db
 from models.usuario import Usuario
+from flask_cors import CORS
 
 def create_app(config_name='default'):
     """
@@ -17,6 +18,17 @@ def create_app(config_name='default'):
         Aplicación Flask configurada
     """
     app = Flask(__name__)
+    
+    # Configurar CORS
+    CORS(app, resources={r"/api/*": {"origins": "*"}})  # Permitir CORS para todas las rutas de API
+
+    # Configurar CORS según el entorno
+    if app.config['FLASK_ENV'] == 'production':
+    # Se configurará en el método init_app de ProductionConfig
+     pass
+    else:
+    # Desarrollo: permitir todos los orígenes
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
     
     # Cargar configuración
     app.config.from_object(config[config_name])
@@ -51,6 +63,8 @@ def create_app(config_name='default'):
         initialize_database(app)
     
     return app
+
+
 
 def configure_logging(app):
     """Configura el sistema de logging de la aplicación"""

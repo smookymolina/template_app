@@ -1,6 +1,7 @@
 import os
 import secrets
 from datetime import timedelta
+from flask_cors import CORS  # Importar CORS
 
 class Config:
     """Configuración base para la aplicación"""
@@ -50,6 +51,26 @@ class Config:
             subdir_path = os.path.join(upload_folder, subdir)
             if not os.path.exists(subdir_path):
                 os.makedirs(subdir_path)
+
+class ProductionConfig(Config):
+    """Configuración para entorno de producción"""
+    # ... otras configuraciones ...
+    
+    # Lista de orígenes permitidos para CORS
+    CORS_ORIGINS = [
+        'https://ejemplo.com',
+        'https://www.ejemplo.com',
+        'https://app.ejemplo.com'
+    ]
+    
+    @staticmethod
+    def init_app(app):
+        """Inicialización específica para producción"""
+        Config.init_app(app)
+        
+        # Configurar CORS para producción
+        from flask_cors import CORS
+        CORS(app, resources={r"/api/*": {"origins": app.config.get('CORS_ORIGINS', ["*"])}})
 
 class DevelopmentConfig(Config):
     """Configuración para entorno de desarrollo"""

@@ -1,7 +1,8 @@
-from flask import Blueprint, render_template, send_file, current_app
+from flask import Blueprint, render_template, send_file, current_app, redirect, url_for, request, jsonify
 from flask_login import login_required
 import io
 from PIL import Image, ImageDraw
+from models.recluta import Recluta
 
 main_bp = Blueprint('main', __name__)
 
@@ -56,6 +57,68 @@ def seguimiento():
         Template HTML renderizado
     """
     return render_template('seguimiento.html')
+
+@main_bp.route('/consulta')
+def consulta_folio():
+    """
+    Alias para la página de seguimiento, orientado a consulta por folio.
+    Redirige a la página de seguimiento con un parámetro opcional.
+    
+    Returns:
+        Redirección a la página de seguimiento
+    """
+    folio = request.args.get('folio', '')
+    return redirect(url_for('main.seguimiento', folio=folio))
+
+@main_bp.route('/estado/<folio>')
+def estado_folio(folio):
+    """
+    Muestra directamente el estado de un folio específico.
+    Es una forma rápida de compartir el estado con un link directo.
+    
+    Args:
+        folio: Número de folio del candidato
+        
+    Returns:
+        Template HTML renderizado con información prellenada
+    """
+    # Verificar si el folio existe
+    recluta = Recluta.query.filter_by(folio=folio).first()
+    if not recluta:
+        return render_template('seguimiento.html', error="El folio proporcionado no existe")
+    
+    # Renderizar template con el folio preseleccionado
+    return render_template('seguimiento.html', folio=folio, auto_consulta=True)
+
+@main_bp.route('/cliente')
+def portal_cliente():
+    """
+    Portal principal para clientes, con acceso a diferentes opciones
+    como seguimiento, FAQs, contacto, etc.
+    
+    Returns:
+        Template HTML renderizado
+    """
+    return render_template('cliente.html')
+
+@main_bp.route('/verificar-folio/<folio>')
+def validar_folio_publico(folio):
+    """
+    Endpoint público para verificar si un folio existe sin mostrar datos sensibles.
+    Útil para validación en frontend antes de hacer consultas completas.
+    
+    Args:
+        folio: Número de folio a verificar
+        
+    Returns:
+        JSON con resultado de la verificación
+    """
+    recluta = Recluta.query.filter_by(folio=folio).first()
+    return jsonify({
+        "success": recluta is not None,
+        "exists": recluta is not None,
+        "message": "Folio válido" if recluta else "Folio no encontrado"
+    })
 
 @main_bp.errorhandler(404)
 def page_not_found(e):
