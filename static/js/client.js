@@ -895,85 +895,113 @@ validateFolio: function(folio) {
     },
     
     /**
-     * Renderiza los items de la timeline según el estado
-     * @param {string} currentStatus - Estado actual
-     * @returns {string} - HTML de los items de la timeline
-     */
-    renderTimelineItems: function(currentStatus) {
-        // Mapear estados del sistema a estados de la timeline
-        const statusMap = {
-            'En proceso': 'revision',
-            'Activo': 'finalizada',
-            'Rechazado': 'finalizada'
-        };
+ * Renderiza los items de la timeline según el estado del proceso
+ * @param {string} currentStatus - Estado actual del proceso
+ * @returns {string} - HTML de los items de la timeline
+ */
+renderTimelineItems: function(currentStatus) {
+    // Mapear estados del sistema a estados de la timeline
+    const statusMap = {
+        'En proceso': 'revision',
+        'Activo': 'finalizada',
+        'Rechazado': 'finalizada'
+    };
+    
+    // Estado mapeado o por defecto
+    const timelineStatus = statusMap[currentStatus] || 'recibida';
+    
+    // Orden de los estados
+    const statusOrder = ['recibida', 'revision', 'entrevista', 'evaluacion', 'finalizada'];
+    const currentIndex = statusOrder.indexOf(timelineStatus);
+    
+    // Generar los items
+    let timelineHTML = '';
+    
+    // Iconos y etiquetas descriptivas para cada estado
+    const stateDetails = {
+        'recibida': {
+            icon: 'fa-file-alt',
+            title: 'Recibida',
+            description: 'Tu postulación ha sido recibida y registrada en nuestro sistema.',
+            successText: 'Postulación registrada exitosamente'
+        },
+        'revision': {
+            icon: 'fa-search',
+            title: 'En revisión',
+            description: 'Nuestro equipo está evaluando tu perfil y requisitos para el puesto.',
+            successText: 'Tu perfil está siendo evaluado'
+        },
+        'entrevista': {
+            icon: 'fa-calendar-check',
+            title: 'Entrevista',
+            description: 'La etapa de entrevistas donde evaluamos tu experiencia y habilidades.',
+            successText: 'Entrevista completada'
+        },
+        'evaluacion': {
+            icon: 'fa-clipboard-check',
+            title: 'Evaluación final',
+            description: 'Análisis final de resultados y toma de decisiones.',
+            successText: 'Evaluación en proceso'
+        },
+        'finalizada': {
+            icon: 'fa-flag-checkered',
+            title: 'Proceso finalizado',
+            description: 'Proceso completado. Te contactaremos con la decisión final.',
+            successText: 'Proceso completado'
+        }
+    };
+    
+    statusOrder.forEach((status, index) => {
+        // Determinar clase según el estado actual
+        let itemClass = 'timeline-item';
+        let statusClass = '';
+        let statusText = '';
         
-        // Estado mapeado o por defecto
-        const timelineStatus = statusMap[currentStatus] || 'recibida';
+        if (index < currentIndex) {
+            // Estado completado
+            itemClass += ' completed';
+            statusClass = 'status-completed';
+            statusText = stateDetails[status].successText;
+        } else if (index === currentIndex) {
+            // Estado activo
+            itemClass += ' active';
+            statusClass = 'status-active';
+            statusText = 'En proceso actual';
+        } else {
+            // Estado pendiente
+            statusClass = 'status-pending';
+            statusText = 'Pendiente';
+        }
         
-        // Orden de los estados
-        const statusOrder = ['recibida', 'revision', 'entrevista', 'evaluacion', 'finalizada'];
-        const currentIndex = statusOrder.indexOf(timelineStatus);
+        // Obtener detalles del estado
+        const details = stateDetails[status];
         
-        // Generar los items
-        let timelineHTML = '';
-        
-        statusOrder.forEach((status, index) => {
-            // Determinar clase según el estado actual
-            let itemClass = 'timeline-item';
-            if (index < currentIndex) {
-                itemClass += ' completed';
-            } else if (index === currentIndex) {
-                itemClass += ' active';
-            }
-            
-            // Contenido según el estado
-            let content = '';
-            switch(status) {
-                case 'recibida':
-                    content = `
-                        <h4>Recibida</h4>
-                        <p>Documentación recibida y registrada en el sistema.</p>
-                    `;
-                    break;
-                case 'revision':
-                    content = `
-                        <h4>En revisión</h4>
-                        <p>Evaluación inicial de requisitos y perfil.</p>
-                    `;
-                    break;
-                case 'entrevista':
-                    content = `
-                        <h4>Entrevista</h4>
-                        <p>Programación y realización de entrevistas.</p>
-                    `;
-                    break;
-                case 'evaluacion':
-                    content = `
-                        <h4>Evaluación</h4>
-                        <p>Análisis de resultados y toma de decisiones.</p>
-                    `;
-                    break;
-                case 'finalizada':
-                    content = `
-                        <h4>Finalizada</h4>
-                        <p>Proceso completado con decisión final.</p>
-                    `;
-                    break;
-            }
-            
-            // Generar HTML del item
-            timelineHTML += `
-                <div class="${itemClass}" data-status="${status}">
-                    <div class="timeline-marker"></div>
-                    <div class="timeline-content">
-                        ${content}
-                    </div>
+        // Generar HTML del item con animación conditional
+        timelineHTML += `
+            <div class="${itemClass}" data-status="${status}">
+                <div class="timeline-marker">
+                    <i class="fas ${details.icon}"></i>
                 </div>
-            `;
-        });
-        
-        return timelineHTML;
-    }
+                <div class="timeline-content">
+                    <div class="timeline-header">
+                        <h4>${details.title}</h4>
+                        <span class="timeline-status ${statusClass}">${statusText}</span>
+                    </div>
+                    <p>${details.description}</p>
+                    ${index <= currentIndex ? '<div class="timeline-progress-bar"></div>' : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    return `
+        <div class="timeline-header-info">
+            <h3>Estado de tu proceso</h3>
+            <p>Aquí puedes ver el avance de tu proceso de contratación</p>
+        </div>
+        ${timelineHTML}
+    `;
+},
 };
 
-export default Client;
+export default Client; 
