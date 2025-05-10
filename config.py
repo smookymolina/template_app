@@ -1,7 +1,6 @@
 import os
 import secrets
 from datetime import timedelta
-from flask_cors import CORS  # Importar CORS
 
 class Config:
     """Configuración base para la aplicación"""
@@ -38,6 +37,9 @@ class Config:
     SESSION_COOKIE_SAMESITE = 'Lax'
     REMEMBER_COOKIE_DURATION = timedelta(days=14)
     
+    # Configuración CORS (nueva)
+    CORS_ENABLED = True
+    
     @staticmethod
     def init_app(app):
         """Inicialización para la configuración base"""
@@ -51,26 +53,6 @@ class Config:
             subdir_path = os.path.join(upload_folder, subdir)
             if not os.path.exists(subdir_path):
                 os.makedirs(subdir_path)
-
-class ProductionConfig(Config):
-    """Configuración para entorno de producción"""
-    # ... otras configuraciones ...
-    
-    # Lista de orígenes permitidos para CORS
-    CORS_ORIGINS = [
-        'https://ejemplo.com',
-        'https://www.ejemplo.com',
-        'https://app.ejemplo.com'
-    ]
-    
-    @staticmethod
-    def init_app(app):
-        """Inicialización específica para producción"""
-        Config.init_app(app)
-        
-        # Configurar CORS para producción
-        from flask_cors import CORS
-        CORS(app, resources={r"/api/*": {"origins": app.config.get('CORS_ORIGINS', ["*"])}})
 
 class DevelopmentConfig(Config):
     """Configuración para entorno de desarrollo"""
@@ -113,6 +95,14 @@ class ProductionConfig(Config):
     
     # Nivel de log para producción
     LOG_LEVEL = "ERROR"
+    
+    # Configuración CORS para producción
+    # Lista de orígenes permitidos (dominios externos que pueden acceder a la API)
+    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '').split(',') or [
+        'https://ejemplo.com',  # Frontend principal
+        'https://admin.ejemplo.com',  # Panel de administración
+        'https://mobile.ejemplo.com'  # Versión móvil
+    ]
     
     @staticmethod
     def init_app(app):

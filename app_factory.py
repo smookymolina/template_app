@@ -5,7 +5,7 @@ import os
 from config import config
 from models import db
 from models.usuario import Usuario
-from flask_cors import CORS
+from flask_cors import CORS  # Importar CORS
 
 def create_app(config_name='default'):
     """
@@ -19,23 +19,26 @@ def create_app(config_name='default'):
     """
     app = Flask(__name__)
     
-    # Configurar CORS
-    CORS(app, resources={r"/api/*": {"origins": "*"}})  # Permitir CORS para todas las rutas de API
-
-    # Configurar CORS según el entorno
-    if app.config['FLASK_ENV'] == 'production':
-    # Se configurará en el método init_app de ProductionConfig
-     pass
-    else:
-    # Desarrollo: permitir todos los orígenes
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
-    
     # Cargar configuración
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
     
     # Establecer explícitamente FLASK_ENV en app.config
     app.config['FLASK_ENV'] = os.environ.get('FLASK_ENV', 'development')
+    
+    # Configurar CORS para permitir peticiones desde orígenes externos
+    if app.config['FLASK_ENV'] == 'production' and app.config.get('CORS_ORIGINS'):
+        # En producción, usar orígenes específicos definidos en la configuración
+        CORS(app, resources={r"/api/*": {"origins": app.config.get('CORS_ORIGINS')}})
+    else:
+        # En desarrollo, permitir todos los orígenes para las rutas de API
+        CORS(app, resources={r"/api/*": {
+            "origins": "*",
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+            "expose_headers": ["Content-Type", "X-Total-Count"],
+            "max_age": 600  # Tiempo de caché para preflight requests (en segundos)
+        }})
     
     # Configurar logging
     configure_logging(app)
@@ -63,8 +66,6 @@ def create_app(config_name='default'):
         initialize_database(app)
     
     return app
-
-
 
 def configure_logging(app):
     """Configura el sistema de logging de la aplicación"""
