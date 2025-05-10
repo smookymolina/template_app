@@ -654,3 +654,59 @@ def check_auth():
     except Exception as e:
         current_app.logger.error(f"Error al verificar autenticación: {str(e)}")
         return jsonify({"authenticated": False, "error": str(e)}), 500
+
+@api_bp.route('/recuperar-folio', methods=['POST'])
+def recuperar_folio():
+    """
+    Recupera el folio de un recluta mediante su email y teléfono.
+    Esta ruta es pública y no requiere autenticación.
+    
+    Returns:
+        JSON con el folio si se encuentra, o un mensaje de error
+    """
+    try:
+        data = request.get_json()
+        
+        # Validar datos requeridos
+        if not data or 'email' not in data or 'telefono' not in data:
+            return jsonify({
+                "success": False,
+                "message": "Se requiere email y teléfono para recuperar el folio"
+            }), 400
+        
+        email = data.get('email', '').strip().lower()
+        telefono = data.get('telefono', '').strip()
+        
+        # Validar formato básico de email
+        import re
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            return jsonify({
+                "success": False, 
+                "message": "Formato de email inválido"
+            }), 400
+        
+        # Buscar recluta por email y teléfono
+        recluta = Recluta.query.filter_by(email=email, telefono=telefono).first()
+        
+        if not recluta:
+            # No revelar si el email existe o no por seguridad, mensaje genérico
+            return jsonify({
+                "success": False,
+                "message": "No se encontró ningún recluta con esos datos"
+            }), 404
+        
+        # Recluta encontrado, devolver folio
+        return jsonify({
+            "success": True,
+            "message": "Folio recuperado correctamente",
+            "folio": recluta.folio,
+            "nombre": recluta.nombre,
+            "fecha_registro": recluta.fecha_registro.strftime('%d/%m/%Y') if recluta.fecha_registro else None
+        })
+            
+    except Exception as e:
+        current_app.logger.error(f"Error al recuperar folio: {str(e)}")
+        return jsonify({
+            "success": False, 
+            "message": "Error al procesar la solicitud. Inténtelo más tarde."
+        }), 500

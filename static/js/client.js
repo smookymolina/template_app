@@ -138,6 +138,406 @@ setFormState: function(state, message = '') {
     }
 },
 
+// Añadir métodos al objeto Client en static/js/client.js
+
+/**
+ * Muestra el formulario de recuperación de folio
+ */
+showRecuperarFolioForm: function() {
+    const modal = document.getElementById('cliente-modal');
+    if (!modal) return;
+    
+    // Ocultar formulario de tracking
+    const trackingForm = document.getElementById('tracking-form');
+    const trackingResults = document.getElementById('tracking-results');
+    
+    if (trackingForm) trackingForm.style.display = 'none';
+    if (trackingResults) trackingResults.style.display = 'none';
+    
+    // Mostrar formulario de recuperación si existe, si no, crearlo
+    let recoveryForm = document.getElementById('recovery-form');
+    
+    if (!recoveryForm) {
+        // Crear formulario de recuperación
+        recoveryForm = document.createElement('div');
+        recoveryForm.id = 'recovery-form';
+        recoveryForm.innerHTML = `
+            <div class="recovery-header">
+                <h3>Recuperar Folio de Seguimiento</h3>
+                <p>Ingresa tu correo electrónico y número de teléfono para recuperar tu folio</p>
+            </div>
+            
+            <div class="form-group">
+                <label for="recovery-email">Correo electrónico</label>
+                <div class="input-icon-wrapper">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="recovery-email" placeholder="Ingresa tu correo electrónico" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="recovery-telefono">Teléfono</label>
+                <div class="input-icon-wrapper">
+                    <i class="fas fa-phone"></i>
+                    <input type="tel" id="recovery-telefono" placeholder="Ingresa tu número de teléfono" required>
+                </div>
+            </div>
+            
+            <div class="form-message" style="display: none;"></div>
+            
+            <div class="form-buttons">
+                <button class="btn-secondary recovery-back-btn">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </button>
+                <button class="btn-primary recovery-submit-btn">
+                    <i class="fas fa-search"></i> Recuperar Folio
+                </button>
+            </div>
+        `;
+        
+        // Agregar después del tracking-form
+        if (trackingForm && trackingForm.parentNode) {
+            trackingForm.parentNode.appendChild(recoveryForm);
+        } else {
+            // Si no hay tracking-form, agregar al modal-body
+            const modalBody = modal.querySelector('.modal-body');
+            if (modalBody) modalBody.appendChild(recoveryForm);
+        }
+        
+        // Configurar eventos del formulario
+        const backBtn = recoveryForm.querySelector('.recovery-back-btn');
+        const submitBtn = recoveryForm.querySelector('.recovery-submit-btn');
+        
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                this.showTrackingForm();
+            });
+        }
+        
+        if (submitBtn) {
+            submitBtn.addEventListener('click', () => {
+                this.processRecoveryForm();
+            });
+        }
+        
+        // Permitir Enter en los campos del formulario
+        const emailInput = recoveryForm.querySelector('#recovery-email');
+        const telefonoInput = recoveryForm.querySelector('#recovery-telefono');
+        
+        if (emailInput) {
+            emailInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    telefonoInput.focus();
+                }
+            });
+        }
+        
+        if (telefonoInput) {
+            telefonoInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.processRecoveryForm();
+                }
+            });
+        }
+    }
+    
+    // Mostrar formulario de recuperación
+    recoveryForm.style.display = 'block';
+    
+    // Modificar footer del modal
+    const modalFooter = modal.querySelector('.modal-footer');
+    if (modalFooter) {
+        // Ocultar botón de consultar
+        const consultarBtn = modalFooter.querySelector('#consultar-folio-btn');
+        if (consultarBtn) consultarBtn.style.display = 'none';
+    }
+},
+
+/**
+ * Muestra el formulario de tracking (oculta el de recuperación)
+ */
+showTrackingForm: function() {
+    // Ocultar formulario de recuperación
+    const recoveryForm = document.getElementById('recovery-form');
+    if (recoveryForm) recoveryForm.style.display = 'none';
+    
+    // Ocultar resultados si se estaban mostrando
+    const trackingResults = document.getElementById('tracking-results');
+    if (trackingResults) trackingResults.style.display = 'none';
+    
+    // Mostrar formulario de tracking
+    const trackingForm = document.getElementById('tracking-form');
+    if (trackingForm) trackingForm.style.display = 'block';
+    
+    // Restablecer modal footer
+    const modal = document.getElementById('cliente-modal');
+    if (modal) {
+        const modalFooter = modal.querySelector('.modal-footer');
+        if (modalFooter) {
+            // Mostrar botón de consultar
+            const consultarBtn = modalFooter.querySelector('#consultar-folio-btn');
+            if (consultarBtn) consultarBtn.style.display = 'block';
+        }
+    }
+    
+    // Limpiar cualquier estado previo
+    this.setFormState('idle');
+},
+
+/**
+ * Procesa el formulario de recuperación
+ */
+processRecoveryForm: async function() {
+    const recoveryForm = document.getElementById('recovery-form');
+    if (!recoveryForm) return;
+    
+    const emailInput = recoveryForm.querySelector('#recovery-email');
+    const telefonoInput = recoveryForm.querySelector('#recovery-telefono');
+    const messageElement = recoveryForm.querySelector('.form-message');
+    const submitBtn = recoveryForm.querySelector('.recovery-submit-btn');
+    
+    if (!emailInput || !telefonoInput || !messageElement || !submitBtn) return;
+    
+    const email = emailInput.value.trim();
+    const telefono = telefonoInput.value.trim();
+    
+    // Validar datos
+    if (!email) {
+        this.showRecoveryMessage('Por favor, ingresa tu correo electrónico', 'error');
+        emailInput.focus();
+        return;
+    }
+    
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        this.showRecoveryMessage('Por favor, ingresa un correo electrónico válido', 'error');
+        emailInput.focus();
+        return;
+    }
+    
+    if (!telefono) {
+        this.showRecoveryMessage('Por favor, ingresa tu número de teléfono', 'error');
+        telefonoInput.focus();
+        return;
+    }
+    
+    // Mostrar estado de carga
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+    submitBtn.disabled = true;
+    emailInput.disabled = true;
+    telefonoInput.disabled = true;
+    
+    try {
+        // Hacer petición al servidor
+        const response = await fetch('/api/recuperar-folio', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, telefono })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            // Mostrar folio recuperado
+            this.showRecoverySuccess(data);
+        } else {
+            // Mostrar error
+            this.showRecoveryMessage(data.message || 'No se encontró ningún folio con esos datos', 'error');
+        }
+    } catch (error) {
+        console.error('Error al recuperar folio:', error);
+        this.showRecoveryMessage('Error al procesar la solicitud. Intente más tarde.', 'error');
+    } finally {
+        // Restablecer estado de botón
+        submitBtn.innerHTML = '<i class="fas fa-search"></i> Recuperar Folio';
+        submitBtn.disabled = false;
+        emailInput.disabled = false;
+        telefonoInput.disabled = false;
+    }
+},
+
+/**
+ * Muestra un mensaje en el formulario de recuperación
+ * @param {string} message - Mensaje a mostrar
+ * @param {string} type - Tipo de mensaje ('error', 'success', 'info')
+ */
+showRecoveryMessage: function(message, type = 'info') {
+    const recoveryForm = document.getElementById('recovery-form');
+    if (!recoveryForm) return;
+    
+    const messageElement = recoveryForm.querySelector('.form-message');
+    if (!messageElement) return;
+    
+    // Mostrar mensaje
+    messageElement.className = `form-message message-${type}`;
+    messageElement.innerHTML = `<i class="fas fa-${type === 'error' ? 'exclamation-circle' : (type === 'success' ? 'check-circle' : 'info-circle')}"></i> ${message}`;
+    messageElement.style.display = 'block';
+    
+    // Si es error, hacer vibrar
+    if (type === 'error') {
+        messageElement.classList.add('shake-animation');
+        setTimeout(() => {
+            messageElement.classList.remove('shake-animation');
+        }, 500);
+    }
+},
+
+/**
+ * Muestra el folio recuperado exitosamente
+ * @param {Object} data - Datos del folio recuperado
+ */
+showRecoverySuccess: function(data) {
+    const recoveryForm = document.getElementById('recovery-form');
+    if (!recoveryForm) return;
+    
+    // Crear un componente de éxito
+    recoveryForm.innerHTML = `
+        <div class="recovery-success">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h3>¡Folio Recuperado!</h3>
+            <p>Hemos encontrado tu folio de seguimiento:</p>
+            
+            <div class="folio-display">
+                <span class="folio-value">${data.folio}</span>
+                <button class="copy-folio-btn" title="Copiar folio">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </div>
+            
+            <div class="folio-details">
+                <p><strong>Nombre:</strong> ${data.nombre || 'No disponible'}</p>
+                <p><strong>Fecha de registro:</strong> ${data.fecha_registro || 'No disponible'}</p>
+            </div>
+            
+            <div class="recovery-actions">
+                <button class="btn-secondary recovery-back-btn">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </button>
+                <button class="btn-primary view-status-btn">
+                    <i class="fas fa-search"></i> Consultar Estado
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Configurar eventos
+    const backBtn = recoveryForm.querySelector('.recovery-back-btn');
+    const viewStatusBtn = recoveryForm.querySelector('.view-status-btn');
+    const copyBtn = recoveryForm.querySelector('.copy-folio-btn');
+    
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            this.showTrackingForm();
+        });
+    }
+    
+    if (viewStatusBtn) {
+        viewStatusBtn.addEventListener('click', () => {
+            this.showTrackingForm();
+            
+            // Llenar automáticamente el campo de folio
+            const folioInput = document.getElementById('folio');
+            if (folioInput) {
+                folioInput.value = data.folio;
+                
+                // Consultar estado automáticamente
+                this.processFolio();
+            }
+        });
+    }
+    
+    if (copyBtn) {
+        copyBtn.addEventListener('click', () => {
+            // Copiar folio al portapapeles
+            try {
+                navigator.clipboard.writeText(data.folio).then(() => {
+                    // Cambiar temporalmente el ícono para mostrar éxito
+                    const icon = copyBtn.querySelector('i');
+                    if (icon) {
+                        icon.className = 'fas fa-check';
+                        setTimeout(() => {
+                            icon.className = 'fas fa-copy';
+                        }, 1500);
+                    }
+                });
+            } catch (err) {
+                console.error('Error al copiar:', err);
+            }
+        });
+    }
+    
+    // Estilos CSS adicionales para la vista de éxito
+    const style = document.createElement('style');
+    style.textContent = `
+        .recovery-success {
+            text-align: center;
+            padding: 20px 0;
+        }
+        
+        .success-icon {
+            font-size: 48px;
+            color: var(--success-color);
+            margin-bottom: 15px;
+        }
+        
+        .folio-display {
+            background-color: var(--primary-light);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .folio-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-color);
+            letter-spacing: 1px;
+        }
+        
+        .copy-folio-btn {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            font-size: 16px;
+            transition: var(--transition);
+        }
+        
+        .copy-folio-btn:hover {
+            color: var(--primary-dark);
+            transform: scale(1.1);
+        }
+        
+        .folio-details {
+            margin-bottom: 20px;
+        }
+        
+        .recovery-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .recovery-actions button {
+            width: auto;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+    `;
+    document.head.appendChild(style);
+},
+
 /**
  * Muestra un mensaje debajo del formulario
  * @param {string} message - Mensaje a mostrar

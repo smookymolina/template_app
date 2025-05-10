@@ -1,4 +1,6 @@
 <!-- Modal para acceso de clientes -->
+<!-- Modificar el modal de cliente en templates/index.html -->
+
 <div id="cliente-modal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -7,38 +9,31 @@
         </div>
         
         <div class="modal-body">
-            <!-- Instrucciones sobre el folio de seguimiento -->
-            <div class="folio-instructions">
-                <h4><i class="fas fa-info-circle"></i> ¿Qué es el folio de seguimiento?</h4>
-                <p>El folio de seguimiento es un identificador único asignado al iniciar su proceso de reclutamiento. Con este código puede consultar el estado actual de su aplicación en cualquier momento.</p>
-                
-                <h5><i class="fas fa-question-circle"></i> ¿Cómo obtener mi folio?</h5>
-                <ul>
-                    <li>El folio se proporciona automáticamente por correo electrónico cuando su postulación es registrada en nuestro sistema.</li>
-                    <li>El formato del folio es <strong>REC-XXXXXXXX</strong> (por ejemplo: REC-1A2B3C4D).</li>
-                    <li>Si no ha recibido su folio, revise la carpeta de spam o comuníquese con su asesor asignado.</li>
-                </ul>
-            </div>
-
             <form id="tracking-form">
                 <div class="form-group">
                     <label for="folio">Folio de Seguimiento</label>
                     <div class="input-icon-wrapper">
                         <i class="fas fa-file-alt"></i>
-                        <input type="text" id="folio" placeholder="Ingrese su folio (formato: REC-XXXXXXXX)" required>
+                        <input type="text" id="folio" placeholder="Ingresa tu folio (formato: REC-XXXXXXXX)" required>
                     </div>
                 </div>
                 
                 <p class="modal-info">
-                    <i class="fas fa-info-circle"></i> Ingrese el folio proporcionado para dar seguimiento a su proceso de contratación.
-                    Si no cuenta con un folio, comuníquese al correo <a href="mailto:contacto@empresa.com">contacto@empresa.com</a> o al teléfono (55) 1234-5678.
+                    <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para dar seguimiento a tu proceso de contratación.
+                    El formato del folio es REC-XXXXXXXX (por ejemplo: REC-1A2B3C4D).
                 </p>
+                
+                <div class="recovery-link-container">
+                    <a href="#" id="recuperar-folio-link">¿Olvidaste tu folio? Recupéralo aquí</a>
+                </div>
             </form>
             
             <!-- Contenedor para mostrar los resultados (inicialmente oculto) -->
             <div id="tracking-results" style="display: none;">
                 <!-- Los resultados se cargarán dinámicamente aquí -->
             </div>
+            
+            <!-- El formulario de recuperación se generará dinámicamente -->
         </div>
         
         <div class="modal-footer">
@@ -51,6 +46,61 @@
         </div>
     </div>
 </div>
+
+<!-- Estilos para el enlace de recuperación -->
+<style>
+.recovery-link-container {
+    text-align: center;
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+.recovery-link-container a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.recovery-link-container a:hover {
+    text-decoration: underline;
+}
+
+#recovery-form {
+    animation: fadeIn 0.3s ease;
+}
+
+/* Estilos para el formulario de recuperación */
+.recovery-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.recovery-header h3 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.recovery-header p {
+    color: var(--text-light);
+    margin: 0;
+}
+
+.form-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+.form-buttons button {
+    flex: 1;
+}
+
+/* Modo oscuro */
+.dark-mode .recovery-link-container a {
+    color: var(--primary-color);
+}
+</style>
 
 <!-- Estilos adicionales para las instrucciones del folio -->
 <style>
