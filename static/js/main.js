@@ -261,21 +261,62 @@ function loginSuccess(usuario) {
     // Actualizar usuario actual
     Auth.currentUser = usuario;
     
-    // Cambiar de pantalla: ocultar login, mostrar dashboard
-    document.getElementById('login-section').style.display = 'none';
-    document.getElementById('dashboard-section').style.display = 'block';
+    // Asegurarnos de que los elementos existen antes de interactuar con ellos
+    const loginSection = document.getElementById('login-section');
+    const dashboardSection = document.getElementById('dashboard-section');
     
-    // Actualizar información de usuario en la UI
-    updateUserInfo(usuario);
-    
-    // Inicializar módulos principales solo la primera vez
-    if (!appState.initialized) {
-        initializeModules();
-        appState.initialized = true;
+    if (!loginSection || !dashboardSection) {
+        console.error('Error: Elementos del DOM no encontrados');
+        showError('Error al cargar la interfaz. Por favor, recarga la página.');
+        return;
     }
     
-    // Mostrar notificación de bienvenida
-    showSuccess(`¡Bienvenido ${usuario.nombre || usuario.email}!`);
+    // Cambiar de pantalla: ocultar login, mostrar dashboard
+    loginSection.style.display = 'none';
+    dashboardSection.style.display = 'block';
+    
+    try {
+        // Actualizar información de usuario en la UI solo si los elementos existen
+        updateUserInfo(usuario);
+        
+        // Inicializar módulos principales solo la primera vez
+        if (!appState.initialized) {
+            console.log('Inicializando módulos principales...');
+            // Inicializar uno por uno con manejo de errores
+            try {
+                if (typeof Reclutas !== 'undefined' && Reclutas.init) {
+                    console.log('Inicializando módulo de reclutas...');
+                    Reclutas.init();
+                }
+            } catch (e) {
+                console.error('Error al inicializar módulo de reclutas:', e);
+            }
+            
+            try {
+                if (typeof Calendar !== 'undefined' && Calendar.init) {
+                    console.log('Inicializando módulo de calendario...');
+                    Calendar.init();
+                }
+            } catch (e) {
+                console.error('Error al inicializar módulo de calendario:', e);
+            }
+            
+            try {
+                console.log('Cargando estadísticas...');
+                loadEstadisticas();
+            } catch (e) {
+                console.error('Error al cargar estadísticas:', e);
+            }
+            
+            appState.initialized = true;
+        }
+        
+        // Mostrar notificación de bienvenida
+        showSuccess(`¡Bienvenido ${usuario.nombre || usuario.email}!`);
+    } catch (error) {
+        console.error('Error en loginSuccess:', error);
+        showError('Error al cargar el dashboard. Por favor, recarga la página.');
+    }
 }
 
 /**
@@ -283,6 +324,11 @@ function loginSuccess(usuario) {
  * @param {Object} usuario - Datos del usuario
  */
 function updateUserInfo(usuario) {
+    if (!usuario) {
+        console.error('Error: Datos de usuario no proporcionados');
+        return;
+    }
+
     // Nombre en el header y dropdown
     const gerenteName = document.getElementById('gerente-name');
     const dropdownUserName = document.getElementById('dropdown-user-name');
@@ -304,6 +350,8 @@ function updateUserInfo(usuario) {
     if (userName) userName.value = usuario.nombre || '';
     if (userEmail) userEmail.value = usuario.email || '';
     if (userPhone) userPhone.value = usuario.telefono || '';
+    
+    console.log('Información de usuario actualizada correctamente');
 }
 
 /**
@@ -488,6 +536,7 @@ function getEntrevistaType(tipo) {
  */
 async function loadEstadisticas() {
     try {
+        console.log('Cargando estadísticas...');
         const response = await fetch(`${CONFIG.API_URL}/estadisticas`);
         
         if (!response.ok) {
@@ -497,9 +546,32 @@ async function loadEstadisticas() {
         const data = await response.json();
         if (data.success) {
             updateEstadisticasUI(data);
+            console.log('Estadísticas cargadas correctamente');
+        } else {
+            throw new Error(data.message || 'Error desconocido al cargar estadísticas');
         }
     } catch (error) {
         console.error('Error al cargar estadísticas:', error);
+        // Intentar mostrar mensaje de error en la interfaz
+        const statsContainer = document.querySelector('.stats-grid');
+        if (statsContainer) {
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-exclamation-circle"></i></div>
+                    <div class="stat-content">
+                        <h4>Error</h4>
+                        <p>No se pudieron cargar las estadísticas</p>
+                        <button class="btn-link retry-stats">Reintentar</button>
+                    </div>
+                </div>
+            `;
+            
+            // Añadir evento para reintentar carga
+            const retryButton = statsContainer.querySelector('.retry-stats');
+            if (retryButton) {
+                retryButton.addEventListener('click', loadEstadisticas);
+            }
+        }
     }
 }
 

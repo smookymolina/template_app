@@ -125,6 +125,60 @@ const Reclutas = {
     },
 
     /**
+ * Carga y muestra la lista de reclutas
+ */
+loadAndDisplayReclutas: async function() {
+    try {
+        console.log('Cargando reclutas...');
+        const container = document.getElementById('reclutas-list');
+        
+        if (!container) {
+            console.error('No se encontró el contenedor de reclutas en el DOM');
+            return;
+        }
+        
+        // Mostrar estado de carga
+        container.innerHTML = '<tr><td colspan="7" style="text-align:center"><i class="fas fa-spinner fa-spin"></i> Cargando reclutas...</td></tr>';
+        
+        // Cargar reclutas desde la API
+        const reclutas = await this.loadReclutas();
+        
+        // Mostrar reclutas en la tabla
+        this.renderReclutasTable(container);
+        
+        // Actualizar paginación
+        this.updatePagination();
+        
+        console.log(`Se cargaron ${reclutas.length} reclutas`);
+        return reclutas;
+    } catch (error) {
+        console.error('Error al cargar y mostrar reclutas:', error);
+        
+        // Mostrar mensaje de error en la tabla
+        const container = document.getElementById('reclutas-list');
+        if (container) {
+            container.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center">
+                        <i class="fas fa-exclamation-circle text-danger"></i> 
+                        Error al cargar reclutas. <button class="btn-link retry-load">Reintentar</button>
+                    </td>
+                </tr>
+            `;
+            
+            // Añadir evento para reintentar carga
+            const retryButton = container.querySelector('.retry-load');
+            if (retryButton) {
+                retryButton.addEventListener('click', () => this.loadAndDisplayReclutas());
+            }
+        }
+        
+        showError('Error al cargar reclutas: ' + error.message);
+        throw error;
+    }
+},
+
+    /**
      * Obtiene datos de un recluta específico
      * @param {number} id - ID del recluta
      * @returns {Promise<Object>} - Datos del recluta
