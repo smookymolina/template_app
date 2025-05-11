@@ -12,19 +12,44 @@ let currentYear = currentDate.getFullYear();
 
 // Evento para cuando se carga completamente el documento
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM cargado completamente');
+    
     // Inicializar listeners de eventos para la interfaz
     initEventListeners();
     
     // Comprobar si hay un tema guardado
     checkSavedTheme();
     
-    // Comprobar si hay una sesión activa
-    checkSession();
-    
-    // Inicializar calendario si estamos en esa sección
-    initCalendar();
     // Verificar estado de autenticación
     checkAuthentication();
+    
+    // Inicializar eventos de los dropdowns
+    const profileDropdownButton = document.getElementById('profile-dropdown-button');
+    if (profileDropdownButton) {
+        profileDropdownButton.addEventListener('click', function() {
+            const dropdown = document.getElementById('profile-dropdown-content');
+            if (dropdown) dropdown.classList.toggle('show');
+        });
+    }
+    
+    // Cerrar dropdowns al hacer clic fuera
+    document.addEventListener('click', function(event) {
+        const dropdowns = document.querySelectorAll('.dropdown-content.show');
+        dropdowns.forEach(dropdown => {
+            if (!dropdown.parentElement.contains(event.target)) {
+                dropdown.classList.remove('show');
+            }
+        });
+    });
+    
+    // Configurar botón de logout
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            logout();
+        });
+    }
 });
 
 // Comprobar si existe una sesión de usuario activa
@@ -323,14 +348,21 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 function checkAuthentication() {
+    console.log('Verificando autenticación...');
     fetch('/api/check-auth')
-        .then(response => response.json())
+        .then(response => {
+            console.log('Respuesta recibida:', response.status);
+            return response.json();
+        })
         .then(data => {
+            console.log('Datos de autenticación:', data);
             if (data.authenticated) {
                 // Usuario ya está autenticado
+                console.log('Usuario autenticado:', data.usuario);
                 loginSuccess(data.usuario);
             } else {
                 // Mostrar pantalla de login
+                console.log('Usuario no autenticado, mostrando login');
                 document.getElementById('login-section').style.display = 'block';
                 document.getElementById('dashboard-section').style.display = 'none';
             }
@@ -393,19 +425,48 @@ function loginSuccess(usuario) {
     document.getElementById('login-section').style.display = 'none';
     document.getElementById('dashboard-section').style.display = 'block';
     
-    document.getElementById('gerente-name').textContent = usuario.email;
-    document.getElementById('dropdown-user-name').textContent = usuario.email;
-    document.getElementById('dashboard-profile-pic').src = "/api/placeholder/100/100";
+    // Actualizar información de usuario en la UI
+    if (document.getElementById('gerente-name'))
+        document.getElementById('gerente-name').textContent = usuario.nombre || usuario.email;
+    if (document.getElementById('dropdown-user-name'))
+        document.getElementById('dropdown-user-name').textContent = usuario.nombre || usuario.email;
+    if (document.getElementById('dashboard-profile-pic'))
+        document.getElementById('dashboard-profile-pic').src = usuario.foto_url || "/api/placeholder/100/100";
     
+    // Actualizar campos del formulario de perfil si existen
     if (document.getElementById('user-name')) 
-        document.getElementById('user-name').value = usuario.email;
+        document.getElementById('user-name').value = usuario.nombre || usuario.email;
     if (document.getElementById('user-email')) 
         document.getElementById('user-email').value = usuario.email;
+    if (document.getElementById('user-phone'))
+        document.getElementById('user-phone').value = usuario.telefono || '';
     
-    showNotification(`¡Bienvenido ${usuario.email}!`, 'success');
+    showNotification(`¡Bienvenido ${usuario.nombre || usuario.email}!`, 'success');
+    
+    // Configurar sección inicial activa
+    const reclutas_section = document.getElementById('reclutas-section');
+    if (reclutas_section) {
+        reclutas_section.classList.add('active');
+    }
+    
+    // Activar navegación
+    const navLinks = document.querySelectorAll('.dashboard-nav a');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetSection = this.getAttribute('data-section');
+            changeActiveSection(targetSection);
+        });
+    });
     
     // Cargar datos reales de reclutas
     loadReclutas();
+    
+    // Cargar estadísticas
+    loadEstadisticas();
+    
+    // Inicializar calendario
+    initCalendar();
 }
 
 // Agregar esta nueva función
@@ -2140,7 +2201,7 @@ function closeMenusOnClickOutside(event) {
 function changeActiveSection(targetSection) {
     if (!targetSection) return;
     
-    // Actualizar tab activa
+    // Actualizar tab activa en la navegación
     const navItems = document.querySelectorAll('.dashboard-nav li');
     if (navItems) {
         navItems.forEach(li => {
@@ -2161,11 +2222,33 @@ function changeActiveSection(targetSection) {
     }
     
     const targetElement = document.getElementById(targetSection);
-    if (targetElement) targetElement.classList.add('active');
+    if (targetElement) {
+        targetElement.classList.add('active');
+        
+        // Disparar evento personalizado para notificar el cambio de sección
+        const event = new CustomEvent('sectionChanged', { 
+            detail: { section: targetSection } 
+        });
+        document.dispatchEvent(event);
+    }
     
-    // Si es la sección de estadísticas, recargar datos
-    if (targetSection === 'estadisticas-section') {
-        loadEstadisticas();
+    // Acciones específicas por sección
+    switch (targetSection) {
+        case 'estadisticas-section':
+            loadEstadisticas();
+            break;
+        case 'calendario-section':
+            // Recargar eventos si es necesario
+            if (typeof updateCalendarEvents === 'function') {
+                setTimeout(() => {
+                    updateCalendarEvents();
+                }, 200);
+            }
+            break;
+        case 'reclutas-section':
+            // Recargar lista de reclutas si es necesario
+            loadReclutas();
+            break;
     }
 }
 

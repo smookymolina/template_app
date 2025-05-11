@@ -80,7 +80,62 @@
 
 <!-- Dashboard Section (hidden by default) -->
 <div id="dashboard-section" style="display: none;">
-    <!-- Dashboard content from other templates -->
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="profile-section">
+            <div class="profile-pic-container">
+                <img id="dashboard-profile-pic" class="profile-pic" src="/api/placeholder/100/100" alt="Foto de perfil">
+                <div class="profile-pic-overlay">
+                    <label for="profile-upload" class="profile-pic-edit">
+                        <i class="fas fa-camera"></i>
+                    </label>
+                    <input type="file" id="profile-upload" accept="image/*" style="display: none;">
+                </div>
+            </div>
+            <div class="profile-info">
+                <h2 id="gerente-name">Nombre del Gerente</h2>
+                <p class="profile-role">Administrador</p>
+            </div>
+        </div>
+        
+        <div class="dashboard-nav">
+            <ul>
+                <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Reclutas</a></li>
+                <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
+                <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Estadísticas</a></li>
+                <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Configuración</a></li>
+            </ul>
+        </div>
+        
+        <div class="profile-dropdown">
+            <button id="profile-dropdown-button" class="profile-dropdown-button">
+                <i class="fas fa-user-circle"></i>
+                <span id="dropdown-user-name">Usuario</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+            <div id="profile-dropdown-content" class="dropdown-content">
+                <a href="#" data-section="configuracion-section"><i class="fas fa-user-cog"></i> Mi Perfil</a>
+                <a href="#"><i class="fas fa-question-circle"></i> Ayuda</a>
+                <div class="dropdown-divider"></div>
+                <a href="#" id="logout-button"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div class="dashboard-content">
+        <!-- Sección de reclutas -->
+        {% include 'components/seccion_reclutas.html' %}
+        
+        <!-- Sección de calendario -->
+        {% include 'components/seccion_calendario.html' %}
+        
+        <!-- Sección de estadísticas -->
+        {% include 'components/seccion_estadisticas.html' %}
+        
+        <!-- Sección de configuración -->
+        {% include 'components/seccion_configuracion.html' %}
+    </div>
 </div>
 
 <!-- Contenedor para resultados del tracking (en pestaña) -->
@@ -134,6 +189,34 @@
         </div>
     </div>
 </div>
+
+{% if include_components %}
+<!-- Modales para la gestión de reclutas -->
+{% include 'components/modals.html' %}
+
+<!-- Modal de confirmación (usado en varias secciones) -->
+<div id="confirm-modal" class="modal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h3 id="confirm-title">Confirmar acción</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+
+        <div class="modal-body">
+            <p id="confirm-message">¿Estás seguro de que deseas realizar esta acción?</p>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary close-modal">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button id="confirm-action-btn" class="btn-danger">
+                <i class="fas fa-check"></i> Confirmar
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}

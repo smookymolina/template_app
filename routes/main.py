@@ -141,7 +141,7 @@ def index():
     Returns:
         Template HTML renderizado
     """
-    return render_template('index.html')
+    return render_template('index.html', include_components=True)
 
 @main_bp.route('/api/placeholder/<int:width>/<int:height>')
 def placeholder(width, height):
