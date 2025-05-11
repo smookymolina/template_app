@@ -23,5 +23,5 @@ def safe_commit():
 # Importar modelos para hacerlos disponibles desde models
 from models.usuario import Usuario
 from models.recluta import Recluta
-from models.entrevista import Entrevista
+from models.entrevista import Entrevista 
 from models.user_session import UserSession

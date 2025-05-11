@@ -17,44 +17,45 @@ const Reclutas = {
         sortOrder: 'asc'
     },
     currentReclutaId: null,
+    asesores: [], // Añadido para almacenar la lista de asesores
 
     /**
      * Inicializa todos los elementos y eventos de gestión de reclutas
      */
     init: async function() {
-        // Inicializar filtros y eventos
-        this.initFilters();
-
-        // Inicializar formulario de añadir recluta
-        this.initAddReclutaForm();
-
-        // Eventos para botones de acción en el modal de detalles
-        const cancelEditBtn = document.querySelector('.edit-mode-buttons .btn-secondary');
-        if (cancelEditBtn) {
-            cancelEditBtn.addEventListener('click', () => this.cancelEdit());
-        }
-
-        const saveChangesBtn = document.querySelector('.edit-mode-buttons .btn-primary');
-        if (saveChangesBtn) {
-            saveChangesBtn.addEventListener('click', () => this.saveReclutaChanges());
-        }
-
-        // Cargar datos iniciales
         try {
+            // Inicializar filtros y eventos
+            this.initFilters();
+
+            // Inicializar formulario de añadir recluta
+            this.initAddReclutaForm();
+
+            // Eventos para botones de acción en el modal de detalles
+            const cancelEditBtn = document.querySelector('.edit-mode-buttons .btn-secondary');
+            if (cancelEditBtn) {
+                cancelEditBtn.addEventListener('click', () => this.cancelEdit());
+            }
+
+            const saveChangesBtn = document.querySelector('.edit-mode-buttons .btn-primary');
+            if (saveChangesBtn) {
+                saveChangesBtn.addEventListener('click', () => this.saveReclutaChanges());
+            }
+
+            // Cargar datos iniciales
             await this.loadAndDisplayReclutas();
             await this.loadAsesores();
             this.populateAsesorSelectors();
+
+            // Registrarse para eventos de cambio de sección
+            document.addEventListener('sectionChanged', (e) => {
+                if (e.detail.section === 'reclutas-section') {
+                    this.loadAndDisplayReclutas();
+                }
+            });
         } catch (error) {
             console.error('Error al inicializar módulo de reclutas:', error);
-            showError('Error al cargar datos de reclutas');
+            showError('Error al cargar datos de reclutas: ' + error.message);
         }
-
-        // Registrarse para eventos de cambio de sección
-        document.addEventListener('sectionChanged', (e) => {
-            if (e.detail.section === 'reclutas-section') {
-                this.loadAndDisplayReclutas();
-            }
-        });
     },
 
     /**
@@ -78,7 +79,9 @@ const Reclutas = {
             }
         } catch (error) {
             console.error('Error al cargar asesores:', error);
-            throw error;
+            // No arrojar error aquí para evitar que falle todo el proceso
+            this.asesores = [];
+            return [];
         }
     },
 
@@ -97,7 +100,24 @@ const Reclutas = {
                 sort_order: this.filters.sortOrder
             });
 
-            const response = await fetch(`${CONFIG.API_URL}/reclutas?${queryParams}`);
+            // Añadir verificación para asegurarnos que CONFIG.API_URL existe
+            if (!CONFIG || !CONFIG.API_URL) {
+                throw new Error('La configuración de API_URL no está definida');
+            }
+
+            // Añadir manejo de errores mejorado con timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+            
+            const response = await fetch(`${CONFIG.API_URL}/reclutas?${queryParams}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 if (response.status === 401) {
@@ -107,19 +127,79 @@ const Reclutas = {
                     showNotification('Sesión expirada. Por favor inicie sesión nuevamente.', 'warning');
                     throw new Error('No autenticado');
                 }
-                throw new Error('Error al cargar reclutas');
+                throw new Error(`Error al cargar reclutas: ${response.status} ${response.statusText}`);
             }
 
             const data = await response.json();
             if (data.success) {
                 this.reclutas = data.reclutas;
-                this.totalPages = data.pages;
+                this.totalPages = data.pages || 1;
                 return this.reclutas;
             } else {
                 throw new Error(data.message || 'Error al obtener reclutas');
             }
         } catch (error) {
-            console.error('Error:', error);
+            // Manejar errores específicos
+            if (error.name === 'AbortError') {
+                console.error('Timeout al cargar reclutas');
+                throw new Error('Tiempo de espera agotado. Verifique su conexión a internet.');
+            }
+            
+            console.error('Error al cargar reclutas:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Carga y muestra la lista de reclutas
+     */
+    loadAndDisplayReclutas: async function() {
+        try {
+            console.log('Cargando reclutas...');
+            const container = document.getElementById('reclutas-list');
+            
+            if (!container) {
+                console.error('No se encontró el contenedor de reclutas en el DOM');
+                return;
+            }
+            
+            // Mostrar estado de carga
+            container.innerHTML = '<tr><td colspan="7" style="text-align:center"><i class="fas fa-spinner fa-spin"></i> Cargando reclutas...</td></tr>';
+            
+            // Cargar reclutas desde la API
+            const reclutas = await this.loadReclutas();
+            
+            // Mostrar reclutas en la tabla
+            this.renderReclutasTable(container);
+            
+            // Actualizar paginación
+            this.updatePagination();
+            
+            console.log(`Se cargaron ${reclutas.length} reclutas`);
+            return reclutas;
+        } catch (error) {
+            console.error('Error al cargar y mostrar reclutas:', error);
+            
+            // Mostrar mensaje de error en la tabla
+            const container = document.getElementById('reclutas-list');
+            if (container) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center">
+                            <i class="fas fa-exclamation-circle text-danger"></i> 
+                            Error al cargar reclutas: ${error.message}. <button class="btn-link retry-load">Reintentar</button>
+                        </td>
+                    </tr>
+                `;
+                
+                // Añadir evento para reintentar carga
+                const retryButton = container.querySelector('.retry-load');
+                if (retryButton) {
+                    retryButton.addEventListener('click', () => this.loadAndDisplayReclutas());
+                }
+            }
+            
+            showError('Error al cargar reclutas: ' + error.message);
             throw error;
         }
     },
@@ -393,6 +473,7 @@ loadAndDisplayReclutas: async function() {
             throw error;
         }
     },
+
 
     /**
      * Filtra los reclutas según los criterios especificados

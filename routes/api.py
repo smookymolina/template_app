@@ -4,7 +4,7 @@ from werkzeug.utils import secure_filename
 from models import db, DatabaseError
 from models.recluta import Recluta
 from models.usuario import Usuario
-from models.entrevista import Entrevista
+from models.entrevista import Entrevista  # Importación específica desde el módulo
 from utils.helpers import guardar_archivo, eliminar_archivo
 from utils.validators import validate_recluta_data, validate_entrevista_data, ValidationError
 from datetime import datetime
