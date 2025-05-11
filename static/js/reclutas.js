@@ -447,7 +447,7 @@ loadAndDisplayReclutas: async function() {
      */
     deleteRecluta: async function(id) {
         try {
-            const response = await fetch(`<span class="math-inline">\{CONFIG\.API\_URL\}/reclutas/</span>{id}`, {
+            const response = await fetch(`${CONFIG.API_URL}/reclutas/${id}`, {
                 method: 'DELETE'
             });
 
