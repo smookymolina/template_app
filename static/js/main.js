@@ -82,7 +82,7 @@ function updateTimelineStatus(status) {
 }
 
 /**
- * Inicializa la aplicación cuando el DOM está completamente cargado
+ * Inicialización principal de la aplicación
  */
 document.addEventListener('DOMContentLoaded', async function() {
     // Comprobar si hay un tema guardado y aplicarlo
@@ -111,11 +111,51 @@ document.addEventListener('DOMContentLoaded', async function() {
         showLoginScreen();
     }
     
+    // Configurar eventos para toggle del modal de cliente
+    setupClienteModal();
+    
     // Configurar eventos de formularios
     setupFormEvents();
 });
 
-
+/**
+ * Configura el modal de cliente
+ */
+function setupClienteModal() {
+    // Exponer funciones al ámbito global para acceso desde plantillas
+    window.showClienteModal = function() {
+        const modal = document.getElementById('cliente-modal');
+        if (modal) modal.style.display = 'block';
+    };
+    
+    window.hideClienteModal = function() {
+        const modal = document.getElementById('cliente-modal');
+        if (modal) modal.style.display = 'none';
+    };
+    
+    // Botón para abrir modal
+    const clienteButton = document.getElementById('cliente-button');
+    if (clienteButton) {
+        clienteButton.addEventListener('click', window.showClienteModal);
+    }
+    
+    // Configuración del modal
+    const modal = document.getElementById('cliente-modal');
+    if (modal) {
+        // Botones para cerrar
+        const closeButtons = modal.querySelectorAll('.close-modal, .close-modal-btn');
+        closeButtons.forEach(button => {
+            button.addEventListener('click', window.hideClienteModal);
+        });
+        
+        // Cerrar al hacer clic fuera
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                window.hideClienteModal();
+            }
+        });
+    }
+}
 
 /**
  * Configura los eventos para formularios y acciones principales

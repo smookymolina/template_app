@@ -1,6 +1,96 @@
-<!-- Modal para acceso de clientes -->
-<!-- Modificar el modal de cliente en templates/index.html -->
+{% extends "base.html" %}
 
+{% block title %}Sistema de Gestión de Reclutas{% endblock %}
+
+{% block content %}
+<div id="login-section">
+    <div class="login-card">
+        <div class="card-header">
+            <i class="fas fa-users-cog"></i>
+            <h2>Sistema de Gestión de Reclutas</h2>
+        </div>
+        
+        <div class="login-tabs">
+            <button type="button" id="admin-login-tab" class="login-tab active">Administrador</button>
+            <button type="button" id="tracking-tab" class="login-tab">Seguimiento</button>
+        </div>
+        
+        <form id="login-form" class="tab-content active">
+            <div class="form-group">
+                <label for="email">Correo Electrónico</label>
+                <div class="input-icon-wrapper">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="email" placeholder="Tu correo electrónico" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <div class="input-icon-wrapper">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" placeholder="Tu contraseña" required>
+                    <button type="button" id="toggle-password" class="toggle-password"><i class="fas fa-eye"></i></button>
+                </div>
+            </div>
+            
+            <div class="remember-forgot">
+                <label class="checkbox-container">
+                    <input type="checkbox" id="remember-me">
+                    <span class="checkbox-label">Recordarme</span>
+                </label>
+                <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
+            </div>
+            
+            <button type="button" id="login-button" class="btn-primary">
+                <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+            </button>
+        </form>
+        
+        <form id="tracking-form" class="tab-content">
+            <div class="form-group">
+                <label for="folio-input">Folio de Seguimiento</label>
+                <div class="input-icon-wrapper">
+                    <i class="fas fa-file-alt"></i>
+                    <input type="text" id="folio-input" placeholder="Ingresa tu folio (Ej: REC-1A2B3C4D)" required>
+                </div>
+            </div>
+            
+            <p class="form-info">
+                <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para consultar el estado de tu proceso.
+            </p>
+            
+            <div class="recovery-link-container">
+                <a href="#" id="tab-recuperar-folio-link">¿Olvidaste tu folio? Recupéralo aquí</a>
+            </div>
+            
+            <button type="button" id="tracking-button" class="btn-primary">
+                <i class="fas fa-search"></i> Consultar Estado
+            </button>
+        </form>
+        
+        <div class="login-divider">
+            <span>o</span>
+        </div>
+        
+        <button type="button" id="cliente-button" class="btn-secondary">
+            <i class="fas fa-user"></i> Acceso para Clientes
+        </button>
+    </div>
+</div>
+
+<!-- Dashboard Section (hidden by default) -->
+<div id="dashboard-section" style="display: none;">
+    <!-- Dashboard content from other templates -->
+</div>
+
+<!-- Contenedor para resultados del tracking (en pestaña) -->
+<div id="tracking-results" style="display: none;">
+    <!-- Los resultados se cargarán dinámicamente aquí -->
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal para acceso de clientes -->
 <div id="cliente-modal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -9,7 +99,7 @@
         </div>
         
         <div class="modal-body">
-            <form id="tracking-form">
+            <form id="modal-tracking-form">
                 <div class="form-group">
                     <label for="folio">Folio de Seguimiento</label>
                     <div class="input-icon-wrapper">
@@ -28,12 +118,10 @@
                 </div>
             </form>
             
-            <!-- Contenedor para mostrar los resultados (inicialmente oculto) -->
-            <div id="tracking-results" style="display: none;">
+            <!-- Contenedor para mostrar los resultados del modal (inicialmente oculto) -->
+            <div id="modal-results" style="display: none;">
                 <!-- Los resultados se cargarán dinámicamente aquí -->
             </div>
-            
-            <!-- El formulario de recuperación se generará dinámicamente -->
         </div>
         
         <div class="modal-footer">
@@ -46,343 +134,247 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
-<!-- Estilos para el enlace de recuperación -->
-<style>
-.recovery-link-container {
-    text-align: center;
-    margin-top: 15px;
-    font-size: 14px;
-}
-
-.recovery-link-container a {
-    color: var(--primary-color);
-    text-decoration: none;
-    transition: var(--transition);
-}
-
-.recovery-link-container a:hover {
-    text-decoration: underline;
-}
-
-#recovery-form {
-    animation: fadeIn 0.3s ease;
-}
-
-/* Estilos para el formulario de recuperación */
-.recovery-header {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.recovery-header h3 {
-    color: var(--primary-color);
-    margin-bottom: 10px;
-}
-
-.recovery-header p {
-    color: var(--text-light);
-    margin: 0;
-}
-
-.form-buttons {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
-    gap: 10px;
-}
-
-.form-buttons button {
-    flex: 1;
-}
-
-/* Modo oscuro */
-.dark-mode .recovery-link-container a {
-    color: var(--primary-color);
-}
-</style>
-
-<!-- Estilos adicionales para las instrucciones del folio -->
-<style>
-.folio-instructions {
-    background-color: rgba(0, 123, 255, 0.05);
-    border-radius: var(--border-radius);
-    padding: 15px;
-    margin-bottom: 20px;
-}
-
-.dark-mode .folio-instructions {
-    background-color: rgba(0, 123, 255, 0.03);
-}
-
-.folio-instructions h4 {
-    font-size: 16px;
-    color: var(--primary-color);
-    margin-top: 0;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-}
-
-.folio-instructions h4 i {
-    margin-right: 8px;
-}
-
-.folio-instructions h5 {
-    font-size: 14px;
-    margin: 15px 0 8px;
-    display: flex;
-    align-items: center;
-}
-
-.folio-instructions h5 i {
-    margin-right: 8px;
-}
-
-.folio-instructions p {
-    margin-bottom: 10px;
-    font-size: 14px;
-}
-
-.folio-instructions ul {
-    padding-left: 25px;
-    margin-bottom: 10px;
-}
-
-.folio-instructions li {
-    margin-bottom: 5px;
-    font-size: 14px;
-}
-
-.folio-instructions strong {
-    color: var(--primary-color);
-    font-weight: 600;
-}
-</style>
-
-<div class="modal-body">
-    <form id="tracking-form">
-        <div class="form-group">
-            <label for="folio">Folio de Seguimiento</label>
-            <div class="input-icon-wrapper">
-                <i class="fas fa-file-alt"></i>
-                <input type="text" id="folio" placeholder="Ingresa tu folio (formato: REC-XXXXXXXX)" required>
-            </div>
-        </div>
+{% block scripts %}
+{{ super() }}
+<script>
+    // Inicialización específica para la página de inicio
+    document.addEventListener('DOMContentLoaded', function() {
+        // Manejo de las pestañas
+        const adminLoginTab = document.getElementById('admin-login-tab');
+        const trackingTab = document.getElementById('tracking-tab');
+        const loginForm = document.getElementById('login-form');
+        const trackingForm = document.getElementById('tracking-form');
+        const trackingResults = document.getElementById('tracking-results');
         
-        <p class="modal-info">
-            <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para dar seguimiento a tu proceso de contratación.
-            El formato del folio es REC-XXXXXXXX (por ejemplo: REC-1A2B3C4D).
-        </p>
-    </form>
-    
-    <!-- Contenedor para mostrar los resultados (inicialmente oculto) -->
-    <div id="tracking-results" style="display: none;">
-        <!-- Los resultados se cargarán dinámicamente aquí -->
-    </div>
-</div>
-
-<!-- Estilos adicionales para resultados y timeline -->
-<style>
-/* Estilos para el resultado del tracking */
-.tracking-result-card {
-    background-color: white;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-sm);
-    padding: 20px;
-    margin-bottom: 20px;
-    transition: var(--transition);
-}
-
-.dark-mode .tracking-result-card {
-    background-color: var(--light-color);
-}
-
-.tracking-result-card h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: var(--primary-color);
-    font-weight: 600;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.tracking-info {
-    margin-bottom: 20px;
-}
-
-.tracking-row {
-    display: flex;
-    margin-bottom: 12px;
-}
-
-.tracking-label {
-    width: 140px;
-    font-weight: 600;
-    color: var(--text-color);
-}
-
-.tracking-value {
-    flex: 1;
-}
-
-.tracking-section {
-    margin-top: 20px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border-color);
-}
-
-.tracking-section h4 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: var(--text-color);
-    font-weight: 600;
-}
-
-/* Estilos para timeline */
-.timeline-container {
-    padding: 20px 0;
-    margin-bottom: 30px;
-}
-
-.timeline {
-    position: relative;
-    padding: 20px 0;
-    margin-bottom: 30px;
-}
-
-/* Línea central */
-.timeline::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 50px;
-    height: 100%;
-    width: 4px;
-    background: var(--border-color);
-    z-index: 1;
-}
-
-.dark-mode .timeline::before {
-    background: #3f3f3f;
-}
-
-/* Elementos de la timeline */
-.timeline-item {
-    position: relative;
-    margin-bottom: 30px;
-    padding-left: 100px;
-}
-
-.timeline-item:last-child {
-    margin-bottom: 0;
-}
-
-/* Marcador circular */
-.timeline-marker {
-    position: absolute;
-    left: 42px;
-    top: 0;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: var(--light-color);
-    border: 4px solid var(--border-color);
-    z-index: 2;
-    transform: translateX(-50%);
-    transition: var(--transition);
-}
-
-.dark-mode .timeline-marker {
-    background: var(--primary-light);
-    border-color: #3f3f3f;
-}
-
-/* Estado completado */
-.timeline-item.completed .timeline-marker {
-    background: var(--success-color);
-    border-color: var(--success-color);
-}
-
-/* Estado activo (en progreso) */
-.timeline-item.active .timeline-marker {
-    background: var(--primary-color);
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.2);
-}
-
-/* Contenido de cada elemento */
-.timeline-content {
-    padding: 15px;
-    border-radius: var(--border-radius);
-    background: white;
-    box-shadow: var(--shadow-sm);
-    transition: var(--transition);
-}
-
-.dark-mode .timeline-content {
-    background: var(--light-color);
-}
-
-.timeline-item.completed .timeline-content {
-    border-left: 4px solid var(--success-color);
-}
-
-.timeline-item.active .timeline-content {
-    border-left: 4px solid var(--primary-color);
-    box-shadow: var(--shadow-md);
-}
-
-.timeline-content h4 {
-    margin: 0 0 8px;
-    color: var(--text-color);
-    font-weight: 600;
-    transition: var(--transition);
-}
-
-.timeline-content p {
-    margin: 0;
-    color: var(--text-light);
-    font-size: 14px;
-}
-
-.timeline-item.active .timeline-content h4 {
-    color: var(--primary-color);
-}
-
-.timeline-item.completed .timeline-content h4 {
-    color: var(--success-color);
-}
-
-/* Botones */
-.new-query-btn {
-    display: inline-block;
-    margin-top: 15px;
-}
-
-/* Responsive */
-@media (max-width: 576px) {
-    .tracking-row {
-        flex-direction: column;
-    }
-    
-    .tracking-label {
-        width: 100%;
-        margin-bottom: 5px;
-    }
-    
-    .timeline::before {
-        left: 30px;
-    }
-    
-    .timeline-item {
-        padding-left: 70px;
-    }
-    
-    .timeline-marker {
-        left: 22px;
-        width: 16px;
-        height: 16px;
-    }
-}
-</style>
+        if (adminLoginTab && trackingTab) {
+            adminLoginTab.addEventListener('click', function() {
+                adminLoginTab.classList.add('active');
+                trackingTab.classList.remove('active');
+                loginForm.classList.add('active');
+                trackingForm.classList.remove('active');
+                trackingResults.style.display = 'none';
+            });
+            
+            trackingTab.addEventListener('click', function() {
+                trackingTab.classList.add('active');
+                adminLoginTab.classList.remove('active');
+                trackingForm.classList.add('active');
+                loginForm.classList.remove('active');
+            });
+        }
+        
+        // Configurar botón de cliente para abrir el modal
+        const clienteButton = document.getElementById('cliente-button');
+        if (clienteButton) {
+            clienteButton.addEventListener('click', function() {
+                const modal = document.getElementById('cliente-modal');
+                if (modal) modal.style.display = 'block';
+            });
+        }
+        
+        // Configurar cierre del modal
+        const closeButtons = document.querySelectorAll('.close-modal, .close-modal-btn');
+        closeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const modal = document.getElementById('cliente-modal');
+                if (modal) modal.style.display = 'none';
+            });
+        });
+        
+        // Cerrar modal al hacer clic fuera del contenido
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('cliente-modal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+        
+        // Manejo de formularios de tracking
+        const trackingButton = document.getElementById('tracking-button');
+        if (trackingButton) {
+            trackingButton.addEventListener('click', function() {
+                const folioInput = document.getElementById('folio-input');
+                if (folioInput && folioInput.value) {
+                    // Usar Client si está disponible, o implementar funcionalidad básica
+                    if (window.Client && typeof window.Client.processFolio === 'function') {
+                        // Pasar el valor del folio a Client
+                        window.Client.processFolioValue(folioInput.value);
+                    } else {
+                        trackFolio(folioInput.value);
+                    }
+                } else {
+                    showNotification('Por favor, ingresa un número de folio', 'warning');
+                }
+            });
+        }
+        
+        // Enlace para recuperar folio en la pestaña
+        const tabRecuperarFolioLink = document.getElementById('tab-recuperar-folio-link');
+        if (tabRecuperarFolioLink) {
+            tabRecuperarFolioLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Mostrar modal con el formulario de recuperación activo
+                const modal = document.getElementById('cliente-modal');
+                if (modal) {
+                    modal.style.display = 'block';
+                    
+                    // Si Client ya está disponible, usar su método
+                    if (window.Client && typeof window.Client.showRecuperarFolioForm === 'function') {
+                        window.Client.showRecuperarFolioForm();
+                    }
+                }
+            });
+        }
+        
+        // Enlace para recuperar folio en el modal
+        const recuperarFolioLink = document.getElementById('recuperar-folio-link');
+        if (recuperarFolioLink) {
+            recuperarFolioLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Si Client ya está disponible, usarlo
+                if (window.Client && typeof window.Client.showRecuperarFolioForm === 'function') {
+                    window.Client.showRecuperarFolioForm();
+                }
+            });
+        }
+        
+        // Botón de consulta de folio en el modal
+        const consultarFolioBtn = document.getElementById('consultar-folio-btn');
+        if (consultarFolioBtn) {
+            consultarFolioBtn.addEventListener('click', function() {
+                const folioInput = document.getElementById('folio');
+                
+                // Si Client ya está disponible, usarlo
+                if (window.Client && typeof window.Client.processFolio === 'function') {
+                    window.Client.processFolio();
+                } else if (folioInput && folioInput.value) {
+                    // Implementación básica como fallback
+                    trackFolio(folioInput.value);
+                }
+            });
+        }
+        
+        // Input de folio para permitir Enter en el modal
+        const folioInput = document.getElementById('folio');
+        if (folioInput) {
+            folioInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    
+                    // Si Client ya está disponible, usarlo
+                    if (window.Client && typeof window.Client.processFolio === 'function') {
+                        window.Client.processFolio();
+                    } else {
+                        // Implementación básica como fallback
+                        trackFolio(this.value);
+                    }
+                }
+            });
+        }
+        
+        // Funciones auxiliares
+        function trackFolio(folio) {
+            if (!folio) {
+                showNotification('Por favor, ingresa un número de folio', 'warning');
+                return;
+            }
+            
+            // Función básica para consultar folio
+            fetch(`/api/tracking/${folio}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(response.status === 404 ? 'Folio no encontrado' : 'Error en la consulta');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Mostrar resultados
+                        displayTrackingResults(data.tracking_info);
+                    } else {
+                        showNotification(data.message || 'No se encontró información para este folio', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification(error.message || 'Error al consultar el folio', 'error');
+                });
+        }
+        
+        function displayTrackingResults(info) {
+            // Implementación básica para mostrar resultados
+            const resultsContainer = document.getElementById('tracking-results');
+            const modalResults = document.getElementById('modal-results');
+            const targetContainer = modalResults && modalResults.style.display !== 'none' ? modalResults : resultsContainer;
+            
+            if (targetContainer) {
+                targetContainer.style.display = 'block';
+                targetContainer.innerHTML = `
+                    <div class="tracking-result-card">
+                        <h3>Información de Proceso</h3>
+                        <div class="tracking-info">
+                            <div class="tracking-row">
+                                <div class="tracking-label">Candidato:</div>
+                                <div class="tracking-value">${info.nombre || 'No disponible'}</div>
+                            </div>
+                            <div class="tracking-row">
+                                <div class="tracking-label">Estado:</div>
+                                <div class="tracking-value">
+                                    <span class="badge badge-${getBadgeClass(info.estado)}">${info.estado || 'Desconocido'}</span>
+                                </div>
+                            </div>
+                            <div class="tracking-row">
+                                <div class="tracking-label">Fecha de registro:</div>
+                                <div class="tracking-value">${info.fecha_registro || 'No disponible'}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-secondary new-query-btn">
+                        <i class="fas fa-arrow-left"></i> Realizar otra consulta
+                    </button>
+                `;
+                
+                // Añadir funcionalidad al botón de nueva consulta
+                const newQueryBtn = targetContainer.querySelector('.new-query-btn');
+                if (newQueryBtn) {
+                    newQueryBtn.addEventListener('click', function() {
+                        targetContainer.style.display = 'none';
+                        
+                        // Mostrar formulario correspondiente
+                        if (targetContainer === modalResults) {
+                            document.getElementById('modal-tracking-form').style.display = 'block';
+                        } else {
+                            trackingForm.classList.add('active');
+                        }
+                    });
+                }
+            }
+        }
+        
+        function showNotification(message, type = 'info') {
+            // Si existe una función global, usarla
+            if (window.showNotification) {
+                window.showNotification(message, type);
+                return;
+            }
+            
+            // Implementación básica como fallback
+            alert(`${type.toUpperCase()}: ${message}`);
+        }
+        
+        function getBadgeClass(estado) {
+            switch(estado) {
+                case 'Activo': return 'success';
+                case 'En proceso': return 'warning';
+                case 'Rechazado': return 'danger';
+                default: return 'secondary';
+            }
+        }
+    });
+</script>
+{% endblock %}
