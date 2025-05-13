@@ -70,6 +70,8 @@
     </div>
 </div>
 
+
+
 <!-- Dashboard Section (hidden by default) -->
 <div id="dashboard-section" style="display: none;">
     <!-- Dashboard Header -->
@@ -227,15 +229,27 @@
             trackingButton.addEventListener('click', function() {
                 const folioInput = document.getElementById('folio-input');
                 if (folioInput && folioInput.value) {
-                    // Usar Client si está disponible, o implementar funcionalidad básica
-                    if (window.Client && typeof window.Client.processFolio === 'function') {
-                        // Pasar el valor del folio a Client
-                        window.Client.processFolioValue(folioInput.value);
+                    // Verificar si existe la función trackFolio
+                    if (typeof trackFolio === 'function') {
+                        trackFolio();
                     } else {
-                        trackFolio(folioInput.value);
+                        // Función de fallback
+                        consultarFolio(folioInput.value);
                     }
                 } else {
                     showNotification('Por favor, ingresa un número de folio', 'warning');
+                }
+            });
+        }
+        
+        // Permitir Enter en el campo de folio
+        const folioInputField = document.getElementById('folio-input');
+        if (folioInputField) {
+            folioInputField.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const trackingBtn = document.getElementById('tracking-button');
+                    if (trackingBtn) trackingBtn.click();
                 }
             });
         }
@@ -384,6 +398,47 @@
                     });
                 }
             }
+        }
+
+        // Función básica para consultar folio
+        function consultarFolio(folio) {
+            if (!folio) {
+                showNotification('Por favor, ingresa un número de folio', 'warning');
+                return;
+            }
+            
+            const trackingButton = document.getElementById('tracking-button');
+            if (trackingButton) {
+                trackingButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
+                trackingButton.disabled = true;
+            }
+            
+            // Función básica para consultar folio
+            fetch(`/api/tracking/${folio}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(response.status === 404 ? 'Folio no encontrado' : 'Error en la consulta');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Mostrar resultados
+                        displayTrackingResults(data.tracking_info);
+                    } else {
+                        showNotification(data.message || 'No se encontró información para este folio', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification(error.message || 'Error al consultar el folio', 'error');
+                })
+                .finally(() => {
+                    if (trackingButton) {
+                        trackingButton.innerHTML = '<i class="fas fa-search"></i> Consultar Estado';
+                        trackingButton.disabled = false;
+                    }
+                });
         }
         
         function showNotification(message, type = 'info') {

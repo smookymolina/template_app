@@ -361,7 +361,8 @@ if (trackingForm) {
 
 // Función para realizar el seguimiento por folio
 async function trackFolio() {
-    const folio = document.getElementById('folio')?.value;
+    const folioInput = document.getElementById('folio-input');
+    const folio = folioInput ? folioInput.value : '';
     
     if (!folio) {
         showNotification('Por favor, ingresa un número de folio', 'warning');
@@ -383,7 +384,8 @@ async function trackFolio() {
             displayTrackingResults(data.tracking_info);
         } else {
             showNotification(data.message || 'No se encontró información para este folio', 'error');
-            trackingResults.style.display = 'none';
+            const trackingResults = document.getElementById('tracking-results');
+            if (trackingResults) trackingResults.style.display = 'none';
         }
     } catch (error) {
         console.error('Error de seguimiento:', error);
@@ -402,6 +404,8 @@ function displayTrackingResults(info) {
     
     // Obtener el contenedor de resultados
     const resultsContainer = document.getElementById('tracking-results');
+    const trackingForm = document.getElementById('tracking-form');
+    
     if (!resultsContainer) return;
     
     // Crear contenido de resultados
@@ -452,7 +456,6 @@ function displayTrackingResults(info) {
     resultsContainer.style.display = 'block';
     
     // Ocultar el formulario
-    const trackingForm = document.getElementById('tracking-form');
     if (trackingForm) {
         trackingForm.style.display = 'none';
     }
@@ -463,7 +466,15 @@ function displayTrackingResults(info) {
     backButton.innerHTML = '<i class="fas fa-arrow-left"></i> Realizar otra consulta';
     backButton.onclick = function() {
         resultsContainer.style.display = 'none';
-        if (trackingForm) trackingForm.style.display = 'block';
+        if (trackingForm) {
+            trackingForm.style.display = 'block';
+            trackingForm.classList.add('active');
+        }
+        const folioInput = document.getElementById('folio-input');
+        if (folioInput) {
+            folioInput.value = '';
+            folioInput.focus();
+        }
     };
     
     resultsContainer.appendChild(backButton);
