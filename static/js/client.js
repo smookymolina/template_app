@@ -9,29 +9,6 @@ const Client = {
      * Inicializa las funcionalidades del modal de cliente
      */
     init: function() {
-        // Configurar botón para abrir modal
-        const clienteButton = document.getElementById('cliente-button');
-        if (clienteButton) {
-            clienteButton.addEventListener('click', this.showClienteModal);
-        }
-        
-        // Configurar cierre del modal
-        const modal = document.getElementById('cliente-modal');
-        if (modal) {
-            // Botones para cerrar
-            const closeButtons = modal.querySelectorAll('.close-modal, .close-modal-btn');
-            closeButtons.forEach(button => {
-                button.addEventListener('click', this.hideClienteModal);
-            });
-            
-            // Cerrar al hacer clic fuera del contenido
-            modal.addEventListener('click', (event) => {
-                if (event.target === modal) {
-                    this.hideClienteModal();
-                }
-            });
-        }
-        
         // Configurar formulario de consulta
         const consultarBtn = document.getElementById('consultar-folio-btn');
         if (consultarBtn) {

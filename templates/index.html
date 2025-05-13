@@ -67,14 +67,6 @@
                 <i class="fas fa-search"></i> Consultar Estado
             </button>
         </form>
-        
-        <div class="login-divider">
-            <span>o</span>
-        </div>
-        
-        <button type="button" id="cliente-button" class="btn-secondary">
-            <i class="fas fa-user"></i> Acceso para Clientes
-        </button>
     </div>
 </div>
 
@@ -145,51 +137,6 @@
 {% endblock %}
 
 {% block modals %}
-<!-- Modal para acceso de clientes -->
-<div id="cliente-modal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Acceso para Clientes</h3>
-            <span class="close-modal">&times;</span>
-        </div>
-        
-        <div class="modal-body">
-            <form id="modal-tracking-form">
-                <div class="form-group">
-                    <label for="folio">Folio de Seguimiento</label>
-                    <div class="input-icon-wrapper">
-                        <i class="fas fa-file-alt"></i>
-                        <input type="text" id="folio" placeholder="Ingresa tu folio (formato: REC-XXXXXXXX)" required>
-                    </div>
-                </div>
-                
-                <p class="modal-info">
-                    <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para dar seguimiento a tu proceso de contratación.
-                    El formato del folio es REC-XXXXXXXX (por ejemplo: REC-1A2B3C4D).
-                </p>
-                
-                <div class="recovery-link-container">
-                    <a href="#" id="recuperar-folio-link">¿Olvidaste tu folio? Recupéralo aquí</a>
-                </div>
-            </form>
-            
-            <!-- Contenedor para mostrar los resultados del modal (inicialmente oculto) -->
-            <div id="modal-results" style="display: none;">
-                <!-- Los resultados se cargarán dinámicamente aquí -->
-            </div>
-        </div>
-        
-        <div class="modal-footer">
-            <button class="btn-secondary close-modal-btn">
-                <i class="fas fa-times"></i> Cancelar
-            </button>
-            <button class="btn-primary" id="consultar-folio-btn">
-                <i class="fas fa-search"></i> Consultar
-            </button>
-        </div>
-    </div>
-</div>
-
 {% if include_components %}
 <!-- Modales para la gestión de reclutas -->
 {% include 'components/modals.html' %}

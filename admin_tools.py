@@ -24,13 +24,34 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-
 try:
-    from app import app
-    from models import db, Usuario
-except ImportError:
-    print("Error: No se pueden importar los módulos necesarios.")
-    print("Asegúrate de que este script esté en la misma carpeta que app.py y models.py")
+    # Usar la nueva estructura de importación
+    print("Intentando importar desde app_factory...")
+    
+    # Monkey patch para evitar la necesidad de flask_cors
+    import sys
+    import types
+    mock_module = types.ModuleType('flask_cors')
+    mock_module.CORS = lambda app, **kwargs: None
+    sys.modules['flask_cors'] = mock_module
+    
+    # Ahora importamos normalmente
+    from app_factory import create_app
+    print("Importando Usuario desde models.usuario...")
+    from models.usuario import Usuario
+    print("Importando db desde models...")
+    from models import db
+    
+    print("Creando aplicación con contexto...")
+    app = create_app('development')
+    print("Aplicación creada exitosamente")
+except ImportError as e:
+    print(f"Error detallado de importación: {e}")
+    # Mostrar los paths donde Python está buscando módulos
+    print("\nPaths de búsqueda de Python:")
+    for p in sys.path:
+        print(f"  - {p}")
+    print("\nAsegúrate de que este script esté en la carpeta raíz del proyecto")
     sys.exit(1)
 
 # Colores para la terminal

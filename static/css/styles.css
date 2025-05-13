@@ -1622,37 +1622,6 @@ input:checked + .slider:before {
     }
 }
 
-/* Divider entre botones */
-.login-divider {
-    display: flex;
-    align-items: center;
-    text-align: center;
-    margin: 20px 0;
-    color: var(--text-light);
-}
-
-.login-divider::before,
-.login-divider::after {
-    content: '';
-    flex: 1;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.login-divider span {
-    padding: 0 10px;
-    font-size: 14px;
-}
-
-/* Ajustes para el botón de cliente */
-#cliente-button {
-    margin-top: 0; /* Elimina el margen superior ya que el divider proporciona espacio */
-    background-color: var(--secondary-color);
-}
-
-#cliente-button:hover {
-    background-color: #5a6268;
-}
-
 /* Estilos para el modal de cliente */
 .modal-info {
     background-color: rgba(0, 123, 255, 0.1);
