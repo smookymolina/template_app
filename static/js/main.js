@@ -362,7 +362,7 @@ if (trackingForm) {
 // Función para realizar el seguimiento por folio
 async function trackFolio() {
     const folioInput = document.getElementById('folio-input');
-    const folio = folioInput ? folioInput.value : '';
+    const folio = folioInput ? folioInput.value.trim() : '';
     
     if (!folio) {
         showNotification('Por favor, ingresa un número de folio', 'warning');

@@ -178,7 +178,6 @@
         const trackingTab = document.getElementById('tracking-tab');
         const loginForm = document.getElementById('login-form');
         const trackingForm = document.getElementById('tracking-form');
-        const trackingResults = document.getElementById('tracking-results');
         
         if (adminLoginTab && trackingTab) {
             adminLoginTab.addEventListener('click', function() {
@@ -186,7 +185,6 @@
                 trackingTab.classList.remove('active');
                 loginForm.classList.add('active');
                 trackingForm.classList.remove('active');
-                trackingResults.style.display = 'none';
             });
             
             trackingTab.addEventListener('click', function() {
@@ -222,25 +220,6 @@
                 modal.style.display = 'none';
             }
         });
-        
-        // Manejo de formularios de tracking
-        const trackingButton = document.getElementById('tracking-button');
-        if (trackingButton) {
-            trackingButton.addEventListener('click', function() {
-                const folioInput = document.getElementById('folio-input');
-                if (folioInput && folioInput.value) {
-                    // Verificar si existe la función trackFolio
-                    if (typeof trackFolio === 'function') {
-                        trackFolio();
-                    } else {
-                        // Función de fallback
-                        consultarFolio(folioInput.value);
-                    }
-                } else {
-                    showNotification('Por favor, ingresa un número de folio', 'warning');
-                }
-            });
-        }
         
         // Permitir Enter en el campo de folio
         const folioInputField = document.getElementById('folio-input');
