@@ -33,6 +33,7 @@ class Recluta(db.Model):
             'estado': self.estado,
             'puesto': self.puesto,
             'notas': self.notas,
+            'folio': self.folio,
             'foto_url': self.foto_url,
             'fecha_registro': self.fecha_registro.isoformat() if self.fecha_registro else None,
             'ultima_actualizacion': self.ultima_actualizacion.isoformat() if self.ultima_actualizacion else None,

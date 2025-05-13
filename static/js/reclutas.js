@@ -527,67 +527,68 @@ loadAndDisplayReclutas: async function() {
      * @param {HTMLElement} container - Elemento contenedor de la tabla
      */
     renderReclutasTable: function(container) {
-        if (!container) return;
+    if (!container) return;
 
-        container.innerHTML = '';
+    container.innerHTML = '';
 
-        if (!this.reclutas || this.reclutas.length === 0) {
-            container.innerHTML = `
-                <tr>
-                    <td colspan="7" class="text-center"> No se encontraron reclutas. ¡Agrega tu primer recluta!
-                    </td>
-                </tr>
-            `;
-            return;
+    if (!this.reclutas || this.reclutas.length === 0) {
+        container.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center"> No se encontraron reclutas. ¡Agrega tu primer recluta!
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    this.reclutas.forEach(recluta => {
+        const row = document.createElement('tr');
+
+        // Determinar URL de la foto
+        const fotoUrl = recluta.foto_url ?
+            (recluta.foto_url.startsWith('http') ?
+                recluta.foto_url :
+                (recluta.foto_url === 'default_profile.jpg' ?
+                    "/api/placeholder/40/40" :
+                    `/${recluta.foto_url}`)) :
+            "/api/placeholder/40/40";
+
+        // Crear badge de estado
+        const estadoBadge = UI.createBadge(recluta.estado, CONFIG.ESTADOS_RECLUTA);
+
+        row.innerHTML = `
+            <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto"></td>
+            <td>${recluta.nombre}</td>
+            <td>${recluta.email}</td>
+            <td>${recluta.telefono}</td>
+            <td><code>${recluta.folio || 'Sin folio'}</code></td>
+            <td id="estado-cell-${recluta.id}"></td>
+            <td>${recluta.asesor_nombre || 'No asignado'}</td>
+            <td>
+                <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="action-btn edit-btn" data-id="${recluta.id}" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="action-btn delete-btn" data-id="${recluta.id}" title="Eliminar">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        `;
+
+        container.appendChild(row);
+
+        // Añadir badge de estado al TD correspondiente
+        const estadoCell = document.getElementById(`estado-cell-${recluta.id}`);
+        if (estadoCell) {
+            estadoCell.appendChild(estadoBadge);
         }
 
-        this.reclutas.forEach(recluta => {
-            const row = document.createElement('tr');
-
-            // Determinar URL de la foto
-            const fotoUrl = recluta.foto_url ?
-                (recluta.foto_url.startsWith('http') ?
-                    recluta.foto_url :
-                    (recluta.foto_url === 'default_profile.jpg' ?
-                        "/api/placeholder/40/40" :
-                        `/${recluta.foto_url}`)) :
-                "/api/placeholder/40/40";
-
-            // Crear badge de estado
-            const estadoBadge = UI.createBadge(recluta.estado, CONFIG.ESTADOS_RECLUTA);
-
-            row.innerHTML = `
-    <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto"></td>
-    <td>${recluta.nombre}</td>
-    <td>${recluta.email}</td>
-    <td>${recluta.telefono}</td>
-    <td id="estado-cell-${recluta.id}"></td>
-    <td>${recluta.asesor?.nombre || recluta.asesor || 'No asignado'}</td>
-    <td>
-        <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
-            <i class="fas fa-eye"></i>
-        </button>
-        <button class="action-btn edit-btn" data-id="${recluta.id}" title="Editar">
-            <i class="fas fa-edit"></i>
-        </button>
-        <button class="action-btn delete-btn" data-id="${recluta.id}" title="Eliminar">
-            <i class="fas fa-trash-alt"></i>
-        </button>
-    </td>
-`;
-
-            container.appendChild(row);
-
-            // Añadir badge de estado al TD correspondiente
-            const estadoCell = document.getElementById(`estado-cell-${recluta.id}`);
-            if (estadoCell) {
-                estadoCell.appendChild(estadoBadge);
-            }
-
-            // Configurar botones de acción
-            this.setupActionButtons(row, recluta.id);
-        });
-    },
+        // Configurar botones de acción
+        this.setupActionButtons(row, recluta.id);
+    });
+},
 
     /**
      * Configura los botones de acción para un recluta
@@ -619,26 +620,26 @@ loadAndDisplayReclutas: async function() {
      * @param {number} id - ID del recluta
      */
     viewRecluta: async function(id) {
-        try {
-            const recluta = await this.getRecluta(id);
-            this.currentReclutaId = id;
+    try {
+        const recluta = await this.getRecluta(id);
+        this.currentReclutaId = id;
 
-            // Rellenar datos en el modal
-            const modal = document.getElementById('view-recluta-modal');
-            if (!modal) return;
+        // Rellenar datos en el modal
+        const elements = {
+            nombre: document.getElementById('detail-recluta-nombre'),
+            puesto: document.getElementById('detail-recluta-puesto'),
+            email: document.getElementById('detail-recluta-email'),
+            telefono: document.getElementById('detail-recluta-telefono'),
+            fecha: document.getElementById('detail-recluta-fecha'),
+            notas: document.getElementById('detail-recluta-notas'),
+            estado: document.getElementById('detail-recluta-estado'),
+            foto: document.getElementById('detail-recluta-pic'),
+            folio: document.getElementById('detail-recluta-folio'),  // Añadir esta línea
+            asesor: document.getElementById('detail-recluta-asesor')
+        };
 
-            // Elementos del modal
-            const elements = {
-                nombre: document.getElementById('detail-recluta-nombre'),
-                puesto: document.getElementById('detail-recluta-puesto'),
-                email: document.getElementById('detail-recluta-email'),
-                telefono: document.getElementById('detail-recluta-telefono'),
-                fecha: document.getElementById('detail-recluta-fecha'),
-                notas: document.getElementById('detail-recluta-notas'),
-                estado: document.getElementById('detail-recluta-estado'),
-                foto: document.getElementById('detail-recluta-foto'),
-                asesor: document.getElementById('detail-recluta-asesor-nombre')
-            };
+        // Añadir el folio
+        if (elements.folio) elements.folio.textContent = recluta.folio || 'Sin folio';
 
             if (elements.nombre) elements.nombre.textContent = recluta.nombre || 'N/A';
             if (elements.puesto) elements.puesto.textContent = recluta.puesto || 'N/A';
