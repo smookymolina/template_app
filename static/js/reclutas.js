@@ -557,23 +557,24 @@ loadAndDisplayReclutas: async function() {
             const estadoBadge = UI.createBadge(recluta.estado, CONFIG.ESTADOS_RECLUTA);
 
             row.innerHTML = `
-                <td><img src="<span class="math-inline">\{fotoUrl\}" alt\="</span>{recluta.nombre}" class="recluta-foto"></td>
-                <td><span class="math-inline">\{recluta\.nombre\}</td\>
-<td\></span>{recluta.email}</td>
-                <td><span class="math-inline">\{recluta\.telefono\}</td\>
-<td id\="estado\-cell\-</span>{recluta.id}"></td>
-                <td><span class="math-inline">\{recluta\.asesor\_nombre \|\| 'No asignado'\}</td\> <td\>
-<button class\="action\-btn view\-btn" data\-id\="</span>{recluta.id}" title="Ver detalles">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="action-btn edit-btn" data-id="<span class="math-inline">\{recluta\.id\}" title\="Editar"\>
-<i class\="fas fa\-edit"\></i\>
-</button\>
-<button class\="action\-btn delete\-btn" data\-id\="</span>{recluta.id}" title="Eliminar">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </td>
-            `;
+    <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto"></td>
+    <td>${recluta.nombre}</td>
+    <td>${recluta.email}</td>
+    <td>${recluta.telefono}</td>
+    <td id="estado-cell-${recluta.id}"></td>
+    <td>${recluta.asesor?.nombre || recluta.asesor || 'No asignado'}</td>
+    <td>
+        <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
+            <i class="fas fa-eye"></i>
+        </button>
+        <button class="action-btn edit-btn" data-id="${recluta.id}" title="Editar">
+            <i class="fas fa-edit"></i>
+        </button>
+        <button class="action-btn delete-btn" data-id="${recluta.id}" title="Eliminar">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+    </td>
+`;
 
             container.appendChild(row);
 
