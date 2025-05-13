@@ -973,26 +973,45 @@ loadAndDisplayReclutas: async function() {
         reader.readAsDataURL(file);
     },
 
-    /**
+        /**
      * Guarda un nuevo recluta desde el formulario de añadir
      */
     saveNewRecluta: async function() {
         const modal = document.getElementById('add-recluta-modal');
         if (!modal) return;
 
-        const form = modal.querySelector('form');
+        const form = document.getElementById('add-recluta-form');
         if (!form) return;
 
+        // Obtener valores usando IDs directos
         const reclutaData = {
-            nombre: form.elements.nombre.value,
-            puesto: form.elements.puesto.value,
-            email: form.elements.email.value,
-            telefono: form.elements.telefono.value,
-            fecha_postulacion: form.elements.fecha.value,
-            notas: form.elements.notas.value,
-            estado: form.elements.estado.value,
-            asesor_id: form.elements.recluta-asesor.value || null
+            nombre: document.getElementById('recluta-nombre').value.trim(),
+            email: document.getElementById('recluta-email').value.trim(),
+            telefono: document.getElementById('recluta-telefono').value.trim(),
+            estado: document.getElementById('recluta-estado').value,
+            puesto: document.getElementById('recluta-puesto')?.value.trim() || '',
+            notas: document.getElementById('recluta-notas')?.value.trim() || '',
+            asesor_id: document.getElementById('recluta-asesor')?.value || null
         };
+
+        // Validación
+        if (!reclutaData.nombre || !reclutaData.email || !reclutaData.telefono) {
+            showError('Por favor, completa todos los campos obligatorios');
+            return;
+        }
+
+        // Validar formato de email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(reclutaData.email)) {
+            showError('Por favor, ingresa un email válido');
+            return;
+        }
+
+        const saveButton = modal.querySelector('.btn-primary');
+        if (saveButton) {
+            saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            saveButton.disabled = true;
+        }
 
         const fotoInput = document.getElementById('recluta-upload');
         const foto = fotoInput && fotoInput.files.length > 0 ? fotoInput.files[0] : null;
@@ -1001,10 +1020,15 @@ loadAndDisplayReclutas: async function() {
             const newRecluta = await this.addRecluta(reclutaData, foto);
             showSuccess(`Recluta "${newRecluta.nombre}" añadido con éxito`);
             UI.closeModal('add-recluta-modal');
-            this.loadAndDisplayReclutas(); // Recargar la lista para mostrar el nuevo recluta
+            this.loadAndDisplayReclutas();
         } catch (error) {
             console.error('Error al guardar nuevo recluta:', error);
-            showError('Error al guardar el recluta');
+            showError('Error al guardar el recluta: ' + error.message);
+        } finally {
+            if (saveButton) {
+                saveButton.innerHTML = '<i class="fas fa-save"></i> Guardar Recluta';
+                saveButton.disabled = false;
+            }
         }
     }
 };

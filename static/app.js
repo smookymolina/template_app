@@ -595,28 +595,56 @@ function displayReclutas(reclutasToDisplay) {
 }
 
 // Función unificada para añadir un recluta
+// Función unificada para añadir un recluta
 function addRecluta() {
+    // Obtener el formulario correctamente
+    const form = document.getElementById('add-recluta-form');
+    if (!form) {
+        showNotification('Error al obtener el formulario', 'error');
+        return;
+    }
+    
+    // Método 1: Usar IDs directos
     const nombreInput = document.getElementById('recluta-nombre');
     const emailInput = document.getElementById('recluta-email');
     const telefonoInput = document.getElementById('recluta-telefono');
     const estadoSelect = document.getElementById('recluta-estado');
     const puestoInput = document.getElementById('recluta-puesto');
     const notasTextarea = document.getElementById('recluta-notas');
+    const asesorSelect = document.getElementById('recluta-asesor');
+    
+    // O Método 2: Usar los elementos del formulario por nombre
+    // const nombreInput = form.elements['recluta-nombre'];
+    // const emailInput = form.elements['recluta-email'];
+    // etc...
     
     if (!nombreInput || !emailInput || !telefonoInput || !estadoSelect) {
         showNotification('Error al obtener los campos del formulario', 'error');
         return;
     }
     
-    const nombre = nombreInput.value;
-    const email = emailInput.value;
-    const telefono = telefonoInput.value;
+    const nombre = nombreInput.value.trim();
+    const email = emailInput.value.trim();
+    const telefono = telefonoInput.value.trim();
     const estado = estadoSelect.value;
-    const puesto = puestoInput ? puestoInput.value : '';
-    const notas = notasTextarea ? notasTextarea.value : '';
+    const puesto = puestoInput ? puestoInput.value.trim() : '';
+    const notas = notasTextarea ? notasTextarea.value.trim() : '';
+    const asesor_id = asesorSelect ? asesorSelect.value : null;
+    
+    // Debug para verificar los valores
+    console.log('Valores obtenidos:', {
+        nombre, email, telefono, estado, puesto, notas, asesor_id
+    });
     
     if (!nombre || !email || !telefono) {
         showNotification('Por favor, completa los campos obligatorios', 'error');
+        return;
+    }
+    
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification('Por favor, ingresa un email válido', 'error');
         return;
     }
     
@@ -634,7 +662,8 @@ function addRecluta() {
         telefono: telefono,
         estado: estado,
         puesto: puesto,
-        notas: notas
+        notas: notas,
+        asesor_id: asesor_id === '' ? null : parseInt(asesor_id)
     };
     
     // Llamada a la API
@@ -647,26 +676,32 @@ function addRecluta() {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Error al guardar recluta');
+            return response.json().then(data => {
+                throw new Error(data.message || 'Error al guardar recluta');
+            });
         }
         return response.json();
     })
     .then(data => {
-        // Añadir el nuevo recluta al array local con datos completos de la API
-        reclutas.push(data);
-        
-        // Cerrar modal
-        closeAddReclutaModal();
-        
-        // Refrescar lista
-        displayReclutas(reclutas);
-        
-        // Mostrar notificación
-        showNotification('Recluta añadido correctamente', 'success');
+        if (data.success) {
+            // Añadir el nuevo recluta al array local con datos completos de la API
+            reclutas.push(data.recluta);
+            
+            // Cerrar modal
+            closeAddReclutaModal();
+            
+            // Refrescar lista
+            displayReclutas(reclutas);
+            
+            // Mostrar notificación
+            showNotification('Recluta añadido correctamente', 'success');
+        } else {
+            throw new Error(data.message || 'Error al guardar recluta');
+        }
     })
     .catch(error => {
         console.error('Error:', error);
-        showNotification('Error al guardar el recluta', 'error');
+        showNotification('Error al guardar el recluta: ' + error.message, 'error');
     })
     .finally(() => {
         // Restaurar botón
