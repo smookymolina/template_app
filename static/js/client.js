@@ -75,6 +75,8 @@ const Client = {
         // Buscar el input tanto en el modal como en la página principal
         let folioInput = document.getElementById('folio');
         
+        
+
         // Si no se encuentra en modal, buscar en página principal
         if (!folioInput) {
             folioInput = document.getElementById('folio-input');
@@ -157,26 +159,34 @@ const Client = {
                         return response.json();
                     })
                     .then(data => {
-                        if (data.success) {
-                            // Mostrar estado de éxito
-                            this.setFormState('success', 'Información obtenida correctamente');
-                            
-                            // Mostrar resultados
-                            this.displayTrackingResults(data.tracking_info, isInModal);
-                        } else {
-                            // Mostrar estado de error
-                            this.setFormState('error', data.message || 'No se encontró información para este folio');
-                            
-                            // Ocultar resultados
-                            if (isInModal) {
-                                const resultsContainer = document.getElementById('modal-results');
-                                if (resultsContainer) {
-                                    resultsContainer.style.display = 'none';
-                                }
-                            } else {
-                                const resultsContainer = document.getElementById('tracking-results');
-                                if (resultsContainer) {
-                                    resultsContainer.style.display = 'none';
+    if (data.success) {
+        // Mostrar estado de éxito
+        this.setFormState('success', 'Información obtenida correctamente');
+        
+        // Mostrar resultados
+        this.displayTrackingResults(data.tracking_info, isInModal);
+        
+        // Si no es modal, hacer scroll hacia arriba
+        if (!isInModal) {
+            const trackingTab = document.getElementById('tracking-tab');
+            if (trackingTab && trackingTab.classList.contains('active')) {
+                window.scrollTo({ top: 200, behavior: 'smooth' });
+            }
+        }
+    } else {
+        // Mostrar estado de error
+        this.setFormState('error', data.message || 'No se encontró información para este folio');
+        
+        // Ocultar resultados
+        if (isInModal) {
+            const resultsContainer = document.getElementById('modal-results');
+            if (resultsContainer) {
+                resultsContainer.style.display = 'none';
+            }
+        } else {
+            const resultsContainer = document.getElementById('tracking-results');
+            if (resultsContainer) {
+                resultsContainer.style.display = 'none';
                                 }
                             }
                         }

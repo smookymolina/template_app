@@ -1789,6 +1789,31 @@ input:checked + .slider:before {
     font-size: 14px;
 }
 
+#tracking-wrapper {
+    position: relative;
+    min-height: 400px;
+}
+
+#tracking-results {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px);
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0);
+    }
+}
+
+/* Ajustar el height del tracking-form para evitar saltos */
+#tracking-form {
+    transition: all 0.3s ease;
+}
+
 /* Transición suave para mostrar/ocultar resultados */
 #tracking-results {
     transition: opacity 0.3s ease;

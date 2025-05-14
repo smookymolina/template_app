@@ -46,27 +46,34 @@
             </button>
         </form>
         
-        <form id="tracking-form" class="tab-content">
-            <div class="form-group">
-                <label for="folio-input">Folio de Seguimiento</label>
-                <div class="input-icon-wrapper">
-                    <i class="fas fa-file-alt"></i>
-                    <input type="text" id="folio-input" placeholder="Ingresa tu folio (Ej: REC-1A2B3C4D)" required>
-                </div>
+        <div id="tracking-wrapper" class="tab-content">
+    <form id="tracking-form">
+        <div class="form-group">
+            <label for="folio-input">Folio de Seguimiento</label>
+            <div class="input-icon-wrapper">
+                <i class="fas fa-file-alt"></i>
+                <input type="text" id="folio-input" placeholder="Ingresa tu folio (Ej: REC-1A2B3C4D)" required>
             </div>
-            
-            <p class="form-info">
-                <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para consultar el estado de tu proceso.
-            </p>
-            
-            <div class="recovery-link-container">
-                <a href="#" id="tab-recuperar-folio-link">¿Olvidaste tu folio? Recupéralo aquí</a>
-            </div>
-            
-            <button type="button" id="tracking-button" class="btn-primary">
-                <i class="fas fa-search"></i> Consultar Estado
-            </button>
-        </form>
+        </div>
+        
+        <p class="form-info">
+            <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para consultar el estado de tu proceso.
+        </p>
+        
+        <div class="recovery-link-container">
+            <a href="#" id="tab-recuperar-folio-link">¿Olvidaste tu folio? Recupéralo aquí</a>
+        </div>
+        
+        <button type="button" id="tracking-button" class="btn-primary">
+            <i class="fas fa-search"></i> Consultar Estado
+        </button>
+    </form>
+    
+    <!-- Contenedor para resultados del tracking (movido dentro del wrapper) -->
+    <div id="tracking-results" style="display: none;">
+        <!-- Los resultados se cargarán dinámicamente aquí -->
+    </div>
+</div>
     </div>
 </div>
 
@@ -131,11 +138,6 @@
         {% include 'components/seccion_configuracion.html' %}
     </div>
 </div>
-
-<!-- Contenedor para resultados del tracking (en pestaña) -->
-<div id="tracking-results" style="display: none;">
-    <!-- Los resultados se cargarán dinámicamente aquí -->
-</div>
 {% endblock %}
 
 {% block modals %}
@@ -175,25 +177,25 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Manejo de las pestañas
         const adminLoginTab = document.getElementById('admin-login-tab');
-        const trackingTab = document.getElementById('tracking-tab');
-        const loginForm = document.getElementById('login-form');
-        const trackingForm = document.getElementById('tracking-form');
-        
-        if (adminLoginTab && trackingTab) {
-            adminLoginTab.addEventListener('click', function() {
-                adminLoginTab.classList.add('active');
-                trackingTab.classList.remove('active');
-                loginForm.classList.add('active');
-                trackingForm.classList.remove('active');
-            });
-            
-            trackingTab.addEventListener('click', function() {
-                trackingTab.classList.add('active');
-                adminLoginTab.classList.remove('active');
-                trackingForm.classList.add('active');
-                loginForm.classList.remove('active');
-            });
-        }
+const trackingTab = document.getElementById('tracking-tab');
+const loginForm = document.getElementById('login-form');
+const trackingWrapper = document.getElementById('tracking-wrapper'); // Cambiar de trackingForm a trackingWrapper
+
+if (adminLoginTab && trackingTab) {
+    adminLoginTab.addEventListener('click', function() {
+        adminLoginTab.classList.add('active');
+        trackingTab.classList.remove('active');
+        loginForm.classList.add('active');
+        trackingWrapper.classList.remove('active'); // Actualizar aquí
+    });
+    
+    trackingTab.addEventListener('click', function() {
+        trackingTab.classList.add('active');
+        adminLoginTab.classList.remove('active');
+        trackingWrapper.classList.add('active'); // Actualizar aquí
+        loginForm.classList.remove('active');
+    });
+}
         
         // Configurar botón de cliente para abrir el modal
         const clienteButton = document.getElementById('cliente-button');
@@ -329,15 +331,18 @@
         }
         
         function displayTrackingResults(info) {
-            // Implementación básica para mostrar resultados
-            const resultsContainer = document.getElementById('tracking-results');
-            const modalResults = document.getElementById('modal-results');
-            const targetContainer = modalResults && modalResults.style.display !== 'none' ? modalResults : resultsContainer;
-            
-            if (targetContainer) {
-                targetContainer.style.display = 'block';
-                targetContainer.innerHTML = `
-                    <div class="tracking-result-card">
+    const resultsContainer = document.getElementById('tracking-results');
+    const trackingForm = document.getElementById('tracking-form'); // Ahora es el formulario dentro del wrapper
+    
+    if (targetContainer) {
+        // Ocultar el formulario
+        if (trackingForm) {
+            trackingForm.style.display = 'none';
+        }
+        
+        targetContainer.style.display = 'block';
+        targetContainer.innerHTML = `
+            <div class="tracking-result-card">
                         <h3>Información de Proceso</h3>
                         <div class="tracking-info">
                             <div class="tracking-row">
@@ -356,28 +361,26 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <button class="btn-secondary new-query-btn">
-                        <i class="fas fa-arrow-left"></i> Realizar otra consulta
-                    </button>
-                `;
+            
+            <button class="btn-secondary new-query-btn">
+                <i class="fas fa-arrow-left"></i> Realizar otra consulta
+            </button>
+        `;
+        
+        // Añadir funcionalidad al botón de nueva consulta
+        const newQueryBtn = targetContainer.querySelector('.new-query-btn');
+        if (newQueryBtn) {
+            newQueryBtn.addEventListener('click', function() {
+                targetContainer.style.display = 'none';
                 
-                // Añadir funcionalidad al botón de nueva consulta
-                const newQueryBtn = targetContainer.querySelector('.new-query-btn');
-                if (newQueryBtn) {
-                    newQueryBtn.addEventListener('click', function() {
-                        targetContainer.style.display = 'none';
-                        
-                        // Mostrar formulario correspondiente
-                        if (targetContainer === modalResults) {
-                            document.getElementById('modal-tracking-form').style.display = 'block';
-                        } else {
-                            trackingForm.classList.add('active');
-                        }
-                    });
+                // Mostrar formulario de nuevo
+                if (trackingForm) {
+                    trackingForm.style.display = 'block';
                 }
-            }
+            });
         }
+    }
+}
 
         // Función básica para consultar folio
         function consultarFolio(folio) {

@@ -407,6 +407,18 @@ function displayTrackingResults(info) {
     const trackingForm = document.getElementById('tracking-form');
     
     if (!resultsContainer) return;
+
+    // Scroll hacia arriba para mostrar los resultados
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
+    // Crear contenido de resultados (mismo código existente)
+    resultsContainer.innerHTML = `...`;
+    
+    // Ocultar el formulario y mostrar resultados con animación
+    if (trackingForm) {
+        trackingForm.style.display = 'none';
+    }
+    resultsContainer.style.display = 'block';
     
     // Crear contenido de resultados
     resultsContainer.innerHTML = `
@@ -461,21 +473,33 @@ function displayTrackingResults(info) {
     }
     
     // Añadir botón para volver
-    const backButton = document.createElement('button');
-    backButton.className = 'btn-secondary';
-    backButton.innerHTML = '<i class="fas fa-arrow-left"></i> Realizar otra consulta';
     backButton.onclick = function() {
+    // Transición suave
+    resultsContainer.style.opacity = '0';
+    
+    setTimeout(() => {
         resultsContainer.style.display = 'none';
         if (trackingForm) {
             trackingForm.style.display = 'block';
             trackingForm.classList.add('active');
+            
+            // Animar la aparición del formulario
+            trackingForm.style.opacity = '0';
+            setTimeout(() => {
+                trackingForm.style.opacity = '1';
+            }, 50);
         }
+        
+        // Limpiar y enfocar el input
         const folioInput = document.getElementById('folio-input');
         if (folioInput) {
             folioInput.value = '';
             folioInput.focus();
         }
-    };
+        
+        resultsContainer.style.opacity = '1';
+    }, 300);
+};
     
     resultsContainer.appendChild(backButton);
 }
