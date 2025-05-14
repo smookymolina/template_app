@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from models import db, DatabaseError
 from models.recluta import Recluta
+from models import Documento
 from models.usuario import Usuario
 from models.entrevista import Entrevista  # Importación específica desde el módulo
 from utils.helpers import guardar_archivo, eliminar_archivo
@@ -654,6 +655,98 @@ def check_auth():
     except Exception as e:
         current_app.logger.error(f"Error al verificar autenticación: {str(e)}")
         return jsonify({"authenticated": False, "error": str(e)}), 500
+
+@api_bp.route('/reclutas/<int:id>/documentos', methods=['GET'])
+@login_required
+def get_documentos_recluta(id):
+    """
+    Obtiene los documentos de un recluta específico.
+    """
+    try:
+        from models import Documento
+        documentos = Documento.query.filter_by(recluta_id=id).all()
+        
+        return jsonify({
+            "success": True,
+            "documentos": [d.serialize() for d in documentos]
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener documentos del recluta {id}: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
+@api_bp.route('/reclutas/<int:id>/documentos', methods=['POST'])
+@login_required
+def upload_documento_recluta(id):
+    """
+    Sube un documento PDF para un recluta específico.
+    """
+    try:
+        from models import Documento
+        
+        if 'documento' not in request.files:
+            return jsonify({"success": False, "message": "No se encontró el archivo"}), 400
+        
+        archivo = request.files['documento']
+        if archivo.filename == '':
+            return jsonify({"success": False, "message": "No se seleccionó ningún archivo"}), 400
+        
+        # Validar que sea PDF
+        if not archivo.filename.lower().endswith('.pdf'):
+            return jsonify({"success": False, "message": "Solo se permiten archivos PDF"}), 400
+        
+        # Guardar archivo
+        ruta_relativa = guardar_archivo(archivo, f'reclutas/{id}/documentos', tipos_permitidos=['pdf'])
+        
+        if ruta_relativa:
+            # Crear registro en base de datos
+            nuevo_documento = Documento(
+                recluta_id=id,
+                nombre=secure_filename(archivo.filename),
+                url=ruta_relativa,
+                tipo='pdf',
+                tamaño=archivo.content_length
+            )
+            
+            db.session.add(nuevo_documento)
+            db.session.commit()
+            
+            return jsonify({
+                "success": True,
+                "documento": nuevo_documento.serialize()
+            }), 201
+        else:
+            return jsonify({"success": False, "message": "Error al guardar el archivo"}), 500
+            
+    except Exception as e:
+        current_app.logger.error(f"Error al subir documento: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
+@api_bp.route('/documentos/<int:id>', methods=['DELETE'])
+@login_required
+def delete_documento(id):
+    """
+    Elimina un documento específico.
+    """
+    try:
+        from models import Documento
+        
+        documento = Documento.query.get(id)
+        if not documento:
+            return jsonify({"success": False, "message": "Documento no encontrado"}), 404
+        
+        # Eliminar archivo físico
+        if documento.url:
+            eliminar_archivo(documento.url)
+        
+        # Eliminar registro
+        db.session.delete(documento)
+        db.session.commit()
+        
+        return jsonify({"success": True, "message": "Documento eliminado correctamente"})
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al eliminar documento {id}: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
 
 @api_bp.route('/recuperar-folio', methods=['POST'])
 def recuperar_folio():

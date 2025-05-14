@@ -5,42 +5,60 @@ from flask import current_app
 from datetime import datetime, date
 import json
 
-def guardar_archivo(archivo, tipo):
+def guardar_archivo(archivo, subdirectorio='', tipos_permitidos=['jpg', 'jpeg', 'png', 'gif', 'pdf'], max_size=5 * 1024 * 1024):
     """
-    Guarda un archivo en el servidor y devuelve la ruta relativa.
-    tipo puede ser 'recluta' o 'usuario'
+    Guarda un archivo en el sistema.
     
     Args:
-        archivo: Objeto de archivo de Flask (request.files)
-        tipo: Tipo de archivo ('recluta' o 'usuario')
+        archivo: Archivo FileStorage de Flask
+        subdirectorio: Subdirectorio dentro de uploads
+        tipos_permitidos: Lista de extensiones permitidas (ahora incluye 'pdf')
+        max_size: Tamaño máximo en bytes (default 5MB)
         
     Returns:
-        Ruta relativa del archivo guardado, o None si hay un error
+        str: Ruta relativa del archivo guardado o None si hay error
     """
-    if not archivo:
-        return None
-        
     try:
-        # Generar nombre único para el archivo
-        filename = secure_filename(archivo.filename)
-        nombre_base, extension = os.path.splitext(filename)
-        nombre_unico = f"{nombre_base}_{uuid.uuid4().hex}{extension}"
+        # Validar extensión
+        if archivo.filename == '':
+            return None
+            
+        extension = archivo.filename.rsplit('.', 1)[1].lower()
+        if extension not in tipos_permitidos:
+            raise ValueError(f"Tipo de archivo no permitido. Solo se permiten: {', '.join(tipos_permitidos)}")
         
-        # Crear subdirectorio si no existe
-        directorio = os.path.join(current_app.config['UPLOAD_FOLDER'], tipo)
-        if not os.path.exists(directorio):
-            os.makedirs(directorio)
+        # Validar tamaño
+        archivo.seek(0, os.SEEK_END)
+        tamaño = archivo.tell()
+        archivo.seek(0)
         
-        # Guardar el archivo
-        ruta_completa = os.path.join(directorio, nombre_unico)
+        if tamaño > max_size:
+            raise ValueError(f"Archivo demasiado grande. Máximo {max_size / (1024*1024):.1f}MB")
+        
+        # Crear nombre único
+        nombre_seguro = secure_filename(archivo.filename)
+        nombre_unico = f"{uuid.uuid4().hex}_{nombre_seguro}"
+        
+        # Crear ruta completa
+        upload_dir = current_app.config['UPLOAD_FOLDER']
+        if subdirectorio:
+            upload_dir = os.path.join(upload_dir, subdirectorio)
+        
+        if not os.path.exists(upload_dir):
+            os.makedirs(upload_dir)
+        
+        ruta_completa = os.path.join(upload_dir, nombre_unico)
+        
+        # Guardar archivo
         archivo.save(ruta_completa)
         
-        # Devolver ruta relativa para guardar en BD
-        return os.path.join(f"static/uploads/{tipo}", nombre_unico)
+        # Devolver ruta relativa
+        return os.path.join('static', 'uploads', subdirectorio, nombre_unico)
+        
     except Exception as e:
         current_app.logger.error(f"Error al guardar archivo: {str(e)}")
         return None
-
+        
 def eliminar_archivo(ruta_relativa):
     """
     Elimina un archivo del servidor.

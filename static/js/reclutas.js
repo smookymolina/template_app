@@ -151,6 +151,153 @@ const Reclutas = {
     },
 
     /**
+ * Carga los documentos de un recluta
+ * @param {number} reclutaId - ID del recluta
+ */
+loadDocumentos: async function(reclutaId) {
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/reclutas/${reclutaId}/documentos`);
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            this.displayDocumentos(data.documentos);
+        } else {
+            throw new Error(data.message || 'Error al cargar documentos');
+        }
+    } catch (error) {
+        console.error('Error al cargar documentos:', error);
+        showError('Error al cargar documentos');
+    }
+},
+
+/**
+ * Muestra los documentos en la interfaz
+ * @param {Array} documentos - Lista de documentos
+ */
+displayDocumentos: function(documentos) {
+    const docsList = document.getElementById('documentos-list');
+    if (!docsList) return;
+    
+    if (documentos.length === 0) {
+        docsList.innerHTML = '<p style="color: var(--text-light);">No hay documentos subidos</p>';
+        return;
+    }
+    
+    docsList.innerHTML = documentos.map(doc => `
+        <div class="documento-item" style="display: flex; align-items: center; margin-bottom: 8px;">
+            <i class="fas fa-file-pdf" style="color: #dc3545; margin-right: 8px;"></i>
+            <a href="${doc.url}" target="_blank" style="flex: 1;">${doc.nombre}</a>
+            <button class="action-btn" onclick="Reclutas.deleteDocumento(${doc.id})" title="Eliminar">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    `).join('');
+},
+
+/**
+ * Sube un documento
+ */
+uploadDocumento: async function() {
+    if (!this.currentReclutaId) {
+        showError('No se ha seleccionado un recluta');
+        return;
+    }
+    
+    const fileInput = document.getElementById('documento-file');
+    if (!fileInput || !fileInput.files[0]) {
+        showError('Por favor, selecciona un archivo');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    
+    // Validar tipo de archivo
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+        showError('Solo se permiten archivos PDF');
+        return;
+    }
+    
+    // Validar tamaño
+    if (file.size > CONFIG.MAX_UPLOAD_SIZE) {
+        showError(`El archivo es demasiado grande. Máximo ${CONFIG.MAX_UPLOAD_SIZE / (1024 * 1024)}MB`);
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('documento', file);
+    
+    const uploadBtn = document.querySelector('#upload-document-modal .btn-primary');
+    if (uploadBtn) {
+        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...';
+        uploadBtn.disabled = true;
+    }
+    
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/reclutas/${this.currentReclutaId}/documentos`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Error ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            showSuccess('Documento subido correctamente');
+            UI.closeModal('upload-document-modal');
+            this.loadDocumentos(this.currentReclutaId);
+        } else {
+            throw new Error(data.message || 'Error al subir documento');
+        }
+    } catch (error) {
+        console.error('Error al subir documento:', error);
+        showError('Error al subir documento: ' + error.message);
+    } finally {
+        if (uploadBtn) {
+            uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Subir Documento';
+            uploadBtn.disabled = false;
+        }
+    }
+},
+
+/**
+ * Elimina un documento
+ * @param {number} documentoId - ID del documento a eliminar
+ */
+deleteDocumento: async function(documentoId) {
+    if (!confirm('¿Estás seguro de eliminar este documento?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/documentos/${documentoId}`, {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            showSuccess('Documento eliminado correctamente');
+            this.loadDocumentos(this.currentReclutaId);
+        } else {
+            throw new Error(data.message || 'Error al eliminar documento');
+        }
+    } catch (error) {
+        console.error('Error al eliminar documento:', error);
+        showError('Error al eliminar documento');
+    }
+},
+
+    /**
      * Carga y muestra la lista de reclutas
      */
     loadAndDisplayReclutas: async function() {
@@ -661,6 +808,9 @@ loadAndDisplayReclutas: async function() {
                 elements.foto.alt = recluta.nombre || 'Foto de recluta';
             }
 
+            // Cargar documentos del recluta
+            this.loadDocumentos(id);
+
             // Mostrar modal de detalles
             UI.showModal('view-recluta-modal');
         } catch (error) {
@@ -1033,6 +1183,18 @@ loadAndDisplayReclutas: async function() {
             }
         }
     }
+};
+// Funciones globales para el HTML
+window.openUploadDocumentModal = function() {
+    // Limpiar el formulario
+    const fileInput = document.getElementById('documento-file');
+    if (fileInput) fileInput.value = '';
+    
+    UI.showModal('upload-document-modal');
+};
+
+window.uploadDocument = function() {
+    Reclutas.uploadDocumento();
 };
 
 export default Reclutas;

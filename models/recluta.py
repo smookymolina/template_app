@@ -10,7 +10,7 @@ class Recluta(db.Model):
     nombre = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), nullable=False)
     telefono = db.Column(db.String(20), nullable=False)
-    estado = db.Column(db.String(20), nullable=False)  # Activo, En proceso, Rechazado
+    estado = db.Column(db.String(20), nullable=False)
     puesto = db.Column(db.String(100), nullable=True)
     notas = db.Column(db.Text, nullable=True)
     folio = db.Column(db.String(20), unique=True, nullable=False)
@@ -22,6 +22,10 @@ class Recluta(db.Model):
     entrevistas = db.relationship('Entrevista', backref='recluta', lazy='dynamic', cascade="all, delete-orphan")
     asesor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
     asesor = db.relationship('Usuario', backref='reclutas_asignados')
+    
+    # NUEVA RELACIÓN con Documento usando string
+    documentos = db.relationship('Documento', backref='recluta', lazy='dynamic', cascade="all, delete-orphan")
+    
     
     def serialize(self):
         """Retorna una representación serializable del recluta"""

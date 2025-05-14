@@ -156,6 +156,19 @@
                         <div class="detail-value" id="detail-recluta-telefono">555-1234</div>
                     </div>
 
+                    <!-- Agregar esto dentro del modal de detalles del recluta -->
+<div class="detail-row">
+    <div class="detail-label"><i class="fas fa-file-pdf"></i> Documentos:</div>
+    <div class="detail-value">
+        <div id="documentos-list" style="margin-bottom: 10px;">
+            <!-- Los documentos se cargarán aquí -->
+        </div>
+        <button type="button" class="btn-secondary" onclick="openUploadDocumentModal()">
+            <i class="fas fa-upload"></i> Subir Documento
+        </button>
+    </div>
+</div>
+
                     <div class="detail-row">
                         <div class="detail-label"><i class="fas fa-user-tie"></i> Asesor:</div>
                         <div class="detail-value" id="detail-recluta-asesor">No asignado</div>
@@ -359,6 +372,41 @@
                 </label>
             </div>
         </div>
+
+        <!-- Modal para subir documentos -->
+<div id="upload-document-modal" class="modal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h3>Subir Documento</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <form id="upload-document-form">
+                <div class="form-group">
+                    <label for="documento-file">Seleccionar archivo PDF</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-file-pdf"></i>
+                        <input type="file" id="documento-file" accept=".pdf" required>
+                    </div>
+                </div>
+                
+                <p class="form-info">
+                    <i class="fas fa-info-circle"></i> Solo se permiten archivos PDF hasta 5MB.
+                </p>
+            </form>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary close-modal">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button type="button" class="btn-primary" onclick="uploadDocument()">
+                <i class="fas fa-upload"></i> Subir Documento
+            </button>
+        </div>
+    </div>
+</div>
 
         <div class="modal-footer">
             <button type="button" class="btn-secondary close-modal">
