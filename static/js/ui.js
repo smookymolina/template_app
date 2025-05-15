@@ -1,41 +1,28 @@
+// Modificaciones en static/js/ui.js
+
 /**
  * Módulo para gestionar la interfaz de usuario
  */
 import CONFIG from './config.js';
 import { showNotification } from './notifications.js';
+import Auth from './auth.js';
 
 const UI = {
     /**
-     * Cambia la sección activa en el dashboard
-     * @param {string} targetSection - ID de la sección a activar
+     * Inicializa la interfaz según el rol del usuario
      */
-    changeActiveSection: function(targetSection) {
-        if (!targetSection) return;
-        
-        // Actualizar tab activa
-        const navItems = document.querySelectorAll('.dashboard-nav li');
-        navItems.forEach(li => {
-            li.classList.remove('active');
-            const link = li.querySelector(`[data-section="${targetSection}"]`);
-            if (link) {
-                li.classList.add('active');
-            }
-        });
-        
-        // Actualizar sección visible
-        const sections = document.querySelectorAll('.dashboard-content-section');
-        sections.forEach(section => {
-            section.classList.remove('active');
-        });
-        
-        const targetElement = document.getElementById(targetSection);
-        if (targetElement) {
-            targetElement.classList.add('active');
-            // Disparar evento personalizado
-            const event = new CustomEvent('sectionChanged', { 
-                detail: { section: targetSection } 
+    initForUserRole: function() {
+        // Configurar elementos de UI según el rol
+        if (Auth.isAdmin()) {
+            // Mostrar elementos solo para administradores
+            document.querySelectorAll('.admin-only').forEach(el => {
+                el.style.display = 'block';
             });
-            document.dispatchEvent(event);
+        } else {
+            // Ocultar elementos solo para administradores
+            document.querySelectorAll('.admin-only').forEach(el => {
+                el.style.display = 'none';
+            });
         }
     },
     

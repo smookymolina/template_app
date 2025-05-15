@@ -1,3 +1,5 @@
+// Modificaciones en static/js/auth.js
+
 /**
  * Módulo de autenticación
  */
@@ -69,6 +71,46 @@ const Auth = {
             console.error('Error de logout:', err);
             throw err;
         }
+    },
+    
+    /**
+     * Verifica si hay una sesión activa
+     * @returns {Promise<Object|null>} - Datos del usuario o null si no hay sesión
+     */
+    checkAuth: async function() {
+        try {
+            const response = await fetch(`${CONFIG.AUTH_URL}/check-auth`);
+            const data = await response.json();
+            
+            if (data.authenticated) {
+                this.currentUser = data.usuario;
+                return data.usuario;
+            } else {
+                this.currentUser = null;
+                return null;
+            }
+        } catch (err) {
+            console.error('Error al verificar autenticación:', err);
+            this.currentUser = null;
+            return null;
+        }
+    },
+    
+    /**
+     * Comprueba si el usuario actual es administrador
+     * @returns {boolean} - True si el usuario es administrador
+     */
+    isAdmin: function() {
+        return this.currentUser && this.currentUser.rol === 'admin';
+    },
+    
+    /**
+     * Comprueba si el usuario actual tiene un rol específico
+     * @param {string} rol - Rol a comprobar ('admin' o 'asesor')
+     * @returns {boolean} - True si el usuario tiene el rol especificado
+     */
+    hasRole: function(rol) {
+        return this.currentUser && this.currentUser.rol === rol;
     },
     
     /**

@@ -17,6 +17,18 @@ class Usuario(db.Model, UserMixin):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
     
+    # Añadir campo de rol
+    rol = db.Column(db.String(20), default='asesor', nullable=False)  # 'admin' o 'asesor'
+    
+    # Relación con reclutas asignados (ya existente)
+    # reclutas_asignados = db.relationship('Recluta', backref='asesor')
+    
+    # Nueva relación con reclutas creados
+    reclutas_creados = db.relationship('Recluta', 
+                                       foreign_keys='Recluta.creado_por_id',
+                                       backref='creador', 
+                                       lazy='dynamic')
+    
     # Relación con sesiones de usuario
     sessions = db.relationship('UserSession', backref='usuario', lazy='dynamic', cascade="all, delete-orphan")
     
@@ -48,9 +60,14 @@ class Usuario(db.Model, UserMixin):
             "nombre": self.nombre,
             "telefono": self.telefono,
             "foto_url": self.foto_url,
+            "rol": self.rol,  # Añadimos el rol a la serialización
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "last_login": self.last_login.isoformat() if self.last_login else None
         }
+    
+    def is_admin(self):
+        """Comprueba si el usuario es administrador"""
+        return self.rol == 'admin'
     
     def save(self):
         """Guarda el usuario en la base de datos de forma segura"""

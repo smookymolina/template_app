@@ -1,9 +1,12 @@
+// Modificaciones en static/js/reclutas.js
+
 /**
  * Módulo para gestionar reclutas
  */
 import CONFIG from './config.js';
 import { showNotification, showError, showSuccess } from './notifications.js';
 import UI from './ui.js';
+import Auth from './auth.js';
 
 const Reclutas = {
     reclutas: [],
@@ -17,18 +20,25 @@ const Reclutas = {
         sortOrder: 'asc'
     },
     currentReclutaId: null,
-    asesores: [], // Añadido para almacenar la lista de asesores
+    asesores: [], // Para almacenar la lista de asesores
+    userRol: null, // Para almacenar el rol del usuario actual
 
     /**
      * Inicializa todos los elementos y eventos de gestión de reclutas
      */
     init: async function() {
         try {
+            // Obtener el rol del usuario actual
+            this.userRol = Auth.currentUser?.rol || 'asesor';
+            
             // Inicializar filtros y eventos
             this.initFilters();
 
             // Inicializar formulario de añadir recluta
             this.initAddReclutaForm();
+
+            // Configurar UI según el rol del usuario
+            this.configureUIForRole();
 
             // Eventos para botones de acción en el modal de detalles
             const cancelEditBtn = document.querySelector('.edit-mode-buttons .btn-secondary');
@@ -43,8 +53,12 @@ const Reclutas = {
 
             // Cargar datos iniciales
             await this.loadAndDisplayReclutas();
-            await this.loadAsesores();
-            this.populateAsesorSelectors();
+            
+            // Cargar asesores solo si el usuario es admin
+            if (this.userRol === 'admin') {
+                await this.loadAsesores();
+                this.populateAsesorSelectors();
+            }
 
             // Registrarse para eventos de cambio de sección
             document.addEventListener('sectionChanged', (e) => {
@@ -59,29 +73,488 @@ const Reclutas = {
     },
 
     /**
-     * Carga la lista de asesores disponibles
-     * @returns {Promise<Array>} - Lista de asesores
+     * Configura la interfaz de usuario según el rol
      */
-    loadAsesores: async function() {
+    configureUIForRole: function() {
+        if (this.userRol !== 'admin') {
+            // Ocultar selectores de asesor en formularios para no-administradores
+            const asesorSelectors = document.querySelectorAll('#recluta-asesor, #edit-recluta-asesor');
+            asesorSelectors.forEach(selector => {
+                if (selector) {
+                    const formGroup = selector.closest('.form-group');
+                    if (formGroup) {
+                        formGroup.style.display = 'none';
+                    }
+                }
+            });
+            
+            // Ocultar columna de asesor en la tabla
+            const asesorHeader = document.querySelector('#reclutas-table th:nth-child(7)');
+            if (asesorHeader) {
+                asesorHeader.style.display = 'none';
+            }
+        }
+    },
+
+    /**
+     * Carga la lista de reclutas con paginación y filtros
+     * @returns {Promise<Array>} - Lista de reclutas
+     */
+    loadReclutas: async function() {
         try {
-            const response = await fetch(`${CONFIG.API_URL}/asesores`);
+            const queryParams = new URLSearchParams({
+                page: this.currentPage,
+                per_page: this.itemsPerPage,
+                search: this.filters.search,
+                estado: this.filters.estado !== 'todos' ? this.filters.estado : '',
+                sort_by: this.filters.sortBy,
+                sort_order: this.filters.sortOrder
+            });
+
+            // Añadir verificación para asegurarnos que CONFIG.API_URL existe
+            if (!CONFIG || !CONFIG.API_URL) {
+                throw new Error('La configuración de API_URL no está definida');
+            }
+
+            // Añadir manejo de errores mejorado con timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+            
+            const response = await fetch(`${CONFIG.API_URL}/reclutas?${queryParams}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
+                if (response.status === 401) {
+                    // Redireccionar al login
+                    document.getElementById('login-section').style.display = 'block';
+                    document.getElementById('dashboard-section').style.display = 'none';
+                    showNotification('Sesión expirada. Por favor inicie sesión nuevamente.', 'warning');
+                    throw new Error('No autenticado');
+                }
+                throw new Error(`Error al cargar reclutas: ${response.status} ${response.statusText}`);
             }
 
             const data = await response.json();
             if (data.success) {
-                this.asesores = data.asesores;
-                return this.asesores;
+                this.reclutas = data.reclutas;
+                this.totalPages = data.pages || 1;
+                // Actualizar el rol del usuario si viene en la respuesta
+                if (data.rol_usuario) {
+                    this.userRol = data.rol_usuario;
+                    this.configureUIForRole();
+                }
+                return this.reclutas;
             } else {
-                throw new Error(data.message || 'Error al obtener asesores');
+                throw new Error(data.message || 'Error al obtener reclutas');
             }
         } catch (error) {
-            console.error('Error al cargar asesores:', error);
-            // No arrojar error aquí para evitar que falle todo el proceso
-            this.asesores = [];
-            return [];
+            // Manejar errores específicos
+            if (error.name === 'AbortError') {
+                console.error('Timeout al cargar reclutas');
+               throw new Error('Tiempo de espera agotado. Verifique su conexión a internet.');
+            }
+            
+            console.error('Error al cargar reclutas:', error);
+            throw error;
+        }
+    },
+
+    /**
+     * Ayuda a obtener la clase CSS correcta para el badge de estado
+     * @param {string} estado - Estado del recluta
+     * @returns {string} - Clase CSS
+     */
+    getBadgeClass: function(estado) {
+        switch(estado) {
+            case 'Activo': return 'badge-success';
+            case 'En proceso': return 'badge-warning';
+            case 'Rechazado': return 'badge-danger';
+            default: return 'badge-secondary';
+        }
+    },
+
+    /**
+     * Renderiza la lista de reclutas en una tabla
+     * @param {HTMLElement} container - Elemento contenedor de la tabla
+     */
+    renderReclutasTable: function(container) {
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (!this.reclutas || this.reclutas.length === 0) {
+            container.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center"> No se encontraron reclutas. ¡Agrega tu primer recluta!
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        this.reclutas.forEach(recluta => {
+            const row = document.createElement('tr');
+
+            // Determinar URL de la foto
+            const fotoUrl = recluta.foto_url ?
+                (recluta.foto_url.startsWith('http') ?
+                    recluta.foto_url :
+                    (recluta.foto_url === 'default_profile.jpg' ?
+                        "/api/placeholder/40/40" :
+                        `/${recluta.foto_url}`)) :
+                "/api/placeholder/40/40";
+
+            // Crear badge de estado
+            const estadoBadge = UI.createBadge(recluta.estado, CONFIG.ESTADOS_RECLUTA);
+
+            // Crear fila con los datos básicos
+            let html = `
+                <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto"></td>
+                <td>${recluta.nombre}</td>
+                <td>${recluta.email}</td>
+                <td>${recluta.telefono}</td>
+                <td><code>${recluta.folio || 'Sin folio'}</code></td>
+                <td id="estado-cell-${recluta.id}"></td>`;
+            
+            // Añadir columna de asesor solo si es administrador
+            if (this.userRol === 'admin') {
+                html += `<td>${recluta.asesor_nombre || 'No asignado'}</td>`;
+            } else {
+                html += `<td style="display:none">${recluta.asesor_nombre || 'No asignado'}</td>`;
+            }
+            
+            // Añadir columna de acciones
+            html += `
+                <td>
+                    <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="action-btn edit-btn" data-id="${recluta.id}" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="action-btn delete-btn" data-id="${recluta.id}" title="Eliminar">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            `;
+            
+            row.innerHTML = html;
+            container.appendChild(row);
+
+            // Añadir badge de estado al TD correspondiente
+            const estadoCell = document.getElementById(`estado-cell-${recluta.id}`);
+            if (estadoCell) {
+                estadoCell.appendChild(estadoBadge);
+            }
+
+            // Configurar botones de acción
+            this.setupActionButtons(row, recluta.id);
+        });
+    },
+
+    /**
+     * Muestra los detalles de un recluta
+     * @param {number} id - ID del recluta
+     */
+    viewRecluta: async function(id) {
+        try {
+            const recluta = await this.getRecluta(id);
+            this.currentReclutaId = id;
+
+            // Rellenar datos en el modal
+            const elements = {
+                nombre: document.getElementById('detail-recluta-nombre'),
+                puesto: document.getElementById('detail-recluta-puesto'),
+                email: document.getElementById('detail-recluta-email'),
+                telefono: document.getElementById('detail-recluta-telefono'),
+                fecha: document.getElementById('detail-recluta-fecha'),
+                notas: document.getElementById('detail-recluta-notas'),
+                estado: document.getElementById('detail-recluta-estado'),
+                foto: document.getElementById('detail-recluta-pic'),
+                folio: document.getElementById('detail-recluta-folio'),
+                asesor: document.getElementById('detail-recluta-asesor'),
+                creador: document.getElementById('detail-recluta-creador') // Nuevo elemento para mostrar el creador
+            };
+
+            if (elements.nombre) elements.nombre.textContent = recluta.nombre || 'N/A';
+            if (elements.puesto) elements.puesto.textContent = recluta.puesto || 'N/A';
+            if (elements.email) elements.email.textContent = recluta.email || 'N/A';
+            if (elements.telefono) elements.telefono.textContent = recluta.telefono || 'N/A';
+            if (elements.fecha) elements.fecha.textContent = recluta.fecha_registro ? new Date(recluta.fecha_registro).toLocaleDateString() : 'N/A';
+            if (elements.notas) elements.notas.textContent = recluta.notas || 'N/A';
+            if (elements.estado) {
+                elements.estado.textContent = recluta.estado || 'N/A';
+                elements.estado.className = `badge ${this.getBadgeClass(recluta.estado)}`;
+            }
+            if (elements.folio) elements.folio.textContent = recluta.folio || 'Sin folio';
+            if (elements.asesor) elements.asesor.textContent = recluta.asesor_nombre || 'No asignado';
+            if (elements.creador) elements.creador.textContent = recluta.creador_nombre || 'No disponible';
+
+            // Mostrar foto
+            if (elements.foto) {
+                const fotoUrl = recluta.foto_url ?
+                    (recluta.foto_url.startsWith('http') ?
+                        recluta.foto_url :
+                        `/${recluta.foto_url}`) :
+                    "/api/placeholder/150/150";
+                elements.foto.src = fotoUrl;
+                elements.foto.alt = recluta.nombre || 'Foto de recluta';
+            }
+
+            // Cargar documentos del recluta
+            this.loadDocumentos(id);
+
+            // Mostrar modal de detalles
+            UI.showModal('view-recluta-modal');
+        } catch (error) {
+            console.error('Error al cargar detalles del recluta:', error);
+            showError('Error al cargar detalles');
+        }
+    },
+
+    /**
+     * Guarda un nuevo recluta desde el formulario de añadir
+     */
+    saveNewRecluta: async function() {
+        const modal = document.getElementById('add-recluta-modal');
+        if (!modal) return;
+
+        const form = document.getElementById('add-recluta-form');
+        if (!form) return;
+
+        // Obtener valores usando IDs directos
+        const reclutaData = {
+            nombre: document.getElementById('recluta-nombre').value.trim(),
+            email: document.getElementById('recluta-email').value.trim(),
+            telefono: document.getElementById('recluta-telefono').value.trim(),
+            estado: document.getElementById('recluta-estado').value,
+            puesto: document.getElementById('recluta-puesto')?.value.trim() || '',
+            notas: document.getElementById('recluta-notas')?.value.trim() || ''
+        };
+
+        // Añadir asesor_id solo si el usuario es admin
+        if (this.userRol === 'admin') {
+            const asesorSelect = document.getElementById('recluta-asesor');
+            if (asesorSelect) {
+                reclutaData.asesor_id = asesorSelect.value || null;
+            }
+        }
+
+        // Validación
+        if (!reclutaData.nombre || !reclutaData.email || !reclutaData.telefono) {
+            showError('Por favor, completa todos los campos obligatorios');
+            return;
+        }
+
+        // Validar formato de email
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(reclutaData.email)) {
+            showError('Por favor, ingresa un email válido');
+            return;
+        }
+
+        const saveButton = modal.querySelector('.btn-primary');
+        if (saveButton) {
+            saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            saveButton.disabled = true;
+        }
+
+        const fotoInput = document.getElementById('recluta-upload');
+        const foto = fotoInput && fotoInput.files.length > 0 ? fotoInput.files[0] : null;
+
+        try {
+            const newRecluta = await this.addRecluta(reclutaData, foto);
+            showSuccess(`Recluta "${newRecluta.nombre}" añadido con éxito`);
+            UI.closeModal('add-recluta-modal');
+            this.loadAndDisplayReclutas();
+        } catch (error) {
+            console.error('Error al guardar nuevo recluta:', error);
+            showError('Error al guardar el recluta: ' + error.message);
+        } finally {
+            if (saveButton) {
+                saveButton.innerHTML = '<i class="fas fa-save"></i> Guardar Recluta';
+                saveButton.disabled = false;
+            }
+        }
+    },
+
+    /**
+     * Actualiza un recluta existente
+     * @param {number} id - ID del recluta
+     * @param {Object} reclutaData - Datos actualizados
+     * @param {File} [foto] - Archivo de foto opcional
+     * @returns {Promise<Object>} - Datos del recluta actualizado
+     */
+    updateRecluta: async function(id, reclutaData, foto = null) {
+        try {
+            let response;
+
+            // Si hay foto, usar FormData
+            if (foto) {
+                const formData = new FormData();
+
+                // Añadir datos del recluta
+                for (const key in reclutaData) {
+                    formData.append(key, reclutaData[key]);
+                }
+
+                // Añadir foto
+                formData.append('foto', foto);
+
+                response = await fetch(`${CONFIG.API_URL}/reclutas/${id}`, {
+                    method: 'PUT',
+                    body: formData
+                });
+            } else {
+                // Sin foto, usar JSON
+                response = await fetch(`${CONFIG.API_URL}/reclutas/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(reclutaData)
+                });
+            }
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                // Actualizar en la lista local si ya está cargado
+                const index = this.reclutas.findIndex(r => r.id === id);
+                if (index !== -1) {
+                    this.reclutas[index] = data.recluta;
+                }
+
+                return data.recluta;
+            } else {
+                throw new Error(data.message || 'Error al actualizar recluta');
+            }
+        } catch (error) {
+            console.error(`Error al actualizar recluta ${id}:`, error);
+            throw error;
+        }
+    },
+
+    /**
+     * Prepara el formulario de edición con los datos del recluta
+     * @param {number} id - ID del recluta a editar
+     */
+    editRecluta: async function(id) {
+        try {
+            const recluta = await this.getRecluta(id);
+            this.currentReclutaId = id;
+
+            // Rellenar el formulario de edición
+            const modal = document.getElementById('edit-recluta-modal');
+            if (!modal) return;
+
+            const form = modal.querySelector('form');
+            if (!form) return;
+
+            // Campos básicos
+            const formElements = {
+                nombre: document.getElementById('edit-recluta-nombre'),
+                puesto: document.getElementById('edit-recluta-puesto'),
+                email: document.getElementById('edit-recluta-email'),
+                telefono: document.getElementById('edit-recluta-telefono'),
+                notas: document.getElementById('edit-recluta-notas'),
+                estado: document.getElementById('edit-recluta-estado'),
+                asesor: document.getElementById('edit-recluta-asesor')
+            };
+
+            // Llenar campos del formulario
+            if (formElements.nombre) formElements.nombre.value = recluta.nombre || '';
+            if (formElements.puesto) formElements.puesto.value = recluta.puesto || '';
+            if (formElements.email) formElements.email.value = recluta.email || '';
+            if (formElements.telefono) formElements.telefono.value = recluta.telefono || '';
+            if (formElements.notas) formElements.notas.value = recluta.notas || '';
+            if (formElements.estado) formElements.estado.value = recluta.estado || 'En proceso';
+            
+            // Mostrar/ocultar selector de asesor según el rol
+            if (formElements.asesor) {
+                if (this.userRol === 'admin') {
+                    formElements.asesor.value = recluta.asesor_id || '';
+                    const formGroup = formElements.asesor.closest('.form-group');
+                    if (formGroup) formGroup.style.display = 'block';
+                } else {
+                    const formGroup = formElements.asesor.closest('.form-group');
+                    if (formGroup) formGroup.style.display = 'none';
+                }
+            }
+
+            // Mostrar la foto actual
+            const picPreview = document.getElementById('edit-recluta-pic-preview');
+            if (picPreview) {
+                picPreview.innerHTML = '';
+                const img = document.createElement('img');
+                const fotoUrl = recluta.foto_url ?
+                    (recluta.foto_url.startsWith('http') ?
+                        recluta.foto_url :
+                        `/${recluta.foto_url}`) :
+                    "/api/placeholder/100/100";
+                img.src = fotoUrl;
+                img.alt = recluta.nombre || 'Foto de recluta';
+                img.classList.add('profile-pic');
+                picPreview.appendChild(img);
+            }
+
+            // Mostrar modal de edición
+            UI.showModal('edit-recluta-modal');
+        } catch (error) {
+            console.error('Error al cargar datos para editar:', error);
+            showError('Error al preparar edición');
+        }
+    },
+
+    /**
+     * Guarda los cambios realizados en la edición del recluta
+     */
+    saveReclutaChanges: async function() {
+        const modal = document.getElementById('edit-recluta-modal');
+        if (!modal || !this.currentReclutaId) return;
+
+        const form = modal.querySelector('form');
+        if (!form) return;
+
+        // Recolectar datos del formulario
+        const reclutaData = {
+            nombre: document.getElementById('edit-recluta-nombre')?.value,
+            puesto: document.getElementById('edit-recluta-puesto')?.value,
+            email: document.getElementById('edit-recluta-email')?.value,
+            telefono: document.getElementById('edit-recluta-telefono')?.value,
+            notas: document.getElementById('edit-recluta-notas')?.value,
+            estado: document.getElementById('edit-recluta-estado')?.value
+        };
+
+        // Añadir asesor_id solo si el usuario es admin
+        if (this.userRol === 'admin') {
+            const asesorSelect = document.getElementById('edit-recluta-asesor');
+            if (asesorSelect) {
+                reclutaData.asesor_id = asesorSelect.value || null;
+            }
+        }
+
+        const fotoInput = document.getElementById('edit-recluta-upload');
+        const foto = fotoInput && fotoInput.files.length > 0 ? fotoInput.files[0] : null;
+
+        try {
+            const updatedRecluta = await this.updateRecluta(this.currentReclutaId, reclutaData, foto);
+            showSuccess(`Recluta "${updatedRecluta.nombre}" actualizado con éxito`);
+            UI.closeModal('edit-recluta-modal');
+            this.loadAndDisplayReclutas(); // Recargar la lista para ver los cambios
+            this.viewRecluta(this.currentReclutaId); // Volver a mostrar los detalles actualizados
+        } catch (error) {
+            console.error('Error al guardar cambios:', error);
+            showError('Error al guardar los cambios: ' + error.message);
         }
     },
 

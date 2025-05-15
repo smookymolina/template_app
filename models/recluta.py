@@ -18,14 +18,19 @@ class Recluta(db.Model):
     fecha_registro = db.Column(db.DateTime, default=datetime.utcnow)
     ultima_actualizacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # Campo existente para el asesor asignado
+    asesor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    asesor = db.relationship('Usuario', foreign_keys=[asesor_id], backref='reclutas_asignados')
+    
+    # Nuevo campo para el usuario que lo creó
+    creado_por_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    # La relación "creador" está definida en la clase Usuario
+    
     # Relación con entrevistas
     entrevistas = db.relationship('Entrevista', backref='recluta', lazy='dynamic', cascade="all, delete-orphan")
-    asesor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
-    asesor = db.relationship('Usuario', backref='reclutas_asignados')
     
-    # NUEVA RELACIÓN con Documento usando string
+    # Relación con documentos
     documentos = db.relationship('Documento', backref='recluta', lazy='dynamic', cascade="all, delete-orphan")
-    
     
     def serialize(self):
         """Retorna una representación serializable del recluta"""
@@ -42,7 +47,9 @@ class Recluta(db.Model):
             'fecha_registro': self.fecha_registro.isoformat() if self.fecha_registro else None,
             'ultima_actualizacion': self.ultima_actualizacion.isoformat() if self.ultima_actualizacion else None,
             'asesor_id': self.asesor_id,
-            'asesor_nombre': self.asesor.nombre if self.asesor else (self.asesor.email if self.asesor else None)
+            'asesor_nombre': self.asesor.nombre if self.asesor else (self.asesor.email if self.asesor else None),
+            'creado_por_id': self.creado_por_id,
+            'creador_nombre': self.creador.nombre if self.creador else (self.creador.email if self.creador else None)
         }
     
     def save(self):
@@ -80,7 +87,7 @@ class Recluta(db.Model):
         return cls.query.get(recluta_id)
     
     @classmethod
-    def get_all(cls, page=1, per_page=10, search=None, estado=None, sort_by='id', sort_order='asc'):
+    def get_all(cls, page=1, per_page=10, search=None, estado=None, sort_by='id', sort_order='asc', usuario=None):
         """
         Obtiene todos los reclutas con paginación y filtros.
         
@@ -91,11 +98,18 @@ class Recluta(db.Model):
             estado: Filtrar por estado
             sort_by: Campo por el que ordenar
             sort_order: Dirección de ordenamiento ('asc' o 'desc')
+            usuario: Usuario que realiza la consulta (para filtrar por permisos)
             
         Returns:
             Objeto de paginación SQLAlchemy
         """
         query = cls.query
+        
+        # Filtrar según el rol del usuario
+        if usuario:
+            if usuario.rol != 'admin':
+                # Si es asesor, solo ve sus reclutas asignados
+                query = query.filter_by(asesor_id=usuario.id)
         
         # Aplicar filtros si existen
         if search:

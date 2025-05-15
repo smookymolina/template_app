@@ -37,6 +37,8 @@ def get_asesores():
 def get_reclutas():
     """
     Obtiene la lista de reclutas con paginación y filtros.
+    Los administradores ven todos los reclutas.
+    Los asesores solo ven los reclutas asignados a ellos.
     """
     try:
         # Parámetros de paginación y filtrado
@@ -50,14 +52,15 @@ def get_reclutas():
         # Limitar el tamaño de página para prevenir abuso
         per_page = min(per_page, current_app.config['MAX_PAGE_SIZE'])
         
-        # Obtener reclutas paginados
+        # Obtener reclutas paginados, pasando el usuario actual para filtrar
         pagination = Recluta.get_all(
             page=page,
             per_page=per_page,
             search=search,
             estado=estado,
             sort_by=sort_by,
-            sort_order=sort_order
+            sort_order=sort_order,
+            usuario=current_user  # Pasamos el usuario actual
         )
         
         return jsonify({
@@ -68,7 +71,8 @@ def get_reclutas():
             "page": page,
             "per_page": per_page,
             "has_next": pagination.has_next,
-            "has_prev": pagination.has_prev
+            "has_prev": pagination.has_prev,
+            "rol_usuario": current_user.rol  # Enviamos el rol para el frontend
         })
     except Exception as e:
         current_app.logger.error(f"Error al obtener reclutas: {str(e)}")
@@ -79,11 +83,16 @@ def get_reclutas():
 def get_recluta(id):
     """
     Obtiene los detalles de un recluta específico.
+    Verifica permisos según el rol del usuario.
     """
     try:
         recluta = Recluta.get_by_id(id)
         if not recluta:
             return jsonify({"success": False, "message": "Recluta no encontrado"}), 404
+        
+        # Verificar permisos
+        if current_user.rol != 'admin' and recluta.asesor_id != current_user.id:
+            return jsonify({"success": False, "message": "No tienes permiso para ver este recluta"}), 403
             
         return jsonify({
             "success": True,
@@ -98,6 +107,8 @@ def get_recluta(id):
 def add_recluta():
     """
     Crea un nuevo recluta.
+    Los administradores pueden asignar a cualquier asesor.
+    Los asesores crean reclutas que se les asignan automáticamente.
     """
     try:
         if request.is_json:
@@ -110,6 +121,22 @@ def add_recluta():
             validated_data = validate_recluta_data(data)
         except ValidationError as e:
             return jsonify({"success": False, "message": "Error de validación", "errors": e.args[0]}), 400
+        
+        # Registrar el creador
+        validated_data['creado_por_id'] = current_user.id
+        
+        # Manejar la asignación de asesor
+        if current_user.rol == 'admin':
+            # Los administradores pueden especificar un asesor
+            if 'asesor_id' not in validated_data or not validated_data['asesor_id']:
+                # Si no se especifica, asignar automáticamente
+                from utils.asignacion import asignar_recluta_automaticamente
+                asesor = asignar_recluta_automaticamente()
+                if asesor:
+                    validated_data['asesor_id'] = asesor.id
+        else:
+            # Si es asesor, el recluta se le asigna a él mismo
+            validated_data['asesor_id'] = current_user.id
         
         # Crear nuevo recluta
         nuevo = Recluta(**validated_data)
@@ -125,7 +152,7 @@ def add_recluta():
         # Guardar en base de datos
         try:
             nuevo.save()
-            current_app.logger.info(f"Recluta creado: {nuevo.id} - {nuevo.nombre}")
+            current_app.logger.info(f"Recluta creado: {nuevo.id} - {nuevo.nombre} por usuario {current_user.id}")
             return jsonify({"success": True, "recluta": nuevo.serialize()}), 201
         except DatabaseError as e:
             return jsonify({"success": False, "message": str(e)}), 500
@@ -139,11 +166,16 @@ def add_recluta():
 def update_recluta(id):
     """
     Actualiza un recluta existente.
+    Verifica permisos según el rol del usuario.
     """
     try:
         recluta = Recluta.get_by_id(id)
         if not recluta:
             return jsonify({"success": False, "message": "Recluta no encontrado"}), 404
+        
+        # Verificar permisos
+        if current_user.rol != 'admin' and recluta.asesor_id != current_user.id:
+            return jsonify({"success": False, "message": "No tienes permiso para modificar este recluta"}), 403
         
         if request.is_json:
             data = request.get_json()
@@ -155,6 +187,10 @@ def update_recluta(id):
             validated_data = validate_recluta_data(data, is_update=True)
         except ValidationError as e:
             return jsonify({"success": False, "message": "Error de validación", "errors": e.args[0]}), 400
+        
+        # Los asesores no pueden cambiar el asesor asignado
+        if current_user.rol != 'admin' and 'asesor_id' in validated_data:
+            del validated_data['asesor_id']
         
         # Actualizar campos
         for key, value in validated_data.items():
@@ -175,7 +211,7 @@ def update_recluta(id):
         # Guardar cambios
         try:
             recluta.save()
-            current_app.logger.info(f"Recluta actualizado: {recluta.id} - {recluta.nombre}")
+            current_app.logger.info(f"Recluta actualizado: {recluta.id} - {recluta.nombre} por usuario {current_user.id}")
             return jsonify({"success": True, "recluta": recluta.serialize()})
         except DatabaseError as e:
             return jsonify({"success": False, "message": str(e)}), 500
@@ -189,11 +225,16 @@ def update_recluta(id):
 def delete_recluta(id):
     """
     Elimina un recluta existente.
+    Verifica permisos según el rol del usuario.
     """
     try:
         recluta = Recluta.get_by_id(id)
         if not recluta:
             return jsonify({"success": False, "message": "Recluta no encontrado"}), 404
+        
+        # Verificar permisos
+        if current_user.rol != 'admin' and recluta.asesor_id != current_user.id:
+            return jsonify({"success": False, "message": "No tienes permiso para eliminar este recluta"}), 403
         
         # Guardar información antes de eliminar para el log
         recluta_info = f"ID: {recluta.id}, Nombre: {recluta.nombre}, Email: {recluta.email}"
@@ -205,7 +246,7 @@ def delete_recluta(id):
         # Eliminar recluta
         try:
             recluta.delete()
-            current_app.logger.info(f"Recluta eliminado: {recluta_info}")
+            current_app.logger.info(f"Recluta eliminado: {recluta_info} por usuario {current_user.id}")
             return jsonify({"success": True, "message": "Recluta eliminado correctamente"})
         except DatabaseError as e:
             return jsonify({"success": False, "message": str(e)}), 500
