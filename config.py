@@ -30,15 +30,23 @@ class Config:
     LOG_FILE = "app.log"
     LOG_LEVEL = "INFO"
     
-    # Configuración mejorada de seguridad para sesiones
-    SESSION_COOKIE_SECURE = False
-    SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
-    REMEMBER_COOKIE_DURATION = timedelta(days=14)
-    SESSION_TYPE = 'filesystem'  # O 'redis' si usas Redis
-    SESSION_USE_SIGNER = True    # Firmar cookies de sesión
-    SESSION_PERMANENT = True     # Mantener la sesión como permanente
-    PERMANENT_SESSION_LIFETIME = timedelta(days=7)  # Vida de sesión de 7 días
+     # Configuración de seguridad para sesiones
+SESSION_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+REMEMBER_COOKIE_DURATION = timedelta(days=7)
+REMEMBER_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
+REMEMBER_COOKIE_HTTPONLY = True
+REMEMBER_COOKIE_REFRESH_EACH_REQUEST = True
+SESSION_REFRESH_EACH_REQUEST = True
+SESSION_TYPE = 'filesystem'
+SESSION_USE_SIGNER = True
+SESSION_PERMANENT = True
+PERMANENT_SESSION_LIFETIME = timedelta(days=7)
+
+     # Anti-CSRF
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = 3600  # 1 hora de validez para tokens CSRF
     
     # Configuración CORS (nueva)
     CORS_ENABLED = True

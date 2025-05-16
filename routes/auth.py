@@ -84,27 +84,39 @@ def logout_usuario():
     Cierra sesión de usuario.
     """
     try:
+        # Obtener el usuario actual antes de cerrar sesión
+        user_id = current_user.id if current_user.is_authenticated else None
+        
         # Registrar sesión como inválida en la base de datos
         try:
             session_token = request.cookies.get('session', '')
-            if session_token:
+            if session_token and user_id:
                 user_session = UserSession.query.filter_by(
                     session_token=session_token,
-                    usuario_id=current_user.id,
+                    usuario_id=user_id,
                     is_valid=True
                 ).first()
                 
                 if user_session:
                     user_session.is_valid = False
                     user_session.save()
+                    
+                # También invalida todas las sesiones más antiguas de este usuario
+                old_sessions = UserSession.query.filter(
+                    UserSession.usuario_id == user_id,
+                    UserSession.is_valid == True,
+                    UserSession.created_at < datetime.utcnow() - timedelta(days=7)
+                ).all()
+                
+                for session in old_sessions:
+                    session.is_valid = False
+                    
+                db.session.commit()
         except Exception as e:
             current_app.logger.warning(f"No se pudo invalidar la sesión: {str(e)}")
         
         # Cerrar sesión de Flask-Login
         logout_user()
-        
-        # Limpiar la sesión actual completamente
-        session.clear()
         
         # Preparar respuesta para eliminar cookies
         response = jsonify({
@@ -112,10 +124,24 @@ def logout_usuario():
             "message": "Sesión cerrada correctamente"
         })
         
-        # Eliminar cookie de sesión explícitamente
+        # Eliminar todas las cookies relacionadas con la sesión
         response.delete_cookie('session')
-        # Eliminar cookie de remember si existe
         response.delete_cookie('remember_token')
+        response.delete_cookie('CSRF-TOKEN')
+        
+        # Asegurarnos de que las cookies se eliminen correctamente
+        # ajustando atributos importantes
+        for cookie in ['session', 'remember_token', 'CSRF-TOKEN']:
+            response.set_cookie(
+                cookie, 
+                '', 
+                expires=0,
+                max_age=0,
+                secure=current_app.config.get('SESSION_COOKIE_SECURE', False),
+                httponly=True,
+                samesite='Strict',
+                path='/'
+            )
         
         return response, 200
     except Exception as e:

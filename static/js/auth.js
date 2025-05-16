@@ -53,26 +53,41 @@ logout: async function() {
     try {
         const response = await fetch(`${CONFIG.AUTH_URL}/logout`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin' // Asegura que se envíen cookies
         });
         
+        // Independientemente de la respuesta, limpiamos todo en el cliente
+        // Limpiar usuario actual
+        this.currentUser = null;
+        
+        // Limpiar localStorage completamente excepto preferencias de tema
+        const darkMode = localStorage.getItem('darkMode');
+        const primaryColor = localStorage.getItem('primaryColor');
+        
+        for (const key in localStorage) {
+            if (localStorage.hasOwnProperty(key) && 
+                key !== 'darkMode' && 
+                key !== 'primaryColor') {
+                localStorage.removeItem(key);
+            }
+        }
+        
+        // Restaurar preferencias de tema
+        if (darkMode) localStorage.setItem('darkMode', darkMode);
+        if (primaryColor) localStorage.setItem('primaryColor', primaryColor);
+        
+        // Limpiar sessionStorage
+        sessionStorage.clear();
+        
+        // Verificar respuesta del servidor
         if (!response.ok) {
             throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
         
         const data = await response.json();
         if (data.success) {
-            // Limpiar usuario actual
-            this.currentUser = null;
-            
-            // Limpiar datos de localStorge relacionados con el usuario
-            localStorage.removeItem('currentStatus');
-            localStorage.removeItem('calendarEvents');
-            
-            // Limpiar sessionStorage si se usa
-            sessionStorage.clear();
-            
-            // Redirigir a la página de login o recargar
+            // Recargar la página para asegurar un estado limpio
             window.location.href = '/';
             return true;
         } else {
@@ -80,6 +95,8 @@ logout: async function() {
         }
     } catch (err) {
         console.error('Error de logout:', err);
+        // Incluso en caso de error, recargamos para limpiar el estado
+        window.location.href = '/';
         throw err;
     }
 },

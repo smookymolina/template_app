@@ -15,46 +15,6 @@ import os
 
 api_bp = Blueprint('api', __name__)
 
-def fresh_login_required(f):
-    """
-    Decorador que verifica si el usuario tiene una sesión reciente y válida.
-    Más estricto que login_required porque verifica la validez en la base de datos.
-    """
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        # Primero verificar si el usuario está autenticado
-        if not current_user.is_authenticated:
-            return jsonify({
-                "success": False,
-                "message": "No autenticado"
-            }), 401
-        
-        # Verificar si la sesión actual es válida en la base de datos
-        try:
-            session_token = request.cookies.get('session', '')
-            if session_token:
-                from models.user_session import UserSession
-                session_valid = UserSession.query.filter_by(
-                    session_token=session_token,
-                    usuario_id=current_user.id,
-                    is_valid=True
-                ).first() is not None
-                
-                if not session_valid:
-                    # Si la sesión no es válida en la BD, cerrar sesión
-                    logout_user()
-                    return jsonify({
-                        "success": False,
-                        "message": "Sesión inválida"
-                    }), 401
-            
-        except Exception as e:
-            current_app.logger.error(f"Error al verificar sesión: {str(e)}")
-        
-        return f(*args, **kwargs)
-    return decorated_function
-
-# Usar este decorador en rutas que manejen información sensible
 @api_bp.route('/usuario', methods=['GET'])
 @fresh_login_required
 def get_usuario_actual():
@@ -132,6 +92,8 @@ def get_reclutas():
     except Exception as e:
         current_app.logger.error(f"Error al obtener reclutas: {str(e)}")
         return jsonify({"success": False, "message": f"Error al obtener reclutas: {str(e)}"}), 500
+
+
 
 @api_bp.route('/reclutas/<int:id>', methods=['GET'])
 @login_required
@@ -721,17 +683,7 @@ def update_perfil():
         current_app.logger.error(f"Error al actualizar perfil: {str(e)}")
         return jsonify({"success": False, "message": f"Error al actualizar perfil: {str(e)}"}), 500
 
-@api_bp.route('/usuario', methods=['GET'])
-@login_required
-def get_usuario_actual():
-    """
-    Obtiene información del usuario autenticado actualmente.
-    """
-    try:
-        return jsonify(current_user.serialize())
-    except Exception as e:
-        current_app.logger.error(f"Error al obtener usuario actual: {str(e)}")
-        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
 
 @api_bp.route('/check-auth', methods=['GET'])
 def check_auth():

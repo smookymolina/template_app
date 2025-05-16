@@ -594,41 +594,61 @@ function updateEstadisticasUI(data) {
  */
 async function logout() {
     try {
+        const button = document.getElementById('logout-button');
+        if (button) {
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cerrando sesión...';
+            button.disabled = true;
+        }
+        
         await Auth.logout();
         
-        // Limpiar datos adicionales
-        window.reclutas = [];
-        window.currentReclutaId = null;
-        window.profileImage = null;
-        window.reclutaImage = null;
-        
-        // Limpiar localStorage (pero preservar preferencias de tema)
-        const darkMode = localStorage.getItem('darkMode');
-        const primaryColor = localStorage.getItem('primaryColor');
-        
-        // Limpiar todo localStorage excepto tema
-        localStorage.clear();
-        
-        // Restaurar preferencias de tema
-        if (darkMode) localStorage.setItem('darkMode', darkMode);
-        if (primaryColor) localStorage.setItem('primaryColor', primaryColor);
-        
-        // Mostrar pantalla de login
-        document.getElementById('login-section').style.display = 'block';
-        document.getElementById('dashboard-section').style.display = 'none';
-        
-        // Limpiar campos
-        const emailField = document.getElementById('email');
-        const passwordField = document.getElementById('password');
-        
-        if (emailField) emailField.value = '';
-        if (passwordField) passwordField.value = '';
-        
-        showSuccess('Sesión cerrada correctamente');
+        // El resto lo hace Auth.logout(), que redirige a la página principal
     } catch (error) {
         console.error('Error al cerrar sesión:', error);
         showError('Error al cerrar sesión');
+        
+        // Recargar la página de todos modos para limpiar el estado
+        window.location.reload();
     }
+}
+
+/**
+ * Verifica periódicamente el estado de autenticación
+ */
+function startAuthCheckInterval() {
+    // Verificar cada 5 minutos (300000 ms)
+    const interval = 300000;
+    
+    setInterval(async () => {
+        try {
+            const response = await fetch('/api/check-auth', {
+                // Asegurarse de que no se use caché
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                }
+            });
+            
+            const data = await response.json();
+            
+            // Si el usuario ya no está autenticado pero la UI muestra que sí,
+            // forzar logout
+            if (!data.authenticated && Auth.currentUser) {
+                console.log('Sesión expirada, redirigiendo a login...');
+                
+                // Mostrar notificación
+                showNotification('Tu sesión ha expirado. Redirigiendo al inicio de sesión...', 'warning');
+                
+                // Pequeña espera para que el usuario pueda ver la notificación
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('Error al verificar autenticación:', error);
+        }
+    }, interval);
 }
 
 /**

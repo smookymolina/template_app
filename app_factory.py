@@ -181,38 +181,83 @@ def register_request_hooks(app):
     @app.after_request
     def add_security_headers(response):
         """Añade cabeceras de seguridad a las respuestas"""
-        # Cabeceras de seguridad existentes
+        # Cabeceras de seguridad
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         response.headers['X-XSS-Protection'] = '1; mode=block'
         
-        # Añadir cabeceras de control de caché para prevenir almacenamiento
-        # en páginas que requieren autenticación
-        if 'text/html' in response.headers.get('Content-Type', ''):
-            # Si el usuario está autenticado o la ruta requiere autenticación
-            from flask_login import current_user
-            from flask import request
-            
-            # Rutas públicas que SÍ deben permitir caché
-            public_routes = ['/static/', '/api/tracking/', '/favicon.ico']
-            
-            # Verificar si es una ruta protegida
-            is_protected_route = True
-            for route in public_routes:
-                if request.path.startswith(route):
-                    is_protected_route = False
-                    break
-            
-            # Para rutas autenticadas o protegidas, prevenir caché
-            if current_user.is_authenticated or is_protected_route:
-                response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-                response.headers['Pragma'] = 'no-cache'
-                response.headers['Expires'] = '0'
-            else:
-                # Para contenido público, permitir cierto nivel de caché
-                response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutos
+        # Rutas públicas que SÍ deben permitir caché
+        public_paths = ['/static/', '/api/tracking/', '/favicon.ico']
+        
+        # Verificar si es una ruta protegida o un usuario autenticado
+        is_protected_route = not any(request.path.startswith(path) for path in public_paths)
+        
+        # Para rutas autenticadas o protegidas, prevenir caché agresivamente
+        if current_user.is_authenticated or is_protected_route:
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '-1'
+            response.headers['Vary'] = 'Cookie'
+        else:
+            # Para contenido público, permitir cierto nivel de caché
+            response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutos
         
         return response
+    
+    @app.before_request
+def check_authentication():
+    """Verifica la validez de la autenticación en cada solicitud"""
+    from flask import request, redirect, url_for
+    from flask_login import current_user, logout_user
+    import json
+    
+    # Rutas que no requieren verificación de sesión
+    exempt_routes = [
+        '/auth/login', 
+        '/auth/logout',
+        '/api/tracking/',
+        '/api/verificar-folio/',
+        '/api/recuperar-folio',
+        '/static/'
+    ]
+    
+    # No verificar rutas exentas o favicon
+    if any(request.path.startswith(route) for route in exempt_routes) or request.path == '/favicon.ico':
+        return
+        
+    # Verificar si el usuario está autenticado y la ruta lo requiere
+    if current_user.is_authenticated:
+        # Verificar validez de sesión en la base de datos
+        try:
+            from models.user_session import UserSession
+            session_token = request.cookies.get('session', '')
+            
+            if session_token:
+                is_valid_session = UserSession.query.filter_by(
+                    session_token=session_token,
+                    usuario_id=current_user.id,
+                    is_valid=True
+                ).first() is not None
+                
+                if not is_valid_session:
+                    # Si la sesión no es válida, forzar logout
+                    logout_user()
+                    
+                    # Si es una solicitud AJAX/API, devolver 401
+                    if request.path.startswith('/api/'):
+                        return app.response_class(
+                            response=json.dumps({
+                                "success": False,
+                                "message": "Sesión expirada o inválida",
+                                "code": "SESSION_EXPIRED"
+                            }),
+                            status=401,
+                            mimetype='application/json'
+                        )
+                    # Para solicitudes normales, redirigir a la página de login
+                    return redirect(url_for('main.index'))
+        except Exception as e:
+            app.logger.error(f"Error al verificar sesión: {str(e)}")
 
 def initialize_database(app):
     """Inicializa la base de datos y crea datos iniciales"""
