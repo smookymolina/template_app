@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from models import db, DatabaseError
+from models.usuario import Usuario
 from models.recluta import Recluta
 from models.entrevista import Entrevista
 from utils.helpers import guardar_archivo, eliminar_archivo
@@ -202,62 +203,6 @@ def add_recluta():
         current_app.logger.error(f"Error al crear recluta: {str(e)}")
         return jsonify({"success": False, "message": f"Error al crear recluta: {str(e)}"}), 500
 
-@api_bp.route('/import/excel', methods=['POST'])
-@login_required
-def import_excel():
-    # Check if user is admin
-    if not hasattr(current_user, 'rol') or current_user.rol != 'admin':
-        return jsonify({"success": False, "message": "No tienes permisos para importar datos"}), 403
-    
-    try:
-        if 'file' not in request.files:
-            return jsonify({"success": False, "message": "No se encontró archivo"}), 400
-            
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({"success": False, "message": "No se seleccionó archivo"}), 400
-            
-        # Process Excel file
-        import pandas as pd
-        
-        df = pd.read_excel(file)
-        
-        imported_count = 0
-        for _, row in df.iterrows():
-            # Create or update recluta
-            # This will depend on your Excel structure
-            recluta_data = {
-                'nombre': row.get('Nombre', ''),
-                'email': row.get('Email', ''),
-                'telefono': row.get('Telefono', ''),
-                'estado': row.get('Estado', 'En proceso'),
-                'puesto': row.get('Puesto', '')
-            }
-            
-            # Check if recluta already exists by email
-            existing = Recluta.query.filter_by(email=recluta_data['email']).first()
-            
-            if existing:
-                # Update existing
-                for key, value in recluta_data.items():
-                    setattr(existing, key, value)
-                existing.save()
-            else:
-                # Create new
-                new_recluta = Recluta(**recluta_data)
-                new_recluta.save()
-                
-            imported_count += 1
-            
-        return jsonify({
-            "success": True,
-            "message": f"Importación completada. {imported_count} reclutas procesados."
-        })
-
-         except Exception as e:
-        current_app.logger.error(f"Error al crear recluta: {str(e)}")
-        return jsonify({"success": False, "message": f"Error al crear recluta: {str(e)}"}), 500
-
 @api_bp.route('/reclutas/<int:id>', methods=['PUT'])
 @login_required
 def update_recluta(id):
@@ -314,6 +259,9 @@ def update_recluta(id):
     except Exception as e:
         current_app.logger.error(f"Error al actualizar recluta {id}: {str(e)}")
         return jsonify({"success": False, "message": f"Error al actualizar recluta: {str(e)}"}), 500
+
+# Aquí solo se muestra la corrección para la parte del método import_excel
+# que aparece duplicado en el archivo original
 
 @api_bp.route('/import/excel', methods=['POST'])
 @login_required

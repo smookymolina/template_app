@@ -1,3 +1,8 @@
+from flask_login import UserMixin
+from datetime import datetime
+import bcrypt
+from models import db, DatabaseError
+
 class Usuario(db.Model, UserMixin):
     """
     Modelo para usuarios administradores y gerentes del sistema.
@@ -48,7 +53,8 @@ class Usuario(db.Model, UserMixin):
             "telefono": self.telefono,
             "foto_url": self.foto_url,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "last_login": self.last_login.isoformat() if self.last_login else None
+            "last_login": self.last_login.isoformat() if self.last_login else None,
+            "rol": self.rol
         }
     
     def save(self):

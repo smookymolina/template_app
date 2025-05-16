@@ -21,29 +21,29 @@ class Recluta(db.Model):
     entrevistas = db.relationship('Entrevista', backref='recluta', lazy='dynamic', cascade="all, delete-orphan")
 
     def serialize(self):
-    """Retorna una representación serializable del recluta"""
-    asesor_info = None
-    if self.asesor:
-        asesor_info = {
-            'id': self.asesor.id,
-            'nombre': self.asesor.nombre,
-            'email': self.asesor.email
+        """Retorna una representación serializable del recluta"""
+        asesor_info = None
+        if hasattr(self, 'asesor') and self.asesor:
+            asesor_info = {
+                'id': self.asesor.id,
+                'nombre': self.asesor.nombre,
+                'email': self.asesor.email
+            }
+            
+        return {
+            'id': self.id,
+            'nombre': self.nombre,
+            'email': self.email,
+            'telefono': self.telefono,
+            'estado': self.estado,
+            'puesto': self.puesto,
+            'notas': self.notas,
+            'foto_url': self.foto_url,
+            'fecha_registro': self.fecha_registro.isoformat() if self.fecha_registro else None,
+            'ultima_actualizacion': self.ultima_actualizacion.isoformat() if self.ultima_actualizacion else None,
+            'asesor_id': self.asesor_id,
+            'asesor': asesor_info
         }
-        
-    return {
-        'id': self.id,
-        'nombre': self.nombre,
-        'email': self.email,
-        'telefono': self.telefono,
-        'estado': self.estado,
-        'puesto': self.puesto,
-        'notas': self.notas,
-        'foto_url': self.foto_url,
-        'fecha_registro': self.fecha_registro.isoformat() if self.fecha_registro else None,
-        'ultima_actualizacion': self.ultima_actualizacion.isoformat() if self.ultima_actualizacion else None,
-        'asesor_id': self.asesor_id,
-        'asesor': asesor_info
-    }
     
     def save(self):
         """Guarda el recluta en la base de datos de forma segura"""
