@@ -288,96 +288,94 @@ const Reclutas = {
      * @param {HTMLElement} container - Elemento contenedor de la tabla
      */
     renderReclutasTable: function(container) {
-        if (!container) return;
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (!this.reclutas || this.reclutas.length === 0) {
+        container.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center">
+                    No se encontraron reclutas. ¡Agrega tu primer recluta!
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    this.reclutas.forEach(recluta => {
+        const row = document.createElement('tr');
         
-        container.innerHTML = '';
+        // Determinar URL de la foto
+        const fotoUrl = recluta.foto_url || '/api/placeholder/40/40';
         
-        if (!this.reclutas || this.reclutas.length === 0) {
-            container.innerHTML = `
-                <tr>
-                    <td colspan="6" class="text-center">
-                        No se encontraron reclutas. ¡Agrega tu primer recluta!
-                    </td>
-                </tr>
+        // Crear badge de estado
+        const estadoBadge = UI.createBadge(recluta.estado, CONFIG.ESTADOS_RECLUTA);
+        
+        // Determinar los botones de acción según el rol del usuario
+        let actionsHtml = '';
+        
+        // Verificar si el usuario actual es admin usando Auth.currentUser
+        if (Auth.currentUser && Auth.currentUser.rol === 'admin') {
+            actionsHtml = `
+                <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="action-btn edit-btn" data-id="${recluta.id}" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="action-btn assign-btn" data-id="${recluta.id}" title="Asignar">
+                    <i class="fas fa-user-check"></i>
+                </button>
+                <button class="action-btn delete-btn" data-id="${recluta.id}" title="Eliminar">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
             `;
-            return;
+        } else {
+            actionsHtml = `
+                <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="action-btn edit-btn" data-id="${recluta.id}" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="action-btn delete-btn" data-id="${recluta.id}" title="Eliminar">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            `;
         }
         
-        this.reclutas.forEach(recluta => {
-            const row = document.createElement('tr');
-            
-            // Determinar URL de la foto
-            const fotoUrl = recluta.foto_url || '/api/placeholder/40/40';
-            
-            // Crear badge de estado
-            const estadoBadge = UI.createBadge(recluta.estado, CONFIG.ESTADOS_RECLUTA);
-            
-            row.innerHTML = `
-                <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto"></td>
-                <td>${recluta.nombre}</td>
-                <td>${recluta.email}</td>
-                <td>${recluta.telefono}</td>
-                <td id="estado-cell-${recluta.id}"></td>
-                <td>
-                    <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="action-btn edit-btn" data-id="${recluta.id}" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="action-btn delete-btn" data-id="${recluta.id}" title="Eliminar">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </td>
-            `;
-            
-            container.appendChild(row);
-
-            // In renderReclutasTable function, update the actions column
-if (current_user.rol === 'admin') {
-    actionsHtml = `
-        <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
-            <i class="fas fa-eye"></i>
-        </button>
-        <button class="action-btn edit-btn" data-id="${recluta.id}" title="Editar">
-            <i class="fas fa-edit"></i>
-        </button>
-        <button class="action-btn assign-btn" data-id="${recluta.id}" title="Asignar">
-            <i class="fas fa-user-check"></i>
-        </button>
-        <button class="action-btn delete-btn" data-id="${recluta.id}" title="Eliminar">
-            <i class="fas fa-trash-alt"></i>
-        </button>
-    `;
-} else {
-    actionsHtml = `
-        <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
-            <i class="fas fa-eye"></i>
-        </button>
-        <button class="action-btn edit-btn" data-id="${recluta.id}" title="Editar">
-            <i class="fas fa-edit"></i>
-        </button>
-        <button class="action-btn delete-btn" data-id="${recluta.id}" title="Eliminar">
-            <i class="fas fa-trash-alt"></i>
-        </button>
-    `;
-}
-
-// Then make sure to set up the assignment button event listener
-row.querySelector('.assign-btn')?.addEventListener('click', () => {
-    this.showAssignModal(recluta.id);
-});
-            
-            // Añadir badge de estado al TD correspondiente
-            const estadoCell = document.getElementById(`estado-cell-${recluta.id}`);
-            if (estadoCell) {
-                estadoCell.appendChild(estadoBadge);
+        row.innerHTML = `
+            <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto"></td>
+            <td>${recluta.nombre}</td>
+            <td>${recluta.email}</td>
+            <td>${recluta.telefono}</td>
+            <td id="estado-cell-${recluta.id}"></td>
+            <td>${actionsHtml}</td>
+        `;
+        
+        container.appendChild(row);
+        
+        // Añadir badge de estado al TD correspondiente
+        const estadoCell = document.getElementById(`estado-cell-${recluta.id}`);
+        if (estadoCell) {
+            estadoCell.appendChild(estadoBadge);
+        }
+        
+        // Configurar botones de acción
+        this.setupActionButtons(row, recluta.id);
+        
+        // Configurar botón de asignación si existe
+        if (Auth.currentUser && Auth.currentUser.rol === 'admin') {
+            const assignBtn = row.querySelector('.assign-btn');
+            if (assignBtn) {
+                assignBtn.addEventListener('click', () => {
+                    this.showAssignModal(recluta.id);
+                });
             }
-            
-            // Configurar botones de acción
-            this.setupActionButtons(row, recluta.id);
-        });
-    },
+        }
+    });
+},
     
     assignRecluta: async function(reclutaId, asesorId) {
     try {
@@ -407,6 +405,16 @@ row.querySelector('.assign-btn')?.addEventListener('click', () => {
     }
 },
 
+/**
+ * Importa reclutas desde un archivo Excel
+ * @param {File} file - Archivo Excel a importar
+ * @returns {Promise<boolean>} - True si la importación fue exitosa
+ */
+/**
+ * Importa reclutas desde un archivo Excel
+ * @param {File} file - Archivo Excel a importar
+ * @returns {Promise<boolean>} - True si la importación fue exitosa
+ */
 importExcel: async function(file) {
     try {
         const formData = new FormData();
@@ -433,6 +441,115 @@ importExcel: async function(file) {
     } catch (error) {
         console.error('Error al importar Excel:', error);
         showError('Error al importar datos: ' + error.message);
+        throw error;
+    }
+},
+
+/**
+ * Muestra el modal para importar reclutas desde Excel
+ */
+showImportModal: function() {
+    // Crear modal
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'import-excel-modal';
+    modal.style.display = 'block';
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Importar Reclutas desde Excel</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Selecciona un archivo Excel (.xlsx, .xls) con la lista de reclutas:</p>
+                <div class="form-group">
+                    <input type="file" id="excel-file" accept=".xlsx,.xls">
+                </div>
+                <div class="alert alert-info">
+                    <p>El archivo debe contener las siguientes columnas:</p>
+                    <ul>
+                        <li><strong>Nombre</strong> (Obligatorio) - Nombre completo del recluta</li>
+                        <li><strong>Email</strong> (Obligatorio) - Correo electrónico</li>
+                        <li><strong>Telefono</strong> (Obligatorio) - Número telefónico</li>
+                        <li><strong>Estado</strong> (Opcional) - Estados válidos: "Activo", "En proceso", "Rechazado"</li>
+                        <li><strong>Puesto</strong> (Opcional) - Puesto al que aplica</li>
+                    </ul>
+                    <p><strong>Nota:</strong> Si se importa un recluta con un email ya existente, se actualizarán sus datos.</p>
+                    <p><strong>Importante:</strong> Los reclutas importados no tendrán un asesor asignado automáticamente. Deberá asignarlos manualmente después de la importación.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary close-btn">Cancelar</button>
+                <button class="btn-primary" id="confirm-import-btn">Importar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Configurar eventos
+    const closeButtons = modal.querySelectorAll('.close-modal, .close-btn');
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+    });
+    
+    const confirmBtn = document.getElementById('confirm-import-btn');
+    confirmBtn.addEventListener('click', async () => {
+        const fileInput = document.getElementById('excel-file');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            showError('Por favor selecciona un archivo');
+            return;
+        }
+        
+        try {
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
+            confirmBtn.disabled = true;
+            
+            await this.importExcel(file);
+            document.body.removeChild(modal);
+        } catch (error) {
+            // Error is already handled in importExcel
+            confirmBtn.innerHTML = 'Importar';
+            confirmBtn.disabled = false;
+        }
+    });
+},
+
+/**
+ * Asigna un recluta a un asesor
+ * @param {number} reclutaId - ID del recluta a asignar
+ * @param {number} asesorId - ID del asesor al que asignar
+ * @returns {Promise<boolean>} - True si la asignación fue exitosa
+ */
+assignRecluta: async function(reclutaId, asesorId) {
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/reclutas/${reclutaId}/assign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ asesor_id: asesorId })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Error ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            showSuccess(data.message);
+            await this.loadAndDisplayReclutas();
+            return true;
+        } else {
+            throw new Error(data.message || 'Error al asignar recluta');
+        }
+    } catch (error) {
+        console.error(`Error al asignar recluta ${reclutaId}:`, error);
+        showError('Error al asignar recluta: ' + error.message);
         throw error;
     }
 },
@@ -558,36 +675,6 @@ showAssignModal: async function(reclutaId) {
     } catch (error) {
         console.error('Error al mostrar modal de asignación:', error);
         showError('Error al preparar asignación');
-    }
-},
-
-importExcel: async function(file) {
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        const response = await fetch(`${CONFIG.API_URL}/import/excel`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `Error ${response.status}`);
-        }
-        
-        const data = await response.json();
-        if (data.success) {
-            showSuccess(data.message);
-            await this.loadAndDisplayReclutas();
-            return true;
-        } else {
-            throw new Error(data.message || 'Error al importar datos');
-        }
-    } catch (error) {
-        console.error('Error al importar Excel:', error);
-        showError('Error al importar datos: ' + error.message);
-        throw error;
     }
 },
 
