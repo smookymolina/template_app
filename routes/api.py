@@ -85,10 +85,14 @@ def add_recluta():
             data = request.get_json()
         else:
             data = request.form.to_dict()
-            
+
         # Validar datos
         try:
             validated_data = validate_recluta_data(data)
+            
+            # Si el usuario es asesor, asignar automáticamente el recluta a él
+            if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+                validated_data['asesor_id'] = current_user.id  
         except ValidationError as e:
             return jsonify({"success": False, "message": "Error de validación", "errors": e.args[0]}), 400
         
@@ -130,10 +134,17 @@ def update_recluta(id):
             data = request.get_json()
         else:
             data = request.form.to_dict()
-            
+        
         # Validar datos
         try:
             validated_data = validate_recluta_data(data, is_update=True)
+            
+            # Si es asesor, asegurar que no puede cambiar asesor_id
+            if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+                if 'asesor_id' in validated_data:
+                    # Si intenta cambiar a otro asesor
+                    if validated_data['asesor_id'] is not None and int(validated_data['asesor_id']) != current_user.id:
+                        return jsonify({"success": False, "message": "No tienes permisos para asignar este recluta a otro asesor"}), 403
         except ValidationError as e:
             return jsonify({"success": False, "message": "Error de validación", "errors": e.args[0]}), 400
         
