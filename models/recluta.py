@@ -23,9 +23,8 @@ class Recluta(db.Model):
     asesor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
     asesor = db.relationship('Usuario', backref='reclutas_asignados')
     
-    # NUEVA RELACIÓN con Documento usando string
+    # Relación con Documento
     documentos = db.relationship('Documento', backref='recluta', lazy='dynamic', cascade="all, delete-orphan")
-    
     
     def serialize(self):
         """Retorna una representación serializable del recluta"""
@@ -75,12 +74,27 @@ class Recluta(db.Model):
             raise DatabaseError(f"Error al eliminar recluta: {str(e)}")
     
     @classmethod
-    def get_by_id(cls, recluta_id):
-        """Obtiene un recluta por su ID"""
-        return cls.query.get(recluta_id)
+    def get_by_id(cls, id, current_user=None):
+        """
+        Obtiene un recluta por su ID, verificando permisos según el rol del usuario.
+        
+        Args:
+            id: ID del recluta
+            current_user: Usuario que realiza la consulta (para filtrar por rol)
+            
+        Returns:
+            Recluta si existe y el usuario tiene permisos, None en caso contrario
+        """
+        query = cls.query.filter_by(id=id)
+        
+        # Verificar permisos si el usuario es asesor
+        if current_user and hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+            query = query.filter_by(asesor_id=current_user.id)
+            
+        return query.first()
     
     @classmethod
-    def get_all(cls, page=1, per_page=10, search=None, estado=None, sort_by='id', sort_order='asc'):
+    def get_all(cls, page=1, per_page=10, search=None, estado=None, sort_by='id', sort_order='asc', current_user=None):
         """
         Obtiene todos los reclutas con paginación y filtros.
         
@@ -91,11 +105,16 @@ class Recluta(db.Model):
             estado: Filtrar por estado
             sort_by: Campo por el que ordenar
             sort_order: Dirección de ordenamiento ('asc' o 'desc')
+            current_user: Usuario que realiza la consulta (para filtrar por rol)
             
         Returns:
             Objeto de paginación SQLAlchemy
         """
         query = cls.query
+        
+        # Filtrar por rol si el usuario no es administrador
+        if current_user and hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+            query = query.filter_by(asesor_id=current_user.id)
         
         # Aplicar filtros si existen
         if search:

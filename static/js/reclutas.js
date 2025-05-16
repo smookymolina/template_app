@@ -19,44 +19,51 @@ const Reclutas = {
     currentReclutaId: null,
     asesores: [], // Añadido para almacenar la lista de asesores
 
-    /**
-     * Inicializa todos los elementos y eventos de gestión de reclutas
-     */
     init: async function() {
-        try {
-            // Inicializar filtros y eventos
-            this.initFilters();
+    try {
+        // Obtener el rol del usuario actual
+        this.userRol = Auth.currentUser?.rol || 'asesor';
+        
+        // Inicializar filtros y eventos
+        this.initFilters();
 
-            // Inicializar formulario de añadir recluta
-            this.initAddReclutaForm();
+        // Inicializar formulario de añadir recluta
+        this.initAddReclutaForm();
 
-            // Eventos para botones de acción en el modal de detalles
-            const cancelEditBtn = document.querySelector('.edit-mode-buttons .btn-secondary');
-            if (cancelEditBtn) {
-                cancelEditBtn.addEventListener('click', () => this.cancelEdit());
-            }
+        // Configurar UI según el rol del usuario
+        this.configureUIForRole();
 
-            const saveChangesBtn = document.querySelector('.edit-mode-buttons .btn-primary');
-            if (saveChangesBtn) {
-                saveChangesBtn.addEventListener('click', () => this.saveReclutaChanges());
-            }
+        // Eventos para botones de acción en el modal de detalles
+        const cancelEditBtn = document.querySelector('.edit-mode-buttons .btn-secondary');
+        if (cancelEditBtn) {
+            cancelEditBtn.addEventListener('click', () => this.cancelEdit());
+        }
 
-            // Cargar datos iniciales
-            await this.loadAndDisplayReclutas();
+        const saveChangesBtn = document.querySelector('.edit-mode-buttons .btn-primary');
+        if (saveChangesBtn) {
+            saveChangesBtn.addEventListener('click', () => this.saveReclutaChanges());
+        }
+
+        // Cargar datos iniciales
+        await this.loadAndDisplayReclutas();
+        
+        // Cargar asesores solo si el usuario es admin
+        if (this.userRol === 'admin') {
             await this.loadAsesores();
             this.populateAsesorSelectors();
-
-            // Registrarse para eventos de cambio de sección
-            document.addEventListener('sectionChanged', (e) => {
-                if (e.detail.section === 'reclutas-section') {
-                    this.loadAndDisplayReclutas();
-                }
-            });
-        } catch (error) {
-            console.error('Error al inicializar módulo de reclutas:', error);
-            showError('Error al cargar datos de reclutas: ' + error.message);
         }
-    },
+
+        // Registrarse para eventos de cambio de sección
+        document.addEventListener('sectionChanged', (e) => {
+            if (e.detail.section === 'reclutas-section') {
+                this.loadAndDisplayReclutas();
+            }
+        });
+    } catch (error) {
+        console.error('Error al inicializar módulo de reclutas:', error);
+        showError('Error al cargar datos de reclutas: ' + error.message);
+    }
+},
 
     /**
      * Carga la lista de asesores disponibles
@@ -171,6 +178,30 @@ loadDocumentos: async function(reclutaId) {
     } catch (error) {
         console.error('Error al cargar documentos:', error);
         showError('Error al cargar documentos');
+    }
+},
+
+/**
+ * Configura la interfaz de usuario según el rol
+ */
+configureUIForRole: function() {
+    if (this.userRol !== 'admin') {
+        // Ocultar selectores de asesor en formularios para no-administradores
+        const asesorSelectors = document.querySelectorAll('#recluta-asesor, #edit-recluta-asesor');
+        asesorSelectors.forEach(selector => {
+            if (selector) {
+                const formGroup = selector.closest('.form-group');
+                if (formGroup) {
+                    formGroup.style.display = 'none';
+                }
+            }
+        });
+        
+        // Ocultar columna de asesor en la tabla
+        const asesorHeader = document.querySelector('#reclutas-table th:nth-child(7)');
+        if (asesorHeader) {
+            asesorHeader.style.display = 'none';
+        }
     }
 },
 

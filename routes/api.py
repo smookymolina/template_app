@@ -50,14 +50,15 @@ def get_reclutas():
         # Limitar el tamaño de página para prevenir abuso
         per_page = min(per_page, current_app.config['MAX_PAGE_SIZE'])
         
-        # Obtener reclutas paginados
+        # Obtener reclutas paginados, pasando el usuario actual para el filtrado por rol
         pagination = Recluta.get_all(
             page=page,
             per_page=per_page,
             search=search,
             estado=estado,
             sort_by=sort_by,
-            sort_order=sort_order
+            sort_order=sort_order,
+            current_user=current_user
         )
         
         return jsonify({
@@ -81,9 +82,11 @@ def get_recluta(id):
     Obtiene los detalles de un recluta específico.
     """
     try:
-        recluta = Recluta.get_by_id(id)
+        # Usar el método modificado que verifica permisos
+        recluta = Recluta.get_by_id(id, current_user=current_user)
+        
         if not recluta:
-            return jsonify({"success": False, "message": "Recluta no encontrado"}), 404
+            return jsonify({"success": False, "message": "Recluta no encontrado o sin permisos para acceder"}), 404
             
         return jsonify({
             "success": True,
@@ -110,6 +113,10 @@ def add_recluta():
             validated_data = validate_recluta_data(data)
         except ValidationError as e:
             return jsonify({"success": False, "message": "Error de validación", "errors": e.args[0]}), 400
+        
+        # Si el usuario es asesor, asignar automáticamente el recluta a él
+        if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+            validated_data['asesor_id'] = current_user.id
         
         # Crear nuevo recluta
         nuevo = Recluta(**validated_data)
@@ -141,9 +148,11 @@ def update_recluta(id):
     Actualiza un recluta existente.
     """
     try:
-        recluta = Recluta.get_by_id(id)
+        # Usar el método modificado que verifica permisos
+        recluta = Recluta.get_by_id(id, current_user=current_user)
+        
         if not recluta:
-            return jsonify({"success": False, "message": "Recluta no encontrado"}), 404
+            return jsonify({"success": False, "message": "Recluta no encontrado o sin permisos para acceder"}), 404
         
         if request.is_json:
             data = request.get_json()
@@ -155,6 +164,13 @@ def update_recluta(id):
             validated_data = validate_recluta_data(data, is_update=True)
         except ValidationError as e:
             return jsonify({"success": False, "message": "Error de validación", "errors": e.args[0]}), 400
+        
+        # Si es asesor, asegurar que no puede cambiar asesor_id
+        if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+            if 'asesor_id' in validated_data:
+                # Si intenta cambiar a otro asesor
+                if validated_data['asesor_id'] is not None and int(validated_data['asesor_id']) != current_user.id:
+                    return jsonify({"success": False, "message": "No tienes permisos para asignar este recluta a otro asesor"}), 403
         
         # Actualizar campos
         for key, value in validated_data.items():
@@ -191,9 +207,11 @@ def delete_recluta(id):
     Elimina un recluta existente.
     """
     try:
-        recluta = Recluta.get_by_id(id)
+        # Usar el método modificado que verifica permisos
+        recluta = Recluta.get_by_id(id, current_user=current_user)
+        
         if not recluta:
-            return jsonify({"success": False, "message": "Recluta no encontrado"}), 404
+            return jsonify({"success": False, "message": "Recluta no encontrado o sin permisos para acceder"}), 404
         
         # Guardar información antes de eliminar para el log
         recluta_info = f"ID: {recluta.id}, Nombre: {recluta.nombre}, Email: {recluta.email}"
@@ -213,7 +231,7 @@ def delete_recluta(id):
     except Exception as e:
         current_app.logger.error(f"Error al eliminar recluta {id}: {str(e)}")
         return jsonify({"success": False, "message": f"Error al eliminar recluta: {str(e)}"}), 500
-
+        
 # ----- API DE ENTREVISTAS -----
 
 @api_bp.route('/entrevistas', methods=['GET'])

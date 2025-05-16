@@ -16,9 +16,8 @@ class Usuario(db.Model, UserMixin):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
-    
-    # Relación con sesiones de usuario
-    sessions = db.relationship('UserSession', backref='usuario', lazy='dynamic', cascade="all, delete-orphan")
+    rol = db.Column(db.String(20), default='asesor')  # 'admin' o 'asesor'
+
     
     @property
     def password(self):
