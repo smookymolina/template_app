@@ -595,10 +595,27 @@ function updateEstadisticasUI(data) {
 async function logout() {
     try {
         await Auth.logout();
-        Auth.currentUser = null;
         
-        // Cambiar a la pantalla de login
-        showLoginScreen();
+        // Limpiar datos adicionales
+        window.reclutas = [];
+        window.currentReclutaId = null;
+        window.profileImage = null;
+        window.reclutaImage = null;
+        
+        // Limpiar localStorage (pero preservar preferencias de tema)
+        const darkMode = localStorage.getItem('darkMode');
+        const primaryColor = localStorage.getItem('primaryColor');
+        
+        // Limpiar todo localStorage excepto tema
+        localStorage.clear();
+        
+        // Restaurar preferencias de tema
+        if (darkMode) localStorage.setItem('darkMode', darkMode);
+        if (primaryColor) localStorage.setItem('primaryColor', primaryColor);
+        
+        // Mostrar pantalla de login
+        document.getElementById('login-section').style.display = 'block';
+        document.getElementById('dashboard-section').style.display = 'none';
         
         // Limpiar campos
         const emailField = document.getElementById('email');
@@ -735,7 +752,40 @@ async function updateProfile() {
     }
 }
 
+/**
+ * Verifica periódicamente el estado de autenticación
+ */
+function startAuthCheckInterval() {
+    // Verificar cada 5 minutos (300000 ms)
+    const interval = 300000;
+    
+    setInterval(async () => {
+        try {
+            const response = await fetch('/api/check-auth');
+            const data = await response.json();
+            
+            // Si el usuario ya no está autenticado pero la UI muestra que sí,
+            // forzar logout
+            if (!data.authenticated && Auth.currentUser) {
+                console.log('Sesión expirada, redirigiendo a login...');
+                await Auth.logout();
+                
+                // Forzar recarga para limpiar todo el estado
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error('Error al verificar autenticación:', error);
+        }
+    }, interval);
+}
 
+// Llamar a esta función después de un login exitoso
+function loginSuccess(usuario) {
+    // Código existente...
+    
+    // Iniciar verificación periódica
+    startAuthCheckInterval();
+}
 
 /**
  * Maneja cambios en la imagen de perfil

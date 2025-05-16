@@ -42,60 +42,48 @@ const Auth = {
             console.error('Error de login:', err);
             throw err;
         }
-    },
-    
-    /**
-     * Cierra la sesión del usuario actual
-     * @returns {Promise<boolean>} - True si se cerró sesión correctamente
-     * @throws {Error} Si hay error al cerrar la sesión
-     */
-    logout: async function() {
-        try {
-            const response = await fetch(`${CONFIG.AUTH_URL}/logout`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            if (data.success) {
-                this.currentUser = null;
-                return true;
-            } else {
-                throw new Error(data.message || 'Error al cerrar sesión');
-            }
-        } catch (err) {
-            console.error('Error de logout:', err);
-            throw err;
+},
+
+/**
+ * Cierra la sesión del usuario actual
+ * @returns {Promise<boolean>} - True si se cerró sesión correctamente
+ * @throws {Error} Si hay error al cerrar la sesión
+ */
+logout: async function() {
+    try {
+        const response = await fetch(`${CONFIG.AUTH_URL}/logout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
-    },
-    
-    /**
-     * Verifica si hay una sesión activa
-     * @returns {Promise<Object|null>} - Datos del usuario o null si no hay sesión
-     */
-    checkAuth: async function() {
-        try {
-            const response = await fetch(`${CONFIG.AUTH_URL}/check-auth`);
-            const data = await response.json();
-            
-            if (data.authenticated) {
-                this.currentUser = data.usuario;
-                return data.usuario;
-            } else {
-                this.currentUser = null;
-                return null;
-            }
-        } catch (err) {
-            console.error('Error al verificar autenticación:', err);
+        
+        const data = await response.json();
+        if (data.success) {
+            // Limpiar usuario actual
             this.currentUser = null;
-            return null;
+            
+            // Limpiar datos de localStorge relacionados con el usuario
+            localStorage.removeItem('currentStatus');
+            localStorage.removeItem('calendarEvents');
+            
+            // Limpiar sessionStorage si se usa
+            sessionStorage.clear();
+            
+            // Redirigir a la página de login o recargar
+            window.location.href = '/';
+            return true;
+        } else {
+            throw new Error(data.message || 'Error al cerrar sesión');
         }
-    },
-    
+    } catch (err) {
+        console.error('Error de logout:', err);
+        throw err;
+    }
+},
+
     /**
      * Comprueba si el usuario actual es administrador
      * @returns {boolean} - True si el usuario es administrador

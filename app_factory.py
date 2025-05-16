@@ -181,9 +181,37 @@ def register_request_hooks(app):
     @app.after_request
     def add_security_headers(response):
         """Añade cabeceras de seguridad a las respuestas"""
+        # Cabeceras de seguridad existentes
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         response.headers['X-XSS-Protection'] = '1; mode=block'
+        
+        # Añadir cabeceras de control de caché para prevenir almacenamiento
+        # en páginas que requieren autenticación
+        if 'text/html' in response.headers.get('Content-Type', ''):
+            # Si el usuario está autenticado o la ruta requiere autenticación
+            from flask_login import current_user
+            from flask import request
+            
+            # Rutas públicas que SÍ deben permitir caché
+            public_routes = ['/static/', '/api/tracking/', '/favicon.ico']
+            
+            # Verificar si es una ruta protegida
+            is_protected_route = True
+            for route in public_routes:
+                if request.path.startswith(route):
+                    is_protected_route = False
+                    break
+            
+            # Para rutas autenticadas o protegidas, prevenir caché
+            if current_user.is_authenticated or is_protected_route:
+                response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
+            else:
+                # Para contenido público, permitir cierto nivel de caché
+                response.headers['Cache-Control'] = 'public, max-age=300'  # 5 minutos
+        
         return response
 
 def initialize_database(app):

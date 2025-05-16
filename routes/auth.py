@@ -84,7 +84,7 @@ def logout_usuario():
     Cierra sesión de usuario.
     """
     try:
-        # Registrar sesión como inválida
+        # Registrar sesión como inválida en la base de datos
         try:
             session_token = request.cookies.get('session', '')
             if session_token:
@@ -103,10 +103,21 @@ def logout_usuario():
         # Cerrar sesión de Flask-Login
         logout_user()
         
-        return jsonify({
+        # Limpiar la sesión actual completamente
+        session.clear()
+        
+        # Preparar respuesta para eliminar cookies
+        response = jsonify({
             "success": True, 
             "message": "Sesión cerrada correctamente"
-        }), 200
+        })
+        
+        # Eliminar cookie de sesión explícitamente
+        response.delete_cookie('session')
+        # Eliminar cookie de remember si existe
+        response.delete_cookie('remember_token')
+        
+        return response, 200
     except Exception as e:
         current_app.logger.error(f"Error en logout: {str(e)}")
         return jsonify({

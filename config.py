@@ -9,7 +9,6 @@ class Config:
     PERMANENT_SESSION_LIFETIME = timedelta(days=7)
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB límite para uploads
     
-    
     # Para compatibilidad con la variable ENV
     FLASK_ENV = os.environ.get('FLASK_ENV', 'development')
     
@@ -31,11 +30,15 @@ class Config:
     LOG_FILE = "app.log"
     LOG_LEVEL = "INFO"
     
-    # Configuración de seguridad
+    # Configuración mejorada de seguridad para sesiones
     SESSION_COOKIE_SECURE = False
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     REMEMBER_COOKIE_DURATION = timedelta(days=14)
+    SESSION_TYPE = 'filesystem'  # O 'redis' si usas Redis
+    SESSION_USE_SIGNER = True    # Firmar cookies de sesión
+    SESSION_PERMANENT = True     # Mantener la sesión como permanente
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)  # Vida de sesión de 7 días
     
     # Configuración CORS (nueva)
     CORS_ENABLED = True
@@ -92,17 +95,10 @@ class ProductionConfig(Config):
     
     # Configuración de seguridad en producción
     SESSION_COOKIE_SECURE = True
-    
-    # Nivel de log para producción
-    LOG_LEVEL = "ERROR"
-    
-    # Configuración CORS para producción
-    # Lista de orígenes permitidos (dominios externos que pueden acceder a la API)
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', '').split(',') or [
-        'https://ejemplo.com',  # Frontend principal
-        'https://admin.ejemplo.com',  # Panel de administración
-        'https://mobile.ejemplo.com'  # Versión móvil
-    ]
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    REMEMBER_COOKIE_SECURE = True
+    REMEMBER_COOKIE_HTTPONLY = True
     
     @staticmethod
     def init_app(app):
