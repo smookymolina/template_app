@@ -4,6 +4,7 @@
 import CONFIG from './config.js';
 import { showNotification, showError, showSuccess } from './notifications.js';
 import UI from './ui.js';
+import Auth from './auth.js';
 
 const Reclutas = {
     reclutas: [],
@@ -331,6 +332,41 @@ const Reclutas = {
             `;
             
             container.appendChild(row);
+
+            // In renderReclutasTable function, update the actions column
+if (current_user.rol === 'admin') {
+    actionsHtml = `
+        <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
+            <i class="fas fa-eye"></i>
+        </button>
+        <button class="action-btn edit-btn" data-id="${recluta.id}" title="Editar">
+            <i class="fas fa-edit"></i>
+        </button>
+        <button class="action-btn assign-btn" data-id="${recluta.id}" title="Asignar">
+            <i class="fas fa-user-check"></i>
+        </button>
+        <button class="action-btn delete-btn" data-id="${recluta.id}" title="Eliminar">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+    `;
+} else {
+    actionsHtml = `
+        <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
+            <i class="fas fa-eye"></i>
+        </button>
+        <button class="action-btn edit-btn" data-id="${recluta.id}" title="Editar">
+            <i class="fas fa-edit"></i>
+        </button>
+        <button class="action-btn delete-btn" data-id="${recluta.id}" title="Eliminar">
+            <i class="fas fa-trash-alt"></i>
+        </button>
+    `;
+}
+
+// Then make sure to set up the assignment button event listener
+row.querySelector('.assign-btn')?.addEventListener('click', () => {
+    this.showAssignModal(recluta.id);
+});
             
             // Añadir badge de estado al TD correspondiente
             const estadoCell = document.getElementById(`estado-cell-${recluta.id}`);
@@ -343,6 +379,288 @@ const Reclutas = {
         });
     },
     
+    assignRecluta: async function(reclutaId, asesorId) {
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/reclutas/${reclutaId}/assign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ asesor_id: asesorId })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Error ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            showSuccess(data.message);
+            await this.loadAndDisplayReclutas();
+            return true;
+        } else {
+            throw new Error(data.message || 'Error al asignar recluta');
+        }
+    } catch (error) {
+        console.error(`Error al asignar recluta ${reclutaId}:`, error);
+        showError('Error al asignar recluta: ' + error.message);
+        throw error;
+    }
+},
+
+importExcel: async function(file) {
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(`${CONFIG.API_URL}/import/excel`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Error ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            showSuccess(data.message);
+            await this.loadAndDisplayReclutas();
+            return true;
+        } else {
+            throw new Error(data.message || 'Error al importar datos');
+        }
+    } catch (error) {
+        console.error('Error al importar Excel:', error);
+        showError('Error al importar datos: ' + error.message);
+        throw error;
+    }
+},
+
+    getAsesores: async function() {
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/asesores`);
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            return data.asesores;
+        } else {
+            throw new Error(data.message || 'Error al obtener asesores');
+        }
+    } catch (error) {
+        console.error('Error al obtener asesores:', error);
+        throw error;
+    }
+},
+
+assignRecluta: async function(reclutaId, asesorId) {
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/reclutas/${reclutaId}/assign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ asesor_id: asesorId })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Error ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            showSuccess(data.message);
+            await this.loadAndDisplayReclutas();
+            return true;
+        } else {
+            throw new Error(data.message || 'Error al asignar recluta');
+        }
+    } catch (error) {
+        console.error(`Error al asignar recluta ${reclutaId}:`, error);
+        showError('Error al asignar recluta: ' + error.message);
+        throw error;
+    }
+},
+
+showAssignModal: async function(reclutaId) {
+    try {
+        // Get recluta details
+        const recluta = await this.getRecluta(reclutaId);
+        
+        // Get list of available asesores
+        const asesores = await this.getAsesores();
+        
+        // Create modal
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.id = 'assign-recluta-modal';
+        modal.style.display = 'block';
+        
+        let asesorOptions = '';
+        asesores.forEach(asesor => {
+            const selected = recluta.asesor_id === asesor.id ? 'selected' : '';
+            asesorOptions += `<option value="${asesor.id}" ${selected}>${asesor.nombre || asesor.email}</option>`;
+        });
+        
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Asignar Recluta</h3>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p>Asignar a <strong>${recluta.nombre}</strong> a un asesor:</p>
+                    <div class="form-group">
+                        <label for="asesor-select">Asesor</label>
+                        <select id="asesor-select" class="form-control">
+                            <option value="">-- Seleccionar Asesor --</option>
+                            ${asesorOptions}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary close-btn">Cancelar</button>
+                    <button class="btn-primary" id="confirm-assign-btn">Asignar</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Setup event listeners
+        const closeButtons = modal.querySelectorAll('.close-modal, .close-btn');
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+        });
+        
+        const confirmBtn = document.getElementById('confirm-assign-btn');
+        confirmBtn.addEventListener('click', async () => {
+            const asesorSelect = document.getElementById('asesor-select');
+            const asesorId = asesorSelect.value;
+            
+            if (!asesorId) {
+                showError('Por favor selecciona un asesor');
+                return;
+            }
+            
+            try {
+                await this.assignRecluta(reclutaId, asesorId);
+                document.body.removeChild(modal);
+            } catch (error) {
+                // Error is already handled in assignRecluta
+            }
+        });
+    } catch (error) {
+        console.error('Error al mostrar modal de asignación:', error);
+        showError('Error al preparar asignación');
+    }
+},
+
+importExcel: async function(file) {
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch(`${CONFIG.API_URL}/import/excel`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || `Error ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            showSuccess(data.message);
+            await this.loadAndDisplayReclutas();
+            return true;
+        } else {
+            throw new Error(data.message || 'Error al importar datos');
+        }
+    } catch (error) {
+        console.error('Error al importar Excel:', error);
+        showError('Error al importar datos: ' + error.message);
+        throw error;
+    }
+},
+
+showImportModal: function() {
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'import-excel-modal';
+    modal.style.display = 'block';
+    
+    modal.innerHTML = `
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Importar Reclutas desde Excel</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Selecciona un archivo Excel (.xlsx) con la lista de reclutas:</p>
+                <div class="form-group">
+                    <input type="file" id="excel-file" accept=".xlsx,.xls">
+                </div>
+                <div class="alert alert-info">
+                    <p>El archivo debe contener las siguientes columnas:</p>
+                    <ul>
+                        <li>Nombre</li>
+                        <li>Email</li>
+                        <li>Telefono</li>
+                        <li>Estado (opcional)</li>
+                        <li>Puesto (opcional)</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary close-btn">Cancelar</button>
+                <button class="btn-primary" id="confirm-import-btn">Importar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Setup event listeners
+    const closeButtons = modal.querySelectorAll('.close-modal, .close-btn');
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+    });
+    
+    const confirmBtn = document.getElementById('confirm-import-btn');
+    confirmBtn.addEventListener('click', async () => {
+        const fileInput = document.getElementById('excel-file');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            showError('Por favor selecciona un archivo');
+            return;
+        }
+        
+        try {
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
+            confirmBtn.disabled = true;
+            
+            await this.importExcel(file);
+            document.body.removeChild(modal);
+        } catch (error) {
+            // Error is already handled in importExcel
+            confirmBtn.innerHTML = 'Importar';
+            confirmBtn.disabled = false;
+        }
+    });
+},
+
     /**
      * Configura los botones de acción para un recluta
      * @param {HTMLElement} row - Fila de la tabla
@@ -912,39 +1230,59 @@ const Reclutas = {
     /**
      * Inicializa todos los elementos y eventos de gestión de reclutas
      */
-    init: async function() {
-        // Inicializar filtros y eventos
-        this.initFilters();
-        
-        // Inicializar formulario de añadir recluta
-        this.initAddReclutaForm();
-        
-        // Eventos para botones de acción en el modal de detalles
-        const cancelEditBtn = document.querySelector('.edit-mode-buttons .btn-secondary');
-        if (cancelEditBtn) {
-            cancelEditBtn.addEventListener('click', () => this.cancelEdit());
-        }
-        
-        const saveChangesBtn = document.querySelector('.edit-mode-buttons .btn-primary');
-        if (saveChangesBtn) {
-            saveChangesBtn.addEventListener('click', () => this.saveReclutaChanges());
-        }
-        
-        // Cargar datos iniciales
-        try {
-            await this.loadAndDisplayReclutas();
-        } catch (error) {
-            console.error('Error al inicializar módulo de reclutas:', error);
-            showError('Error al cargar datos de reclutas');
-        }
-        
-        // Registrarse para eventos de cambio de sección
-        document.addEventListener('sectionChanged', (e) => {
-            if (e.detail.section === 'reclutas-section') {
-                this.loadAndDisplayReclutas();
+    // En el método init del objeto Reclutas
+init: async function() {
+    // Inicializar filtros y eventos
+    this.initFilters();
+    
+    // Inicializar formulario de añadir recluta
+    this.initAddReclutaForm();
+    
+    // Añadir botón de importación para administradores
+    if (Auth.currentUser && Auth.currentUser.rol === 'admin') {
+        const sectionActions = document.querySelector('.section-actions');
+        if (sectionActions) {
+            const importButton = document.createElement('button');
+            importButton.className = 'btn-secondary';
+            importButton.innerHTML = '<i class="fas fa-file-excel"></i> Importar Excel';
+            importButton.addEventListener('click', () => this.showImportModal());
+            
+            // Insert before the add button
+            const addButton = sectionActions.querySelector('.btn-primary');
+            if (addButton) {
+                sectionActions.insertBefore(importButton, addButton);
+            } else {
+                sectionActions.appendChild(importButton);
             }
-        });
+        }
     }
+    
+    // Eventos para botones de acción en el modal de detalles
+    const cancelEditBtn = document.querySelector('.edit-mode-buttons .btn-secondary');
+    if (cancelEditBtn) {
+        cancelEditBtn.addEventListener('click', () => this.cancelEdit());
+    }
+    
+    const saveChangesBtn = document.querySelector('.edit-mode-buttons .btn-primary');
+    if (saveChangesBtn) {
+        saveChangesBtn.addEventListener('click', () => this.saveReclutaChanges());
+    }
+    
+    // Cargar datos iniciales
+    try {
+        await this.loadAndDisplayReclutas();
+    } catch (error) {
+        console.error('Error al inicializar módulo de reclutas:', error);
+        showError('Error al cargar datos de reclutas');
+    }
+    
+    // Registrarse para eventos de cambio de sección
+    document.addEventListener('sectionChanged', (e) => {
+        if (e.detail.section === 'reclutas-section') {
+            this.loadAndDisplayReclutas();
+        }
+    });
+}
 };
 
 export default Reclutas;

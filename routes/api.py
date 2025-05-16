@@ -27,19 +27,43 @@ def get_reclutas():
         estado = request.args.get('estado', '')
         sort_by = request.args.get('sort_by', 'id')
         sort_order = request.args.get('sort_order', 'asc')
+
+        # Base query
+        query = Recluta.query
         
-        # Limitar el tamaño de página para prevenir abuso
-        per_page = min(per_page, current_app.config['MAX_PAGE_SIZE'])
+        # Apply role-based filtering
+        if hasattr(current_user, 'rol'):
+            if current_user.rol == 'admin':
+                # Admins see all reclutas
+                pass
+            elif current_user.rol in ['gerente', 'asesor']:
+                # Gerentes and asesores only see their assigned reclutas
+                query = query.filter_by(asesor_id=current_user.id)
         
-        # Obtener reclutas paginados
-        pagination = Recluta.get_all(
-            page=page,
-            per_page=per_page,
-            search=search,
-            estado=estado,
-            sort_by=sort_by,
-            sort_order=sort_order
-        )
+        # Apply other filters
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                db.or_(
+                    Recluta.nombre.ilike(search_term),
+                    Recluta.email.ilike(search_term),
+                    Recluta.telefono.ilike(search_term),
+                    Recluta.puesto.ilike(search_term)
+                )
+            )
+        
+        if estado:
+            query = query.filter_by(estado=estado)
+        
+        # Apply sorting
+        if hasattr(Recluta, sort_by):
+            attr = getattr(Recluta, sort_by)
+            if sort_order.lower() == 'desc':
+                attr = attr.desc()
+            query = query.order_by(attr)
+        
+        # Apply pagination
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
         
         return jsonify({
             "success": True,
@@ -51,6 +75,7 @@ def get_reclutas():
             "has_next": pagination.has_next,
             "has_prev": pagination.has_prev
         })
+
     except Exception as e:
         current_app.logger.error(f"Error al obtener reclutas: {str(e)}")
         return jsonify({"success": False, "message": f"Error al obtener reclutas: {str(e)}"}), 500
@@ -73,6 +98,64 @@ def get_recluta(id):
     except Exception as e:
         current_app.logger.error(f"Error al obtener recluta {id}: {str(e)}")
         return jsonify({"success": False, "message": f"Error al obtener recluta: {str(e)}"}), 500
+
+@api_bp.route('/reclutas/<int:id>/assign', methods=['POST'])
+@login_required
+def assign_recluta(id):
+    # Check if user is admin
+    if not hasattr(current_user, 'rol') or current_user.rol != 'admin':
+        return jsonify({"success": False, "message": "No tienes permisos para asignar reclutas"}), 403
+    
+    try:
+        data = request.get_json()
+        asesor_id = data.get('asesor_id')
+        
+        # Validate asesor exists
+        asesor = Usuario.query.get(asesor_id)
+        if not asesor:
+            return jsonify({"success": False, "message": "Asesor no encontrado"}), 404
+        
+        # Get and update recluta
+        recluta = Recluta.query.get(id)
+        if not recluta:
+            return jsonify({"success": False, "message": "Recluta no encontrado"}), 404
+            
+        recluta.asesor_id = asesor_id
+        try:
+            db.session.commit()
+            return jsonify({
+                "success": True,
+                "message": f"Recluta asignado correctamente a {asesor.nombre or asesor.email}",
+                "recluta": recluta.serialize()
+            })
+        except Exception as e:
+            db.session.rollback()
+            raise e
+    except Exception as e:
+        current_app.logger.error(f"Error al asignar recluta {id}: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al asignar recluta: {str(e)}"}), 500
+
+@api_bp.route('/asesores', methods=['GET'])
+@login_required
+def get_asesores():
+    """
+    Obtiene la lista de asesores para asignación.
+    Solo accesible para administradores.
+    """
+    # Check if user is admin
+    if not hasattr(current_user, 'rol') or current_user.rol != 'admin':
+        return jsonify({"success": False, "message": "No tienes permisos para ver asesores"}), 403
+    
+    try:
+        asesores = Usuario.query.filter(Usuario.rol.in_(['asesor', 'gerente'])).all()
+        
+        return jsonify({
+            "success": True,
+            "asesores": [a.serialize() for a in asesores]
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener asesores: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al obtener asesores: {str(e)}"}), 500
 
 @api_bp.route('/reclutas', methods=['POST'])
 @login_required
@@ -116,6 +199,62 @@ def add_recluta():
             return jsonify({"success": False, "message": str(e)}), 500
             
     except Exception as e:
+        current_app.logger.error(f"Error al crear recluta: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al crear recluta: {str(e)}"}), 500
+
+@api_bp.route('/import/excel', methods=['POST'])
+@login_required
+def import_excel():
+    # Check if user is admin
+    if not hasattr(current_user, 'rol') or current_user.rol != 'admin':
+        return jsonify({"success": False, "message": "No tienes permisos para importar datos"}), 403
+    
+    try:
+        if 'file' not in request.files:
+            return jsonify({"success": False, "message": "No se encontró archivo"}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"success": False, "message": "No se seleccionó archivo"}), 400
+            
+        # Process Excel file
+        import pandas as pd
+        
+        df = pd.read_excel(file)
+        
+        imported_count = 0
+        for _, row in df.iterrows():
+            # Create or update recluta
+            # This will depend on your Excel structure
+            recluta_data = {
+                'nombre': row.get('Nombre', ''),
+                'email': row.get('Email', ''),
+                'telefono': row.get('Telefono', ''),
+                'estado': row.get('Estado', 'En proceso'),
+                'puesto': row.get('Puesto', '')
+            }
+            
+            # Check if recluta already exists by email
+            existing = Recluta.query.filter_by(email=recluta_data['email']).first()
+            
+            if existing:
+                # Update existing
+                for key, value in recluta_data.items():
+                    setattr(existing, key, value)
+                existing.save()
+            else:
+                # Create new
+                new_recluta = Recluta(**recluta_data)
+                new_recluta.save()
+                
+            imported_count += 1
+            
+        return jsonify({
+            "success": True,
+            "message": f"Importación completada. {imported_count} reclutas procesados."
+        })
+
+         except Exception as e:
         current_app.logger.error(f"Error al crear recluta: {str(e)}")
         return jsonify({"success": False, "message": f"Error al crear recluta: {str(e)}"}), 500
 
@@ -175,6 +314,84 @@ def update_recluta(id):
     except Exception as e:
         current_app.logger.error(f"Error al actualizar recluta {id}: {str(e)}")
         return jsonify({"success": False, "message": f"Error al actualizar recluta: {str(e)}"}), 500
+
+@api_bp.route('/import/excel', methods=['POST'])
+@login_required
+def import_excel():
+    # Check if user is admin
+    if not hasattr(current_user, 'rol') or current_user.rol != 'admin':
+        return jsonify({"success": False, "message": "No tienes permisos para importar datos"}), 403
+    
+    try:
+        if 'file' not in request.files:
+            return jsonify({"success": False, "message": "No se encontró archivo"}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"success": False, "message": "No se seleccionó archivo"}), 400
+            
+        # Save the file temporarily
+        filename = secure_filename(file.filename)
+        temp_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'temp', filename)
+        os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+        file.save(temp_path)
+        
+        # Process Excel file
+        import pandas as pd
+        
+        df = pd.read_excel(temp_path)
+        
+        imported_count = 0
+        for _, row in df.iterrows():
+            # Create or update recluta
+            # Adjust field names based on your Excel structure
+            try:
+                recluta_data = {
+                    'nombre': str(row.get('Nombre', '')),
+                    'email': str(row.get('Email', '')),
+                    'telefono': str(row.get('Telefono', '')),
+                    'estado': str(row.get('Estado', 'En proceso')),
+                    'puesto': str(row.get('Puesto', ''))
+                }
+                
+                # Clean up data
+                for key, value in recluta_data.items():
+                    if pd.isna(value) or value == 'nan':
+                        recluta_data[key] = ''
+                
+                # Skip rows with no email or name
+                if not recluta_data['email'] or not recluta_data['nombre']:
+                    continue
+                
+                # Check if recluta already exists by email
+                existing = Recluta.query.filter_by(email=recluta_data['email']).first()
+                
+                if existing:
+                    # Update existing
+                    for key, value in recluta_data.items():
+                        setattr(existing, key, value)
+                    db.session.commit()
+                else:
+                    # Create new
+                    new_recluta = Recluta(**recluta_data)
+                    db.session.add(new_recluta)
+                    db.session.commit()
+                    
+                imported_count += 1
+            except Exception as e:
+                current_app.logger.error(f"Error importando fila: {str(e)}")
+                continue
+        
+        # Clean up temp file
+        os.remove(temp_path)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Importación completada. {imported_count} reclutas procesados."
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al importar Excel: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al importar Excel: {str(e)}"}), 500
 
 @api_bp.route('/reclutas/<int:id>', methods=['DELETE'])
 @login_required

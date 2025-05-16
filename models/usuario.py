@@ -1,8 +1,3 @@
-from flask_login import UserMixin
-from datetime import datetime
-import bcrypt
-from models import db, DatabaseError
-
 class Usuario(db.Model, UserMixin):
     """
     Modelo para usuarios administradores y gerentes del sistema.
@@ -16,9 +11,13 @@ class Usuario(db.Model, UserMixin):
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
+    rol = db.Column(db.String(20), default='asesor')  # 'admin', 'gerente', 'asesor'
     
     # Relación con sesiones de usuario
     sessions = db.relationship('UserSession', backref='usuario', lazy='dynamic', cascade="all, delete-orphan")
+    
+    # Add relationship to reclutas
+    reclutas_asignados = db.relationship('Recluta', backref='asesor', lazy='dynamic')
     
     @property
     def password(self):

@@ -9,30 +9,41 @@ class Recluta(db.Model):
     nombre = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), nullable=False)
     telefono = db.Column(db.String(20), nullable=False)
-    estado = db.Column(db.String(20), nullable=False)  # Activo, En proceso, Rechazado
+    estado = db.Column(db.String(20), nullable=False) 
     puesto = db.Column(db.String(100), nullable=True)
     notas = db.Column(db.Text, nullable=True)
     foto_url = db.Column(db.String(255), nullable=True)
     fecha_registro = db.Column(db.DateTime, default=datetime.utcnow)
     ultima_actualizacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    asesor_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
     
     # Relación con entrevistas
     entrevistas = db.relationship('Entrevista', backref='recluta', lazy='dynamic', cascade="all, delete-orphan")
 
     def serialize(self):
-        """Retorna una representación serializable del recluta"""
-        return {
-            'id': self.id,
-            'nombre': self.nombre,
-            'email': self.email,
-            'telefono': self.telefono,
-            'estado': self.estado,
-            'puesto': self.puesto,
-            'notas': self.notas,
-            'foto_url': self.foto_url,
-            'fecha_registro': self.fecha_registro.isoformat() if self.fecha_registro else None,
-            'ultima_actualizacion': self.ultima_actualizacion.isoformat() if self.ultima_actualizacion else None
+    """Retorna una representación serializable del recluta"""
+    asesor_info = None
+    if self.asesor:
+        asesor_info = {
+            'id': self.asesor.id,
+            'nombre': self.asesor.nombre,
+            'email': self.asesor.email
         }
+        
+    return {
+        'id': self.id,
+        'nombre': self.nombre,
+        'email': self.email,
+        'telefono': self.telefono,
+        'estado': self.estado,
+        'puesto': self.puesto,
+        'notas': self.notas,
+        'foto_url': self.foto_url,
+        'fecha_registro': self.fecha_registro.isoformat() if self.fecha_registro else None,
+        'ultima_actualizacion': self.ultima_actualizacion.isoformat() if self.ultima_actualizacion else None,
+        'asesor_id': self.asesor_id,
+        'asesor': asesor_info
+    }
     
     def save(self):
         """Guarda el recluta en la base de datos de forma segura"""
