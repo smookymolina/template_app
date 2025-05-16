@@ -260,9 +260,6 @@ def update_recluta(id):
         current_app.logger.error(f"Error al actualizar recluta {id}: {str(e)}")
         return jsonify({"success": False, "message": f"Error al actualizar recluta: {str(e)}"}), 500
 
-# Aquí solo se muestra la corrección para la parte del método import_excel
-# que aparece duplicado en el archivo original
-
 @api_bp.route('/import/excel', methods=['POST'])
 @login_required
 def import_excel():
@@ -284,15 +281,34 @@ def import_excel():
         os.makedirs(os.path.dirname(temp_path), exist_ok=True)
         file.save(temp_path)
         
+        # Get available asesores/gerentes
+        asesores = Usuario.query.filter(
+            Usuario.is_active == True,
+            Usuario.rol.in_(['asesor', 'gerente'])
+        ).all()
+        
+        if not asesores:
+            return jsonify({
+                "success": False, 
+                "message": "No hay asesores o gerentes disponibles para asignar los reclutas"
+            }), 400
+            
         # Process Excel file
         import pandas as pd
         
         df = pd.read_excel(temp_path)
         
         imported_count = 0
+        assigned_count = 0
+        
+        # Load current assignment counts for each asesor
+        asesor_assignment_counts = {}
+        for asesor in asesores:
+            count = Recluta.query.filter_by(asesor_id=asesor.id).count()
+            asesor_assignment_counts[asesor.id] = count
+        
         for _, row in df.iterrows():
             # Create or update recluta
-            # Adjust field names based on your Excel structure
             try:
                 recluta_data = {
                     'nombre': str(row.get('Nombre', '')),
@@ -318,12 +334,32 @@ def import_excel():
                     # Update existing
                     for key, value in recluta_data.items():
                         setattr(existing, key, value)
+                    
+                    # If recluta doesn't have asesor yet, assign one
+                    if existing.asesor_id is None:
+                        # Find asesor with fewest reclutas
+                        asesor_id = min(asesor_assignment_counts, key=asesor_assignment_counts.get)
+                        existing.asesor_id = asesor_id
+                        asesor_assignment_counts[asesor_id] += 1
+                        assigned_count += 1
+                    
                     db.session.commit()
                 else:
-                    # Create new
+                    # Create new recluta
+                    # Find asesor with fewest reclutas
+                    asesor_id = min(asesor_assignment_counts, key=asesor_assignment_counts.get)
+                    
+                    # Add asesor_id to recluta_data
+                    recluta_data['asesor_id'] = asesor_id
+                    
+                    # Create and add new recluta
                     new_recluta = Recluta(**recluta_data)
                     db.session.add(new_recluta)
                     db.session.commit()
+                    
+                    # Update assignment count for this asesor
+                    asesor_assignment_counts[asesor_id] += 1
+                    assigned_count += 1
                     
                 imported_count += 1
             except Exception as e:
@@ -335,7 +371,7 @@ def import_excel():
         
         return jsonify({
             "success": True,
-            "message": f"Importación completada. {imported_count} reclutas procesados."
+            "message": f"Importación completada. {imported_count} reclutas procesados, {assigned_count} reclutas asignados a asesores."
         })
     except Exception as e:
         current_app.logger.error(f"Error al importar Excel: {str(e)}")
