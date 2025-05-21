@@ -296,6 +296,95 @@ def eliminar_usuario():
     
     input("\nPresiona Enter para continuar...")
 
+def cambiar_rol_usuario():
+    """Cambia el rol de un usuario existente"""
+    print_header("Cambiar Rol de Usuario")
+    
+    # Definir roles válidos
+    roles_validos = ['admin', 'asesor', 'user']
+    
+    try:
+        with app.app_context():
+            usuarios = Usuario.query.all()
+            
+            if not usuarios:
+                print_info("No hay usuarios registrados en el sistema")
+                input("\nPresiona Enter para continuar...")
+                return
+            
+            # Mostrar lista de usuarios con sus roles actuales
+            print(f"{Color.BOLD}{'ID':<5}| {'EMAIL':<40}| {'ROL ACTUAL':<15}{Color.ENDC}")
+            print("-" * 62)
+            
+            for usuario in usuarios:
+                rol_actual = getattr(usuario, 'rol', 'user')  # Default a 'user' si no tiene rol
+                print(f"{usuario.id:<5}| {usuario.email:<40}| {rol_actual:<15}")
+            
+            print("-" * 62)
+            
+            # Solicitar ID para cambiar rol
+            while True:
+                try:
+                    id_input = input("\nID del usuario para cambiar rol (0 para cancelar): ")
+                    if not id_input:
+                        continue
+                        
+                    id_usuario = int(id_input)
+                    if id_usuario == 0:
+                        print_info("Operación cancelada")
+                        return
+                    
+                    usuario = Usuario.query.get(id_usuario)
+                    if not usuario:
+                        print_error(f"No existe un usuario con ID {id_usuario}")
+                        if not confirm_action("¿Deseas intentar con otro ID?"):
+                            return
+                        continue
+                    break
+                except ValueError:
+                    print_error("Debes ingresar un número válido")
+            
+            # Obtener rol actual
+            rol_actual = getattr(usuario, 'rol', 'user')
+            print(f"\nUsuario seleccionado: {Color.BOLD}{usuario.email}{Color.ENDC}")
+            print(f"Rol actual: {Color.BOLD}{rol_actual}{Color.ENDC}")
+            
+            # Solicitar nuevo rol
+            print("\nRoles disponibles:")
+            for i, rol in enumerate(roles_validos, 1):
+                print(f"{i}. {rol}")
+                
+            while True:
+                try:
+                    opcion = int(input("\nSelecciona el nuevo rol (1-3): "))
+                    if 1 <= opcion <= len(roles_validos):
+                        nuevo_rol = roles_validos[opcion-1]
+                        break
+                    else:
+                        print_error(f"Selecciona una opción entre 1 y {len(roles_validos)}")
+                except ValueError:
+                    print_error("Debes ingresar un número válido")
+            
+            # Confirmar cambio
+            if nuevo_rol == rol_actual:
+                print_warning(f"El usuario ya tiene el rol de {nuevo_rol}")
+                if not confirm_action("¿Deseas continuar con el cambio de todas formas?"):
+                    print_info("Operación cancelada")
+                    return
+            
+            # Realizar cambio
+            usuario.rol = nuevo_rol
+            db.session.commit()
+            
+            print_success(f"Rol actualizado exitosamente: {usuario.email} ahora es {nuevo_rol}")
+            log_activity(f"Cambio de rol de usuario", details=f"ID: {id_usuario}, Email: {usuario.email}, Nuevo rol: {nuevo_rol}")
+            
+    except Exception as e:
+        print_error(f"Error al cambiar rol de usuario: {str(e)}")
+        log_activity("Error al cambiar rol de usuario", success=False, details=str(e))
+    
+    input("\nPresiona Enter para continuar...")
+
 def cambiar_password():
     """Cambia la contraseña de un usuario existente"""
     print_header("Cambiar Contraseña")
@@ -372,6 +461,247 @@ def cambiar_password():
     except Exception as e:
         print_error(f"Error al cambiar contraseña: {str(e)}")
         log_activity("Error al cambiar contraseña", success=False, details=str(e))
+    
+    input("\nPresiona Enter para continuar...")
+
+def ver_reclutas_por_asesor():
+    """Muestra los reclutas asignados a cada asesor"""
+    print_header("Reclutas por Asesor")
+    
+    try:
+        with app.app_context():
+            # Importar modelo de Recluta
+            from models.recluta import Recluta
+            
+            # Primero, obtener todos los asesores
+            asesores = Usuario.query.filter_by(rol='asesor').all()
+            
+            if not asesores:
+                print_info("No hay usuarios con rol de asesor en el sistema")
+                input("\nPresiona Enter para continuar...")
+                return
+            
+            # Mostrar lista de asesores
+            print(f"{Color.BOLD}{'ID':<5}| {'EMAIL/NOMBRE':<40}| {'# RECLUTAS':<10}{Color.ENDC}")
+            print("-" * 57)
+            
+            for asesor in asesores:
+                # Contar reclutas asignados a este asesor
+                num_reclutas = Recluta.query.filter_by(asesor_id=asesor.id).count()
+                nombre_mostrar = asesor.nombre if hasattr(asesor, 'nombre') and asesor.nombre else asesor.email
+                print(f"{asesor.id:<5}| {nombre_mostrar:<40}| {num_reclutas:<10}")
+            
+            print("-" * 57)
+            
+            # Solicitar ID para ver detalle
+            id_input = input("\nID del asesor para ver detalle (0 para volver): ")
+            if not id_input or id_input == "0":
+                return
+                
+            try:
+                id_asesor = int(id_input)
+                asesor = Usuario.query.get(id_asesor)
+                
+                if not asesor:
+                    print_error(f"No existe un usuario con ID {id_asesor}")
+                    input("\nPresiona Enter para continuar...")
+                    return
+                
+                if asesor.rol != 'asesor':
+                    print_warning(f"El usuario seleccionado no tiene rol de asesor (rol actual: {asesor.rol})")
+                    if not confirm_action("¿Deseas ver sus reclutas de todas formas?"):
+                        return
+                
+                # Obtener reclutas asignados
+                reclutas = Recluta.query.filter_by(asesor_id=id_asesor).all()
+                
+                if not reclutas:
+                    print_info(f"El asesor {asesor.email} no tiene reclutas asignados")
+                    input("\nPresiona Enter para continuar...")
+                    return
+                
+                # Mostrar reclutas
+                print(f"\n{Color.BOLD}Reclutas asignados a {asesor.email}:{Color.ENDC}")
+                print(f"{Color.BOLD}{'ID':<5}| {'NOMBRE':<30}| {'EMAIL':<30}| {'ESTADO':<15}{Color.ENDC}")
+                print("-" * 82)
+                
+                for recluta in reclutas:
+                    print(f"{recluta.id:<5}| {recluta.nombre:<30}| {recluta.email:<30}| {recluta.estado:<15}")
+                
+                print("-" * 82)
+                print(f"Total: {len(reclutas)} reclutas")
+                
+                log_activity("Consulta de reclutas por asesor", details=f"Asesor ID: {id_asesor}, Email: {asesor.email}")
+                
+            except ValueError:
+                print_error("Debes ingresar un número válido")
+                
+    except Exception as e:
+        print_error(f"Error al consultar reclutas por asesor: {str(e)}")
+        log_activity("Error al consultar reclutas por asesor", success=False, details=str(e))
+    
+    input("\nPresiona Enter para continuar...")
+
+def asignar_recluta():
+    """Asigna o reasigna un recluta a un asesor"""
+    print_header("Asignar Recluta a Asesor")
+    
+    try:
+        with app.app_context():
+            # Importar modelo de Recluta
+            from models.recluta import Recluta
+            
+            # Primero, mostrar lista de reclutas sin asignar o filtrar por criterio
+            print("Opciones de filtrado:")
+            print("1. Ver reclutas sin asesor asignado")
+            print("2. Ver todos los reclutas")
+            print("3. Buscar recluta por nombre/email")
+            
+            opcion = input("\nSelecciona una opción (1-3): ")
+            
+            if opcion == "1":
+                reclutas = Recluta.query.filter_by(asesor_id=None).all()
+                filtro_desc = "sin asesor asignado"
+            elif opcion == "2":
+                reclutas = Recluta.query.all()
+                filtro_desc = "todos"
+            elif opcion == "3":
+                busqueda = input("Introduce nombre o email a buscar: ")
+                reclutas = Recluta.query.filter(
+                    db.or_(
+                        Recluta.nombre.like(f"%{busqueda}%"),
+                        Recluta.email.like(f"%{busqueda}%")
+                    )
+                ).all()
+                filtro_desc = f"con coincidencia de '{busqueda}'"
+            else:
+                print_error("Opción no válida")
+                return
+            
+            if not reclutas:
+                print_info(f"No se encontraron reclutas {filtro_desc}")
+                input("\nPresiona Enter para continuar...")
+                return
+            
+            # Mostrar reclutas encontrados
+            print(f"\n{Color.BOLD}Reclutas {filtro_desc}:{Color.ENDC}")
+            print(f"{Color.BOLD}{'ID':<5}| {'NOMBRE':<30}| {'EMAIL':<30}| {'ASESOR ACTUAL':<20}{Color.ENDC}")
+            print("-" * 87)
+            
+            for recluta in reclutas:
+                # Obtener nombre del asesor actual si existe
+                asesor_actual = "Sin asignar"
+                if recluta.asesor_id:
+                    asesor = Usuario.query.get(recluta.asesor_id)
+                    if asesor:
+                        asesor_actual = asesor.email
+                
+                print(f"{recluta.id:<5}| {recluta.nombre:<30}| {recluta.email:<30}| {asesor_actual:<20}")
+            
+            print("-" * 87)
+            print(f"Total: {len(reclutas)} reclutas")
+            
+            # Solicitar ID del recluta a asignar
+            while True:
+                try:
+                    id_input = input("\nID del recluta a asignar (0 para cancelar): ")
+                    if not id_input:
+                        continue
+                        
+                    id_recluta = int(id_input)
+                    if id_recluta == 0:
+                        print_info("Operación cancelada")
+                        return
+                    
+                    recluta = Recluta.query.get(id_recluta)
+                    if not recluta:
+                        print_error(f"No existe un recluta con ID {id_recluta}")
+                        if not confirm_action("¿Deseas intentar con otro ID?"):
+                            return
+                        continue
+                    break
+                except ValueError:
+                    print_error("Debes ingresar un número válido")
+            
+            # Obtener asesor actual si existe
+            asesor_actual_id = recluta.asesor_id
+            asesor_actual_nombre = "Sin asignar"
+            if asesor_actual_id:
+                asesor_actual = Usuario.query.get(asesor_actual_id)
+                if asesor_actual:
+                    asesor_actual_nombre = asesor_actual.email
+            
+            print(f"\nRecluta seleccionado: {Color.BOLD}{recluta.nombre} ({recluta.email}){Color.ENDC}")
+            print(f"Asesor actual: {Color.BOLD}{asesor_actual_nombre}{Color.ENDC}")
+            
+            # Mostrar lista de asesores disponibles
+            asesores = Usuario.query.filter(Usuario.rol.in_(['admin', 'asesor'])).all()
+            
+            if not asesores:
+                print_error("No hay usuarios con rol de asesor o admin en el sistema")
+                input("\nPresiona Enter para continuar...")
+                return
+            
+            print(f"\n{Color.BOLD}Asesores disponibles:{Color.ENDC}")
+            print(f"{Color.BOLD}{'ID':<5}| {'EMAIL':<40}| {'ROL':<10}{Color.ENDC}")
+            print("-" * 57)
+            
+            for asesor in asesores:
+                print(f"{asesor.id:<5}| {asesor.email:<40}| {asesor.rol:<10}")
+            
+            print("-" * 57)
+            
+            # Opción para desasignar
+            print("\n0. Desasignar (sin asesor)")
+            
+            # Solicitar ID del asesor
+            while True:
+                try:
+                    id_input = input("\nID del asesor a asignar (0 para desasignar): ")
+                    if not id_input:
+                        continue
+                        
+                    id_asesor = int(id_input)
+                    
+                    if id_asesor == 0:
+                        # Desasignar
+                        nuevo_asesor_nombre = "Sin asignar"
+                        break
+                    
+                    asesor = Usuario.query.get(id_asesor)
+                    if not asesor:
+                        print_error(f"No existe un usuario con ID {id_asesor}")
+                        if not confirm_action("¿Deseas intentar con otro ID?"):
+                            return
+                        continue
+                    
+                    if asesor.rol not in ['admin', 'asesor']:
+                        print_warning(f"El usuario seleccionado no tiene rol de asesor o admin (rol actual: {asesor.rol})")
+                        if not confirm_action("¿Deseas asignar este recluta de todas formas?"):
+                            continue
+                    
+                    nuevo_asesor_nombre = asesor.email
+                    break
+                except ValueError:
+                    print_error("Debes ingresar un número válido")
+            
+            # Confirmar asignación
+            if id_asesor == asesor_actual_id:
+                print_warning(f"El recluta ya está asignado a este asesor")
+                if not confirm_action("¿Deseas continuar con la asignación de todas formas?"):
+                    print_info("Operación cancelada")
+                    return
+            
+            # Realizar asignación
+            recluta.asesor_id = None if id_asesor == 0 else id_asesor
+            db.session.commit()
+            
+            print_success(f"Recluta asignado exitosamente a {nuevo_asesor_nombre}")
+            log_activity(f"Asignación de recluta", details=f"Recluta ID: {id_recluta}, Nombre: {recluta.nombre}, Asignado a: {nuevo_asesor_nombre}")
+            
+    except Exception as e:
+        print_error(f"Error al asignar recluta: {str(e)}")
+        log_activity("Error al asignar recluta", success=False, details=str(e))
     
     input("\nPresiona Enter para continuar...")
 
@@ -491,12 +821,20 @@ def menu_principal():
         clear_screen()
         print_header("Sistema de Gestión de Reclutas - Administración")
         
+        print(f"{Color.BOLD}=== Gestión de Usuarios ==={Color.ENDC}")
         print(f"{Color.BOLD}1.{Color.ENDC} Listar usuarios")
         print(f"{Color.BOLD}2.{Color.ENDC} Crear nuevo usuario")
         print(f"{Color.BOLD}3.{Color.ENDC} Eliminar usuario")
         print(f"{Color.BOLD}4.{Color.ENDC} Cambiar contraseña de usuario")
-        print(f"{Color.BOLD}5.{Color.ENDC} Ver registros de actividad")
-        print(f"{Color.BOLD}6.{Color.ENDC} Cambiar contraseña de administrador")
+        print(f"{Color.BOLD}5.{Color.ENDC} Cambiar rol de usuario")
+        
+        print(f"\n{Color.BOLD}=== Gestión de Reclutas ==={Color.ENDC}")
+        print(f"{Color.BOLD}6.{Color.ENDC} Ver reclutas por asesor")
+        print(f"{Color.BOLD}7.{Color.ENDC} Asignar recluta a asesor")
+        
+        print(f"\n{Color.BOLD}=== Sistema ==={Color.ENDC}")
+        print(f"{Color.BOLD}8.{Color.ENDC} Ver registros de actividad")
+        print(f"{Color.BOLD}9.{Color.ENDC} Cambiar contraseña de administrador")
         print(f"{Color.BOLD}0.{Color.ENDC} Salir")
         
         opcion = input(f"\n{Color.BOLD}Selecciona una opción:{Color.ENDC} ")
@@ -510,8 +848,14 @@ def menu_principal():
         elif opcion == "4":
             cambiar_password()
         elif opcion == "5":
-            ver_logs()
+            cambiar_rol_usuario()
         elif opcion == "6":
+            ver_reclutas_por_asesor()
+        elif opcion == "7":
+            asignar_recluta()
+        elif opcion == "8":
+            ver_logs()
+        elif opcion == "9":
             setup_admin_password()
             input("\nPresiona Enter para continuar...")
         elif opcion == "0":
