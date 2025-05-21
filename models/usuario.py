@@ -13,6 +13,7 @@ class Usuario(db.Model, UserMixin):
     nombre = db.Column(db.String(100), nullable=True)
     telefono = db.Column(db.String(20), nullable=True)
     foto_url = db.Column(db.String(255), nullable=True)
+    rol = db.Column(db.String(20), default='user')  # admin, asesor, user
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
@@ -48,6 +49,7 @@ class Usuario(db.Model, UserMixin):
             "nombre": self.nombre,
             "telefono": self.telefono,
             "foto_url": self.foto_url,
+            "rol": self.rol,  # Incluir el rol en la serialización
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "last_login": self.last_login.isoformat() if self.last_login else None
         }

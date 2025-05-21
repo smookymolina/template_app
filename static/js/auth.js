@@ -8,6 +8,48 @@ const Auth = {
     currentUser: null,
     
     /**
+     * Verifica si el usuario tiene rol de administrador
+     * @returns {boolean} True si es admin, False en caso contrario
+     */
+    isAdmin: function() {
+        return this.currentUser && this.currentUser.rol === 'admin';
+    },
+    
+    /**
+     * Verifica si el usuario tiene rol de asesor
+     * @returns {boolean} True si es asesor, False en caso contrario
+     */
+    isAsesor: function() {
+        return this.currentUser && this.currentUser.rol === 'asesor';
+    },
+    
+    /**
+     * Obtiene el rol del usuario actual
+     * @returns {string} Rol del usuario o null si no hay usuario autenticado
+     */
+    getUserRole: function() {
+        return this.currentUser ? this.currentUser.rol : null;
+    },
+    
+    /**
+     * Verifica si un usuario tiene permisos para acceder a un recurso
+     * @param {string} permission - Nombre del permiso a verificar
+     * @returns {boolean} - True si tiene el permiso, False en caso contrario
+     */
+    hasPermission: function(permission) {
+        // Lista de permisos básicos por rol
+        const permisos = {
+            'admin': ['ver_todos_reclutas', 'asignar_asesores', 'eliminar_usuarios'],
+            'asesor': ['ver_mis_reclutas']
+        };
+        
+        const userRole = this.getUserRole();
+        if (!userRole) return false;
+        
+        return permisos[userRole] && permisos[userRole].includes(permission);
+    },
+    
+    /**
      * Inicia sesión con credenciales
      * @param {string} email - Correo electrónico del usuario
      * @param {string} password - Contraseña del usuario
@@ -171,6 +213,51 @@ const Auth = {
      */
     isAuthenticated: function() {
         return this.currentUser !== null;
+    },
+ /**
+     * Actualiza los datos del usuario, asegurando que el rol sea correcto
+     * @param {Object} userData - Datos del usuario
+     */
+    updateUserData: function(userData) {
+        this.currentUser = userData;
+        
+        // Si el rol no está definido, intentar obtenerlo
+        if (!this.currentUser.rol) {
+            this.fetchUserRole().catch(error => {
+                console.error('Error al obtener rol del usuario:', error);
+            });
+        }
+    },
+    
+    /**
+     * Obtiene el rol del usuario desde el backend
+     * @returns {Promise<Object>} - Datos del rol y permisos
+     */
+    fetchUserRole: async function() {
+        if (!this.isAuthenticated()) return null;
+        
+        try {
+            const response = await fetch(`${CONFIG.API_URL}/usuario/rol`);
+            
+            if (!response.ok) {
+                throw new Error(`Error ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            if (data.success) {
+                // Actualizar el rol en el objeto currentUser
+                if (this.currentUser) {
+                    this.currentUser.rol = data.rol;
+                    this.currentUser.permisos = data.permisos;
+                }
+                return data;
+            } else {
+                throw new Error(data.message || 'Error al obtener rol');
+            }
+        } catch (error) {
+            console.error('Error al obtener rol del usuario:', error);
+            throw error;
+        }
     }
 };
 

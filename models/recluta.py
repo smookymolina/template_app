@@ -70,50 +70,74 @@ class Recluta(db.Model):
             db.session.rollback()
             raise DatabaseError(f"Error al eliminar recluta: {str(e)}")
     
-    @classmethod
-    def get_by_id(cls, recluta_id):
-        """Obtiene un recluta por su ID"""
-        return cls.query.get(recluta_id)
+@classmethod
+def get_by_id(cls, recluta_id, current_user=None):
+    """
+    Obtiene un recluta por su ID, aplicando filtro por permisos si es necesario.
     
-    @classmethod
-    def get_all(cls, page=1, per_page=10, search=None, estado=None, sort_by='id', sort_order='asc'):
-        """
-        Obtiene todos los reclutas con paginación y filtros.
+    Args:
+        recluta_id: ID del recluta a obtener
+        current_user: Usuario actual, para verificar permisos
         
-        Args:
-            page: Número de página
-            per_page: Elementos por página
-            search: Texto para buscar en nombre, email, teléfono o puesto
-            estado: Filtrar por estado
-            sort_by: Campo por el que ordenar
-            sort_order: Dirección de ordenamiento ('asc' o 'desc')
-            
-        Returns:
-            Objeto de paginación SQLAlchemy
-        """
-        query = cls.query
+    Returns:
+        Objeto Recluta o None si no existe o no tiene permisos
+    """
+    recluta = cls.query.get(recluta_id)
+    
+    # Si no existe el recluta, devolver None
+    if not recluta:
+        return None
+    
+    # Si hay usuario y es asesor, verificar que tenga permiso
+    if current_user and hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+        if recluta.asesor_id != current_user.id:
+            return None
+    return recluta
+
+@classmethod
+def get_all(cls, page=1, per_page=10, search=None, estado=None, sort_by='id', sort_order='asc', current_user=None):
+    """
+    Obtiene todos los reclutas con paginación y filtros.
+    
+    Args:
+        page: Número de página
+        per_page: Elementos por página
+        search: Texto para buscar en nombre, email, teléfono o puesto
+        estado: Filtrar por estado
+        sort_by: Campo por el que ordenar
+        sort_order: Dirección de ordenamiento ('asc' o 'desc')
+        current_user: Usuario actual, para filtrar por asesor_id si aplica
         
-        # Aplicar filtros si existen
-        if search:
-            search_term = f"%{search}%"
-            query = query.filter(
-                db.or_(
-                    cls.nombre.ilike(search_term),
-                    cls.email.ilike(search_term),
-                    cls.telefono.ilike(search_term),
-                    cls.puesto.ilike(search_term)
-                )
+    Returns:
+        Objeto de paginación SQLAlchemy
+    """
+    query = cls.query
+    
+    # Si hay usuario actual y es asesor, filtrar por asesor_id
+    if current_user and hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+        query = query.filter_by(asesor_id=current_user.id)
+    
+    # Aplicar filtros si existen
+    if search:
+        search_term = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                cls.nombre.ilike(search_term),
+                cls.email.ilike(search_term),
+                cls.telefono.ilike(search_term),
+                cls.puesto.ilike(search_term)
             )
-        
-        if estado:
-            query = query.filter_by(estado=estado)
-        
-        # Aplicar ordenamiento
-        if hasattr(cls, sort_by):
-            attr = getattr(cls, sort_by)
-            if sort_order.lower() == 'desc':
-                attr = attr.desc()
-            query = query.order_by(attr)
-        
-        # Retornar con paginación
-        return query.paginate(page=page, per_page=per_page, error_out=False)
+        )
+    
+    if estado:
+        query = query.filter_by(estado=estado)
+    
+    # Aplicar ordenamiento
+    if hasattr(cls, sort_by):
+        attr = getattr(cls, sort_by)
+        if sort_order.lower() == 'desc':
+            attr = attr.desc()
+        query = query.order_by(attr)
+    
+    # Retornar con paginación
+    return query.paginate(page=page, per_page=per_page, error_out=False)

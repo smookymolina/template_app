@@ -36,6 +36,7 @@ def get_asesores():
 def get_reclutas():
     """
     Obtiene la lista de reclutas con paginación y filtros.
+    Para asesores, solo muestra los reclutas asignados a ellos.
     """
     try:
         # Parámetros de paginación y filtrado
@@ -49,15 +50,38 @@ def get_reclutas():
         # Limitar el tamaño de página para prevenir abuso
         per_page = min(per_page, current_app.config['MAX_PAGE_SIZE'])
         
-        # Obtener reclutas paginados
-        pagination = Recluta.get_all(
-            page=page,
-            per_page=per_page,
-            search=search,
-            estado=estado,
-            sort_by=sort_by,
-            sort_order=sort_order
-        )
+        # Iniciar la consulta base
+        query = Recluta.query
+        
+        # Aplicar filtro según el rol del usuario
+        if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+            # Si es asesor, mostrar solo sus reclutas asignados
+            query = query.filter_by(asesor_id=current_user.id)
+            current_app.logger.info(f"Filtrado de reclutas por asesor_id: {current_user.id}")
+        
+        # Aplicar filtro de búsqueda
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(db.or_(
+                Recluta.nombre.ilike(search_term),
+                Recluta.email.ilike(search_term),
+                Recluta.telefono.ilike(search_term),
+                Recluta.puesto.ilike(search_term)
+            ))
+        
+        # Aplicar filtro por estado
+        if estado:
+            query = query.filter_by(estado=estado)
+        
+        # Aplicar ordenamiento
+        if hasattr(Recluta, sort_by):
+            attr = getattr(Recluta, sort_by)
+            if sort_order.lower() == 'desc':
+                attr = attr.desc()
+            query = query.order_by(attr)
+        
+        # Ejecutar la consulta con paginación
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
         
         return jsonify({
             "success": True,
@@ -78,12 +102,21 @@ def get_reclutas():
 def get_recluta(id):
     """
     Obtiene los detalles de un recluta específico.
+    Para asesores, verifica que el recluta esté asignado a ellos.
     """
     try:
         recluta = Recluta.get_by_id(id)
         if not recluta:
             return jsonify({"success": False, "message": "Recluta no encontrado"}), 404
-            
+        
+        # Verificar permisos según rol
+        if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+            if recluta.asesor_id != current_user.id:
+                return jsonify({
+                    "success": False, 
+                    "message": "No tienes permisos para ver este recluta"
+                }), 403
+        
         return jsonify({
             "success": True,
             "recluta": recluta.serialize()
@@ -91,6 +124,28 @@ def get_recluta(id):
     except Exception as e:
         current_app.logger.error(f"Error al obtener recluta {id}: {str(e)}")
         return jsonify({"success": False, "message": f"Error al obtener recluta: {str(e)}"}), 500
+
+@api_bp.route('/usuario/rol', methods=['GET'])
+@login_required
+def get_usuario_rol():
+    """
+    Obtiene información del rol del usuario autenticado.
+    """
+    try:
+        rol = getattr(current_user, 'rol', 'user')
+        return jsonify({
+            "success": True,
+            "rol": rol,
+            "permisos": {
+                "is_admin": rol == 'admin',
+                "is_asesor": rol == 'asesor',
+                "can_assign_asesores": rol == 'admin',
+                "can_see_all_reclutas": rol == 'admin'
+            }
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener rol del usuario: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al obtener rol: {str(e)}"}), 500
 
 @api_bp.route('/reclutas', methods=['POST'])
 @login_required
@@ -144,11 +199,20 @@ def add_recluta():
 def update_recluta(id):
     """
     Actualiza un recluta existente.
+    Para asesores, verifica que el recluta esté asignado a ellos.
     """
     try:
         recluta = Recluta.get_by_id(id)
         if not recluta:
             return jsonify({"success": False, "message": "Recluta no encontrado"}), 404
+        
+        # Verificar permisos según rol
+        if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+            if recluta.asesor_id != current_user.id:
+                return jsonify({
+                    "success": False, 
+                    "message": "No tienes permisos para modificar este recluta"
+                }), 403
         
         if request.is_json:
             data = request.get_json()
@@ -160,6 +224,12 @@ def update_recluta(id):
             validated_data = validate_recluta_data(data, is_update=True)
         except ValidationError as e:
             return jsonify({"success": False, "message": "Error de validación", "errors": e.args[0]}), 400
+        
+        # Para asesores, no permitir cambiar el asesor_id
+        if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+            if 'asesor_id' in validated_data:
+                # Ignorar el asesor_id enviado y mantener el actual
+                validated_data['asesor_id'] = current_user.id
         
         # Actualizar campos
         for key, value in validated_data.items():
@@ -194,11 +264,20 @@ def update_recluta(id):
 def delete_recluta(id):
     """
     Elimina un recluta existente.
+    Para asesores, verifica que el recluta esté asignado a ellos.
     """
     try:
         recluta = Recluta.get_by_id(id)
         if not recluta:
             return jsonify({"success": False, "message": "Recluta no encontrado"}), 404
+        
+        # Verificar permisos según rol
+        if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+            if recluta.asesor_id != current_user.id:
+                return jsonify({
+                    "success": False, 
+                    "message": "No tienes permisos para eliminar este recluta"
+                }), 403
         
         # Guardar información antes de eliminar para el log
         recluta_info = f"ID: {recluta.id}, Nombre: {recluta.nombre}, Email: {recluta.email}"

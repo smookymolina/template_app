@@ -215,9 +215,17 @@ async function login() {
  * Acciones a realizar tras un login exitoso
  * @param {Object} usuario - Datos del usuario autenticado
  */
-function loginSuccess(usuario) {
+async function loginSuccess(usuario) {
     // Actualizar usuario actual
-    Auth.currentUser = usuario;
+    Auth.updateUserData(usuario);
+    
+    // Obtener rol y permisos del usuario
+    try {
+        await Auth.fetchUserRole();
+    } catch (error) {
+        console.error('Error al obtener rol del usuario:', error);
+        // Continuar, ya que podría ser un problema temporal
+    }
     
     // Asegurarnos de que los elementos existen antes de interactuar con ellos
     const loginSection = document.getElementById('login-section');
@@ -735,7 +743,24 @@ async function updateProfile() {
     }
 }
 
-
+// Inicialización manual del botón de agregar recluta
+document.addEventListener('DOMContentLoaded', function() {
+    const addReclutaButton = document.getElementById('open-add-recluta-modal');
+    if (addReclutaButton) {
+        addReclutaButton.addEventListener('click', function() {
+            const modal = document.getElementById('add-recluta-modal');
+            if (modal) {
+                modal.style.display = 'block';
+                console.log('Modal de agregar recluta abierto manualmente');
+            } else {
+                console.error('Modal add-recluta-modal no encontrado');
+            }
+        });
+        console.log('Evento de botón Agregar Recluta inicializado manualmente');
+    } else {
+        console.error('Botón open-add-recluta-modal no encontrado');
+    }
+});
 
 /**
  * Maneja cambios en la imagen de perfil

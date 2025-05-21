@@ -2,6 +2,7 @@
  * Módulo para gestionar reclutas
  */
 import CONFIG from './config.js';
+import Auth from './auth.js';
 import { showNotification, showError, showSuccess } from './notifications.js';
 import UI from './ui.js';
 
@@ -19,39 +20,18 @@ const Reclutas = {
     currentReclutaId: null,
     asesores: [], // Añadido para almacenar la lista de asesores
 
-    /**
+     /**
      * Inicializa todos los elementos y eventos de gestión de reclutas
      */
     init: async function() {
         try {
-            // Inicializar filtros y eventos
-            this.initFilters();
-
-            // Inicializar formulario de añadir recluta
-            this.initAddReclutaForm();
-
-            // Eventos para botones de acción en el modal de detalles
-            const cancelEditBtn = document.querySelector('.edit-mode-buttons .btn-secondary');
-            if (cancelEditBtn) {
-                cancelEditBtn.addEventListener('click', () => this.cancelEdit());
-            }
-
-            const saveChangesBtn = document.querySelector('.edit-mode-buttons .btn-primary');
-            if (saveChangesBtn) {
-                saveChangesBtn.addEventListener('click', () => this.saveReclutaChanges());
-            }
-
-            // Cargar datos iniciales
-            await this.loadAndDisplayReclutas();
-            await this.loadAsesores();
-            this.populateAsesorSelectors();
-
-            // Registrarse para eventos de cambio de sección
-            document.addEventListener('sectionChanged', (e) => {
-                if (e.detail.section === 'reclutas-section') {
-                    this.loadAndDisplayReclutas();
-                }
-            });
+            // Asegurarse de tener información actualizada de rol antes de configurar UI
+            await this.fetchUserRoleAndPermissions();
+            
+            // Configurar la UI según el rol
+            this.configureUIForRole();
+            
+            // ... [resto del código de inicialización] ...
         } catch (error) {
             console.error('Error al inicializar módulo de reclutas:', error);
             showError('Error al cargar datos de reclutas: ' + error.message);
@@ -87,74 +67,94 @@ const Reclutas = {
 
     /**
      * Carga la lista de reclutas con paginación y filtros
-     * @returns {Promise<Array>} - Lista de reclutas
      */
     loadReclutas: async function() {
-    try {
-        const queryParams = new URLSearchParams({
-            page: this.currentPage,
-            per_page: this.itemsPerPage,
-            search: this.filters.search,
-            estado: this.filters.estado !== 'todos' ? this.filters.estado : '',
-            sort_by: this.filters.sortBy,
-            sort_order: this.filters.sortOrder
-        });
-
-        // No es necesario enviar el rol como parámetro, ya que el servidor 
-        // usa current_user para determinar los permisos basados en roles
-
-        // Añadir verificación para asegurarnos que CONFIG.API_URL existe
-        if (!CONFIG || !CONFIG.API_URL) {
-            throw new Error('La configuración de API_URL no está definida');
-        }
-
-        // Añadir manejo de errores mejorado con timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
-        
-        const response = await fetch(`${CONFIG.API_URL}/reclutas?${queryParams}`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            },
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            if (response.status === 401) {
-                // Redireccionar al login
-                document.getElementById('login-section').style.display = 'block';
-                document.getElementById('dashboard-section').style.display = 'none';
-                showNotification('Sesión expirada. Por favor inicie sesión nuevamente.', 'warning');
-                throw new Error('No autenticado');
+        try {
+            const queryParams = new URLSearchParams({
+                page: this.currentPage,
+                per_page: this.itemsPerPage,
+                search: this.filters.search,
+                estado: this.filters.estado !== 'todos' ? this.filters.estado : '',
+                sort_by: this.filters.sortBy,
+                sort_order: this.filters.sortOrder
+            });
+            
+            // No es necesario enviar el rol como parámetro, ya que el servidor 
+            // usar los datos de la sesión para aplicar permisos
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+            
+            const response = await fetch(`${CONFIG.API_URL}/reclutas?${queryParams}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                },
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                if (response.status === 401) {
+                    // Redireccionar al login
+                    document.getElementById('login-section').style.display = 'block';
+                    document.getElementById('dashboard-section').style.display = 'none';
+                    showNotification('Sesión expirada. Por favor inicie sesión nuevamente.', 'warning');
+                    throw new Error('No autenticado');
+                }
+                if (response.status === 403) {
+                    throw new Error('No tienes permisos para acceder a estos reclutas');
+                }
+                throw new Error(`Error al cargar reclutas: ${response.status} ${response.statusText}`);
             }
-            if (response.status === 403) {
-                throw new Error('No tienes permisos para acceder a estos reclutas');
+            
+            const data = await response.json();
+            if (data.success) {
+                this.reclutas = data.reclutas;
+                this.totalPages = data.pages || 1;
+                return this.reclutas;
+            } else {
+                throw new Error(data.message || 'Error al obtener reclutas');
             }
-            throw new Error(`Error al cargar reclutas: ${response.status} ${response.statusText}`);
+        } catch (error) {
+            // Manejar errores específicos
+            if (error.name === 'AbortError') {
+                console.error('Timeout al cargar reclutas');
+                throw new Error('Tiempo de espera agotado. Verifique su conexión a internet.');
+            }
+            
+            console.error('Error al cargar reclutas:', error);
+            throw error;
         }
+    },
 
-        const data = await response.json();
-        if (data.success) {
-            this.reclutas = data.reclutas;
-            this.totalPages = data.pages || 1;
-            return this.reclutas;
-        } else {
-            throw new Error(data.message || 'Error al obtener reclutas');
+/**
+     * Obtiene el rol y permisos del usuario actual
+     */
+    fetchUserRoleAndPermissions: async function() {
+        try {
+            // Usar el método de Auth para obtener rol
+            const roleData = await Auth.fetchUserRole();
+            
+            // Almacenar información en el módulo para uso local
+            if (roleData) {
+                this.userRole = roleData.rol;
+                this.userPermissions = roleData.permisos;
+            } else {
+                // Valores por defecto seguros (mínimos permisos)
+                this.userRole = 'user';
+                this.userPermissions = {};
+            }
+            
+            return roleData;
+        } catch (error) {
+            console.error('Error al obtener rol del usuario:', error);
+            // Establecer valores seguros por defecto
+            this.userRole = 'user';
+            this.userPermissions = {};
         }
-    } catch (error) {
-        // Manejar errores específicos
-        if (error.name === 'AbortError') {
-            console.error('Timeout al cargar reclutas');
-            throw new Error('Tiempo de espera agotado. Verifique su conexión a internet.');
-        }
-        
-        console.error('Error al cargar reclutas:', error);
-        throw error;
-    }
-},
+    },
 
     /**
      * Carga y muestra la lista de reclutas
@@ -210,47 +210,62 @@ const Reclutas = {
         }
     },
 
-configureUIForRole: function() {
-    // Asegurarse de obtener el rol correcto desde Auth
-    this.userRol = Auth.currentUser?.rol || 'asesor';
-    
-    if (this.userRol !== 'admin') {
-        // Ocultar selectores de asesor en formularios para no-administradores
-        const asesorSelectors = document.querySelectorAll('#recluta-asesor, #edit-recluta-asesor');
-        asesorSelectors.forEach(selector => {
-            if (selector) {
-                const formGroup = selector.closest('.form-group');
-                if (formGroup) {
-                    formGroup.style.display = 'none';
+ /**
+     * Configura la interfaz de usuario según el rol
+     */
+    configureUIForRole: function() {
+        // Obtener rol de manera segura, usando el almacenado en este módulo
+        // o consultando Auth si no está disponible
+        const role = this.userRole || Auth.getUserRole() || 'user';
+        
+        // Establece el rol usado localmente
+        this.userRole = role;
+        
+        // Configurar UI para no-administradores
+        if (role !== 'admin') {
+            // Ocultar selectores de asesor en formularios
+            const asesorSelectors = document.querySelectorAll('#recluta-asesor, #edit-recluta-asesor');
+            asesorSelectors.forEach(selector => {
+                if (selector) {
+                    const formGroup = selector.closest('.form-group');
+                    if (formGroup) {
+                        formGroup.style.display = 'none';
+                    }
+                }
+            });
+            
+            // Ocultar columna de asesor en la tabla
+            const asesorHeader = document.querySelector('#reclutas-table th:nth-child(7)');
+            if (asesorHeader) {
+                asesorHeader.style.display = 'none';
+            }
+            
+            // Ocultar elementos de la columna de asesor en cada fila
+            document.querySelectorAll('#reclutas-list tr').forEach(row => {
+                const asesorCell = row.querySelector('td:nth-child(7)');
+                if (asesorCell) asesorCell.style.display = 'none';
+            });
+            
+            // Mostrar mensaje informativo para asesores
+            if (role === 'asesor') {
+                const reclutasSection = document.querySelector('#reclutas-section .section-header');
+                if (reclutasSection) {
+                    // Verificar si ya existe el mensaje para no duplicarlo
+                    if (!reclutasSection.querySelector('.info-message')) {
+                        const infoMessage = document.createElement('div');
+                        infoMessage.className = 'info-message';
+                        infoMessage.innerHTML = '<i class="fas fa-info-circle"></i> Vista filtrada: solo se muestran los reclutas asignados a ti.';
+                        infoMessage.style.color = 'var(--primary-color)';
+                        infoMessage.style.marginTop = '10px';
+                        infoMessage.style.fontSize = '14px';
+                        reclutasSection.appendChild(infoMessage);
+                    }
                 }
             }
-        });
-        
-        // Ocultar columna de asesor en la tabla
-        const asesorHeader = document.querySelector('#reclutas-table th:nth-child(7)');
-        if (asesorHeader) {
-            asesorHeader.style.display = 'none';
         }
         
-        // Ocultar elementos de la columna de asesor en cada fila
-        document.querySelectorAll('#reclutas-list tr').forEach(row => {
-            const asesorCell = row.querySelector('td:nth-child(7)');
-            if (asesorCell) asesorCell.style.display = 'none';
-        });
-        
-        // Mostrar mensaje informativo para asesores
-        const reclutasSection = document.querySelector('#reclutas-section .section-header');
-        if (reclutasSection) {
-            const infoMessage = document.createElement('div');
-            infoMessage.className = 'info-message';
-            infoMessage.innerHTML = '<i class="fas fa-info-circle"></i> Estás viendo solo los reclutas asignados a ti.';
-            infoMessage.style.color = 'var(--primary-color)';
-            infoMessage.style.marginTop = '10px';
-            infoMessage.style.fontSize = '14px';
-            reclutasSection.appendChild(infoMessage);
-        }
-    }
-},
+        console.log(`UI configurada para rol: ${role}`);
+    },
 
     /**
  * Carga y muestra la lista de reclutas
@@ -929,13 +944,16 @@ loadAndDisplayReclutas: async function() {
      * Inicializa los eventos del formulario de añadir recluta
      */
     initAddReclutaForm: function() {
-        // Botón para abrir modal
-        const addButton = document.querySelector('.section-actions .btn-primary');
-        if (addButton) {
-            addButton.addEventListener('click', () => {
-                this.openAddReclutaModal();
-            });
-        }
+    // Botón para abrir modal
+    const addButton = document.getElementById('open-add-recluta-modal');  // Verifica este ID
+    if (addButton) {
+        addButton.addEventListener('click', () => {
+            this.openAddReclutaModal();
+        });
+        console.log('Evento de botón Agregar Recluta inicializado');  // Añadir para debug
+    } else {
+        console.error('Botón Agregar Recluta no encontrado en el DOM'); // Añadir para debug
+    }
 
         // Eventos del modal
         const modal = document.getElementById('add-recluta-modal');
@@ -968,25 +986,27 @@ loadAndDisplayReclutas: async function() {
      * Abre el modal para añadir un nuevo recluta
      */
     openAddReclutaModal: function() {
-        // Limpiar formulario
-        const form = document.getElementById('add-recluta-form');
-        if (form) form.reset();
-
-        // Limpiar preview de imagen
-        const picPreview = document.getElementById('recluta-pic-preview');
-        if (picPreview) {
-            picPreview.innerHTML = '<i class="fas fa-user-circle"></i>';
-        }
-
-        // Seleccionar la opción por defecto del asesor
-        const asesorSelect = document.getElementById('recluta-asesor');
-        if (asesorSelect) {
-            asesorSelect.value = '';
-        }
-
-        // Mostrar modal
-        UI.showModal('add-recluta-modal');
-    },
+    console.log('Intentando abrir modal...');
+    const modal = document.getElementById('add-recluta-modal');
+    if (!modal) {
+        console.error('Modal no encontrado en el DOM');
+        return;
+    }
+    
+    // Mostrar el modal directamente en vez de usar UI.showModal
+    modal.style.display = 'block';
+    console.log('Modal mostrado');
+    
+    // Limpiar el formulario si es necesario
+    const form = document.getElementById('add-recluta-form');
+    if (form) form.reset();
+    
+    // Limpiar preview de imagen si existe
+    const picPreview = document.getElementById('recluta-pic-preview');
+    if (picPreview) {
+        picPreview.innerHTML = '<i class="fas fa-user-circle"></i>';
+    }
+},
 
     /**
      * Maneja el evento de cambio de la imagen del recluta en el formulario
@@ -1081,6 +1101,11 @@ loadAndDisplayReclutas: async function() {
             }
         }
     }
+};
+
+// Exponer la función addRecluta al ámbito global para que funcione con onclick en HTML
+window.addRecluta = function() {
+    Reclutas.saveNewRecluta();
 };
 
 export default Reclutas;
