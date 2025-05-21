@@ -97,6 +97,7 @@ def get_recluta(id):
 def add_recluta():
     """
     Crea un nuevo recluta.
+    Para asesores, asigna automáticamente el recluta a él mismo ignorando cualquier asesor_id proporcionado.
     """
     try:
         if request.is_json:
@@ -109,6 +110,11 @@ def add_recluta():
             validated_data = validate_recluta_data(data)
         except ValidationError as e:
             return jsonify({"success": False, "message": "Error de validación", "errors": e.args[0]}), 400
+        
+        # Si el usuario es asesor, asignar automáticamente el recluta a él
+        # e ignorar cualquier asesor_id proporcionado
+        if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+            validated_data['asesor_id'] = current_user.id
         
         # Crear nuevo recluta
         nuevo = Recluta(**validated_data)
@@ -220,15 +226,28 @@ def delete_recluta(id):
 def get_entrevistas():
     """
     Obtiene la lista de entrevistas.
+    Para asesores, solo muestra las entrevistas de sus reclutas asignados.
     """
     try:
         # Filtro opcional por recluta_id
         recluta_id = request.args.get('recluta_id', type=int)
         
         if recluta_id:
+            # Verificar que el usuario tenga acceso al recluta
+            recluta = Recluta.get_by_id(recluta_id, current_user=current_user)
+            if not recluta:
+                return jsonify({"success": False, "message": "Recluta no encontrado o sin permisos para acceder"}), 404
+                
             entrevistas = Entrevista.get_for_recluta(recluta_id)
         else:
-            entrevistas = Entrevista.query.all()
+            # Si el usuario es asesor, filtrar solo sus reclutas
+            if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+                # Obtener IDs de reclutas asignados al asesor
+                reclutas_ids = [r.id for r in Recluta.query.filter_by(asesor_id=current_user.id).all()]
+                entrevistas = Entrevista.query.filter(Entrevista.recluta_id.in_(reclutas_ids)).all()
+            else:
+                # Para admins, mostrar todas
+                entrevistas = Entrevista.query.all()
             
         return jsonify({
             "success": True,
@@ -243,11 +262,18 @@ def get_entrevistas():
 def get_entrevista(id):
     """
     Obtiene los detalles de una entrevista específica.
+    Verifica que el usuario tenga permisos para acceder a través del recluta asociado.
     """
     try:
         entrevista = Entrevista.get_by_id(id)
         if not entrevista:
             return jsonify({"success": False, "message": "Entrevista no encontrada"}), 404
+        
+        # Verificar que el usuario tenga acceso al recluta asociado
+        if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+            recluta = Recluta.get_by_id(entrevista.recluta_id, current_user=current_user)
+            if not recluta:
+                return jsonify({"success": False, "message": "No tienes permisos para acceder a esta entrevista"}), 403
             
         return jsonify({
             "success": True,
@@ -262,6 +288,7 @@ def get_entrevista(id):
 def add_entrevista():
     """
     Programa una nueva entrevista.
+    Verifica que el usuario tenga permisos para acceder al recluta asociado.
     """
     try:
         data = request.get_json()
@@ -271,6 +298,13 @@ def add_entrevista():
             validated_data = validate_entrevista_data(data)
         except ValidationError as e:
             return jsonify({"success": False, "message": "Error de validación", "errors": e.args[0]}), 400
+        
+        # Verificar que el usuario tenga acceso al recluta
+        recluta_id = validated_data.get('recluta_id')
+        if recluta_id:
+            recluta = Recluta.get_by_id(recluta_id, current_user=current_user)
+            if not recluta:
+                return jsonify({"success": False, "message": "Recluta no encontrado o sin permisos para acceder"}), 404
         
         # Convertir la fecha de string a objeto Date si es necesario
         if 'fecha' in validated_data and isinstance(validated_data['fecha'], str):
@@ -296,11 +330,17 @@ def add_entrevista():
 def update_entrevista(id):
     """
     Actualiza una entrevista existente.
+    Verifica que el usuario tenga permisos para acceder al recluta asociado.
     """
     try:
         entrevista = Entrevista.get_by_id(id)
         if not entrevista:
             return jsonify({"success": False, "message": "Entrevista no encontrada"}), 404
+        
+        # Verificar que el usuario tenga acceso al recluta asociado
+        recluta = Recluta.get_by_id(entrevista.recluta_id, current_user=current_user)
+        if not recluta:
+            return jsonify({"success": False, "message": "No tienes permisos para actualizar esta entrevista"}), 403
         
         data = request.get_json()
             
@@ -309,6 +349,12 @@ def update_entrevista(id):
             validated_data = validate_entrevista_data(data, is_update=True)
         except ValidationError as e:
             return jsonify({"success": False, "message": "Error de validación", "errors": e.args[0]}), 400
+        
+        # Si se está cambiando el recluta_id, verificar también permisos para el nuevo recluta
+        if 'recluta_id' in validated_data and validated_data['recluta_id'] != entrevista.recluta_id:
+            nuevo_recluta = Recluta.get_by_id(validated_data['recluta_id'], current_user=current_user)
+            if not nuevo_recluta:
+                return jsonify({"success": False, "message": "No tienes permisos para asignar esta entrevista al recluta especificado"}), 403
         
         # Convertir la fecha de string a objeto Date si es necesario
         if 'fecha' in validated_data and isinstance(validated_data['fecha'], str):
@@ -335,11 +381,17 @@ def update_entrevista(id):
 def delete_entrevista(id):
     """
     Elimina una entrevista existente.
+    Verifica que el usuario tenga permisos para acceder al recluta asociado.
     """
     try:
         entrevista = Entrevista.get_by_id(id)
         if not entrevista:
             return jsonify({"success": False, "message": "Entrevista no encontrada"}), 404
+        
+        # Verificar que el usuario tenga acceso al recluta asociado
+        recluta = Recluta.get_by_id(entrevista.recluta_id, current_user=current_user)
+        if not recluta:
+            return jsonify({"success": False, "message": "No tienes permisos para eliminar esta entrevista"}), 403
         
         # Guardar información antes de eliminar para el log
         entrevista_info = f"ID: {entrevista.id}, Recluta: {entrevista.recluta_id}, Fecha: {entrevista.fecha}"
@@ -355,6 +407,39 @@ def delete_entrevista(id):
     except Exception as e:
         current_app.logger.error(f"Error al eliminar entrevista {id}: {str(e)}")
         return jsonify({"success": False, "message": f"Error al eliminar entrevista: {str(e)}"}), 500
+
+@api_bp.route('/documentos/<int:id>', methods=['DELETE'])
+@login_required
+def delete_documento(id):
+    """
+    Elimina un documento específico.
+    Verifica que el usuario tenga permisos para acceder al documento a través del recluta asociado.
+    """
+    try:
+        from models import Documento
+        
+        documento = Documento.query.get(id)
+        if not documento:
+            return jsonify({"success": False, "message": "Documento no encontrado"}), 404
+        
+        # Verificar que el usuario tenga acceso al recluta asociado al documento
+        recluta = Recluta.get_by_id(documento.recluta_id, current_user=current_user)
+        if not recluta:
+            return jsonify({"success": False, "message": "No tienes permisos para eliminar este documento"}), 403
+        
+        # Eliminar archivo físico
+        if documento.url:
+            eliminar_archivo(documento.url)
+        
+        # Eliminar registro
+        db.session.delete(documento)
+        db.session.commit()
+        
+        return jsonify({"success": True, "message": "Documento eliminado correctamente"})
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al eliminar documento {id}: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
 
 # ----- API DE ESTADÍSTICAS -----
 
@@ -624,6 +709,30 @@ def update_perfil():
         current_app.logger.error(f"Error al actualizar perfil: {str(e)}")
         return jsonify({"success": False, "message": f"Error al actualizar perfil: {str(e)}"}), 500
 
+@api_bp.route('/reclutas/<int:id>/documentos', methods=['GET'])
+@login_required
+def get_documentos_recluta(id):
+    """
+    Obtiene los documentos de un recluta específico.
+    Verifica que el usuario tenga permisos para acceder al recluta.
+    """
+    try:
+        # Verificar que el usuario tenga acceso al recluta
+        recluta = Recluta.get_by_id(id, current_user=current_user)
+        if not recluta:
+            return jsonify({"success": False, "message": "Recluta no encontrado o sin permisos para acceder"}), 404
+            
+        from models import Documento
+        documentos = Documento.query.filter_by(recluta_id=id).all()
+        
+        return jsonify({
+            "success": True,
+            "documentos": [d.serialize() for d in documentos]
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener documentos del recluta {id}: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
 @api_bp.route('/usuario', methods=['GET'])
 @login_required
 def get_usuario_actual():
@@ -654,6 +763,59 @@ def check_auth():
     except Exception as e:
         current_app.logger.error(f"Error al verificar autenticación: {str(e)}")
         return jsonify({"authenticated": False, "error": str(e)}), 500
+
+@api_bp.route('/reclutas/<int:id>/documentos', methods=['POST'])
+@login_required
+def upload_documento_recluta(id):
+    """
+    Sube un documento PDF para un recluta específico.
+    Verifica que el usuario tenga permisos para acceder al recluta.
+    """
+    try:
+        # Verificar que el usuario tenga acceso al recluta
+        recluta = Recluta.get_by_id(id, current_user=current_user)
+        if not recluta:
+            return jsonify({"success": False, "message": "Recluta no encontrado o sin permisos para acceder"}), 404
+            
+        from models import Documento
+        
+        if 'documento' not in request.files:
+            return jsonify({"success": False, "message": "No se encontró el archivo"}), 400
+        
+        archivo = request.files['documento']
+        if archivo.filename == '':
+            return jsonify({"success": False, "message": "No se seleccionó ningún archivo"}), 400
+        
+        # Validar que sea PDF
+        if not archivo.filename.lower().endswith('.pdf'):
+            return jsonify({"success": False, "message": "Solo se permiten archivos PDF"}), 400
+        
+        # Guardar archivo
+        ruta_relativa = guardar_archivo(archivo, f'reclutas/{id}/documentos', tipos_permitidos=['pdf'])
+        
+        if ruta_relativa:
+            # Crear registro en base de datos
+            nuevo_documento = Documento(
+                recluta_id=id,
+                nombre=secure_filename(archivo.filename),
+                url=ruta_relativa,
+                tipo='pdf',
+                tamaño=archivo.content_length
+            )
+            
+            db.session.add(nuevo_documento)
+            db.session.commit()
+            
+            return jsonify({
+                "success": True,
+                "documento": nuevo_documento.serialize()
+            }), 201
+        else:
+            return jsonify({"success": False, "message": "Error al guardar el archivo"}), 500
+            
+    except Exception as e:
+        current_app.logger.error(f"Error al subir documento: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
 
 @api_bp.route('/recuperar-folio', methods=['POST'])
 def recuperar_folio():

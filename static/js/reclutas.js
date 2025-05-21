@@ -90,65 +90,71 @@ const Reclutas = {
      * @returns {Promise<Array>} - Lista de reclutas
      */
     loadReclutas: async function() {
-        try {
-            const queryParams = new URLSearchParams({
-                page: this.currentPage,
-                per_page: this.itemsPerPage,
-                search: this.filters.search,
-                estado: this.filters.estado !== 'todos' ? this.filters.estado : '',
-                sort_by: this.filters.sortBy,
-                sort_order: this.filters.sortOrder
-            });
+    try {
+        const queryParams = new URLSearchParams({
+            page: this.currentPage,
+            per_page: this.itemsPerPage,
+            search: this.filters.search,
+            estado: this.filters.estado !== 'todos' ? this.filters.estado : '',
+            sort_by: this.filters.sortBy,
+            sort_order: this.filters.sortOrder
+        });
 
-            // Añadir verificación para asegurarnos que CONFIG.API_URL existe
-            if (!CONFIG || !CONFIG.API_URL) {
-                throw new Error('La configuración de API_URL no está definida');
-            }
+        // No es necesario enviar el rol como parámetro, ya que el servidor 
+        // usa current_user para determinar los permisos basados en roles
 
-            // Añadir manejo de errores mejorado con timeout
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
-            
-            const response = await fetch(`${CONFIG.API_URL}/reclutas?${queryParams}`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json'
-                },
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    // Redireccionar al login
-                    document.getElementById('login-section').style.display = 'block';
-                    document.getElementById('dashboard-section').style.display = 'none';
-                    showNotification('Sesión expirada. Por favor inicie sesión nuevamente.', 'warning');
-                    throw new Error('No autenticado');
-                }
-                throw new Error(`Error al cargar reclutas: ${response.status} ${response.statusText}`);
-            }
-
-            const data = await response.json();
-            if (data.success) {
-                this.reclutas = data.reclutas;
-                this.totalPages = data.pages || 1;
-                return this.reclutas;
-            } else {
-                throw new Error(data.message || 'Error al obtener reclutas');
-            }
-        } catch (error) {
-            // Manejar errores específicos
-            if (error.name === 'AbortError') {
-                console.error('Timeout al cargar reclutas');
-                throw new Error('Tiempo de espera agotado. Verifique su conexión a internet.');
-            }
-            
-            console.error('Error al cargar reclutas:', error);
-            throw error;
+        // Añadir verificación para asegurarnos que CONFIG.API_URL existe
+        if (!CONFIG || !CONFIG.API_URL) {
+            throw new Error('La configuración de API_URL no está definida');
         }
-    },
+
+        // Añadir manejo de errores mejorado con timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+        
+        const response = await fetch(`${CONFIG.API_URL}/reclutas?${queryParams}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            },
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                // Redireccionar al login
+                document.getElementById('login-section').style.display = 'block';
+                document.getElementById('dashboard-section').style.display = 'none';
+                showNotification('Sesión expirada. Por favor inicie sesión nuevamente.', 'warning');
+                throw new Error('No autenticado');
+            }
+            if (response.status === 403) {
+                throw new Error('No tienes permisos para acceder a estos reclutas');
+            }
+            throw new Error(`Error al cargar reclutas: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.success) {
+            this.reclutas = data.reclutas;
+            this.totalPages = data.pages || 1;
+            return this.reclutas;
+        } else {
+            throw new Error(data.message || 'Error al obtener reclutas');
+        }
+    } catch (error) {
+        // Manejar errores específicos
+        if (error.name === 'AbortError') {
+            console.error('Timeout al cargar reclutas');
+            throw new Error('Tiempo de espera agotado. Verifique su conexión a internet.');
+        }
+        
+        console.error('Error al cargar reclutas:', error);
+        throw error;
+    }
+},
 
     /**
      * Carga y muestra la lista de reclutas
@@ -203,6 +209,48 @@ const Reclutas = {
             throw error;
         }
     },
+
+configureUIForRole: function() {
+    // Asegurarse de obtener el rol correcto desde Auth
+    this.userRol = Auth.currentUser?.rol || 'asesor';
+    
+    if (this.userRol !== 'admin') {
+        // Ocultar selectores de asesor en formularios para no-administradores
+        const asesorSelectors = document.querySelectorAll('#recluta-asesor, #edit-recluta-asesor');
+        asesorSelectors.forEach(selector => {
+            if (selector) {
+                const formGroup = selector.closest('.form-group');
+                if (formGroup) {
+                    formGroup.style.display = 'none';
+                }
+            }
+        });
+        
+        // Ocultar columna de asesor en la tabla
+        const asesorHeader = document.querySelector('#reclutas-table th:nth-child(7)');
+        if (asesorHeader) {
+            asesorHeader.style.display = 'none';
+        }
+        
+        // Ocultar elementos de la columna de asesor en cada fila
+        document.querySelectorAll('#reclutas-list tr').forEach(row => {
+            const asesorCell = row.querySelector('td:nth-child(7)');
+            if (asesorCell) asesorCell.style.display = 'none';
+        });
+        
+        // Mostrar mensaje informativo para asesores
+        const reclutasSection = document.querySelector('#reclutas-section .section-header');
+        if (reclutasSection) {
+            const infoMessage = document.createElement('div');
+            infoMessage.className = 'info-message';
+            infoMessage.innerHTML = '<i class="fas fa-info-circle"></i> Estás viendo solo los reclutas asignados a ti.';
+            infoMessage.style.color = 'var(--primary-color)';
+            infoMessage.style.marginTop = '10px';
+            infoMessage.style.fontSize = '14px';
+            reclutasSection.appendChild(infoMessage);
+        }
+    }
+},
 
     /**
  * Carga y muestra la lista de reclutas
@@ -537,7 +585,7 @@ loadAndDisplayReclutas: async function() {
                 <td colspan="8" class="text-center"> No se encontraron reclutas. ¡Agrega tu primer recluta!
                 </td>
             </tr>
-        `;
+        `; 
         return;
     }
 
