@@ -105,25 +105,23 @@ def get_recluta(id):
     Para asesores, verifica que el recluta esté asignado a ellos.
     """
     try:
-        recluta = Recluta.get_by_id(id)
+        recluta = Recluta.get_by_id(id, current_user=current_user)
         if not recluta:
-            return jsonify({"success": False, "message": "Recluta no encontrado"}), 404
-        
-        # Verificar permisos según rol
-        if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
-            if recluta.asesor_id != current_user.id:
-                return jsonify({
-                    "success": False, 
-                    "message": "No tienes permisos para ver este recluta"
-                }), 403
-        
+            return jsonify({
+                "success": False, 
+                "message": "Recluta no encontrado"
+            }), 404
+            
         return jsonify({
             "success": True,
             "recluta": recluta.serialize()
         })
     except Exception as e:
         current_app.logger.error(f"Error al obtener recluta {id}: {str(e)}")
-        return jsonify({"success": False, "message": f"Error al obtener recluta: {str(e)}"}), 500
+        return jsonify({
+            "success": False, 
+            "message": f"Error al obtener recluta: {str(e)}"
+        }), 500
 
 @api_bp.route('/usuario/rol', methods=['GET'])
 @login_required
