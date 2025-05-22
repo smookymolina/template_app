@@ -34,12 +34,8 @@ def get_asesores():
 @api_bp.route('/reclutas', methods=['GET'])
 @login_required
 def get_reclutas():
-    """
-    Obtiene la lista de reclutas con paginación y filtros.
-    Para asesores, solo muestra los reclutas asignados a ellos.
-    """
     try:
-        # Parámetros de paginación y filtrado
+        # Parámetros existentes...
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', current_app.config['DEFAULT_PAGE_SIZE'], type=int)
         search = request.args.get('search', '')
@@ -47,41 +43,19 @@ def get_reclutas():
         sort_by = request.args.get('sort_by', 'id')
         sort_order = request.args.get('sort_order', 'asc')
         
-        # Limitar el tamaño de página para prevenir abuso
         per_page = min(per_page, current_app.config['MAX_PAGE_SIZE'])
         
-        # Iniciar la consulta base
-        query = Recluta.query
-        
-        # Aplicar filtro según el rol del usuario
+        # AGREGAR FILTRADO POR ROL
         if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
-            # Si es asesor, mostrar solo sus reclutas asignados
-            query = query.filter_by(asesor_id=current_user.id)
-            current_app.logger.info(f"Filtrado de reclutas por asesor_id: {current_user.id}")
-        
-        # Aplicar filtro de búsqueda
-        if search:
-            search_term = f"%{search}%"
-            query = query.filter(db.or_(
-                Recluta.nombre.ilike(search_term),
-                Recluta.email.ilike(search_term),
-                Recluta.telefono.ilike(search_term),
-                Recluta.puesto.ilike(search_term)
-            ))
-        
-        # Aplicar filtro por estado
-        if estado:
-            query = query.filter_by(estado=estado)
-        
-        # Aplicar ordenamiento
-        if hasattr(Recluta, sort_by):
-            attr = getattr(Recluta, sort_by)
-            if sort_order.lower() == 'desc':
-                attr = attr.desc()
-            query = query.order_by(attr)
-        
-        # Ejecutar la consulta con paginación
-        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+            pagination = Recluta.get_all(
+                page=page, per_page=per_page, search=search, estado=estado,
+                sort_by=sort_by, sort_order=sort_order, current_user=current_user
+            )
+        else:
+            pagination = Recluta.get_all(
+                page=page, per_page=per_page, search=search, estado=estado,
+                sort_by=sort_by, sort_order=sort_order
+            )
         
         return jsonify({
             "success": True,
@@ -91,7 +65,8 @@ def get_reclutas():
             "page": page,
             "per_page": per_page,
             "has_next": pagination.has_next,
-            "has_prev": pagination.has_prev
+            "has_prev": pagination.has_prev,
+            "user_role": getattr(current_user, 'rol', 'user')  # AGREGAR ROL
         })
     except Exception as e:
         current_app.logger.error(f"Error al obtener reclutas: {str(e)}")

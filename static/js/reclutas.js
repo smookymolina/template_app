@@ -20,6 +20,34 @@ const Reclutas = {
     currentReclutaId: null,
     asesores: [], // Añadido para almacenar la lista de asesores
 
+configureUIForRole: function() {
+    const role = this.userRole || Auth.getUserRole() || 'user';
+    this.userRole = role;
+    
+    if (role !== 'admin') {
+        // Ocultar selectores de asesor en formularios
+        const asesorSelectors = document.querySelectorAll('#recluta-asesor, #edit-recluta-asesor');
+        asesorSelectors.forEach(selector => {
+            const formGroup = selector ? selector.closest('.form-group') : null;
+            if (formGroup) formGroup.style.display = 'none';
+        });
+        
+        // MODIFICAR: Ocultar columna "Asesor" en header
+        const asesorHeader = document.querySelector('#reclutas-table th:nth-child(7)');
+        if (asesorHeader) asesorHeader.style.display = 'none';
+        
+        // AGREGAR: CSS para ocultar todas las celdas de asesor
+        const style = document.createElement('style');
+        style.textContent = `
+            #reclutas-table th:nth-child(7),
+            #reclutas-table td:nth-child(7) { 
+                display: none !important; 
+            }
+        `;
+        document.head.appendChild(style);
+    }
+},
+
      /**
  * Inicializa todos los elementos y eventos de gestión de reclutas
  */
@@ -146,6 +174,7 @@ init: async function() {
             if (data.success) {
                 this.reclutas = data.reclutas;
                 this.totalPages = data.pages || 1;
+                this.lastApiResponse = data;
                 return this.reclutas;
             } else {
                 throw new Error(data.message || 'Error al obtener reclutas');
@@ -193,31 +222,29 @@ init: async function() {
      * Carga y muestra la lista de reclutas
      */
     loadAndDisplayReclutas: async function() {
-        try {
-            console.log('Cargando reclutas...');
-            const container = document.getElementById('reclutas-list');
-            
-            if (!container) {
-                console.error('No se encontró el contenedor de reclutas en el DOM');
-                return;
-            }
-            
-            // Mostrar estado de carga
-            container.innerHTML = '<tr><td colspan="7" style="text-align:center"><i class="fas fa-spinner fa-spin"></i> Cargando reclutas...</td></tr>';
-            
-            // Cargar reclutas desde la API
-            const reclutas = await this.loadReclutas();
-            
-            // Mostrar reclutas en la tabla
-            this.renderReclutasTable(container);
-            
-            // Actualizar paginación
-            this.updatePagination();
-            
-            console.log(`Se cargaron ${reclutas.length} reclutas`);
-            return reclutas;
-        } catch (error) {
-            console.error('Error al cargar y mostrar reclutas:', error);
+    try {
+        console.log('Cargando reclutas...');
+        const container = document.getElementById('reclutas-list');
+        
+        if (!container) return;
+        
+        container.innerHTML = '<tr><td colspan="8" style="text-align:center"><i class="fas fa-spinner fa-spin"></i> Cargando reclutas...</td></tr>';
+        
+        const reclutas = await this.loadReclutas();
+        
+        // AGREGAR: Obtener rol del usuario desde la respuesta
+        if (this.lastApiResponse && this.lastApiResponse.user_role) {
+            this.userRole = this.lastApiResponse.user_role;
+            this.configureUIForRole();
+        }
+        
+        this.renderReclutasTable(container);
+        this.updatePagination();
+        
+        console.log(`Se cargaron ${reclutas.length} reclutas`);
+        return reclutas;
+    } catch (error) {
+        console.error('Error al cargar y mostrar reclutas:', error);
             
             // Mostrar mensaje de error en la tabla
             const container = document.getElementById('reclutas-list');
@@ -569,85 +596,68 @@ init: async function() {
      * @param {HTMLElement} container - Elemento contenedor de la tabla
      */
     renderReclutasTable: function(container) {
-        if (!container) {
-            console.error('Container no proporcionado para renderizar tabla');
-            return;
-        }
-
-        container.innerHTML = '';
-
-        if (!this.reclutas || this.reclutas.length === 0) {
-            container.innerHTML = `
-                <tr>
-                    <td colspan="8" class="text-center" style="padding: 20px;">
-                        <i class="fas fa-users" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i><br>
-                        No se encontraron reclutas. ¡Agrega tu primer recluta!
-                    </td>
-                </tr>
-            `; 
-            return;
-        }
-
-        this.reclutas.forEach(recluta => {
-            const row = document.createElement('tr');
-
-            // Determinar URL de la foto
-            const fotoUrl = recluta.foto_url ?
-                (recluta.foto_url.startsWith('http') ?
-                    recluta.foto_url :
-                    (recluta.foto_url === 'default_profile.jpg' ?
-                        "/api/placeholder/40/40" :
-                        `/${recluta.foto_url}`)) :
-                "/api/placeholder/40/40";
-
-            // Crear badge de estado
-            const estadoBadge = UI.createBadge(recluta.estado, CONFIG.ESTADOS_RECLUTA);
-
-            row.innerHTML = `
-                <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto" onerror="this.src='/api/placeholder/40/40'"></td>
-                <td>${recluta.nombre}</td>
-                <td>${recluta.email}</td>
-                <td>${recluta.telefono}</td>
-                <td><code>${recluta.folio || 'Sin folio'}</code></td>
-                <td id="estado-cell-${recluta.id}"></td>
-                <td>${recluta.asesor_nombre || 'No asignado'}</td>
-                <td>
-                    <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="action-btn edit-btn" data-id="${recluta.id}" title="Editar">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="action-btn delete-btn" data-id="${recluta.id}" title="Eliminar">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    if (!this.reclutas || this.reclutas.length === 0) {
+        container.innerHTML = `
+            <tr>
+                <td colspan="${this.userRole === 'admin' ? '8' : '7'}" class="text-center" style="padding: 20px;">
+                    <i class="fas fa-users" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i><br>
+                    No se encontraron reclutas. ¡Agrega tu primer recluta!
                 </td>
-            `;
+            </tr>
+        `;
+        return;
+    }
 
-            container.appendChild(row);
+    this.reclutas.forEach(recluta => {
+        const row = document.createElement('tr');
+        const fotoUrl = recluta.foto_url || "/api/placeholder/40/40";
+        const estadoBadge = UI.createBadge(recluta.estado, CONFIG.ESTADOS_RECLUTA);
+        
+        // MODIFICAR: Condicional para columna asesor
+        const asesorColumn = this.userRole === 'admin' ? 
+            `<td>${recluta.asesor_nombre || 'No asignado'}</td>` : '';
+        
+        row.innerHTML = `
+            <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto" onerror="this.src='/api/placeholder/40/40'"></td>
+            <td>${recluta.nombre}</td>
+            <td>${recluta.email}</td>
+            <td>${recluta.telefono}</td>
+            <td><code>${recluta.folio || 'Sin folio'}</code></td>
+            <td id="estado-cell-${recluta.id}"></td>
+            ${asesorColumn}
+            <td>
+                <button class="action-btn view-btn" data-id="${recluta.id}" title="Ver detalles">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="action-btn edit-btn" data-id="${recluta.id}" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="action-btn delete-btn" data-id="${recluta.id}" title="Eliminar">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        `;
+        
+        container.appendChild(row);
+        
+        // Añadir badge de estado
+        const estadoCell = document.getElementById(`estado-cell-${recluta.id}`);
+        if (estadoCell) estadoCell.appendChild(estadoBadge);
+        
+        // Configurar eventos de botones...
+        const viewBtn = row.querySelector('.view-btn');
+        const editBtn = row.querySelector('.edit-btn'); 
+        const deleteBtn = row.querySelector('.delete-btn');
 
-            // Añadir badge de estado al TD correspondiente
-            const estadoCell = document.getElementById(`estado-cell-${recluta.id}`);
-            if (estadoCell) {
-                estadoCell.appendChild(estadoBadge);
-            }
-
-            // Configurar botones de acción usando arrow functions para mantener el contexto
-            const viewBtn = row.querySelector('.view-btn');
-            const editBtn = row.querySelector('.edit-btn'); 
-            const deleteBtn = row.querySelector('.delete-btn');
-
-            if (viewBtn) {
-                viewBtn.addEventListener('click', () => this.viewRecluta(recluta.id));
-            }
-            if (editBtn) {
-                editBtn.addEventListener('click', () => this.editRecluta(recluta.id));
-            }
-            if (deleteBtn) {
-                deleteBtn.addEventListener('click', () => this.confirmDeleteRecluta(recluta.id));
-            }
-        });
-    },
+        if (viewBtn) viewBtn.addEventListener('click', () => this.viewRecluta(recluta.id));
+        if (editBtn) editBtn.addEventListener('click', () => this.editRecluta(recluta.id));
+        if (deleteBtn) deleteBtn.addEventListener('click', () => this.confirmDeleteRecluta(recluta.id));
+    });
+},
 
     /**
      * Configura los botones de acción para un recluta
