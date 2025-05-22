@@ -21,22 +21,36 @@ const Reclutas = {
     asesores: [], // Añadido para almacenar la lista de asesores
 
      /**
-     * Inicializa todos los elementos y eventos de gestión de reclutas
-     */
-    init: async function() {
-        try {
-            // Asegurarse de tener información actualizada de rol antes de configurar UI
-            await this.fetchUserRoleAndPermissions();
-            
-            // Configurar la UI según el rol
-            this.configureUIForRole();
-            
-            // ... [resto del código de inicialización] ...
-        } catch (error) {
-            console.error('Error al inicializar módulo de reclutas:', error);
-            showError('Error al cargar datos de reclutas: ' + error.message);
+ * Inicializa todos los elementos y eventos de gestión de reclutas
+ */
+init: async function() {
+    try {
+        console.log('Iniciando módulo de reclutas...');
+        
+        // Asegurarse de tener información actualizada de rol antes de configurar UI
+        await this.fetchUserRoleAndPermissions();
+        
+        // Configurar la UI según el rol
+        this.configureUIForRole();
+        
+        // Cargar asesores si es necesario
+        if (this.userRole === 'admin') {
+            await this.loadAsesores();
+            this.populateAsesorSelectors();
         }
-    },
+        
+        // Inicializar eventos de la interfaz
+        this.initFilters();
+        this.initAddReclutaForm();
+        
+        // ✅ REMOVED: Ya no cargamos datos aquí, se hace desde loginSuccess()
+        console.log('Módulo de reclutas inicializado correctamente');
+        
+    } catch (error) {
+        console.error('Error al inicializar módulo de reclutas:', error);
+        throw new Error('Error al inicializar reclutas: ' + error.message);
+    }
+},
 
     /**
      * Carga la lista de asesores disponibles
@@ -266,60 +280,6 @@ const Reclutas = {
         
         console.log(`UI configurada para rol: ${role}`);
     },
-
-    /**
- * Carga y muestra la lista de reclutas
- */
-loadAndDisplayReclutas: async function() {
-    try {
-        console.log('Cargando reclutas...');
-        const container = document.getElementById('reclutas-list');
-        
-        if (!container) {
-            console.error('No se encontró el contenedor de reclutas en el DOM');
-            return;
-        }
-        
-        // Mostrar estado de carga
-        container.innerHTML = '<tr><td colspan="7" style="text-align:center"><i class="fas fa-spinner fa-spin"></i> Cargando reclutas...</td></tr>';
-        
-        // Cargar reclutas desde la API
-        const reclutas = await this.loadReclutas();
-        
-        // Mostrar reclutas en la tabla
-        this.renderReclutasTable(container);
-        
-        // Actualizar paginación
-        this.updatePagination();
-        
-        console.log(`Se cargaron ${reclutas.length} reclutas`);
-        return reclutas;
-    } catch (error) {
-        console.error('Error al cargar y mostrar reclutas:', error);
-        
-        // Mostrar mensaje de error en la tabla
-        const container = document.getElementById('reclutas-list');
-        if (container) {
-            container.innerHTML = `
-                <tr>
-                    <td colspan="7" class="text-center">
-                        <i class="fas fa-exclamation-circle text-danger"></i> 
-                        Error al cargar reclutas. <button class="btn-link retry-load">Reintentar</button>
-                    </td>
-                </tr>
-            `;
-            
-            // Añadir evento para reintentar carga
-            const retryButton = container.querySelector('.retry-load');
-            if (retryButton) {
-                retryButton.addEventListener('click', () => this.loadAndDisplayReclutas());
-            }
-        }
-        
-        showError('Error al cargar reclutas: ' + error.message);
-        throw error;
-    }
-},
 
     /**
      * Obtiene datos de un recluta específico
@@ -589,15 +549,24 @@ loadAndDisplayReclutas: async function() {
      * Renderiza la lista de reclutas en una tabla
      * @param {HTMLElement} container - Elemento contenedor de la tabla
      */
-    renderReclutasTable: function(container) {
-    if (!container) return;
+    /**
+ * Renderiza la lista de reclutas en una tabla
+ * @param {HTMLElement} container - Elemento contenedor de la tabla
+ */
+renderReclutasTable: function(container) {
+    if (!container) {
+        console.error('Container no proporcionado para renderizar tabla');
+        return;
+    }
 
     container.innerHTML = '';
 
     if (!this.reclutas || this.reclutas.length === 0) {
         container.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center"> No se encontraron reclutas. ¡Agrega tu primer recluta!
+                <td colspan="8" class="text-center" style="padding: 20px;">
+                    <i class="fas fa-users" style="font-size: 48px; opacity: 0.3; margin-bottom: 10px;"></i><br>
+                    No se encontraron reclutas. ¡Agrega tu primer recluta!
                 </td>
             </tr>
         `; 
@@ -620,7 +589,7 @@ loadAndDisplayReclutas: async function() {
         const estadoBadge = UI.createBadge(recluta.estado, CONFIG.ESTADOS_RECLUTA);
 
         row.innerHTML = `
-            <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto"></td>
+            <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto" onerror="this.src='/api/placeholder/40/40'"></td>
             <td>${recluta.nombre}</td>
             <td>${recluta.email}</td>
             <td>${recluta.telefono}</td>

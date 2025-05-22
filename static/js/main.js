@@ -216,52 +216,53 @@ async function login() {
  * @param {Object} usuario - Datos del usuario autenticado
  */
 async function loginSuccess(usuario) {
-    // Actualizar usuario actual
-    Auth.updateUserData(usuario);
-    
-    // Obtener rol y permisos del usuario
     try {
+        // Actualizar usuario actual
+        Auth.updateUserData(usuario);
+        
+        // Obtener rol y permisos del usuario ANTES de inicializar módulos
         await Auth.fetchUserRole();
-    } catch (error) {
-        console.error('Error al obtener rol del usuario:', error);
-        // Continuar, ya que podría ser un problema temporal
-    }
-    
-    // Asegurarnos de que los elementos existen antes de interactuar con ellos
-    const loginSection = document.getElementById('login-section');
-    const dashboardSection = document.getElementById('dashboard-section');
-    
-    if (!loginSection || !dashboardSection) {
-        console.error('Error: Elementos del DOM no encontrados');
-        showError('Error al cargar la interfaz. Por favor, recarga la página.');
-        return;
-    }
-    
-    // Cambiar de pantalla: ocultar login, mostrar dashboard
-    loginSection.style.display = 'none';
-    dashboardSection.style.display = 'block';
-    
-    try {
-        // Actualizar información de usuario en la UI solo si los elementos existen
+        
+        // Asegurarnos de que los elementos existen antes de interactuar con ellos
+        const loginSection = document.getElementById('login-section');
+        const dashboardSection = document.getElementById('dashboard-section');
+        
+        if (!loginSection || !dashboardSection) {
+            console.error('Error: Elementos del DOM no encontrados');
+            showError('Error al cargar la interfaz. Por favor, recarga la página.');
+            return;
+        }
+        
+        // Cambiar de pantalla: ocultar login, mostrar dashboard
+        loginSection.style.display = 'none';
+        dashboardSection.style.display = 'block';
+        
+        // Actualizar información de usuario en la UI
         updateUserInfo(usuario);
         
         // Inicializar módulos principales solo la primera vez
         if (!appState.initialized) {
             console.log('Inicializando módulos principales...');
-            // Inicializar uno por uno con manejo de errores
+            
+            // Inicializar módulos uno por uno con manejo de errores y ESPERANDO cada uno
             try {
                 if (typeof Reclutas !== 'undefined' && Reclutas.init) {
                     console.log('Inicializando módulo de reclutas...');
-                    Reclutas.init();
+                    await Reclutas.init(); // ✅ ESPERAMOS la inicialización completa
+                    
+                    // ✅ CARGAR DATOS INICIALES después de la inicialización
+                    console.log('Cargando datos iniciales de reclutas...');
+                    await Reclutas.loadAndDisplayReclutas();
                 }
             } catch (e) {
                 console.error('Error al inicializar módulo de reclutas:', e);
+                showError('Error al cargar reclutas: ' + e.message);
             }
             
             try {
                 if (typeof Calendar !== 'undefined' && Calendar.init) {
                     console.log('Inicializando módulo de calendario...');
-                    Calendar.init();
+                    await Calendar.init(); // ✅ ESPERAMOS si es async
                 }
             } catch (e) {
                 console.error('Error al inicializar módulo de calendario:', e);
@@ -269,19 +270,33 @@ async function loginSuccess(usuario) {
             
             try {
                 console.log('Cargando estadísticas...');
-                loadEstadisticas();
+                await loadEstadisticas(); // ✅ ESPERAMOS si es async
             } catch (e) {
                 console.error('Error al cargar estadísticas:', e);
             }
             
             appState.initialized = true;
+        } else {
+            // Si ya está inicializado, solo recargar datos de reclutas
+            try {
+                console.log('Recargando datos de reclutas...');
+                await Reclutas.loadAndDisplayReclutas();
+            } catch (e) {
+                console.error('Error al recargar reclutas:', e);
+                showError('Error al cargar reclutas: ' + e.message);
+            }
         }
         
         // Mostrar notificación de bienvenida
         showSuccess(`¡Bienvenido ${usuario.nombre || usuario.email}!`);
+        
     } catch (error) {
         console.error('Error en loginSuccess:', error);
-        showError('Error al cargar el dashboard. Por favor, recarga la página.');
+        showError('Error al cargar el dashboard: ' + error.message);
+        
+        // En caso de error crítico, mantener en login
+        document.getElementById('login-section').style.display = 'block';
+        document.getElementById('dashboard-section').style.display = 'none';
     }
 }
 
