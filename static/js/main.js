@@ -217,13 +217,14 @@ async function login() {
  */
 async function loginSuccess(usuario) {
     try {
-        // Actualizar usuario actual
+        console.log('=== INICIO LOGIN SUCCESS ===');
+        console.log('Usuario recibido:', usuario);
+        
+        // 1. Actualizar usuario actual PRIMERO
         Auth.updateUserData(usuario);
+        console.log('Usuario actualizado en Auth:', Auth.currentUser);
         
-        // Obtener rol y permisos del usuario ANTES de inicializar módulos
-        await Auth.fetchUserRole();
-        
-        // Asegurarnos de que los elementos existen antes de interactuar con ellos
+        // 2. Asegurar elementos del DOM
         const loginSection = document.getElementById('login-section');
         const dashboardSection = document.getElementById('dashboard-section');
         
@@ -233,90 +234,81 @@ async function loginSuccess(usuario) {
             return;
         }
         
-        // Cambiar de pantalla: ocultar login, mostrar dashboard
+        // 3. Cambiar de pantalla ANTES de configurar UI
         loginSection.style.display = 'none';
         dashboardSection.style.display = 'block';
         
-        // Actualizar información de usuario en la UI
+        // 4. Configurar UI según rol INMEDIATAMENTE
+        const userRole = usuario.rol || 'admin';
+        console.log('Configurando UI para rol:', userRole);
+        configureDashboardForRole(userRole);
+        
+        // 5. Actualizar información de usuario
         updateUserInfo(usuario);
         
-        // Inicializar módulos principales solo la primera vez
+        // 6. Inicializar módulos
         if (!appState.initialized) {
             console.log('Inicializando módulos principales...');
             
-            // Inicializar módulos uno por uno con manejo de errores y ESPERANDO cada uno
+            // Inicializar Reclutas con rol específico
             try {
                 if (typeof Reclutas !== 'undefined' && Reclutas.init) {
                     console.log('Inicializando módulo de reclutas...');
+                    // Pasar el rol al módulo de reclutas
+                    Reclutas.userRole = userRole;
                     await Reclutas.init();
-console.log('Reclutas inicializado, configurando eventos globales...');
-
-// Configurar eventos globales después de la inicialización
-document.addEventListener('click', function(e) {
-    // Botones de acción en tabla de reclutas
-    if (e.target.closest('.view-btn')) {
-        const id = parseInt(e.target.closest('.view-btn').dataset.id);
-        if (id) Reclutas.viewRecluta(id);
-    }
-    else if (e.target.closest('.edit-btn')) {
-        const id = parseInt(e.target.closest('.edit-btn').dataset.id);
-        if (id) Reclutas.viewRecluta(id).then(() => setTimeout(() => Reclutas.enableEditMode(), 200));
-    }
-    else if (e.target.closest('.delete-btn')) {
-        const id = parseInt(e.target.closest('.delete-btn').dataset.id);
-        if (id) Reclutas.confirmDeleteRecluta(id);
-    }
-});
+                    console.log('Reclutas inicializado correctamente');
                     
-                    // ✅ CARGAR DATOS INICIALES después de la inicialización
-                    console.log('Cargando datos iniciales de reclutas...');
+                    // Cargar datos iniciales
                     await Reclutas.loadAndDisplayReclutas();
+                    console.log('Datos de reclutas cargados');
                 }
             } catch (e) {
                 console.error('Error al inicializar módulo de reclutas:', e);
                 showError('Error al cargar reclutas: ' + e.message);
             }
             
+            // Inicializar otros módulos
             try {
                 if (typeof Calendar !== 'undefined' && Calendar.init) {
-                    console.log('Inicializando módulo de calendario...');
-                    await Calendar.init(); // ✅ ESPERAMOS si es async
+                    await Calendar.init();
                 }
             } catch (e) {
-                console.error('Error al inicializar módulo de calendario:', e);
+                console.error('Error al inicializar calendario:', e);
             }
             
             try {
-                console.log('Cargando estadísticas...');
-                await loadEstadisticas(); // ✅ ESPERAMOS si es async
+                await loadEstadisticas();
             } catch (e) {
                 console.error('Error al cargar estadísticas:', e);
             }
             
             appState.initialized = true;
         } else {
-            // Si ya está inicializado, solo recargar datos de reclutas
+            // Solo recargar datos si ya está inicializado
             try {
-                console.log('Recargando datos de reclutas...');
                 await Reclutas.loadAndDisplayReclutas();
             } catch (e) {
                 console.error('Error al recargar reclutas:', e);
-                showError('Error al cargar reclutas: ' + e.message);
             }
         }
         
-        // Mostrar notificación de bienvenida
-        showSuccess(`¡Bienvenido ${usuario.nombre || usuario.email}!`);
+        // 7. Mostrar saludo personalizado según rol
+        const welcomeMessage = getWelcomeMessage(usuario);
+        showSuccess(welcomeMessage);
+        
+        console.log('=== LOGIN SUCCESS COMPLETADO ===');
         
     } catch (error) {
         console.error('Error en loginSuccess:', error);
         showError('Error al cargar el dashboard: ' + error.message);
         
-        // En caso de error crítico, mantener en login
+        // En caso de error crítico, volver al login
         document.getElementById('login-section').style.display = 'block';
         document.getElementById('dashboard-section').style.display = 'none';
     }
 }
+
 
 /**
  * Actualiza la información del usuario en la interfaz
@@ -357,50 +349,7 @@ function updateUserInfo(usuario) {
 }
 
 /**
- * ✅ NUEVA FUNCIÓN: Configura el dashboard según el rol del usuario 
- * @param {string} rol - Rol del usuario ('admin' o 'asesor')
- */
-function configureDashboardForRole(rol) {
-    const dashboardNav = document.querySelector('.dashboard-nav ul');
-    const profileRole = document.querySelector('.profile-role');
-    
-    if (!dashboardNav) return;
-    
-    // Actualizar texto del rol
-    if (profileRole) {
-        profileRole.textContent = rol === 'admin' ? 'Administrador' : 'Asesor de Reclutamiento';
-    }
-    
-    if (rol === 'admin') {
-        // Dashboard completo para administradores
-        dashboardNav.innerHTML = `
-            <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Gestión de Reclutas</a></li>
-            <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
-            <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Estadísticas</a></li>
-            <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Configuración</a></li>
-        `;
-        
-        // Mostrar mensaje de bienvenida para admin
-        showAdminWelcome();
-    } else {
-        // Dashboard simplificado para asesores
-        dashboardNav.innerHTML = `
-            <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Mis Reclutas</a></li>
-            <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Mis Entrevistas</a></li>
-            <li><a href="#" data-section="timeline-section"><i class="fas fa-stream"></i> Estado del Proceso</a></li>
-            <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Mi Perfil</a></li>
-        `;
-        
-        // Mostrar mensaje de bienvenida para asesor
-        showAsesorWelcome();
-    }
-    
-    // Re-inicializar eventos de navegación
-    UI.initNavigation();
-}
-
-/**
- * ✅ NUEVA FUNCIÓN: Muestra mensaje de bienvenida para administradores
+ * Muestra mensaje de bienvenida para administradores
  */
 function showAdminWelcome() {
     const estadisticasSection = document.getElementById('estadisticas-section');
@@ -420,34 +369,6 @@ function showAdminWelcome() {
             <p>Gestiona todos los reclutas, asigna asesores, ve estadísticas completas y programa entrevistas para todo el equipo.</p>
         `;
         estadisticasSection.insertBefore(welcomeDiv, estadisticasSection.firstChild);
-    }
-}
-
-/**
- * ✅ NUEVA FUNCIÓN: Muestra mensaje de bienvenida para asesores
- */
-function showAsesorWelcome() {
-    const reclutasSection = document.getElementById('reclutas-section');
-    if (reclutasSection && !reclutasSection.querySelector('.asesor-welcome')) {
-        const welcomeDiv = document.createElement('div');
-        welcomeDiv.className = 'asesor-welcome';
-        welcomeDiv.style.cssText = `
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: white;
-            padding: 15px;
-            border-radius: var(--border-radius);
-            margin-bottom: 20px;
-            text-align: center;
-        `;
-        welcomeDiv.innerHTML = `
-            <h4><i class="fas fa-handshake"></i> Panel de Asesor de Reclutamiento</h4>
-            <p>Gestiona tus reclutas asignados, programa entrevistas y haz seguimiento a los procesos de selección.</p>
-        `;
-        
-        const sectionHeader = reclutasSection.querySelector('.section-header');
-        if (sectionHeader && sectionHeader.nextSibling) {
-            reclutasSection.insertBefore(welcomeDiv, sectionHeader.nextSibling);
-        }
     }
 }
 
@@ -495,31 +416,7 @@ function configureDashboardForRole(rol) {
 }
 
 /**
- * ✅ NUEVA FUNCIÓN: Muestra mensaje de bienvenida para administradores
- */
-function showAdminWelcome() {
-    const estadisticasSection = document.getElementById('estadisticas-section');
-    if (estadisticasSection && !estadisticasSection.querySelector('.admin-welcome')) {
-        const welcomeDiv = document.createElement('div');
-        welcomeDiv.className = 'admin-welcome';
-        welcomeDiv.style.cssText = `
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-            color: white;
-            padding: 20px;
-            border-radius: var(--border-radius);
-            margin-bottom: 20px;
-            text-align: center;
-        `;
-        welcomeDiv.innerHTML = `
-            <h3><i class="fas fa-crown"></i> Panel de Administración</h3>
-            <p>Gestiona todos los reclutas, asigna asesores, ve estadísticas completas y programa entrevistas para todo el equipo.</p>
-        `;
-        estadisticasSection.insertBefore(welcomeDiv, estadisticasSection.firstChild);
-    }
-}
-
-/**
- * ✅ NUEVA FUNCIÓN: Muestra mensaje de bienvenida para asesores
+ * Muestra mensaje de bienvenida para asesores
  */
 function showAsesorWelcome() {
     const reclutasSection = document.getElementById('reclutas-section');

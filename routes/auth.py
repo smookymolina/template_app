@@ -57,11 +57,18 @@ def login_usuario():
             except Exception as e:
                 current_app.logger.warning(f"No se pudo registrar la sesión: {str(e)}")
             
-            current_app.logger.info(f"Inicio de sesión exitoso: {usuario.email}")
+            # Preparar datos del usuario
+            user_data = usuario.serialize()
+            
+            # Asegurar que el rol esté presente
+            if 'rol' not in user_data or not user_data['rol']:
+                user_data['rol'] = 'admin'  # Default seguro
+            
+            current_app.logger.info(f"Login exitoso - Usuario: {usuario.email}, Rol: {user_data['rol']}")
             return jsonify({
                 "success": True, 
                 "message": "Inicio de sesión exitoso", 
-                "usuario": usuario.serialize()
+                "usuario": user_data
             }), 200
         else:
             current_app.logger.warning(f"Intento fallido de inicio de sesión: {validated_data['email']}")

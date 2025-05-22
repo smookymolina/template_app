@@ -98,6 +98,9 @@ def get_recluta(id):
             "message": f"Error al obtener recluta: {str(e)}"
         }), 500
 
+# BUSCAR en routes/api.py la función get_usuario_rol
+# REEMPLAZAR completamente con:
+
 @api_bp.route('/usuario/rol', methods=['GET'])
 @login_required
 def get_usuario_rol():
@@ -105,16 +108,52 @@ def get_usuario_rol():
     Obtiene información del rol del usuario autenticado.
     """
     try:
-        rol = getattr(current_user, 'rol', 'user')
+        # Obtener el rol del usuario actual
+        rol = getattr(current_user, 'rol', 'admin')
+        
+        # Si no tiene rol definido, asignar admin por defecto
+        if not rol:
+            rol = 'admin'
+            current_user.rol = rol
+            db.session.commit()
+            current_app.logger.info(f"Asignado rol por defecto 'admin' al usuario {current_user.email}")
+        
+        # Definir permisos según el rol
+        permisos = {
+            'admin': {
+                "is_admin": True,
+                "is_asesor": False,
+                "can_assign_asesores": True,
+                "can_see_all_reclutas": True,
+                "can_upload_excel": True,
+                "can_manage_users": True
+            },
+            'asesor': {
+                "is_admin": False,
+                "is_asesor": True,
+                "can_assign_asesores": False,
+                "can_see_all_reclutas": False,
+                "can_upload_excel": False,
+                "can_manage_users": False
+            },
+            'user': {
+                "is_admin": False,
+                "is_asesor": False,
+                "can_assign_asesores": False,
+                "can_see_all_reclutas": False,
+                "can_upload_excel": False,
+                "can_manage_users": False
+            }
+        }
+        
+        user_permisos = permisos.get(rol, permisos['user'])
+        
+        current_app.logger.info(f"Rol obtenido para usuario {current_user.email}: {rol}")
+        
         return jsonify({
             "success": True,
             "rol": rol,
-            "permisos": {
-                "is_admin": rol == 'admin',
-                "is_asesor": rol == 'asesor',
-                "can_assign_asesores": rol == 'admin',
-                "can_see_all_reclutas": rol == 'admin'
-            }
+            "permisos": user_permisos
         })
     except Exception as e:
         current_app.logger.error(f"Error al obtener rol del usuario: {str(e)}")

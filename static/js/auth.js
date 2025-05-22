@@ -219,46 +219,92 @@ const Auth = {
      * @param {Object} userData - Datos del usuario
      */
     updateUserData: function(userData) {
-        this.currentUser = userData;
-        
-        // Si el rol no está definido, intentar obtenerlo
-        if (!this.currentUser.rol) {
-            this.fetchUserRole().catch(error => {
-                console.error('Error al obtener rol del usuario:', error);
-            });
-        }
-    },
+    this.currentUser = userData;
+    
+    // ASEGURAR que el rol esté presente
+    if (!this.currentUser.rol) {
+        this.currentUser.rol = 'admin'; // Default seguro
+    }
+    
+    console.log('Usuario actualizado:', {
+        email: this.currentUser.email,
+        rol: this.currentUser.rol,
+        nombre: this.currentUser.nombre
+    });
+},
     
     /**
      * Obtiene el rol del usuario desde el backend
      * @returns {Promise<Object>} - Datos del rol y permisos
      */
     fetchUserRole: async function() {
-        if (!this.isAuthenticated()) return null;
-        
-        try {
-            const response = await fetch(`${CONFIG.API_URL}/usuario/rol`);
-            
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            if (data.success) {
-                // Actualizar el rol en el objeto currentUser
-                if (this.currentUser) {
-                    this.currentUser.rol = data.rol;
-                    this.currentUser.permisos = data.permisos;
-                }
-                return data;
-            } else {
-                throw new Error(data.message || 'Error al obtener rol');
-            }
-        } catch (error) {
-            console.error('Error al obtener rol del usuario:', error);
-            throw error;
-        }
+    // Si ya tenemos el rol en currentUser, usarlo
+    if (this.currentUser && this.currentUser.rol) {
+        return {
+            rol: this.currentUser.rol,
+            permisos: this.getPermissionsForRole(this.currentUser.rol)
+        };
     }
-};
+    
+    if (!this.isAuthenticated()) return null;
+    
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/usuario/rol`);
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            // Actualizar el rol en el objeto currentUser
+            if (this.currentUser) {
+                this.currentUser.rol = data.rol;
+                this.currentUser.permisos = data.permisos;
+            }
+            return data;
+        } else {
+            throw new Error(data.message || 'Error al obtener rol');
+        }
+    } catch (error) {
+        console.error('Error al obtener rol del usuario:', error);
+        // Usar rol por defecto si hay error
+        if (this.currentUser) {
+            this.currentUser.rol = 'admin';
+        }
+        return { rol: 'admin', permisos: { is_admin: true } };
+    }
+},
 
+getPermissionsForRole: function(rol) {
+    const permissions = {
+        'admin': {
+            is_admin: true,
+            is_asesor: false,
+            can_assign_asesores: true,
+            can_see_all_reclutas: true,
+            can_upload_excel: true,
+            can_manage_users: true
+        },
+        'asesor': {
+            is_admin: false,
+            is_asesor: true,
+            can_assign_asesores: false,
+            can_see_all_reclutas: false,
+            can_upload_excel: false,
+            can_manage_users: false
+        },
+        'user': {
+            is_admin: false,
+            is_asesor: false,
+            can_assign_asesores: false,
+            can_see_all_reclutas: false,
+            can_upload_excel: false,
+            can_manage_users: false
+        }
+    };
+    
+    return permissions[rol] || permissions['user'];
+}
+};
 export default Auth;

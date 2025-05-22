@@ -193,20 +193,43 @@ def initialize_database(app):
     
     # Crear usuario admin por defecto si no existe
     admin_email = 'admin@example.com'
-    if not Usuario.query.filter_by(email=admin_email).first():
-        admin = Usuario(email=admin_email)
+    admin_user = Usuario.query.filter_by(email=admin_email).first()
+    if not admin_user:
+        admin = Usuario(
+            email=admin_email,
+            nombre='Administrador Principal',
+            rol='admin'  # Asegurar que tenga rol admin
+        )
         admin.password = 'admin'  # Se encriptará automáticamente
         db.session.add(admin)
-        db.session.commit()
         app.logger.info(f'Usuario admin creado: {admin_email}')
+    else:
+        # Asegurar que tenga rol admin
+        if not admin_user.rol:
+            admin_user.rol = 'admin'
+            db.session.commit()
+            app.logger.info(f'Rol admin asignado a usuario existente: {admin_email}')
     
     # Crear segundo admin para pruebas
     admin2_email = 'admin2@example.com'
-    if not Usuario.query.filter_by(email=admin2_email).first():
-        admin2 = Usuario(email=admin2_email)
+    admin2_user = Usuario.query.filter_by(email=admin2_email).first()
+    if not admin2_user:
+        admin2 = Usuario(
+            email=admin2_email,
+            nombre='Admin Secundario',
+            rol='admin'  # Asegurar que tenga rol admin
+        )
         admin2.password = 'admin2'  # Se encriptará automáticamente
         db.session.add(admin2)
-        db.session.commit()
         app.logger.info(f'Usuario admin2 creado: {admin2_email}')
+    else:
+        # Asegurar que tenga rol admin
+        if not admin2_user.rol:
+            admin2_user.rol = 'admin'
+            db.session.commit()
+            app.logger.info(f'Rol admin asignado a usuario existente: {admin2_email}')
+    
+    # Commit de cambios
+    db.session.commit()
     
     app.logger.info('Base de datos inicializada correctamente')

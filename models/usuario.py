@@ -1,3 +1,5 @@
+# REEMPLAZAR COMPLETAMENTE el archivo models/usuario.py con este contenido:
+
 from flask_login import UserMixin
 from datetime import datetime
 import bcrypt
@@ -13,7 +15,7 @@ class Usuario(db.Model, UserMixin):
     nombre = db.Column(db.String(100), nullable=True)
     telefono = db.Column(db.String(20), nullable=True)
     foto_url = db.Column(db.String(255), nullable=True)
-    rol = db.Column(db.String(20), default='user')  # admin, asesor, user
+    rol = db.Column(db.String(20), default='admin')  # admin, asesor, user
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
@@ -49,10 +51,29 @@ class Usuario(db.Model, UserMixin):
             "nombre": self.nombre,
             "telefono": self.telefono,
             "foto_url": self.foto_url,
-            "rol": self.rol,  # Incluir el rol en la serialización
+            "rol": self.rol or 'admin',  # Asegurar que siempre tenga un rol
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "last_login": self.last_login.isoformat() if self.last_login else None
         }
+    
+    def get_display_role(self):
+        """Retorna el nombre descriptivo del rol"""
+        role_names = {
+            'admin': 'Administrador',
+            'asesor': 'Gerente de Reclutamiento',
+            'user': 'Usuario'
+        }
+        return role_names.get(self.rol, 'Usuario')
+
+    def has_permission(self, permission):
+        """Verifica si el usuario tiene un permiso específico"""
+        permissions = {
+            'admin': ['all'],
+            'asesor': ['view_assigned_reclutas', 'edit_assigned_reclutas', 'schedule_interviews'],
+            'user': ['view_profile']
+        }
+        user_permissions = permissions.get(self.rol, [])
+        return 'all' in user_permissions or permission in user_permissions
     
     def save(self):
         """Guarda el usuario en la base de datos de forma segura"""

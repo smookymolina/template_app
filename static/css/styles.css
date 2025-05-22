@@ -1865,3 +1865,109 @@ input:checked + .slider:before {
 .dark-mode .modal-info {
     background-color: rgba(0, 123, 255, 0.05);
 }
+
+/* ===== ESTILOS ESPECÍFICOS PARA ROLES ===== */
+
+/* Ocultar elementos para asesores */
+.asesor-view #upload-excel-btn,
+.asesor-view #download-template-btn {
+    display: none !important;
+}
+
+/* Ocultar columna de asesor para asesores */
+.asesor-view #reclutas-table th:nth-child(7),
+.asesor-view #reclutas-table td:nth-child(7) {
+    display: none !important;
+}
+
+/* Mostrar elementos para administradores */
+.admin-view #upload-excel-btn,
+.admin-view #download-template-btn {
+    display: inline-block !important;
+}
+
+/* Estilos para mensajes de bienvenida específicos por rol */
+.admin-welcome {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)) !important;
+    color: white !important;
+    padding: 15px !important;
+    border-radius: var(--border-radius) !important;
+    margin-bottom: 20px !important;
+    text-align: center !important;
+    animation: slideIn 0.5s ease-out;
+}
+
+.asesor-welcome {
+    background: linear-gradient(135deg, #28a745, #20c997) !important;
+    color: white !important;
+    padding: 15px !important;
+    border-radius: var(--border-radius) !important;
+    margin-bottom: 20px !important;
+    text-align: center !important;
+    animation: slideIn 0.5s ease-out;
+}
+
+/* Botones específicos de Excel */
+#upload-excel-btn {
+    background-color: var(--success-color) !important;
+    border-color: var(--success-color) !important;
+}
+
+#upload-excel-btn:hover {
+    background-color: #218838 !important;
+    border-color: #1e7e34 !important;
+}
+
+#download-template-btn {
+    background-color: var(--secondary-color) !important;
+    border-color: var(--secondary-color) !important;
+}
+
+#download-template-btn:hover {
+    background-color: #5a6268 !important;
+    border-color: #545b62 !important;
+}
+
+/* Animación para elementos que aparecen */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Indicadores visuales de rol */
+.profile-role {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* Estilos para elementos de configuración por rol */
+.role-indicator {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.role-indicator.admin {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.role-indicator.asesor {
+    background-color: var(--success-color);
+    color: white;
+}
+
+/* Ocultar selectores de asesor para no-admins */
+.asesor-view .form-group:has(#recluta-asesor),
+.asesor-view .form-group:has(#edit-recluta-asesor) {
+    display: none !important;
+}
