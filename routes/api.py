@@ -924,3 +924,309 @@ def recuperar_folio():
             "success": False, 
             "message": "Error al procesar la solicitud. Inténtelo más tarde."
         }), 500
+
+# ✅ NUEVA RUTA: Importación masiva de reclutas desde Excel
+@api_bp.route('/reclutas/import-excel', methods=['POST'])
+@login_required
+def import_reclutas_excel():
+    """
+    Importa reclutas masivamente desde un archivo Excel.
+    Solo disponible para administradores.
+    """
+    try:
+        # Verificar que el usuario sea administrador
+        if hasattr(current_user, 'rol') and current_user.rol != 'admin':
+            return jsonify({
+                "success": False,
+                "message": "Solo los administradores pueden importar reclutas desde Excel"
+            }), 403
+        
+        # Verificar que se haya enviado un archivo
+        if 'excel_file' not in request.files:
+            return jsonify({
+                "success": False,
+                "message": "No se encontró el archivo Excel"
+            }), 400
+        
+        file = request.files['excel_file']
+        if file.filename == '':
+            return jsonify({
+                "success": False,
+                "message": "No se seleccionó ningún archivo"
+            }), 400
+        
+        # Validar extensión del archivo
+        if not file.filename.lower().endswith(('.xlsx', '.xls')):
+            return jsonify({
+                "success": False,
+                "message": "Solo se permiten archivos Excel (.xlsx, .xls)"
+            }), 400
+        
+        # Procesar el archivo Excel
+        results = process_excel_file(file)
+        
+        current_app.logger.info(f"Importación Excel completada: {results['imported']} reclutas importados, {results['errors']} errores")
+        
+        return jsonify({
+            "success": True,
+            "message": "Importación completada",
+            "processed": results['processed'],
+            "imported": results['imported'],
+            "skipped": results['skipped'],
+            "errors": results['errors'],
+            "error_details": results['error_details']
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error en importación Excel: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al procesar el archivo Excel: {str(e)}"
+        }), 500
+
+def process_excel_file(file):
+    """
+    Procesa el archivo Excel y extrae los datos de reclutas.
+    
+    Args:
+        file: Archivo Excel subido
+        
+    Returns:
+        dict: Resultados del procesamiento
+    """
+    try:
+        import pandas as pd
+        from io import BytesIO
+        
+        # Leer el archivo Excel
+        file_content = BytesIO(file.read())
+        
+        # Intentar leer con pandas
+        try:
+            df = pd.read_excel(file_content, engine='openpyxl')
+        except:
+            # Si falla openpyxl, intentar con xlrd para archivos .xls
+            file_content.seek(0)
+            df = pd.read_excel(file_content, engine='xlrd')
+        
+        # Normalizar nombres de columnas (minúsculas y sin espacios)
+        df.columns = df.columns.str.lower().str.strip().str.replace(' ', '_')
+        
+        # Verificar columnas requeridas
+        required_columns = ['nombre', 'email', 'telefono']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            raise ValueError(f"Faltan las siguientes columnas requeridas: {', '.join(missing_columns)}")
+        
+        # Eliminar filas completamente vacías
+        df = df.dropna(how='all')
+        
+        # Procesar cada fila
+        results = {
+            'processed': len(df),
+            'imported': 0,
+            'skipped': 0,
+            'errors': 0,
+            'error_details': []
+        }
+        
+        for index, row in df.iterrows():
+            try:
+                # Extraer datos básicos
+                recluta_data = {
+                    'nombre': str(row['nombre']).strip() if pd.notna(row['nombre']) else '',
+                    'email': str(row['email']).strip().lower() if pd.notna(row['email']) else '',
+                    'telefono': str(row['telefono']).strip() if pd.notna(row['telefono']) else '',
+                    'puesto': str(row.get('puesto', '')).strip() if pd.notna(row.get('puesto')) else '',
+                    'estado': str(row.get('estado', 'En proceso')).strip() if pd.notna(row.get('estado')) else 'En proceso',
+                    'notas': str(row.get('notas', '')).strip() if pd.notna(row.get('notas')) else ''
+                }
+                
+                # Validaciones básicas
+                if not recluta_data['nombre']:
+                    results['error_details'].append(f"Fila {index + 2}: Nombre es requerido")
+                    results['errors'] += 1
+                    continue
+                
+                if not recluta_data['email']:
+                    results['error_details'].append(f"Fila {index + 2}: Email es requerido")
+                    results['errors'] += 1
+                    continue
+                
+                if not recluta_data['telefono']:
+                    results['error_details'].append(f"Fila {index + 2}: Teléfono es requerido")
+                    results['errors'] += 1
+                    continue
+                
+                # Validar formato de email
+                import re
+                email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                if not re.match(email_pattern, recluta_data['email']):
+                    results['error_details'].append(f"Fila {index + 2}: Email inválido ({recluta_data['email']})")
+                    results['errors'] += 1
+                    continue
+                
+                # Validar estado
+                estados_validos = ['Activo', 'En proceso', 'Rechazado']
+                if recluta_data['estado'] not in estados_validos:
+                    recluta_data['estado'] = 'En proceso'  # Valor por defecto
+                
+                # Verificar si ya existe un recluta con este email
+                existing_recluta = Recluta.query.filter_by(email=recluta_data['email']).first()
+                if existing_recluta:
+                    results['skipped'] += 1
+                    continue
+                
+                # Crear nuevo recluta
+                nuevo_recluta = Recluta(**recluta_data)
+                
+                # Guardar en base de datos
+                try:
+                    nuevo_recluta.save()
+                    results['imported'] += 1
+                except DatabaseError as e:
+                    results['error_details'].append(f"Fila {index + 2}: Error al guardar - {str(e)}")
+                    results['errors'] += 1
+                    
+            except Exception as e:
+                results['error_details'].append(f"Fila {index + 2}: {str(e)}")
+                results['errors'] += 1
+                continue
+        
+        return results
+        
+    except Exception as e:
+        current_app.logger.error(f"Error procesando archivo Excel: {str(e)}")
+        raise ValueError(f"Error al procesar el archivo Excel: {str(e)}")
+
+# ✅ NUEVA RUTA: Descargar plantilla Excel
+@api_bp.route('/reclutas/plantilla-excel', methods=['GET'])
+@login_required
+def download_excel_template():
+    """
+    Genera y descarga una plantilla Excel para importar reclutas.
+    Solo disponible para administradores.
+    """
+    try:
+        # Verificar que el usuario sea administrador
+        if hasattr(current_user, 'rol') and current_user.rol != 'admin':
+            return jsonify({
+                "success": False,
+                "message": "Solo los administradores pueden descargar la plantilla"
+            }), 403
+        
+        try:
+            import pandas as pd
+            from io import BytesIO
+            from flask import send_file
+            
+            # Crear datos de ejemplo para la plantilla
+            template_data = {
+                'nombre': [
+                    'Juan Pérez García',
+                    'María Elena Rodríguez',
+                    'Carlos Alberto Mendoza'
+                ],
+                'email': [
+                    'juan.perez@email.com',
+                    'maria.rodriguez@email.com', 
+                    'carlos.mendoza@email.com'
+                ],
+                'telefono': [
+                    '+52 55 1234-5678',
+                    '55-9876-5432',
+                    '5555551234'
+                ],
+                'puesto': [
+                    'Desarrollador Frontend',
+                    'Diseñadora UX/UI',
+                    'Analista de Datos'
+                ],
+                'estado': [
+                    'En proceso',
+                    'Activo',
+                    'En proceso'
+                ],
+                'notas': [
+                    'Candidato con experiencia en React',
+                    'Portfolio excelente, referencias positivas',
+                    'Conocimientos en Python y SQL'
+                ]
+            }
+            
+            # Crear DataFrame
+            df = pd.DataFrame(template_data)
+            
+            # Crear archivo Excel en memoria
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df.to_excel(writer, sheet_name='Reclutas', index=False)
+                
+                # Obtener el workbook y worksheet para formato
+                workbook = writer.book
+                worksheet = writer.sheets['Reclutas']
+                
+                # Ajustar ancho de columnas
+                for idx, col in enumerate(df.columns):
+                    max_length = max(
+                        df[col].astype(str).map(len).max(),  # max length in column
+                        len(col)  # length of column name
+                    )
+                    worksheet.column_dimensions[chr(65 + idx)].width = min(max_length + 2, 50)
+                
+                # Agregar hoja de instrucciones
+                instructions_data = {
+                    'Campo': ['nombre', 'email', 'telefono', 'puesto', 'estado', 'notas'],
+                    'Requerido': ['SÍ', 'SÍ', 'SÍ', 'No', 'No', 'No'],
+                    'Descripción': [
+                        'Nombre completo del candidato',
+                        'Correo electrónico válido',
+                        'Número de teléfono',
+                        'Puesto al que aplica',
+                        'Estado: "Activo", "En proceso" o "Rechazado"',
+                        'Notas adicionales sobre el candidato'
+                    ],
+                    'Ejemplo': [
+                        'Juan Pérez García',
+                        'juan@email.com',
+                        '55-1234-5678',
+                        'Desarrollador',
+                        'En proceso',
+                        'Experiencia en React'
+                    ]
+                }
+                
+                instructions_df = pd.DataFrame(instructions_data)
+                instructions_df.to_excel(writer, sheet_name='Instrucciones', index=False)
+                
+                # Ajustar columnas de instrucciones
+                inst_worksheet = writer.sheets['Instrucciones']
+                for idx, col in enumerate(instructions_df.columns):
+                    max_length = max(
+                        instructions_df[col].astype(str).map(len).max(),
+                        len(col)
+                    )
+                    inst_worksheet.column_dimensions[chr(65 + idx)].width = min(max_length + 2, 60)
+            
+            output.seek(0)
+            
+            return send_file(
+                output,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name='plantilla_reclutas.xlsx'
+            )
+            
+        except ImportError:
+            return jsonify({
+                "success": False,
+                "message": "Pandas no está instalado. No se puede generar la plantilla Excel."
+            }), 500
+            
+    except Exception as e:
+        current_app.logger.error(f"Error generando plantilla Excel: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al generar plantilla: {str(e)}"
+        }), 500

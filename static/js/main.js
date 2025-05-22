@@ -335,6 +335,9 @@ function updateUserInfo(usuario) {
     if (gerenteName) gerenteName.textContent = usuario.nombre || usuario.email;
     if (dropdownUserName) dropdownUserName.textContent = usuario.nombre || usuario.email;
     
+    // ✅ NUEVO: Configurar dashboard según rol
+    configureDashboardForRole(usuario.rol);
+    
     // Foto de perfil
     const profilePic = document.getElementById('dashboard-profile-pic');
     if (profilePic) {
@@ -351,6 +354,196 @@ function updateUserInfo(usuario) {
     if (userPhone) userPhone.value = usuario.telefono || '';
     
     console.log('Información de usuario actualizada correctamente');
+}
+
+/**
+ * ✅ NUEVA FUNCIÓN: Configura el dashboard según el rol del usuario 
+ * @param {string} rol - Rol del usuario ('admin' o 'asesor')
+ */
+function configureDashboardForRole(rol) {
+    const dashboardNav = document.querySelector('.dashboard-nav ul');
+    const profileRole = document.querySelector('.profile-role');
+    
+    if (!dashboardNav) return;
+    
+    // Actualizar texto del rol
+    if (profileRole) {
+        profileRole.textContent = rol === 'admin' ? 'Administrador' : 'Asesor de Reclutamiento';
+    }
+    
+    if (rol === 'admin') {
+        // Dashboard completo para administradores
+        dashboardNav.innerHTML = `
+            <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Gestión de Reclutas</a></li>
+            <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
+            <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Estadísticas</a></li>
+            <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Configuración</a></li>
+        `;
+        
+        // Mostrar mensaje de bienvenida para admin
+        showAdminWelcome();
+    } else {
+        // Dashboard simplificado para asesores
+        dashboardNav.innerHTML = `
+            <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Mis Reclutas</a></li>
+            <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Mis Entrevistas</a></li>
+            <li><a href="#" data-section="timeline-section"><i class="fas fa-stream"></i> Estado del Proceso</a></li>
+            <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Mi Perfil</a></li>
+        `;
+        
+        // Mostrar mensaje de bienvenida para asesor
+        showAsesorWelcome();
+    }
+    
+    // Re-inicializar eventos de navegación
+    UI.initNavigation();
+}
+
+/**
+ * ✅ NUEVA FUNCIÓN: Muestra mensaje de bienvenida para administradores
+ */
+function showAdminWelcome() {
+    const estadisticasSection = document.getElementById('estadisticas-section');
+    if (estadisticasSection && !estadisticasSection.querySelector('.admin-welcome')) {
+        const welcomeDiv = document.createElement('div');
+        welcomeDiv.className = 'admin-welcome';
+        welcomeDiv.style.cssText = `
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            text-align: center;
+        `;
+        welcomeDiv.innerHTML = `
+            <h3><i class="fas fa-crown"></i> Panel de Administración</h3>
+            <p>Gestiona todos los reclutas, asigna asesores, ve estadísticas completas y programa entrevistas para todo el equipo.</p>
+        `;
+        estadisticasSection.insertBefore(welcomeDiv, estadisticasSection.firstChild);
+    }
+}
+
+/**
+ * ✅ NUEVA FUNCIÓN: Muestra mensaje de bienvenida para asesores
+ */
+function showAsesorWelcome() {
+    const reclutasSection = document.getElementById('reclutas-section');
+    if (reclutasSection && !reclutasSection.querySelector('.asesor-welcome')) {
+        const welcomeDiv = document.createElement('div');
+        welcomeDiv.className = 'asesor-welcome';
+        welcomeDiv.style.cssText = `
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            text-align: center;
+        `;
+        welcomeDiv.innerHTML = `
+            <h4><i class="fas fa-handshake"></i> Panel de Asesor de Reclutamiento</h4>
+            <p>Gestiona tus reclutas asignados, programa entrevistas y haz seguimiento a los procesos de selección.</p>
+        `;
+        
+        const sectionHeader = reclutasSection.querySelector('.section-header');
+        if (sectionHeader && sectionHeader.nextSibling) {
+            reclutasSection.insertBefore(welcomeDiv, sectionHeader.nextSibling);
+        }
+    }
+}
+
+/**
+ * ✅ NUEVA FUNCIÓN: Configura el dashboard según el rol del usuario 
+ * @param {string} rol - Rol del usuario ('admin' o 'asesor')
+ */
+function configureDashboardForRole(rol) {
+    const dashboardNav = document.querySelector('.dashboard-nav ul');
+    const profileRole = document.querySelector('.profile-role');
+    
+    if (!dashboardNav) return;
+    
+    // Actualizar texto del rol
+    if (profileRole) {
+        profileRole.textContent = rol === 'admin' ? 'Administrador' : 'Asesor de Reclutamiento';
+    }
+    
+    if (rol === 'admin') {
+        // Dashboard completo para administradores
+        dashboardNav.innerHTML = `
+            <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Gestión de Reclutas</a></li>
+            <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
+            <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Estadísticas</a></li>
+            <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Configuración</a></li>
+        `;
+        
+        // Mostrar mensaje de bienvenida para admin
+        showAdminWelcome();
+    } else {
+        // Dashboard simplificado para asesores
+        dashboardNav.innerHTML = `
+            <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Mis Reclutas</a></li>
+            <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Mis Entrevistas</a></li>
+            <li><a href="#" data-section="timeline-section"><i class="fas fa-stream"></i> Estado del Proceso</a></li>
+            <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Mi Perfil</a></li>
+        `;
+        
+        // Mostrar mensaje de bienvenida para asesor
+        showAsesorWelcome();
+    }
+    
+    // Re-inicializar eventos de navegación
+    UI.initNavigation();
+}
+
+/**
+ * ✅ NUEVA FUNCIÓN: Muestra mensaje de bienvenida para administradores
+ */
+function showAdminWelcome() {
+    const estadisticasSection = document.getElementById('estadisticas-section');
+    if (estadisticasSection && !estadisticasSection.querySelector('.admin-welcome')) {
+        const welcomeDiv = document.createElement('div');
+        welcomeDiv.className = 'admin-welcome';
+        welcomeDiv.style.cssText = `
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            text-align: center;
+        `;
+        welcomeDiv.innerHTML = `
+            <h3><i class="fas fa-crown"></i> Panel de Administración</h3>
+            <p>Gestiona todos los reclutas, asigna asesores, ve estadísticas completas y programa entrevistas para todo el equipo.</p>
+        `;
+        estadisticasSection.insertBefore(welcomeDiv, estadisticasSection.firstChild);
+    }
+}
+
+/**
+ * ✅ NUEVA FUNCIÓN: Muestra mensaje de bienvenida para asesores
+ */
+function showAsesorWelcome() {
+    const reclutasSection = document.getElementById('reclutas-section');
+    if (reclutasSection && !reclutasSection.querySelector('.asesor-welcome')) {
+        const welcomeDiv = document.createElement('div');
+        welcomeDiv.className = 'asesor-welcome';
+        welcomeDiv.style.cssText = `
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            text-align: center;
+        `;
+        welcomeDiv.innerHTML = `
+            <h4><i class="fas fa-handshake"></i> Panel de Asesor de Reclutamiento</h4>
+            <p>Gestiona tus reclutas asignados, programa entrevistas y haz seguimiento a los procesos de selección.</p>
+        `;
+        
+        const sectionHeader = reclutasSection.querySelector('.section-header');
+        if (sectionHeader && sectionHeader.nextSibling) {
+            reclutasSection.insertBefore(welcomeDiv, sectionHeader.nextSibling);
+        }
+    }
 }
 
 /**

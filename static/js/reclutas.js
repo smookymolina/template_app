@@ -20,6 +20,9 @@ const Reclutas = {
     currentReclutaId: null,
     asesores: [], // Añadido para almacenar la lista de asesores
 
+/**
+ * Configura la interfaz de usuario según el rol
+ */
 configureUIForRole: function() {
     const role = this.userRole || Auth.getUserRole() || 'user';
     this.userRole = role;
@@ -32,11 +35,11 @@ configureUIForRole: function() {
             if (formGroup) formGroup.style.display = 'none';
         });
         
-        // MODIFICAR: Ocultar columna "Asesor" en header
+        // Ocultar columna "Asesor" en header
         const asesorHeader = document.querySelector('#reclutas-table th:nth-child(7)');
         if (asesorHeader) asesorHeader.style.display = 'none';
         
-        // AGREGAR: CSS para ocultar todas las celdas de asesor
+        // CSS para ocultar todas las celdas de asesor
         const style = document.createElement('style');
         style.textContent = `
             #reclutas-table th:nth-child(7),
@@ -45,7 +48,690 @@ configureUIForRole: function() {
             }
         `;
         document.head.appendChild(style);
+        
+        // ✅ NUEVO: Ocultar botón de Excel para no-admins
+        const excelButton = document.getElementById('upload-excel-btn');
+        if (excelButton) excelButton.style.display = 'none';
+    } else {
+        // ✅ NUEVO: Mostrar y configurar botón de Excel para admins
+        this.setupExcelUpload();
     }
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Descarga la plantilla Excel
+ */
+downloadExcelTemplate: async function() {
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/reclutas/plantilla-excel`);
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        // Crear blob y descargar
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'plantilla_reclutas.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        showSuccess('Plantilla Excel descargada correctamente');
+    } catch (error) {
+        console.error('Error al descargar plantilla:', error);
+        showError('Error al descargar la plantilla Excel');
+    }
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Configura la funcionalidad de subir Excel
+ */
+setupExcelUpload: function() {
+    // Buscar el contenedor de acciones de la sección
+    const sectionActions = document.querySelector('#reclutas-section .section-actions');
+    if (!sectionActions) return;
+    
+    // Verificar si ya existen los botones
+    let excelButton = document.getElementById('upload-excel-btn');
+    let templateButton = document.getElementById('download-template-btn');
+    
+    if (!templateButton) {
+        // Crear botón de descargar plantilla
+        templateButton = document.createElement('button');
+        templateButton.id = 'download-template-btn';
+        templateButton.className = 'btn-secondary';
+        templateButton.innerHTML = '<i class="fas fa-download"></i> Plantilla Excel';
+        templateButton.style.marginRight = '10px';
+        templateButton.title = 'Descargar plantilla Excel para importación masiva';
+        
+        // Insertar antes del botón "Agregar Nuevo Recluta"
+        const addButton = document.getElementById('open-add-recluta-modal');
+        if (addButton) {
+            sectionActions.insertBefore(templateButton, addButton);
+        } else {
+            sectionActions.appendChild(templateButton);
+        }
+    }
+    
+    if (!excelButton) {
+        // Crear botón de Excel
+        excelButton = document.createElement('button');
+        excelButton.id = 'upload-excel-btn';
+        excelButton.className = 'btn-secondary';
+        excelButton.innerHTML = '<i class="fas fa-file-excel"></i> Subir Excel';
+        excelButton.style.marginRight = '10px';
+        excelButton.title = 'Importar reclutas desde archivo Excel';
+        
+        // Insertar antes del botón "Agregar Nuevo Recluta"
+        const addButton = document.getElementById('open-add-recluta-modal');
+        if (addButton) {
+            sectionActions.insertBefore(excelButton, addButton);
+        } else {
+            sectionActions.appendChild(excelButton);
+        }
+    }
+    
+    // Crear input file oculto si no existe
+    let fileInput = document.getElementById('excel-file-input');
+    if (!fileInput) {
+        fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.id = 'excel-file-input';
+        fileInput.accept = '.xlsx,.xls';
+        fileInput.style.display = 'none';
+        document.body.appendChild(fileInput);
+    }
+    
+    // Configurar eventos
+    templateButton.addEventListener('click', () => {
+        this.downloadExcelTemplate();
+    });
+    
+    excelButton.addEventListener('click', () => {
+        fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            this.handleExcelUpload(e.target.files[0]);
+        }
+    });
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Maneja la subida de archivo Excel
+ * @param {File} file - Archivo Excel seleccionado
+ */
+handleExcelUpload: async function(file) {
+    if (!file) return;
+    
+    // Validar tipo de archivo
+    const validTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/vnd.ms-excel' // .xls
+    ];
+    
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls)$/i)) {
+        showError('Por favor selecciona un archivo Excel válido (.xlsx o .xls)');
+        return;
+    }
+    
+    // Validar tamaño (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showError('El archivo es demasiado grande. Máximo 5MB permitido.');
+        return;
+    }
+    
+    // Mostrar modal de confirmación/progreso
+    this.showExcelUploadModal(file);
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Muestra modal de confirmación para subir Excel
+ * @param {File} file - Archivo Excel a procesar
+ */
+showExcelUploadModal: function(file) {
+    // Crear modal dinámicamente
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'block';
+    modal.innerHTML = `
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3>Importar Reclutas desde Excel</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="excel-upload-info">
+                    <p><strong>Archivo seleccionado:</strong> ${file.name}</p>
+                    <p><strong>Tamaño:</strong> ${(file.size / 1024).toFixed(1)} KB</p>
+                    
+                    <div style="margin: 20px 0; padding: 15px; background-color: rgba(0, 123, 255, 0.1); border-radius: 5px;">
+                        <h4 style="margin-top: 0;"><i class="fas fa-info-circle"></i> Formato Requerido</h4>
+                        <p style="margin-bottom: 10px;">El archivo Excel debe tener las siguientes columnas:</p>
+                        <ul style="margin-bottom: 0; padding-left: 20px;">
+                            <li><strong>nombre</strong> - Nombre completo (requerido)</li>
+                            <li><strong>email</strong> - Correo electrónico (requerido)</li>
+                            <li><strong>telefono</strong> - Número de teléfono (requerido)</li>
+                            <li><strong>puesto</strong> - Puesto al que aplica (opcional)</li>
+                            <li><strong>estado</strong> - Estado: "Activo", "En proceso", "Rechazado" (opcional, por defecto "En proceso")</li>
+                            <li><strong>notas</strong> - Notas adicionales (opcional)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="upload-progress" style="display: none;">
+                        <div style="display: flex; align-items: center; margin: 15px 0;">
+                            <i class="fas fa-spinner fa-spin" style="margin-right: 10px;"></i>
+                            <span>Procesando archivo...</span>
+                        </div>
+                        <div style="background-color: #f0f0f0; border-radius: 10px; overflow: hidden;">
+                            <div class="progress-bar" style="height: 8px; background-color: var(--primary-color); width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <div class="progress-text" style="text-align: center; margin-top: 10px; font-size: 12px; color: var(--text-light);">0%</div>
+                    </div>
+                    
+                    <div class="upload-results" style="display: none;">
+                        <!-- Los resultados se mostrarán aquí -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary cancel-upload">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button class="btn-primary confirm-upload">
+                    <i class="fas fa-upload"></i> Procesar Archivo
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Configurar eventos
+    const closeButtons = modal.querySelectorAll('.close-modal, .cancel-upload');
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.body.removeChild(modal);
+            // Limpiar input file
+            const fileInput = document.getElementById('excel-file-input');
+            if (fileInput) fileInput.value = '';
+        });
+    });
+    
+    const confirmButton = modal.querySelector('.confirm-upload');
+    confirmButton.addEventListener('click', () => {
+        this.processExcelFile(file, modal);
+    });
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Procesa el archivo Excel y sube los reclutas
+ * @param {File} file - Archivo Excel
+ * @param {HTMLElement} modal - Modal de progreso
+ */
+processExcelFile: async function(file, modal) {
+    const progressContainer = modal.querySelector('.upload-progress');
+    const resultsContainer = modal.querySelector('.upload-results');
+    const confirmButton = modal.querySelector('.confirm-upload');
+    const cancelButton = modal.querySelector('.cancel-upload');
+    
+    // Mostrar progreso
+    progressContainer.style.display = 'block';
+    confirmButton.style.display = 'none';
+    
+    try {
+        // Crear FormData para enviar el archivo
+        const formData = new FormData();
+        formData.append('excel_file', file);
+        
+        // Simular progreso
+        this.updateProgress(modal, 20, 'Subiendo archivo...');
+        
+        // Enviar archivo al backend
+        const response = await fetch(`${CONFIG.API_URL}/reclutas/import-excel`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        this.updateProgress(modal, 60, 'Procesando datos...');
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        this.updateProgress(modal, 100, 'Completado');
+        
+        // Mostrar resultados
+        setTimeout(() => {
+            this.showUploadResults(data, modal);
+        }, 500);
+        
+    } catch (error) {
+        console.error('Error al procesar Excel:', error);
+        this.showUploadError(error.message, modal);
+    }
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Actualiza la barra de progreso
+ * @param {HTMLElement} modal - Modal
+ * @param {number} percentage - Porcentaje de progreso
+ * @param {string} text - Texto de estado
+ */
+updateProgress: function(modal, percentage, text) {
+    const progressBar = modal.querySelector('.progress-bar');
+    const progressText = modal.querySelector('.progress-text');
+    
+    if (progressBar) progressBar.style.width = `${percentage}%`;
+    if (progressText) progressText.textContent = `${percentage}% - ${text}`;
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Muestra los resultados de la importación
+ * @param {Object} data - Datos de respuesta del servidor
+ * @param {HTMLElement} modal - Modal
+ */
+showUploadResults: function(data, modal) {
+    const progressContainer = modal.querySelector('.upload-progress');
+    const resultsContainer = modal.querySelector('.upload-results');
+    const cancelButton = modal.querySelector('.cancel-upload');
+    
+    progressContainer.style.display = 'none';
+    resultsContainer.style.display = 'block';
+    
+    let resultsHTML = '';
+    
+    if (data.success) {
+        resultsHTML = `
+            <div style="color: var(--success-color); text-align: center; margin-bottom: 15px;">
+                <i class="fas fa-check-circle" style="font-size: 48px;"></i>
+                <h4>¡Importación Exitosa!</h4>
+            </div>
+            <div style="background-color: rgba(40, 167, 69, 0.1); padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                <p><strong>Reclutas procesados:</strong> ${data.processed || 0}</p>
+                <p><strong>Reclutas importados:</strong> ${data.imported || 0}</p>
+                ${data.skipped > 0 ? `<p><strong>Reclutas omitidos:</strong> ${data.skipped} (ya existían)</p>` : ''}
+                ${data.errors > 0 ? `<p style="color: var(--warning-color);"><strong>Errores:</strong> ${data.errors}</p>` : ''}
+            </div>
+        `;
+        
+        if (data.error_details && data.error_details.length > 0) {
+            resultsHTML += `
+                <details style="margin-top: 10px;">
+                    <summary style="cursor: pointer; color: var(--warning-color);">Ver errores detallados</summary>
+                    <ul style="margin-top: 10px; padding-left: 20px; font-size: 12px;">
+                        ${data.error_details.map(error => `<li>${error}</li>`).join('')}
+                    </ul>
+                </details>
+            `;
+        }
+        
+        // Actualizar lista de reclutas
+        setTimeout(() => {
+            this.loadAndDisplayReclutas();
+        }, 1000);
+        
+    } else {
+        resultsHTML = `
+            <div style="color: var(--danger-color); text-align: center; margin-bottom: 15px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 48px;"></i>
+                <h4>Error en la Importación</h4>
+                <p>${data.message || 'Error desconocido'}</p>
+            </div>
+        `;
+    }
+    
+    resultsContainer.innerHTML = resultsHTML;
+    
+    // Cambiar botón de cancelar a cerrar
+    cancelButton.innerHTML = '<i class="fas fa-check"></i> Cerrar';
+    cancelButton.className = 'btn-primary';
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Muestra error en la importación
+ * @param {string} errorMessage - Mensaje de error
+ * @param {HTMLElement} modal - Modal
+ */
+showUploadError: function(errorMessage, modal) {
+    const progressContainer = modal.querySelector('.upload-progress');
+    const resultsContainer = modal.querySelector('.upload-results');
+    const cancelButton = modal.querySelector('.cancel-upload');
+    
+    progressContainer.style.display = 'none';
+    resultsContainer.style.display = 'block';
+    
+    resultsContainer.innerHTML = `
+        <div style="color: var(--danger-color); text-align: center;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px;"></i>
+            <h4>Error al Procesar Archivo</h4>
+            <p>${errorMessage}</p>
+            <div style="margin-top: 15px; padding: 10px; background-color: rgba(220, 53, 69, 0.1); border-radius: 5px;">
+                <small>Verifica que el archivo tenga el formato correcto y vuelve a intentarlo.</small>
+            </div>
+        </div>
+    `;
+    
+    cancelButton.innerHTML = '<i class="fas fa-times"></i> Cerrar';
+    cancelButton.className = 'btn-danger';
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Configura la funcionalidad de subir Excel
+ */
+setupExcelUpload: function() {
+    // Buscar el contenedor de acciones de la sección
+    const sectionActions = document.querySelector('#reclutas-section .section-actions');
+    if (!sectionActions) return;
+    
+    // Verificar si ya existe el botón
+    let excelButton = document.getElementById('upload-excel-btn');
+    if (!excelButton) {
+        // Crear botón de Excel
+        excelButton = document.createElement('button');
+        excelButton.id = 'upload-excel-btn';
+        excelButton.className = 'btn-secondary';
+        excelButton.innerHTML = '<i class="fas fa-file-excel"></i> Subir Excel';
+        excelButton.style.marginRight = '10px';
+        
+        // Insertar antes del botón "Agregar Nuevo Recluta"
+        const addButton = document.getElementById('open-add-recluta-modal');
+        if (addButton) {
+            sectionActions.insertBefore(excelButton, addButton);
+        } else {
+            sectionActions.appendChild(excelButton);
+        }
+    }
+    
+    // Crear input file oculto si no existe
+    let fileInput = document.getElementById('excel-file-input');
+    if (!fileInput) {
+        fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.id = 'excel-file-input';
+        fileInput.accept = '.xlsx,.xls';
+        fileInput.style.display = 'none';
+        document.body.appendChild(fileInput);
+    }
+    
+    // Configurar eventos
+    excelButton.addEventListener('click', () => {
+        fileInput.click();
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            this.handleExcelUpload(e.target.files[0]);
+        }
+    });
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Maneja la subida de archivo Excel
+ * @param {File} file - Archivo Excel seleccionado
+ */
+handleExcelUpload: async function(file) {
+    if (!file) return;
+    
+    // Validar tipo de archivo
+    const validTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+        'application/vnd.ms-excel' // .xls
+    ];
+    
+    if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls)$/i)) {
+        showError('Por favor selecciona un archivo Excel válido (.xlsx o .xls)');
+        return;
+    }
+    
+    // Validar tamaño (máximo 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        showError('El archivo es demasiado grande. Máximo 5MB permitido.');
+        return;
+    }
+    
+    // Mostrar modal de confirmación/progreso
+    this.showExcelUploadModal(file);
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Muestra modal de confirmación para subir Excel
+ * @param {File} file - Archivo Excel a procesar
+ */
+showExcelUploadModal: function(file) {
+    // Crear modal dinámicamente
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.display = 'block';
+    modal.innerHTML = `
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h3>Importar Reclutas desde Excel</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="excel-upload-info">
+                    <p><strong>Archivo seleccionado:</strong> ${file.name}</p>
+                    <p><strong>Tamaño:</strong> ${(file.size / 1024).toFixed(1)} KB</p>
+                    
+                    <div style="margin: 20px 0; padding: 15px; background-color: rgba(0, 123, 255, 0.1); border-radius: 5px;">
+                        <h4 style="margin-top: 0;"><i class="fas fa-info-circle"></i> Formato Requerido</h4>
+                        <p style="margin-bottom: 10px;">El archivo Excel debe tener las siguientes columnas:</p>
+                        <ul style="margin-bottom: 0; padding-left: 20px;">
+                            <li><strong>nombre</strong> - Nombre completo (requerido)</li>
+                            <li><strong>email</strong> - Correo electrónico (requerido)</li>
+                            <li><strong>telefono</strong> - Número de teléfono (requerido)</li>
+                            <li><strong>puesto</strong> - Puesto al que aplica (opcional)</li>
+                            <li><strong>estado</strong> - Estado: "Activo", "En proceso", "Rechazado" (opcional, por defecto "En proceso")</li>
+                            <li><strong>notas</strong> - Notas adicionales (opcional)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="upload-progress" style="display: none;">
+                        <div style="display: flex; align-items: center; margin: 15px 0;">
+                            <i class="fas fa-spinner fa-spin" style="margin-right: 10px;"></i>
+                            <span>Procesando archivo...</span>
+                        </div>
+                        <div style="background-color: #f0f0f0; border-radius: 10px; overflow: hidden;">
+                            <div class="progress-bar" style="height: 8px; background-color: var(--primary-color); width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <div class="progress-text" style="text-align: center; margin-top: 10px; font-size: 12px; color: var(--text-light);">0%</div>
+                    </div>
+                    
+                    <div class="upload-results" style="display: none;">
+                        <!-- Los resultados se mostrarán aquí -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary cancel-upload">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button class="btn-primary confirm-upload">
+                    <i class="fas fa-upload"></i> Procesar Archivo
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Configurar eventos
+    const closeButtons = modal.querySelectorAll('.close-modal, .cancel-upload');
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.body.removeChild(modal);
+            // Limpiar input file
+            const fileInput = document.getElementById('excel-file-input');
+            if (fileInput) fileInput.value = '';
+        });
+    });
+    
+    const confirmButton = modal.querySelector('.confirm-upload');
+    confirmButton.addEventListener('click', () => {
+        this.processExcelFile(file, modal);
+    });
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Procesa el archivo Excel y sube los reclutas
+ * @param {File} file - Archivo Excel
+ * @param {HTMLElement} modal - Modal de progreso
+ */
+processExcelFile: async function(file, modal) {
+    const progressContainer = modal.querySelector('.upload-progress');
+    const resultsContainer = modal.querySelector('.upload-results');
+    const confirmButton = modal.querySelector('.confirm-upload');
+    const cancelButton = modal.querySelector('.cancel-upload');
+    
+    // Mostrar progreso
+    progressContainer.style.display = 'block';
+    confirmButton.style.display = 'none';
+    
+    try {
+        // Crear FormData para enviar el archivo
+        const formData = new FormData();
+        formData.append('excel_file', file);
+        
+        // Simular progreso
+        this.updateProgress(modal, 20, 'Subiendo archivo...');
+        
+        // Enviar archivo al backend
+        const response = await fetch(`${CONFIG.API_URL}/reclutas/import-excel`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        this.updateProgress(modal, 60, 'Procesando datos...');
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        this.updateProgress(modal, 100, 'Completado');
+        
+        // Mostrar resultados
+        setTimeout(() => {
+            this.showUploadResults(data, modal);
+        }, 500);
+        
+    } catch (error) {
+        console.error('Error al procesar Excel:', error);
+        this.showUploadError(error.message, modal);
+    }
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Actualiza la barra de progreso
+ * @param {HTMLElement} modal - Modal
+ * @param {number} percentage - Porcentaje de progreso
+ * @param {string} text - Texto de estado
+ */
+updateProgress: function(modal, percentage, text) {
+    const progressBar = modal.querySelector('.progress-bar');
+    const progressText = modal.querySelector('.progress-text');
+    
+    if (progressBar) progressBar.style.width = `${percentage}%`;
+    if (progressText) progressText.textContent = `${percentage}% - ${text}`;
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Muestra los resultados de la importación
+ * @param {Object} data - Datos de respuesta del servidor
+ * @param {HTMLElement} modal - Modal
+ */
+showUploadResults: function(data, modal) {
+    const progressContainer = modal.querySelector('.upload-progress');
+    const resultsContainer = modal.querySelector('.upload-results');
+    const cancelButton = modal.querySelector('.cancel-upload');
+    
+    progressContainer.style.display = 'none';
+    resultsContainer.style.display = 'block';
+    
+    let resultsHTML = '';
+    
+    if (data.success) {
+        resultsHTML = `
+            <div style="color: var(--success-color); text-align: center; margin-bottom: 15px;">
+                <i class="fas fa-check-circle" style="font-size: 48px;"></i>
+                <h4>¡Importación Exitosa!</h4>
+            </div>
+            <div style="background-color: rgba(40, 167, 69, 0.1); padding: 15px; border-radius: 5px; margin-bottom: 15px;">
+                <p><strong>Reclutas procesados:</strong> ${data.processed || 0}</p>
+                <p><strong>Reclutas importados:</strong> ${data.imported || 0}</p>
+                ${data.skipped > 0 ? `<p><strong>Reclutas omitidos:</strong> ${data.skipped} (ya existían)</p>` : ''}
+                ${data.errors > 0 ? `<p style="color: var(--warning-color);"><strong>Errores:</strong> ${data.errors}</p>` : ''}
+            </div>
+        `;
+        
+        if (data.error_details && data.error_details.length > 0) {
+            resultsHTML += `
+                <details style="margin-top: 10px;">
+                    <summary style="cursor: pointer; color: var(--warning-color);">Ver errores detallados</summary>
+                    <ul style="margin-top: 10px; padding-left: 20px; font-size: 12px;">
+                        ${data.error_details.map(error => `<li>${error}</li>`).join('')}
+                    </ul>
+                </details>
+            `;
+        }
+        
+        // Actualizar lista de reclutas
+        setTimeout(() => {
+            this.loadAndDisplayReclutas();
+        }, 1000);
+        
+    } else {
+        resultsHTML = `
+            <div style="color: var(--danger-color); text-align: center; margin-bottom: 15px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 48px;"></i>
+                <h4>Error en la Importación</h4>
+                <p>${data.message || 'Error desconocido'}</p>
+            </div>
+        `;
+    }
+    
+    resultsContainer.innerHTML = resultsHTML;
+    
+    // Cambiar botón de cancelar a cerrar
+    cancelButton.innerHTML = '<i class="fas fa-check"></i> Cerrar';
+    cancelButton.className = 'btn-primary';
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Muestra error en la importación
+ * @param {string} errorMessage - Mensaje de error
+ * @param {HTMLElement} modal - Modal
+ */
+showUploadError: function(errorMessage, modal) {
+    const progressContainer = modal.querySelector('.upload-progress');
+    const resultsContainer = modal.querySelector('.upload-results');
+    const cancelButton = modal.querySelector('.cancel-upload');
+    
+    progressContainer.style.display = 'none';
+    resultsContainer.style.display = 'block';
+    
+    resultsContainer.innerHTML = `
+        <div style="color: var(--danger-color); text-align: center;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px;"></i>
+            <h4>Error al Procesar Archivo</h4>
+            <p>${errorMessage}</p>
+            <div style="margin-top: 15px; padding: 10px; background-color: rgba(220, 53, 69, 0.1); border-radius: 5px;">
+                <small>Verifica que el archivo tenga el formato correcto y vuelve a intentarlo.</small>
+            </div>
+        </div>
+    `;
+    
+    cancelButton.innerHTML = '<i class="fas fa-times"></i> Cerrar';
+    cancelButton.className = 'btn-danger';
 },
 
      /**
