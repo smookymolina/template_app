@@ -617,8 +617,14 @@ renderReclutasTable: function(container) {
             estadoCell.appendChild(estadoBadge);
         }
 
-        // Configurar botones de acción
-        this.setupActionButtons(row, recluta.id);
+        // Configurar botones de acción INMEDIATAMENTE
+const viewBtn = row.querySelector('.view-btn');
+const editBtn = row.querySelector('.edit-btn'); 
+const deleteBtn = row.querySelector('.delete-btn');
+
+if (viewBtn) viewBtn.addEventListener('click', () => this.viewRecluta(recluta.id));
+if (editBtn) editBtn.addEventListener('click', () => this.editRecluta(recluta.id));
+if (deleteBtn) deleteBtn.addEventListener('click', () => this.confirmDeleteRecluta(recluta.id));
     });
 },
 
@@ -699,70 +705,68 @@ renderReclutasTable: function(container) {
             console.error('Error al cargar detalles del recluta:', error);
             showError('Error al cargar detalles');
         }
+
+        // Configurar eventos de botones del modal
+setTimeout(() => {
+    const viewButtons = document.querySelectorAll('#view-mode-buttons [data-action]');
+    viewButtons.forEach(btn => {
+        const action = btn.dataset.action;
+        btn.onclick = () => {
+            if (action === 'edit') this.enableEditMode();
+            else if (action === 'delete') this.confirmDeleteRecluta(this.currentReclutaId);
+            else if (action === 'schedule-interview') this.programarEntrevista();
+        };
+    });
+
+    const editButtons = document.querySelectorAll('#edit-mode-form [data-action]');
+    editButtons.forEach(btn => {
+        const action = btn.dataset.action;
+        btn.onclick = () => {
+            if (action === 'cancel-edit') this.cancelEdit();
+            else if (action === 'save-changes') this.saveReclutaChanges();
+        };
+    });
+}, 100);
     },
 
-    /**
-     * Prepara el formulario de edición con los datos del recluta
-     * @param {number} id - ID del recluta a editar
-     */
-    editRecluta: async function(id) {
-        try {
-            const recluta = await this.getRecluta(id);
-            this.currentReclutaId = id;
+/**
+ * Habilita el modo de edición en el modal de detalles
+ */
+enableEditMode: function() {
+    if (!this.currentReclutaId) return;
 
-            // Rellenar el formulario de edición
-            const modal = document.getElementById('edit-recluta-modal');
-            if (!modal) return;
+    const viewButtons = document.getElementById('view-mode-buttons');
+    const editForm = document.getElementById('edit-mode-form');
+    
+    if (!viewButtons || !editForm) return;
 
-            const form = modal.querySelector('form');
-            if (!form) return;
+    // Obtener datos actuales
+    const recluta = this.reclutas.find(r => r.id === this.currentReclutaId);
+    if (!recluta) return;
 
-            form.elements.edit_nombre.value = recluta.nombre || '';
-            form.elements.edit_puesto.value = recluta.puesto || '';
-            form.elements.edit_email.value = recluta.email || '';
-            form.elements.edit_telefono.value = recluta.telefono || '';
-            form.elements.edit_fecha.value = recluta.fecha_postulacion ? recluta.fecha_postulacion.split('T')[0] : '';
-            form.elements.edit_notas.value = recluta.notas || '';
-            form.elements.edit_estado.value = recluta.estado || 'pendiente';
-            form.elements.edit_recluta_asesor.value = recluta.asesor_id || '';
+    // Rellenar formulario
+    document.getElementById('edit-recluta-nombre').value = recluta.nombre || '';
+    document.getElementById('edit-recluta-email').value = recluta.email || '';
+    document.getElementById('edit-recluta-telefono').value = recluta.telefono || '';
+    document.getElementById('edit-recluta-puesto').value = recluta.puesto || '';
+    document.getElementById('edit-recluta-estado').value = recluta.estado || '';
+    document.getElementById('edit-recluta-notas').value = recluta.notas || '';
 
-            // Mostrar la foto actual
-            const picPreview = document.getElementById('edit-recluta-pic-preview');
-            if (picPreview) {
-                picPreview.innerHTML = '';
-                const img = document.createElement('img');
-                const fotoUrl = recluta.foto_url ?
-                    (recluta.foto_url.startsWith('http') ?
-                        recluta.foto_url :
-                        `/${recluta.foto_url}`) :
-                    "/api/placeholder/100/100";
-                img.src = fotoUrl;
-                img.alt = recluta.nombre || 'Foto de recluta';
-                img.classList.add('profile-pic');
-                picPreview.appendChild(img);
-            }
-            const uploadInput = document.getElementById('edit-recluta-upload');
-            if (uploadInput) {
-                uploadInput.value = ''; // Limpiar el input de archivo para permitir nueva carga
-            }
+    // Cambiar vista
+    viewButtons.style.display = 'none';
+    editForm.style.display = 'block';
+},
 
-            // Mostrar modal de edición
-            UI.showModal('edit-recluta-modal');
-        } catch (error) {
-            console.error('Error al cargar datos para editar:', error);
-            showError('Error al preparar edición');
-        }
-    },
-
-    /**
-     * Cancela la edición y vuelve al modo de visualización
-     */
-    cancelEdit: function() {
-        UI.closeModal('edit-recluta-modal');
-        if (this.currentReclutaId) {
-            this.viewRecluta(this.currentReclutaId);
-        }
-    },
+/**
+ * Cancela la edición y vuelve al modo vista
+ */
+cancelEdit: function() {
+    const viewButtons = document.getElementById('view-mode-buttons');
+    const editForm = document.getElementById('edit-mode-form');
+    
+    if (viewButtons) viewButtons.style.display = 'flex';
+    if (editForm) editForm.style.display = 'none';
+},
 
     /**
      * Guarda los cambios realizados en la edición del recluta
@@ -801,20 +805,68 @@ renderReclutasTable: function(container) {
     },
 
     /**
+ * Programa una entrevista para el recluta actual
+ */
+programarEntrevista: function() {
+    if (!this.currentReclutaId) {
+        showError('Error: No se puede programar entrevista');
+        return;
+    }
+    
+    const recluta = this.reclutas.find(r => r.id === this.currentReclutaId);
+    if (!recluta) return;
+    
+    // Cerrar modal de detalles
+    UI.closeModal('view-recluta-modal');
+    
+    // Abrir modal de programación de entrevista
+    const modal = document.getElementById('schedule-interview-modal');
+    if (!modal) {
+        showError('No se puede mostrar el modal de entrevista');
+        return;
+    }
+    
+    // Configurar datos del candidato
+    const candidatePic = document.getElementById('interview-candidate-pic');
+    const candidateName = document.getElementById('interview-candidate-name');
+    const candidatePuesto = document.getElementById('interview-candidate-puesto');
+    const dateInput = document.getElementById('interview-date');
+    const timeInput = document.getElementById('interview-time');
+    
+    if (candidatePic) candidatePic.src = recluta.foto_url || '/api/placeholder/40/40';
+    if (candidateName) candidateName.textContent = recluta.nombre;
+    if (candidatePuesto) candidatePuesto.textContent = recluta.puesto || 'No especificado';
+    
+    // Establecer fecha por defecto (mañana)
+    if (dateInput) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        dateInput.value = tomorrow.toISOString().split('T')[0];
+    }
+    
+    // Hora por defecto (10:00 AM)
+    if (timeInput) timeInput.value = '10:00';
+    
+    // Mostrar modal
+    UI.showModal('schedule-interview-modal');
+},
+
+    /**
      * Abre el modal de confirmación para eliminar un recluta
      * @param {number} id - ID del recluta a eliminar
      */
     confirmDeleteRecluta: function(id) {
-        this.currentReclutaId = id;
-        const modal = document.getElementById('confirm-delete-modal');
-        if (modal) {
-            const confirmBtn = modal.querySelector('.btn-danger');
-            if (confirmBtn) {
-                confirmBtn.onclick = () => this.deleteCurrentRecluta();
-            }
-            UI.showModal('confirm-delete-modal');
-        }
-    },
+    this.currentReclutaId = id;
+    const recluta = this.reclutas.find(r => r.id === id);
+    
+    UI.showConfirmModal({
+        title: 'Eliminar Recluta',
+        message: `¿Estás seguro de que deseas eliminar a ${recluta ? recluta.nombre : 'este recluta'}?`,
+        confirmText: 'Eliminar',
+        confirmButtonClass: 'btn-danger',
+        onConfirm: () => this.deleteCurrentRecluta()
+    });
+},
 
     /**
      * Elimina el recluta actualmente seleccionado después de la confirmación

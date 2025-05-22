@@ -248,7 +248,25 @@ async function loginSuccess(usuario) {
             try {
                 if (typeof Reclutas !== 'undefined' && Reclutas.init) {
                     console.log('Inicializando módulo de reclutas...');
-                    await Reclutas.init(); // ✅ ESPERAMOS la inicialización completa
+                    await Reclutas.init();
+console.log('Reclutas inicializado, configurando eventos globales...');
+
+// Configurar eventos globales después de la inicialización
+document.addEventListener('click', function(e) {
+    // Botones de acción en tabla de reclutas
+    if (e.target.closest('.view-btn')) {
+        const id = parseInt(e.target.closest('.view-btn').dataset.id);
+        if (id) Reclutas.viewRecluta(id);
+    }
+    else if (e.target.closest('.edit-btn')) {
+        const id = parseInt(e.target.closest('.edit-btn').dataset.id);
+        if (id) Reclutas.viewRecluta(id).then(() => setTimeout(() => Reclutas.enableEditMode(), 200));
+    }
+    else if (e.target.closest('.delete-btn')) {
+        const id = parseInt(e.target.closest('.delete-btn').dataset.id);
+        if (id) Reclutas.confirmDeleteRecluta(id);
+    }
+});
                     
                     // ✅ CARGAR DATOS INICIALES después de la inicialización
                     console.log('Cargando datos iniciales de reclutas...');

@@ -810,12 +810,13 @@ function viewRecluta(id) {
 }
 
 // Editar un recluta directamente (para botón en la tabla)
+/*
 function editRecluta(id) {
     viewRecluta(id);
     setTimeout(() => {
         enableEditMode();
     }, 300);
-}
+}*/
 
 // Pasar al modo de edición
 function enableEditMode() {
@@ -973,6 +974,7 @@ function saveReclutaChanges() {
 }
 
 // Confirmar eliminación de recluta
+/*
 function confirmDeleteRecluta(id) {
     // Si no se pasa ID, usar el actual del modal
     const reclutaId = id || currentReclutaId;
@@ -1002,7 +1004,7 @@ function confirmDeleteRecluta(id) {
     } else {
         showDeleteConfirmation(recluta);
     }
-}
+}*/
 
 // Mostrar confirmación para eliminar
 function showDeleteConfirmation(recluta) {
