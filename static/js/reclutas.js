@@ -987,23 +987,23 @@ init: async function() {
 },
 
 /**
-     * Editar un recluta directamente (para botón en la tabla)
-     * @param {number} id - ID del recluta a editar
-     */
-    editRecluta: async function(id) {
-        try {
-            // Primero mostrar los detalles
-            await this.viewRecluta(id);
-            
-            // Luego habilitar el modo de edición con un pequeño retraso
-            setTimeout(() => {
-                this.enableEditMode();
-            }, 300);
-        } catch (error) {
-            console.error('Error al editar recluta:', error);
-            showError('Error al cargar recluta para edición');
-        }
-    },
+ * Editar un recluta directamente (para botón en la tabla)
+ * @param {number} id - ID del recluta a editar
+ */
+editRecluta: async function(id) {
+    try {
+        // Primero mostrar los detalles
+        await this.viewRecluta(id);
+        
+        // Luego habilitar el modo de edición con un pequeño retraso
+        setTimeout(() => {
+            this.enableEditMode();
+        }, 300);
+    } catch (error) {
+        console.error('Error al editar recluta:', error);
+        showError('Error al cargar recluta para edición');
+    }
+},
 
     /**
      * Carga la lista de asesores disponibles
@@ -1175,6 +1175,95 @@ init: async function() {
             throw error;
         }
     },
+
+/**
+ * Renderiza la tabla de reclutas con los datos cargados
+ * @param {HTMLElement} container - Contenedor tbody de la tabla
+ */
+renderReclutasTable: function(container) {
+    if (!container) {
+        console.error('Contenedor de tabla no encontrado');
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    if (!this.reclutas || this.reclutas.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `<td colspan="8" style="text-align: center; padding: 20px;">
+            <i class="fas fa-users"></i> No se encontraron reclutas. 
+            <button class="btn-link" onclick="Reclutas.openAddReclutaModal()">¡Agrega tu primer recluta!</button>
+        </td>`;
+        container.appendChild(row);
+        return;
+    }
+    
+    this.reclutas.forEach(recluta => {
+        const row = document.createElement('tr');
+        
+        // Determinar clase del badge según el estado
+        const badgeClass = this.getEstadoBadgeClass(recluta.estado);
+        
+        // Determinar URL de la foto
+        const fotoUrl = this.getFotoUrl(recluta.foto_url);
+        
+        // Generar HTML de la fila
+        row.innerHTML = `
+            <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"></td>
+            <td>${recluta.nombre}</td>
+            <td>${recluta.email}</td>
+            <td>${recluta.telefono}</td>
+            <td>${recluta.puesto || 'No especificado'}</td>
+            <td><span class="badge ${badgeClass}">${recluta.estado}</span></td>
+            ${this.userRole === 'admin' ? `<td>${recluta.asesor_nombre || 'No asignado'}</td>` : ''}
+            <td>
+                <button class="action-btn view-btn" title="Ver detalles" data-id="${recluta.id}">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="action-btn edit-btn" title="Editar" data-id="${recluta.id}">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="action-btn delete-btn" title="Eliminar" data-id="${recluta.id}">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        `;
+        
+        // Configurar eventos de los botones de acción
+        this.setupActionButtons(row, recluta.id);
+        
+        container.appendChild(row);
+    });
+},
+
+/**
+ * Obtiene la clase CSS del badge según el estado
+ * @param {string} estado - Estado del recluta
+ * @returns {string} - Clase CSS del badge
+ */
+getEstadoBadgeClass: function(estado) {
+    const estadoConfig = CONFIG.ESTADOS_RECLUTA.find(e => e.value === estado);
+    return estadoConfig ? estadoConfig.badgeClass : 'badge-secondary';
+},
+
+/**
+ * Obtiene la URL de la foto del recluta
+ * @param {string} fotoUrl - URL de la foto del recluta
+ * @returns {string} - URL final de la foto
+ */
+getFotoUrl: function(fotoUrl) {
+    if (!fotoUrl) return '/api/placeholder/40/40';
+    
+    if (fotoUrl.startsWith('http')) {
+        return fotoUrl;
+    }
+    
+    if (fotoUrl === 'default_profile.jpg') {
+        return '/api/placeholder/40/40';
+    }
+    
+    return `/${fotoUrl}`;
+},
 
  /**
      * Configura la interfaz de usuario según el rol
@@ -1598,30 +1687,44 @@ init: async function() {
     console.log('Configuración de Excel completada');
 },
 
-    /**
-     * Configura los botones de acción para un recluta
-     * @param {HTMLElement} row - Fila de la tabla
-     * @param {number} reclutaId - ID del recluta
-     */
-    setupActionButtons: function(row, reclutaId) {
-        // Botón de ver detalles
-        const viewBtn = row.querySelector('.view-btn');
-        if (viewBtn) {
-            viewBtn.addEventListener('click', () => this.viewRecluta(reclutaId));
-        }
+/**
+ * Configura los botones de acción para un recluta
+ * @param {HTMLElement} row - Fila de la tabla
+ * @param {number} reclutaId - ID del recluta
+ */
+setupActionButtons: function(row, reclutaId) {
+    if (!row || !reclutaId) return;
+    
+    // Botón de ver detalles
+    const viewBtn = row.querySelector('.view-btn');
+    if (viewBtn) {
+        viewBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Ver recluta:', reclutaId);
+            this.viewRecluta(reclutaId);
+        });
+    }
 
-        // Botón de editar
-        const editBtn = row.querySelector('.edit-btn');
-        if (editBtn) {
-            editBtn.addEventListener('click', () => this.editRecluta(reclutaId));
-        }
+    // Botón de editar
+    const editBtn = row.querySelector('.edit-btn');
+    if (editBtn) {
+        editBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Editar recluta:', reclutaId);
+            this.editRecluta(reclutaId);
+        });
+    }
 
-        // Botón de eliminar
-        const deleteBtn = row.querySelector('.delete-btn');
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', () => this.confirmDeleteRecluta(reclutaId));
-        }
-    },
+    // Botón de eliminar
+    const deleteBtn = row.querySelector('.delete-btn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Eliminar recluta:', reclutaId);
+            this.confirmDeleteRecluta(reclutaId);
+        });
+    }
+},
 
     /**
      * Muestra los detalles de un recluta
@@ -1815,43 +1918,55 @@ programarEntrevista: function() {
 },
 
     /**
-     * Abre el modal de confirmación para eliminar un recluta
-     * @param {number} id - ID del recluta a eliminar
-     */
-    confirmDeleteRecluta: function(id) {
+ * Confirmar eliminación de recluta
+ * @param {number} id - ID del recluta a eliminar
+ */
+confirmDeleteRecluta: function(id) {
     this.currentReclutaId = id;
     const recluta = this.reclutas.find(r => r.id === id);
     
-    UI.showConfirmModal({
-        title: 'Eliminar Recluta',
-        message: `¿Estás seguro de que deseas eliminar a ${recluta ? recluta.nombre : 'este recluta'}?`,
-        confirmText: 'Eliminar',
-        confirmButtonClass: 'btn-danger',
-        onConfirm: () => this.deleteCurrentRecluta()
-    });
+    // Usar UI.showConfirmModal si está disponible, sino usar confirm nativo
+    if (typeof UI !== 'undefined' && UI.showConfirmModal) {
+        UI.showConfirmModal({
+            title: 'Eliminar Recluta',
+            message: `¿Estás seguro de que deseas eliminar a ${recluta ? recluta.nombre : 'este recluta'}?`,
+            confirmText: 'Eliminar',
+            confirmButtonClass: 'btn-danger',
+            onConfirm: () => this.deleteCurrentRecluta()
+        });
+    } else {
+        // Fallback con confirm nativo
+        if (confirm(`¿Estás seguro de que deseas eliminar a ${recluta ? recluta.nombre : 'este recluta'}?`)) {
+            this.deleteCurrentRecluta();
+        }
+    }
 },
 
     /**
-     * Elimina el recluta actualmente seleccionado después de la confirmación
-     */
-    deleteCurrentRecluta: async function() {
-        if (!this.currentReclutaId) return;
-        try {
-            const success = await this.deleteRecluta(this.currentReclutaId);
-            if (success) {
-                showSuccess('Recluta eliminado con éxito');
-                UI.closeModal('confirm-delete-modal');
-                this.currentReclutaId = null;
-                this.loadAndDisplayReclutas(); // Recargar la lista
-                UI.closeModal('view-recluta-modal'); // Cerrar el modal de detalles si está abierto
-            } else {
-                showError('Error al eliminar el recluta');
+ * Elimina el recluta actualmente seleccionado
+ */
+deleteCurrentRecluta: async function() {
+    if (!this.currentReclutaId) return;
+    
+    try {
+        const success = await this.deleteRecluta(this.currentReclutaId);
+        if (success) {
+            showSuccess('Recluta eliminado con éxito');
+            this.currentReclutaId = null;
+            await this.loadAndDisplayReclutas(); // Recargar la lista
+            
+            // Cerrar modal de detalles si está abierto
+            if (typeof UI !== 'undefined' && UI.closeModal) {
+                UI.closeModal('view-recluta-modal');
             }
-        } catch (error) {
-            console.error('Error al eliminar recluta:', error);
+        } else {
             showError('Error al eliminar el recluta');
         }
-    },
+    } catch (error) {
+        console.error('Error al eliminar recluta:', error);
+        showError('Error al eliminar el recluta: ' + error.message);
+    }
+},
 
     /**
      * Actualiza la información de paginación en la UI

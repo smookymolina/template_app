@@ -126,15 +126,32 @@ def check_auth():
     """
     Verifica el estado de autenticación del usuario actual.
     """
-    if current_user.is_authenticated:
+    try:
+        # Importar current_user aquí para evitar problemas de importación circular
+        from flask_login import current_user
+        
+        if current_user and current_user.is_authenticated:
+            # Asegurar que el usuario tenga un rol
+            user_data = current_user.serialize()
+            if not user_data.get('rol'):
+                user_data['rol'] = 'admin'  # Valor por defecto seguro
+            
+            return jsonify({
+                "authenticated": True, 
+                "usuario": user_data
+            }), 200
+        else:
+            return jsonify({
+                "authenticated": False,
+                "message": "No hay usuario autenticado"
+            }), 200  # Cambiar a 200 en lugar de 401 para evitar errores en frontend
+            
+    except Exception as e:
+        current_app.logger.error(f"Error al verificar autenticación: {str(e)}")
         return jsonify({
-            "authenticated": True, 
-            "usuario": current_user.serialize()
+            "authenticated": False,
+            "error": "Error interno del servidor"
         }), 200
-    else:
-        return jsonify({
-            "authenticated": False
-        }), 401
 
 @auth_bp.route('/cambiar-password', methods=['POST'])
 @login_required

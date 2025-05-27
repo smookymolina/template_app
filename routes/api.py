@@ -854,6 +854,35 @@ def check_auth():
     except Exception as e:
         current_app.logger.error(f"Error al verificar autenticación: {str(e)}")
         return jsonify({"authenticated": False, "error": str(e)}), 500
+    
+@api_bp.route('/check-auth', methods=['GET'])
+def check_auth_api():
+    """
+    Endpoint alternativo para verificar autenticación desde la API.
+    """
+    try:
+        from flask_login import current_user
+
+        if current_user and current_user.is_authenticated:
+            user_data = current_user.serialize()
+            if not user_data.get('rol'):
+                user_data['rol'] = 'admin'
+
+            return jsonify({
+                "authenticated": True,
+                "usuario": user_data
+            })
+        else:
+            return jsonify({
+                "authenticated": False
+            }), 401
+
+    except Exception as e:
+        current_app.logger.error(f"Error al verificar autenticación en API: {str(e)}")
+        return jsonify({
+            "authenticated": False, 
+            "error": str(e)
+        }), 500
 
 @api_bp.route('/reclutas/<int:id>/documentos', methods=['POST'])
 @login_required

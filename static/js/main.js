@@ -293,9 +293,16 @@ async function loginSuccess(usuario) {
             }
         }
         
-        // 7. Mostrar saludo personalizado según rol
-        const welcomeMessage = getWelcomeMessage(usuario);
-        showSuccess(welcomeMessage);
+        // 7. Mostrar saludo personalizado según rol - CON MANEJO DE ERRORES
+try {
+    const welcomeMessage = getWelcomeMessage(usuario);
+    showSuccess(welcomeMessage);
+} catch (e) {
+    console.error('Error al generar mensaje de bienvenida:', e);
+    // Fallback: mensaje simple si falla getWelcomeMessage
+    const nombre = usuario.nombre || usuario.email || 'Usuario';
+    showSuccess(`¡Bienvenido ${nombre}!`);
+}
         
         console.log('=== LOGIN SUCCESS COMPLETADO ===');
         
@@ -349,6 +356,31 @@ function updateUserInfo(usuario) {
 }
 
 /**
+ * Genera un mensaje de bienvenida personalizado según el rol del usuario
+ * @param {Object} usuario - Datos del usuario
+ * @returns {string} - Mensaje de bienvenida
+ */
+function getWelcomeMessage(usuario) {
+    if (!usuario) {
+        return '¡Bienvenido al sistema!';
+    }
+    
+    const nombre = usuario.nombre || usuario.email;
+    const rol = usuario.rol || 'usuario';
+    
+    switch (rol) {
+        case 'admin':
+            return `¡Bienvenido ${nombre}! Tienes acceso completo como Administrador.`;
+        case 'asesor':
+            return `¡Bienvenido ${nombre}! Gestiona tus reclutas asignados como Asesor.`;
+        case 'gerente':
+            return `¡Bienvenido ${nombre}! Supervisa el proceso de reclutamiento como Gerente.`;
+        default:
+            return `¡Bienvenido ${nombre}!`;
+    }
+}
+
+/**
  * Muestra mensaje de bienvenida para administradores
  */
 function showAdminWelcome() {
@@ -373,7 +405,7 @@ function showAdminWelcome() {
 }
 
 /**
- * ✅ NUEVA FUNCIÓN: Configura el dashboard según el rol del usuario 
+ * Configura el dashboard según el rol del usuario 
  * @param {string} rol - Rol del usuario ('admin' o 'asesor')
  */
 function configureDashboardForRole(rol) {
@@ -868,22 +900,83 @@ async function updateProfile() {
 
 // Inicialización manual del botón de agregar recluta
 document.addEventListener('DOMContentLoaded', function() {
-    const addReclutaButton = document.getElementById('open-add-recluta-modal');
-    if (addReclutaButton) {
-        addReclutaButton.addEventListener('click', function() {
-            const modal = document.getElementById('add-recluta-modal');
-            if (modal) {
-                modal.style.display = 'block';
-                console.log('Modal de agregar recluta abierto manualmente');
-            } else {
-                console.error('Modal add-recluta-modal no encontrado');
-            }
-        });
-        console.log('Evento de botón Agregar Recluta inicializado manualmente');
-    } else {
-        console.error('Botón open-add-recluta-modal no encontrado');
-    }
+    // Esperar un poco para asegurar que todos los módulos estén cargados
+    setTimeout(() => {
+        const addReclutaButton = document.getElementById('open-add-recluta-modal');
+        if (addReclutaButton) {
+            // Remover listeners previos
+            addReclutaButton.replaceWith(addReclutaButton.cloneNode(true));
+            const newButton = document.getElementById('open-add-recluta-modal');
+            
+            newButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Botón Agregar Recluta clickeado');
+                
+                // Verificar si Reclutas está disponible
+                if (typeof Reclutas !== 'undefined' && Reclutas.openAddReclutaModal) {
+                    Reclutas.openAddReclutaModal();
+                } else {
+                    // Fallback: abrir modal directamente
+                    const modal = document.getElementById('add-recluta-modal');
+                    if (modal) {
+                        modal.style.display = 'block';
+                        console.log('Modal abierto directamente (fallback)');
+                    } else {
+                        console.error('Modal add-recluta-modal no encontrado');
+                        showError('No se puede abrir el formulario de agregar recluta');
+                    }
+                }
+            });
+            
+            console.log('Evento de botón Agregar Recluta inicializado correctamente');
+        } else {
+            console.error('Botón open-add-recluta-modal no encontrado en el DOM');
+        }
+    }, 1000); // Esperar 1 segundo para que los módulos se carguen
 });
+
+window.openAddReclutaModal = function() {
+    console.log('Función global openAddReclutaModal llamada');
+    
+    if (typeof Reclutas !== 'undefined' && Reclutas.openAddReclutaModal) {
+        Reclutas.openAddReclutaModal();
+    } else {
+        // Fallback
+        const modal = document.getElementById('add-recluta-modal');
+        if (modal) {
+            modal.style.display = 'block';
+            
+            // Limpiar formulario
+            const form = document.getElementById('add-recluta-form');
+            if (form) form.reset();
+            
+            // Limpiar preview de imagen
+            const picPreview = document.getElementById('recluta-pic-preview');
+            if (picPreview) {
+                picPreview.innerHTML = '<i class="fas fa-user-circle"></i>';
+            }
+        } else {
+            console.error('Modal no encontrado');
+            if (typeof showError !== 'undefined') {
+                showError('No se puede abrir el formulario');
+            }
+        }
+    }
+};
+
+// Función global para guardar recluta (para usar desde HTML)
+window.addRecluta = function() {
+    console.log('Función global addRecluta llamada');
+    
+    if (typeof Reclutas !== 'undefined' && Reclutas.saveNewRecluta) {
+        Reclutas.saveNewRecluta();
+    } else {
+        console.error('Módulo Reclutas no disponible');
+        if (typeof showError !== 'undefined') {
+            showError('Error: Módulo de reclutas no disponible');
+        }
+    }
+};
 
 /**
  * Maneja cambios en la imagen de perfil
