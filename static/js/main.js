@@ -414,6 +414,10 @@ function configureDashboardForRole(rol) {
     
     if (!dashboardNav) return;
     
+    // Añadir clase CSS al body
+    document.body.classList.remove('admin-view', 'asesor-view');
+    document.body.classList.add(rol === 'admin' ? 'admin-view' : 'asesor-view');
+    
     // Actualizar texto del rol
     if (profileRole) {
         const roleNames = {

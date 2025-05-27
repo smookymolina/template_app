@@ -7,6 +7,12 @@
                 <input type="text" id="search-reclutas" placeholder="Buscar reclutas...">
                 <i class="fas fa-search"></i>
             </div>
+            <button class="btn-secondary" id="download-template-btn" style="display: none; margin-right: 10px;">
+        <i class="fas fa-download"></i> Plantilla Excel
+    </button>
+    <button class="btn-success" id="upload-excel-btn" style="display: none; margin-right: 10px;">
+        <i class="fas fa-file-excel"></i> Subir Excel
+    </button>
             <button class="btn-primary" id="open-add-recluta-modal">
                 <i class="fas fa-user-plus"></i> Agregar Nuevo Recluta
             </button>
@@ -38,16 +44,15 @@
                 </div>
                 
                 <table id="reclutas-table">
-    <thead><table id="reclutas-table">
     <thead>
         <tr>
             <th width="60">Foto</th>
             <th>Nombre</th>
             <th>Email</th>
             <th>Teléfono</th>
-            <th>Folio</th>
+            <th>Puesto</th>
             <th width="100">Estado</th>
-            <th id="asesor-header">Asesor</th>
+            <th id="asesor-header" class="asesor-column">Asesor</th>
             <th width="120">Acciones</th>
         </tr>
     </thead>

@@ -77,8 +77,6 @@
     </div>
 </div>
 
-
-
 <!-- Dashboard Section (hidden by default) -->
 <div id="dashboard-section" style="display: none;">
     <!-- Dashboard Header -->
@@ -100,7 +98,7 @@
         </div>
         
         <div class="dashboard-nav">
-            <ul>
+    <ul id="dashboard-navigation">
                 <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Reclutas</a></li>
                 <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
                 <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Estadísticas</a></li>
@@ -444,4 +442,7 @@ if (adminLoginTab && trackingTab) {
         }
     });
 </script>
+
+<input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display: none;">
+
 {% endblock %}

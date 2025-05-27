@@ -1971,3 +1971,22 @@ input:checked + .slider:before {
 .asesor-view .form-group:has(#edit-recluta-asesor) {
     display: none !important;
 }
+
+/* ===== ESTILOS ESPECÍFICOS PARA ROLES ===== */
+
+/* Ocultar elementos para asesores */
+.asesor-view #upload-excel-btn,
+.asesor-view #download-template-btn {
+    display: none !important;
+}
+
+/* Ocultar columna de asesor para asesores */
+.asesor-view .asesor-column,
+.asesor-view .asesor-cell {
+    display: none !important;
+}
+
+/* Ocultar selectores de asesor para asesores */
+.asesor-view .asesor-selector-group {
+    display: none !important;
+}
