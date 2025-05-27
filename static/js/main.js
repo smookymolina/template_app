@@ -416,7 +416,12 @@ function configureDashboardForRole(rol) {
     
     // Actualizar texto del rol
     if (profileRole) {
-        profileRole.textContent = rol === 'admin' ? 'Administrador' : 'Asesor de Reclutamiento';
+        const roleNames = {
+            'admin': 'Administrador',
+            'asesor': 'Asesor de Reclutamiento',
+            'gerente': 'Gerente de Reclutamiento'
+        };
+        profileRole.textContent = roleNames[rol] || 'Usuario';
     }
     
     if (rol === 'admin') {
@@ -431,11 +436,10 @@ function configureDashboardForRole(rol) {
         // Mostrar mensaje de bienvenida para admin
         showAdminWelcome();
     } else {
-        // Dashboard simplificado para asesores
+        // Dashboard simplificado para asesores/gerentes
         dashboardNav.innerHTML = `
             <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Mis Reclutas</a></li>
             <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Mis Entrevistas</a></li>
-            <li><a href="#" data-section="timeline-section"><i class="fas fa-stream"></i> Estado del Proceso</a></li>
             <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Mi Perfil</a></li>
         `;
         
@@ -445,6 +449,17 @@ function configureDashboardForRole(rol) {
     
     // Re-inicializar eventos de navegación
     UI.initNavigation();
+    
+    // ✅ ASEGURAR que Reclutas configure su UI según el rol
+    if (typeof Reclutas !== 'undefined' && Reclutas.configureUIForRole) {
+        // Establecer el rol en el módulo Reclutas
+        Reclutas.userRole = rol;
+        
+        // Configurar UI inmediatamente
+        setTimeout(() => {
+            Reclutas.configureUIForRole();
+        }, 100);
+    }
 }
 
 /**

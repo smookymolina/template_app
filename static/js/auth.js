@@ -268,11 +268,18 @@ const Auth = {
         }
     } catch (error) {
         console.error('Error al obtener rol del usuario:', error);
-        // Usar rol por defecto si hay error
+        // ✅ CAMBIO: Usar 'asesor' como rol por defecto más seguro
         if (this.currentUser) {
-            this.currentUser.rol = 'admin';
+            this.currentUser.rol = 'asesor';
         }
-        return { rol: 'admin', permisos: { is_admin: true } };
+        return { 
+            rol: 'asesor', 
+            permisos: { 
+                is_admin: false, 
+                is_asesor: true,
+                can_upload_excel: false  // ✅ CLAVE: Por defecto NO puede Excel
+            } 
+        };
     }
 },
 

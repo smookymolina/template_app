@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 from models import db, DatabaseError
 from models.recluta import Recluta
 from models.usuario import Usuario
+from utils.decorators import admin_required, excel_upload_required, role_required
 from models.entrevista import Entrevista  # Importación específica desde el módulo
 from utils.helpers import guardar_archivo, eliminar_archivo
 from utils.validators import validate_recluta_data, validate_entrevista_data, ValidationError
@@ -98,9 +99,6 @@ def get_recluta(id):
             "message": f"Error al obtener recluta: {str(e)}"
         }), 500
 
-# BUSCAR en routes/api.py la función get_usuario_rol
-# REEMPLAZAR completamente con:
-
 @api_bp.route('/usuario/rol', methods=['GET'])
 @login_required
 def get_usuario_rol():
@@ -109,32 +107,46 @@ def get_usuario_rol():
     """
     try:
         # Obtener el rol del usuario actual
-        rol = getattr(current_user, 'rol', 'admin')
+        rol = getattr(current_user, 'rol', 'asesor')  # ✅ CAMBIO: Default 'asesor'
         
-        # Si no tiene rol definido, asignar admin por defecto
+        # Si no tiene rol definido, asignar asesor por defecto
         if not rol:
-            rol = 'admin'
+            rol = 'asesor'  # ✅ CAMBIO: Default 'asesor' en lugar de 'admin'
             current_user.rol = rol
             db.session.commit()
-            current_app.logger.info(f"Asignado rol por defecto 'admin' al usuario {current_user.email}")
+            current_app.logger.info(f"Asignado rol por defecto 'asesor' al usuario {current_user.email}")
         
-        # Definir permisos según el rol
+        # ✅ PERMISOS ESPECÍFICOS MEJORADOS
         permisos = {
             'admin': {
                 "is_admin": True,
                 "is_asesor": False,
                 "can_assign_asesores": True,
                 "can_see_all_reclutas": True,
-                "can_upload_excel": True,
-                "can_manage_users": True
+                "can_upload_excel": True,  # ✅ CLAVE: Solo admin puede Excel
+                "can_download_template": True,  # ✅ NUEVO
+                "can_manage_users": True,
+                "show_asesor_column": True  # ✅ NUEVO
             },
             'asesor': {
                 "is_admin": False,
                 "is_asesor": True,
                 "can_assign_asesores": False,
                 "can_see_all_reclutas": False,
+                "can_upload_excel": False,  # ✅ CLAVE: Asesor NO puede Excel
+                "can_download_template": False,  # ✅ NUEVO
+                "can_manage_users": False,
+                "show_asesor_column": False  # ✅ NUEVO
+            },
+            'gerente': {  # ✅ AÑADIDO: Alias para asesor
+                "is_admin": False,
+                "is_asesor": True,
+                "can_assign_asesores": False,
+                "can_see_all_reclutas": False,
                 "can_upload_excel": False,
-                "can_manage_users": False
+                "can_download_template": False,
+                "can_manage_users": False,
+                "show_asesor_column": False
             },
             'user': {
                 "is_admin": False,
@@ -142,7 +154,9 @@ def get_usuario_rol():
                 "can_assign_asesores": False,
                 "can_see_all_reclutas": False,
                 "can_upload_excel": False,
-                "can_manage_users": False
+                "can_download_template": False,
+                "can_manage_users": False,
+                "show_asesor_column": False
             }
         }
         
@@ -993,8 +1007,9 @@ def recuperar_folio():
             "message": "Error al procesar la solicitud. Inténtelo más tarde."
         }), 500
 
-# ✅ NUEVA RUTA: Importación masiva de reclutas desde Excel
+# Importación masiva de reclutas desde Excel
 @api_bp.route('/reclutas/import-excel', methods=['POST'])
+@excel_upload_required  
 @login_required
 def import_reclutas_excel():
     """
@@ -1002,14 +1017,7 @@ def import_reclutas_excel():
     Solo disponible para administradores.
     """
     try:
-        # Verificar que el usuario sea administrador
-        if hasattr(current_user, 'rol') and current_user.rol != 'admin':
-            return jsonify({
-                "success": False,
-                "message": "Solo los administradores pueden importar reclutas desde Excel"
-            }), 403
-        
-        # Verificar que se haya enviado un archivo
+         # Verificar que se haya enviado un archivo
         if 'excel_file' not in request.files:
             return jsonify({
                 "success": False,
@@ -1168,8 +1176,9 @@ def process_excel_file(file):
         current_app.logger.error(f"Error procesando archivo Excel: {str(e)}")
         raise ValueError(f"Error al procesar el archivo Excel: {str(e)}")
 
-# ✅ NUEVA RUTA: Descargar plantilla Excel
+# Descargar plantilla Excel
 @api_bp.route('/reclutas/plantilla-excel', methods=['GET'])
+@excel_upload_required 
 @login_required
 def download_excel_template():
     """
@@ -1177,12 +1186,6 @@ def download_excel_template():
     Solo disponible para administradores.
     """
     try:
-        # Verificar que el usuario sea administrador
-        if hasattr(current_user, 'rol') and current_user.rol != 'admin':
-            return jsonify({
-                "success": False,
-                "message": "Solo los administradores pueden descargar la plantilla"
-            }), 403
         
         try:
             import pandas as pd

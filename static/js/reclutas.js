@@ -24,7 +24,7 @@ const Reclutas = {
  * Configura la interfaz de usuario según el rol
  */
 configureUIForRole: function() {
-    const role = this.userRole || Auth.getUserRole() || 'admin';
+    const role = this.userRole || Auth.getUserRole() || 'asesor';  // ✅ CAMBIO: Default 'asesor'
     this.userRole = role;
     
     console.log('Configurando UI de reclutas para rol:', role);
@@ -32,7 +32,7 @@ configureUIForRole: function() {
     if (role === 'admin') {
         console.log('Configurando UI para administrador');
         
-        // Mostrar botón de Excel para admins
+        // ✅ MOSTRAR funcionalidades de Excel solo para admins
         this.setupExcelUpload();
         
         // Mostrar columna de asesor
@@ -44,7 +44,7 @@ configureUIForRole: function() {
     } else {
         console.log('Configurando UI para asesor/gerente');
         
-        // Ocultar elementos de admin
+        // ✅ OCULTAR elementos de admin
         this.hideAdminElements();
         
         // Ocultar columna de asesor

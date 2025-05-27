@@ -1,5 +1,3 @@
-# REEMPLAZAR COMPLETAMENTE el archivo models/usuario.py con este contenido:
-
 from flask_login import UserMixin
 from datetime import datetime
 import bcrypt
@@ -15,7 +13,7 @@ class Usuario(db.Model, UserMixin):
     nombre = db.Column(db.String(100), nullable=True)
     telefono = db.Column(db.String(20), nullable=True)
     foto_url = db.Column(db.String(255), nullable=True)
-    rol = db.Column(db.String(20), default='admin')  # admin, asesor, user
+    rol = db.Column(db.String(20), default='asesor', nullable=False)  # ✅ CAMBIO: Default 'asesor' en lugar de 'admin'
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
@@ -51,7 +49,7 @@ class Usuario(db.Model, UserMixin):
             "nombre": self.nombre,
             "telefono": self.telefono,
             "foto_url": self.foto_url,
-            "rol": self.rol or 'admin',  # Asegurar que siempre tenga un rol
+            "rol": self.rol or 'asesor',  # ✅ CAMBIO: Asegurar rol por defecto
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "last_login": self.last_login.isoformat() if self.last_login else None
         }
@@ -61,15 +59,38 @@ class Usuario(db.Model, UserMixin):
         role_names = {
             'admin': 'Administrador',
             'asesor': 'Gerente de Reclutamiento',
+            'gerente': 'Gerente de Reclutamiento',  # ✅ AÑADIDO: Alias para gerente
             'user': 'Usuario'
         }
         return role_names.get(self.rol, 'Usuario')
+
+    # ✅ NUEVAS FUNCIONES DE PERMISOS
+    def is_admin(self):
+        """Verifica si el usuario es administrador"""
+        return self.rol == 'admin'
+    
+    def is_asesor(self):
+        """Verifica si el usuario es asesor/gerente"""
+        return self.rol in ['asesor', 'gerente']
+    
+    def can_upload_excel(self):
+        """Verifica si el usuario puede subir archivos Excel"""
+        return self.rol == 'admin'
+    
+    def can_assign_asesores(self):
+        """Verifica si el usuario puede asignar asesores"""
+        return self.rol == 'admin'
+    
+    def can_see_all_reclutas(self):
+        """Verifica si el usuario puede ver todos los reclutas"""
+        return self.rol == 'admin'
 
     def has_permission(self, permission):
         """Verifica si el usuario tiene un permiso específico"""
         permissions = {
             'admin': ['all'],
             'asesor': ['view_assigned_reclutas', 'edit_assigned_reclutas', 'schedule_interviews'],
+            'gerente': ['view_assigned_reclutas', 'edit_assigned_reclutas', 'schedule_interviews'],
             'user': ['view_profile']
         }
         user_permissions = permissions.get(self.rol, [])
@@ -78,6 +99,10 @@ class Usuario(db.Model, UserMixin):
     def save(self):
         """Guarda el usuario en la base de datos de forma segura"""
         try:
+            # ✅ ASEGURAR ROL ANTES DE GUARDAR
+            if not self.rol:
+                self.rol = 'asesor'
+                
             if not self.id:  # Si es un nuevo usuario
                 db.session.add(self)
             db.session.commit()
