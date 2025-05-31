@@ -69,8 +69,8 @@ hideAsesorColumn: function() {
     const style = document.createElement('style');
     style.id = 'hide-asesor-style';
     style.textContent = `
-        #reclutas-table th:nth-child(7),
-        #reclutas-table td:nth-child(7) { 
+        #reclutas-table th:nth-child(8),
+        #reclutas-table td:nth-child(8) { 
             display: none !important; 
         }
     `;
@@ -245,7 +245,7 @@ showAsesorWelcome: function() {
 },
 
 /**
- * ✅ NUEVA FUNCIÓN: Configura características para administradores
+ * Configura características para administradores
  */
 setupAdminFeatures: function() {
     console.log('Configurando características de administrador');
@@ -312,15 +312,18 @@ hideAsesorSelectors: function() {
 },
 
 /**
- * ✅ NUEVA FUNCIÓN: Oculta botones de Excel
+ * Oculta botones de Excel
  */
 hideExcelButtons: function() {
-    const excelButtons = document.querySelectorAll('#upload-excel-btn, #download-template-btn');
-    excelButtons.forEach(button => {
-        if (button) button.style.display = 'none';
-    });
+    // Solo ocultar el botón de subir Excel para asesores
+    const uploadButton = document.getElementById('upload-excel-btn');
+    if (uploadButton) uploadButton.style.display = 'none';
     
-    console.log('Botones de Excel ocultados');
+    // Mantener visible el botón de plantilla para todos los roles
+    const templateButton = document.getElementById('download-template-btn');
+    if (templateButton) templateButton.style.display = 'inline-block';
+    
+    console.log('Botón de subir Excel ocultado para asesor');
 },
 
 /**
@@ -714,57 +717,100 @@ showUploadError: function(errorMessage, modal) {
 },
 
 /**
- * ✅ NUEVA FUNCIÓN: Configura la funcionalidad de subir Excel
+ * Configura la funcionalidad de subir Excel
  */
 setupExcelUpload: function() {
+    console.log('Configurando botones de Excel para administrador');
+    
     // Buscar el contenedor de acciones de la sección
     const sectionActions = document.querySelector('#reclutas-section .section-actions');
-    if (!sectionActions) return;
+    if (!sectionActions) {
+        console.error('No se encontró el contenedor de acciones');
+        return;
+    }
     
-    // Verificar si ya existe el botón
-    let excelButton = document.getElementById('upload-excel-btn');
-    if (!excelButton) {
-        // Crear botón de Excel
-        excelButton = document.createElement('button');
-        excelButton.id = 'upload-excel-btn';
-        excelButton.className = 'btn-secondary';
-        excelButton.innerHTML = '<i class="fas fa-file-excel"></i> Subir Excel';
-        excelButton.style.marginRight = '10px';
+    // Verificar si ya existen los botones
+    let templateButton = document.getElementById('download-template-btn');
+    
+    // Crear botón de plantilla si no existe
+    if (!templateButton) {
+        templateButton = document.createElement('button');
+        templateButton.id = 'download-template-btn';
+        templateButton.className = 'btn-secondary';
+        templateButton.innerHTML = '<i class="fas fa-download"></i> Plantilla Excel';
+        templateButton.style.marginRight = '10px';
+        templateButton.title = 'Descargar plantilla Excel para importación masiva';
         
         // Insertar antes del botón "Agregar Nuevo Recluta"
         const addButton = document.getElementById('open-add-recluta-modal');
         if (addButton) {
-            sectionActions.insertBefore(excelButton, addButton);
+            sectionActions.insertBefore(templateButton, addButton);
         } else {
-            sectionActions.appendChild(excelButton);
+            sectionActions.appendChild(templateButton);
         }
+        
+        console.log('Botón de plantilla Excel creado');
     }
     
-    // Crear input file oculto si no existe
-    let fileInput = document.getElementById('excel-file-input');
-    if (!fileInput) {
-        fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.id = 'excel-file-input';
-        fileInput.accept = '.xlsx,.xls';
-        fileInput.style.display = 'none';
-        document.body.appendChild(fileInput);
+    // SOLO CREAR BOTÓN DE SUBIR EXCEL PARA ADMINISTRADORES
+    if (this.userRole === 'admin') {
+        let excelButton = document.getElementById('upload-excel-btn');
+        
+        if (!excelButton) {
+            excelButton = document.createElement('button');
+            excelButton.id = 'upload-excel-btn';
+            excelButton.className = 'btn-success';
+            excelButton.innerHTML = '<i class="fas fa-file-excel"></i> Subir Excel';
+            excelButton.style.marginRight = '10px';
+            excelButton.title = 'Importar reclutas desde archivo Excel';
+            
+            // Insertar antes del botón "Agregar Nuevo Recluta"
+            const addButton = document.getElementById('open-add-recluta-modal');
+            if (addButton) {
+                sectionActions.insertBefore(excelButton, addButton);
+            } else {
+                sectionActions.appendChild(excelButton);
+            }
+            
+            console.log('Botón de subir Excel creado (solo admin)');
+        }
+        
+        // Crear input file oculto si no existe
+        let fileInput = document.getElementById('excel-file-input');
+        if (!fileInput) {
+            fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.id = 'excel-file-input';
+            fileInput.accept = '.xlsx,.xls';
+            fileInput.style.display = 'none';
+            document.body.appendChild(fileInput);
+        }
+        
+        // Configurar eventos para subir Excel
+        excelButton.addEventListener('click', () => {
+            console.log('Abriendo selector de archivo Excel...');
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                console.log('Archivo Excel seleccionado:', e.target.files[0].name);
+                this.handleExcelUpload(e.target.files[0]);
+            }
+        });
     }
     
-    // Configurar eventos
-    excelButton.addEventListener('click', () => {
-        fileInput.click();
+    // Configurar evento para plantilla (disponible para todos los roles)
+    templateButton.addEventListener('click', () => {
+        console.log('Descargando plantilla Excel...');
+        this.downloadExcelTemplate();
     });
     
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            this.handleExcelUpload(e.target.files[0]);
-        }
-    });
+    console.log('Configuración de Excel completada');
 },
 
 /**
- * ✅ NUEVA FUNCIÓN: Maneja la subida de archivo Excel
+ * Maneja la subida de archivo Excel
  * @param {File} file - Archivo Excel seleccionado
  */
 handleExcelUpload: async function(file) {
@@ -1260,7 +1306,9 @@ renderReclutasTable: function(container) {
     
     if (!this.reclutas || this.reclutas.length === 0) {
         const row = document.createElement('tr');
-        row.innerHTML = `<td colspan="8" style="text-align: center; padding: 20px;">
+        // ✅ CORREGIR COLSPAN SEGÚN ROL
+        const colspan = this.userRole === 'admin' ? '9' : '8';
+        row.innerHTML = `<td colspan="${colspan}" style="text-align: center; padding: 20px;">
             <i class="fas fa-users"></i> No se encontraron reclutas. 
             <button class="btn-link" onclick="Reclutas.openAddReclutaModal()">¡Agrega tu primer recluta!</button>
         </td>`;
@@ -1271,19 +1319,17 @@ renderReclutasTable: function(container) {
     this.reclutas.forEach(recluta => {
         const row = document.createElement('tr');
         
-        // Determinar clase del badge según el estado
         const badgeClass = this.getEstadoBadgeClass(recluta.estado);
-        
-        // Determinar URL de la foto
         const fotoUrl = this.getFotoUrl(recluta.foto_url);
         
-        // Generar HTML de la fila
+        // ✅ AÑADIR COLUMNA FOLIO
         row.innerHTML = `
             <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"></td>
             <td>${recluta.nombre}</td>
             <td>${recluta.email}</td>
             <td>${recluta.telefono}</td>
             <td>${recluta.puesto || 'No especificado'}</td>
+            <td><span class="folio-display">${recluta.folio || 'N/A'}</span></td>
             <td><span class="badge ${badgeClass}">${recluta.estado}</span></td>
             ${this.userRole === 'admin' ? `<td>${recluta.asesor_nombre || 'No asignado'}</td>` : ''}
             <td>
@@ -1299,9 +1345,7 @@ renderReclutasTable: function(container) {
             </td>
         `;
         
-        // Configurar eventos de los botones de acción
         this.setupActionButtons(row, recluta.id);
-        
         container.appendChild(row);
     });
 },
@@ -1673,24 +1717,20 @@ getFotoUrl: function(fotoUrl) {
     },
 
     /**
-     * Renderiza la lista de reclutas en una tabla
-     * @param {HTMLElement} container - Elemento contenedor de la tabla
-     */
-    setupExcelUpload: function() {
-    console.log('Configurando botones de Excel para administrador');
+ * Configura la funcionalidad de plantilla Excel (solo descarga)
+ */
+setupExcelUpload: function() {
+    console.log('Configurando botón de plantilla Excel para administrador');
     
-    // Buscar el contenedor de acciones de la sección
     const sectionActions = document.querySelector('#reclutas-section .section-actions');
     if (!sectionActions) {
         console.error('No se encontró el contenedor de acciones');
         return;
     }
     
-    // Verificar si ya existen los botones
-    let excelButton = document.getElementById('upload-excel-btn');
+    // ✅ SOLO CREAR BOTÓN DE PLANTILLA EXCEL
     let templateButton = document.getElementById('download-template-btn');
     
-    // Crear botón de plantilla si no existe
     if (!templateButton) {
         templateButton = document.createElement('button');
         templateButton.id = 'download-template-btn';
@@ -1699,7 +1739,6 @@ getFotoUrl: function(fotoUrl) {
         templateButton.style.marginRight = '10px';
         templateButton.title = 'Descargar plantilla Excel para importación masiva';
         
-        // Insertar antes del botón "Agregar Nuevo Recluta"
         const addButton = document.getElementById('open-add-recluta-modal');
         if (addButton) {
             sectionActions.insertBefore(templateButton, addButton);
@@ -1710,67 +1749,24 @@ getFotoUrl: function(fotoUrl) {
         console.log('Botón de plantilla Excel creado');
     }
     
-    // Crear botón de subir Excel si no existe
-    if (!excelButton) {
-        excelButton = document.createElement('button');
-        excelButton.id = 'upload-excel-btn';
-        excelButton.className = 'btn-success';
-        excelButton.innerHTML = '<i class="fas fa-file-excel"></i> Subir Excel';
-        excelButton.style.marginRight = '10px';
-        excelButton.title = 'Importar reclutas desde archivo Excel';
-        
-        // Insertar antes del botón "Agregar Nuevo Recluta"
-        const addButton = document.getElementById('open-add-recluta-modal');
-        if (addButton) {
-            sectionActions.insertBefore(excelButton, addButton);
-        } else {
-            sectionActions.appendChild(excelButton);
-        }
-        
-        console.log('Botón de subir Excel creado');
-    }
-    
-    // Mostrar los botones si estaban ocultos
-    excelButton.style.display = 'inline-block';
     templateButton.style.display = 'inline-block';
     
-    // Crear input file oculto si no existe
-    let fileInput = document.getElementById('excel-file-input');
-    if (!fileInput) {
-        fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.id = 'excel-file-input';
-        fileInput.accept = '.xlsx,.xls';
-        fileInput.style.display = 'none';
-        document.body.appendChild(fileInput);
+    // ✅ ELIMINAR REFERENCIAS AL BOTÓN DE SUBIR EXCEL
+    const uploadButton = document.getElementById('upload-excel-btn');
+    if (uploadButton) {
+        uploadButton.remove();
     }
     
-    // Configurar eventos (remover listeners previos)
+    // Configurar evento solo para plantilla
     templateButton.replaceWith(templateButton.cloneNode(true));
-    excelButton.replaceWith(excelButton.cloneNode(true));
-    
-    // Obtener referencias actualizadas
     templateButton = document.getElementById('download-template-btn');
-    excelButton = document.getElementById('upload-excel-btn');
     
     templateButton.addEventListener('click', () => {
         console.log('Descargando plantilla Excel...');
         this.downloadExcelTemplate();
     });
     
-    excelButton.addEventListener('click', () => {
-        console.log('Abriendo selector de archivo Excel...');
-        fileInput.click();
-    });
-    
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            console.log('Archivo Excel seleccionado:', e.target.files[0].name);
-            this.handleExcelUpload(e.target.files[0]);
-        }
-    });
-    
-    console.log('Configuración de Excel completada');
+    console.log('Configuración de plantilla Excel completada');
 },
 
 /**
@@ -1808,6 +1804,20 @@ setupActionButtons: function(row, reclutaId) {
             e.preventDefault();
             console.log('Eliminar recluta:', reclutaId);
             this.confirmDeleteRecluta(reclutaId);
+        });
+    }
+
+    // NUEVO: Select de cambio de estado
+    const estadoSelect = row.querySelector('.estado-select');
+    if (estadoSelect) {
+        estadoSelect.addEventListener('change', (e) => {
+            e.preventDefault();
+            const nuevoEstado = e.target.value;
+            const estadoActual = e.target.dataset.current;
+            
+            if (nuevoEstado !== estadoActual) {
+                this.changeReclutaEstado(reclutaId, nuevoEstado, estadoActual);
+            }
         });
     }
 },
@@ -2054,6 +2064,81 @@ deleteCurrentRecluta: async function() {
     }
 },
 
+/**
+ * NUEVO: Cambia el estado de un recluta
+ * @param {number} reclutaId - ID del recluta
+ * @param {string} nuevoEstado - Nuevo estado
+ * @param {string} estadoActual - Estado actual
+ */
+changeReclutaEstado: async function(reclutaId, nuevoEstado, estadoActual) {
+    try {
+        // Mostrar confirmación
+        if (!confirm(`¿Cambiar estado de "${estadoActual}" a "${nuevoEstado}"?`)) {
+            // Restaurar valor anterior si cancela
+            const select = document.querySelector(`select[data-id="${reclutaId}"]`);
+            if (select) select.value = estadoActual;
+            return;
+        }
+
+        // Desactivar select durante el proceso
+        const select = document.querySelector(`select[data-id="${reclutaId}"]`);
+        if (select) {
+            select.disabled = true;
+            select.style.opacity = '0.5';
+        }
+
+        // Actualizar en el servidor
+        const response = await fetch(`${CONFIG.API_URL}/reclutas/${reclutaId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: nuevoEstado })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.success) {
+            // Actualizar en la lista local
+            const reclutaIndex = this.reclutas.findIndex(r => r.id === reclutaId);
+            if (reclutaIndex !== -1) {
+                this.reclutas[reclutaIndex].estado = nuevoEstado;
+            }
+
+            // Actualizar visualmente el badge
+            const badge = select.parentNode.querySelector('.badge');
+            if (badge) {
+                badge.className = `badge ${this.getEstadoBadgeClass(nuevoEstado)}`;
+                badge.textContent = nuevoEstado;
+            }
+
+            // Actualizar dataset del select
+            select.dataset.current = nuevoEstado;
+            
+            showSuccess(`Estado cambiado a "${nuevoEstado}" exitosamente`);
+            console.log(`Estado actualizado: ${estadoActual} → ${nuevoEstado}`);
+        } else {
+            throw new Error(data.message || 'Error al actualizar estado');
+        }
+
+    } catch (error) {
+        console.error('Error al cambiar estado:', error);
+        showError('Error al cambiar estado: ' + error.message);
+        
+        // Restaurar valor anterior en caso de error
+        const select = document.querySelector(`select[data-id="${reclutaId}"]`);
+        if (select) select.value = estadoActual;
+    } finally {
+        // Reactivar select
+        const select = document.querySelector(`select[data-id="${reclutaId}"]`);
+        if (select) {
+            select.disabled = false;
+            select.style.opacity = '1';
+        }
+    }
+},
+
     /**
      * Actualiza la información de paginación en la UI
      */
@@ -2126,46 +2211,44 @@ deleteCurrentRecluta: async function() {
     },
 
     /**
-     * Inicializa los eventos del formulario de añadir recluta
-     */
-    initAddReclutaForm: function() {
-    // Botón para abrir modal
-    const addButton = document.getElementById('open-add-recluta-modal');  // Verifica este ID
+ * Inicializa los eventos del formulario de añadir recluta
+ */
+initAddReclutaForm: function() {
+    const addButton = document.getElementById('open-add-recluta-modal');
     if (addButton) {
         addButton.addEventListener('click', () => {
             this.openAddReclutaModal();
         });
-        console.log('Evento de botón Agregar Recluta inicializado');  // Añadir para debug
+        console.log('Evento de botón Agregar Recluta inicializado');
     } else {
-        console.error('Botón Agregar Recluta no encontrado en el DOM'); // Añadir para debug
+        console.error('Botón Agregar Recluta no encontrado en el DOM');
     }
 
-        // Eventos del modal
-        const modal = document.getElementById('add-recluta-modal');
-        if (!modal) return;
+    const modal = document.getElementById('add-recluta-modal');
+    if (!modal) return;
 
-        // Botón de guardar
-        const saveButton = modal.querySelector('.btn-primary');
-        if (saveButton) {
-            saveButton.addEventListener('click', () => {
-                this.saveNewRecluta();
-            });
-        }
-
-        // Botón de cerrar
-        const closeButtons = modal.querySelectorAll('.close-modal, .btn-secondary');
-        closeButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                UI.closeModal('add-recluta-modal');
-            });
+    // ✅ ELIMINAR ONCLICK Y USAR SOLO EVENT LISTENER
+    const saveButton = modal.querySelector('.btn-primary');
+    if (saveButton) {
+        // Limpiar cualquier onclick existente
+        saveButton.removeAttribute('onclick');
+        saveButton.addEventListener('click', () => {
+            this.saveNewRecluta();
         });
+    }
 
-        // Input de foto
-        const fotoInput = document.getElementById('recluta-upload');
-        if (fotoInput) {
-            fotoInput.addEventListener('change', this.handleReclutaImageChange);
-        }
-    },
+    const closeButtons = modal.querySelectorAll('.close-modal, .btn-secondary');
+    closeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            UI.closeModal('add-recluta-modal');
+        });
+    });
+
+    const fotoInput = document.getElementById('recluta-upload');
+    if (fotoInput) {
+        fotoInput.addEventListener('change', this.handleReclutaImageChange);
+    }
+},
 
     /**
  * Abrir modal con verificaciones

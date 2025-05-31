@@ -785,6 +785,80 @@ td {
     padding: 0 10px;
 }
 
+/* NUEVO: Estilos para folio display */
+.folio-display {
+    font-family: 'Courier New', monospace;
+    background-color: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    color: var(--primary-color);
+    display: inline-block;
+}
+
+.dark-mode .folio-display {
+    background-color: #2a2b3d;
+    border-color: #3f3f3f;
+}
+
+/* NUEVO: Container para estado con select */
+.estado-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* NUEVO: Select de estado */
+.estado-select {
+    padding: 4px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: white;
+    font-size: 12px;
+    min-width: 100px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.dark-mode .estado-select {
+    background-color: #2a2b3d;
+    color: var(--text-color);
+    border-color: #3f3f3f;
+}
+
+.estado-select:hover {
+    border-color: var(--primary-color);
+}
+
+.estado-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* NUEVO: Mejorar badges con colores específicos */
+.badge-success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+}
+
+.badge-warning {
+    background: linear-gradient(135deg, #ffc107, #fd7e14);
+    color: #333;
+    border: none;
+}
+
+.badge-danger {
+    background: linear-gradient(135deg, #dc3545, #e74c3c);
+    color: white;
+    border: none;
+}
+
 /* Estadísticas */
 .stats-grid {
     display: grid;
@@ -2032,8 +2106,8 @@ body.admin-view .asesor-column {
 }
 
 /* Ocultar columna de asesor en tabla para no-admin */
-body.asesor-view #reclutas-table th:nth-child(7),
-body.asesor-view #reclutas-table td:nth-child(7) {
+body.asesor-view #reclutas-table th:nth-child(8),
+body.asesor-view #reclutas-table td:nth-child(8) {
     display: none !important;
 }
 
@@ -2783,4 +2857,47 @@ body.admin-view .dashboard-header::before {
     color: white;
     font-size: 12px;
     font-weight: bold;
+}
+
+/* ===== CORRECCIÓN ESPECÍFICA PARA TABLA DE RECLUTAS ===== */
+
+/* Ocultar columna de asesor para asesores - Más específico */
+body.asesor-view #reclutas-table th:nth-child(7),
+body.asesor-view #reclutas-table td:nth-child(7) {
+    display: none !important;
+}
+
+/* Asegurar que la tabla se ajuste correctamente sin la columna de asesor */
+body.asesor-view #reclutas-table {
+    table-layout: auto;
+}
+
+/* Para administradores, asegurar que la columna sea visible */
+body.admin-view #reclutas-table th:nth-child(7),
+body.admin-view #reclutas-table td:nth-child(7) {
+    display: table-cell !important;
+}
+
+/* Estilos para mostrar el folio en la tabla */
+.folio-display {
+    font-family: 'Courier New', monospace;
+    background-color: #f8f9fa;
+    padding: 4px 8px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--primary-color);
+    font-size: 12px;
+}
+
+.dark-mode .folio-display {
+    background-color: #2a2b3d;
+    border-color: #3f3f3f;
+}
+
+/* Ajustar columna de asesor para no-admin */
+body.asesor-view #reclutas-table th:nth-child(8),
+body.asesor-view #reclutas-table td:nth-child(8) {
+    display: none !important;
 }

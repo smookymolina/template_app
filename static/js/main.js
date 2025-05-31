@@ -738,10 +738,4 @@ window.openAddReclutaModal = function() {
     }
 };
 
-window.addRecluta = function() {
-    if (typeof Reclutas !== 'undefined' && Reclutas.saveNewRecluta) {
-        Reclutas.saveNewRecluta();
-    }
-};
-
 console.log('✅ main.js cargado - Sistema de folio restaurado');
