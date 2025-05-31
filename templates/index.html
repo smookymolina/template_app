@@ -15,6 +15,7 @@
             <button type="button" id="tracking-tab" class="login-tab">Seguimiento</button>
         </div>
         
+        <!-- ✅ PESTAÑA ADMINISTRADOR -->
         <form id="login-form" class="tab-content active">
             <div class="form-group">
                 <label for="email">Correo Electrónico</label>
@@ -46,34 +47,82 @@
             </button>
         </form>
         
+        <!-- ✅ PESTAÑA SEGUIMIENTO PÚBLICO -->
         <div id="tracking-wrapper" class="tab-content">
-    <form id="tracking-form">
-        <div class="form-group">
-            <label for="folio-input">Folio de Seguimiento</label>
-            <div class="input-icon-wrapper">
-                <i class="fas fa-file-alt"></i>
-                <input type="text" id="folio-input" placeholder="Ingresa tu folio (Ej: REC-1A2B3C4D)" required>
+            <!-- Formulario de consulta de folio -->
+            <form id="tracking-form">
+                <div class="form-group">
+                    <label for="folio-input">Folio de Seguimiento</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-file-alt"></i>
+                        <input type="text" id="folio-input" placeholder="Ingresa tu folio (Ej: REC-1A2B3C4D)" required>
+                    </div>
+                </div>
+                
+                <p class="form-info">
+                    <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para consultar el estado de tu proceso.
+                </p>
+                
+                <div class="recovery-link-container">
+                    <a href="#" id="tab-recuperar-folio-link">¿Olvidaste tu folio? Recupéralo aquí</a>
+                </div>
+                
+                <button type="button" id="tracking-button" class="btn-primary">
+                    <i class="fas fa-search"></i> Consultar Estado
+                </button>
+            </form>
+            
+            <!-- Contenedor para resultados del tracking -->
+            <div id="tracking-results" style="display: none;">
+                <!-- Los resultados se cargarán dinámicamente aquí -->
             </div>
         </div>
-        
-        <p class="form-info">
-            <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para consultar el estado de tu proceso.
-        </p>
-        
-        <div class="recovery-link-container">
-            <a href="#" id="tab-recuperar-folio-link">¿Olvidaste tu folio? Recupéralo aquí</a>
-        </div>
-        
-        <button type="button" id="tracking-button" class="btn-primary">
-            <i class="fas fa-search"></i> Consultar Estado
-        </button>
-    </form>
-    
-    <!-- Contenedor para resultados del tracking (movido dentro del wrapper) -->
-    <div id="tracking-results" style="display: none;">
-        <!-- Los resultados se cargarán dinámicamente aquí -->
     </div>
 </div>
+
+<!-- ✅ MODAL DE CLIENTE PARA SEGUIMIENTO -->
+<div id="cliente-modal" class="modal">
+    <div class="modal-content modal-sm">
+        <div class="modal-header">
+            <h3>Seguimiento de Proceso</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+
+        <div class="modal-body">
+            <!-- Formulario en el modal -->
+            <form id="modal-tracking-form">
+                <div class="form-group">
+                    <label for="folio">Folio de Seguimiento</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-file-alt"></i>
+                        <input type="text" id="folio" placeholder="Ingresa tu folio (Ej: REC-1A2B3C4D)" required>
+                    </div>
+                </div>
+                
+                <div class="modal-info">
+                    <i class="fas fa-info-circle"></i>
+                    Ingresa el folio que recibiste para consultar el estado de tu proceso de reclutamiento.
+                </div>
+                
+                <div class="recovery-link-container">
+                    <a href="#" id="recuperar-folio-link">¿Olvidaste tu folio? Recupéralo aquí</a>
+                </div>
+            </form>
+            
+            <!-- Contenedor para resultados en el modal -->
+            <div id="modal-results" style="display: none;">
+                <!-- Los resultados se cargarán dinámicamente aquí -->
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary close-modal-btn">
+                <i class="fas fa-times"></i> Cerrar
+            </button>
+            <button type="button" class="btn-primary" id="consultar-folio-btn">
+                <i class="fas fa-search"></i> Consultar Estado
+            </button>
+        </div>
     </div>
 </div>
 
@@ -98,7 +147,7 @@
         </div>
         
         <div class="dashboard-nav">
-    <ul id="dashboard-navigation">
+            <ul id="dashboard-navigation">
                 <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Reclutas</a></li>
                 <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
                 <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Estadísticas</a></li>
@@ -170,279 +219,156 @@
 
 {% block scripts %}
 {{ super() }}
-<script>
-    // Inicialización específica para la página de inicio
-    document.addEventListener('DOMContentLoaded', function() {
-        // Manejo de las pestañas
-        const adminLoginTab = document.getElementById('admin-login-tab');
-const trackingTab = document.getElementById('tracking-tab');
-const loginForm = document.getElementById('login-form');
-const trackingWrapper = document.getElementById('tracking-wrapper'); // Cambiar de trackingForm a trackingWrapper
+<script type="module">
+    // ✅ IMPORTS CORRECTOS DE MÓDULOS
+    import { showNotification, showError, showSuccess } from '/static/js/notifications.js';
+    import Client from '/static/js/client.js';
+    import Timeline from '/static/js/timeline.js';
 
-if (adminLoginTab && trackingTab) {
-    adminLoginTab.addEventListener('click', function() {
-        adminLoginTab.classList.add('active');
-        trackingTab.classList.remove('active');
-        loginForm.classList.add('active');
-        trackingWrapper.classList.remove('active'); // Actualizar aquí
-    });
-    
-    trackingTab.addEventListener('click', function() {
-        trackingTab.classList.add('active');
-        adminLoginTab.classList.remove('active');
-        trackingWrapper.classList.add('active'); // Actualizar aquí
-        loginForm.classList.remove('active');
-    });
-}
+    // ✅ INICIALIZACIÓN PRINCIPAL
+    document.addEventListener('DOMContentLoaded', function() {
+        // Inicializar módulo de cliente (tracking público)
+        Client.init();
         
-        // Configurar botón de cliente para abrir el modal
-        const clienteButton = document.getElementById('cliente-button');
-        if (clienteButton) {
-            clienteButton.addEventListener('click', function() {
-                const modal = document.getElementById('cliente-modal');
-                if (modal) modal.style.display = 'block';
+        // Inicializar timeline
+        Timeline.init();
+        
+        // ✅ MANEJO DE PESTAÑAS CORREGIDO
+        const adminLoginTab = document.getElementById('admin-login-tab');
+        const trackingTab = document.getElementById('tracking-tab');
+        const loginForm = document.getElementById('login-form');
+        const trackingWrapper = document.getElementById('tracking-wrapper');
+
+        if (adminLoginTab && trackingTab && loginForm && trackingWrapper) {
+            adminLoginTab.addEventListener('click', function() {
+                // Activar pestaña admin
+                adminLoginTab.classList.add('active');
+                trackingTab.classList.remove('active');
+                loginForm.classList.add('active');
+                trackingWrapper.classList.remove('active');
+            });
+            
+            trackingTab.addEventListener('click', function() {
+                // Activar pestaña seguimiento
+                trackingTab.classList.add('active');
+                adminLoginTab.classList.remove('active');
+                trackingWrapper.classList.add('active');
+                loginForm.classList.remove('active');
             });
         }
+
+        // ✅ EVENTOS DE TRACKING EN LA PESTAÑA
+        const trackingButton = document.getElementById('tracking-button');
+        const folioInput = document.getElementById('folio-input');
         
-        // Configurar cierre del modal
-        const closeButtons = document.querySelectorAll('.close-modal, .close-modal-btn');
-        closeButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const modal = document.getElementById('cliente-modal');
-                if (modal) modal.style.display = 'none';
-            });
-        });
-        
-        // Cerrar modal al hacer clic fuera del contenido
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('cliente-modal');
-            if (event.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-        
-        // Permitir Enter en el campo de folio
-        const folioInputField = document.getElementById('folio-input');
-        if (folioInputField) {
-            folioInputField.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    const trackingBtn = document.getElementById('tracking-button');
-                    if (trackingBtn) trackingBtn.click();
+        if (trackingButton) {
+            trackingButton.addEventListener('click', function() {
+                if (Client && typeof Client.processFolioValue === 'function') {
+                    Client.processFolioValue(folioInput.value);
                 }
             });
         }
-        
-        // Enlace para recuperar folio en la pestaña
-        const tabRecuperarFolioLink = document.getElementById('tab-recuperar-folio-link');
-        if (tabRecuperarFolioLink) {
-            tabRecuperarFolioLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                // Mostrar modal con el formulario de recuperación activo
-                const modal = document.getElementById('cliente-modal');
-                if (modal) {
-                    modal.style.display = 'block';
-                    
-                    // Si Client ya está disponible, usar su método
-                    if (window.Client && typeof window.Client.showRecuperarFolioForm === 'function') {
-                        window.Client.showRecuperarFolioForm();
-                    }
-                }
-            });
-        }
-        
-        // Enlace para recuperar folio en el modal
-        const recuperarFolioLink = document.getElementById('recuperar-folio-link');
-        if (recuperarFolioLink) {
-            recuperarFolioLink.addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                // Si Client ya está disponible, usarlo
-                if (window.Client && typeof window.Client.showRecuperarFolioForm === 'function') {
-                    window.Client.showRecuperarFolioForm();
-                }
-            });
-        }
-        
-        // Botón de consulta de folio en el modal
-        const consultarFolioBtn = document.getElementById('consultar-folio-btn');
-        if (consultarFolioBtn) {
-            consultarFolioBtn.addEventListener('click', function() {
-                const folioInput = document.getElementById('folio');
-                
-                // Si Client ya está disponible, usarlo
-                if (window.Client && typeof window.Client.processFolio === 'function') {
-                    window.Client.processFolio();
-                } else if (folioInput && folioInput.value) {
-                    // Implementación básica como fallback
-                    trackFolio(folioInput.value);
-                }
-            });
-        }
-        
-        // Input de folio para permitir Enter en el modal
-        const folioInput = document.getElementById('folio');
+
         if (folioInput) {
             folioInput.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    
-                    // Si Client ya está disponible, usarlo
-                    if (window.Client && typeof window.Client.processFolio === 'function') {
-                        window.Client.processFolio();
-                    } else {
-                        // Implementación básica como fallback
-                        trackFolio(this.value);
+                    if (Client && typeof Client.processFolioValue === 'function') {
+                        Client.processFolioValue(this.value);
                     }
                 }
             });
         }
-        
-        // Funciones auxiliares
-        function trackFolio(folio) {
-            if (!folio) {
-                showNotification('Por favor, ingresa un número de folio', 'warning');
-                return;
-            }
-            
-            // Función básica para consultar folio
-            fetch(`/api/tracking/${folio}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(response.status === 404 ? 'Folio no encontrado' : 'Error en la consulta');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        // Mostrar resultados
-                        displayTrackingResults(data.tracking_info);
-                    } else {
-                        showNotification(data.message || 'No se encontró información para este folio', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showNotification(error.message || 'Error al consultar el folio', 'error');
-                });
-        }
-        
-        function displayTrackingResults(info) {
-    const resultsContainer = document.getElementById('tracking-results');
-    const trackingForm = document.getElementById('tracking-form'); // Ahora es el formulario dentro del wrapper
-    
-    if (targetContainer) {
-        // Ocultar el formulario
-        if (trackingForm) {
-            trackingForm.style.display = 'none';
-        }
-        
-        targetContainer.style.display = 'block';
-        targetContainer.innerHTML = `
-            <div class="tracking-result-card">
-                        <h3>Información de Proceso</h3>
-                        <div class="tracking-info">
-                            <div class="tracking-row">
-                                <div class="tracking-label">Candidato:</div>
-                                <div class="tracking-value">${info.nombre || 'No disponible'}</div>
-                            </div>
-                            <div class="tracking-row">
-                                <div class="tracking-label">Estado:</div>
-                                <div class="tracking-value">
-                                    <span class="badge badge-${getBadgeClass(info.estado)}">${info.estado || 'Desconocido'}</span>
-                                </div>
-                            </div>
-                            <div class="tracking-row">
-                                <div class="tracking-label">Fecha de registro:</div>
-                                <div class="tracking-value">${info.fecha_registro || 'No disponible'}</div>
-                            </div>
-                        </div>
-                    </div>
-            
-            <button class="btn-secondary new-query-btn">
-                <i class="fas fa-arrow-left"></i> Realizar otra consulta
-            </button>
-        `;
-        
-        // Añadir funcionalidad al botón de nueva consulta
-        const newQueryBtn = targetContainer.querySelector('.new-query-btn');
-        if (newQueryBtn) {
-            newQueryBtn.addEventListener('click', function() {
-                targetContainer.style.display = 'none';
-                
-                // Mostrar formulario de nuevo
-                if (trackingForm) {
-                    trackingForm.style.display = 'block';
-                }
-            });
-        }
-    }
-}
 
-        // Función básica para consultar folio
-        function consultarFolio(folio) {
-            if (!folio) {
-                showNotification('Por favor, ingresa un número de folio', 'warning');
-                return;
-            }
-            
-            const trackingButton = document.getElementById('tracking-button');
-            if (trackingButton) {
-                trackingButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
-                trackingButton.disabled = true;
-            }
-            
-            // Función básica para consultar folio
-            fetch(`/api/tracking/${folio}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(response.status === 404 ? 'Folio no encontrado' : 'Error en la consulta');
+        // ✅ LINK DE RECUPERAR FOLIO EN LA PESTAÑA
+        const tabRecuperarFolioLink = document.getElementById('tab-recuperar-folio-link');
+        if (tabRecuperarFolioLink) {
+            tabRecuperarFolioLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                // Abrir modal y mostrar formulario de recuperación
+                const modal = document.getElementById('cliente-modal');
+                if (modal) {
+                    modal.style.display = 'block';
+                    // Llamar función de recuperación del módulo Client
+                    if (Client && typeof Client.showRecuperarFolioForm === 'function') {
+                        setTimeout(() => Client.showRecuperarFolioForm(), 100);
                     }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        // Mostrar resultados
-                        displayTrackingResults(data.tracking_info);
-                    } else {
-                        showNotification(data.message || 'No se encontró información para este folio', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showNotification(error.message || 'Error al consultar el folio', 'error');
-                })
-                .finally(() => {
-                    if (trackingButton) {
-                        trackingButton.innerHTML = '<i class="fas fa-search"></i> Consultar Estado';
-                        trackingButton.disabled = false;
-                    }
-                });
+                }
+            });
         }
+
+        // ✅ MODAL DE CLIENTE - EVENTOS
+        const clienteModal = document.getElementById('cliente-modal');
+        const consultarFolioBtn = document.getElementById('consultar-folio-btn');
+        const folioModalInput = document.getElementById('folio');
+        const recuperarFolioLink = document.getElementById('recuperar-folio-link');
+
+        // Consultar folio en modal
+        if (consultarFolioBtn) {
+            consultarFolioBtn.addEventListener('click', function() {
+                if (Client && typeof Client.processFolio === 'function') {
+                    Client.processFolio();
+                }
+            });
+        }
+
+        // Enter en input del modal
+        if (folioModalInput) {
+            folioModalInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (Client && typeof Client.processFolio === 'function') {
+                        Client.processFolio();
+                    }
+                }
+            });
+        }
+
+        // Link recuperar folio en modal
+        if (recuperarFolioLink) {
+            recuperarFolioLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (Client && typeof Client.showRecuperarFolioForm === 'function') {
+                    Client.showRecuperarFolioForm();
+                }
+            });
+        }
+
+        // ✅ CERRAR MODAL
+        const closeButtons = document.querySelectorAll('.close-modal, .close-modal-btn');
+        closeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                if (clienteModal) {
+                    clienteModal.style.display = 'none';
+                    // Resetear formulario al cerrar
+                    if (Client && typeof Client.resetFolioForm === 'function') {
+                        Client.resetFolioForm();
+                    }
+                }
+            });
+        });
+
+        // Cerrar modal al hacer clic fuera
+        window.addEventListener('click', function(event) {
+            if (event.target === clienteModal) {
+                clienteModal.style.display = 'none';
+                if (Client && typeof Client.resetFolioForm === 'function') {
+                    Client.resetFolioForm();
+                }
+            }
+        });
+
+        // ✅ EXPONER FUNCIONES GLOBALMENTE PARA COMPATIBILIDAD
+        window.showNotification = showNotification;
+        window.showError = showError;
+        window.showSuccess = showSuccess;
+        window.Client = Client;
+        window.Timeline = Timeline;
         
-        function showNotification(message, type = 'info') {
-            // Si existe una función global, usarla
-            if (window.showNotification) {
-                window.showNotification(message, type);
-                return;
-            }
-            
-            // Implementación básica como fallback
-            alert(`${type.toUpperCase()}: ${message}`);
-        }
-        
-        function getBadgeClass(estado) {
-            switch(estado) {
-                case 'Activo': return 'success';
-                case 'En proceso': return 'warning';
-                case 'Rechazado': return 'danger';
-                default: return 'secondary';
-            }
-        }
+        console.log('✅ Sistema de tracking por folio inicializado correctamente');
     });
 </script>
 
+<!-- Input para Excel (si es necesario) -->
 <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display: none;">
-
 {% endblock %}

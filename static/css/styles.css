@@ -2065,3 +2065,722 @@ body.admin-view .dashboard-header::before {
     background: linear-gradient(90deg, var(--primary-color), var(--primary-dark));
     z-index: 1;
 }
+
+/* ✅ ESTILOS ESPECÍFICOS PARA SISTEMA DE TRACKING POR FOLIO */
+
+/* ===== PESTAÑAS DE LOGIN Y TRACKING ===== */
+.login-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 25px;
+    background-color: #f8f9fa;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    overflow: hidden;
+}
+
+.dark-mode .login-tabs {
+    background-color: #2a2b3d;
+    border-bottom-color: #3f3f3f;
+}
+
+.login-tab {
+    flex: 1;
+    text-align: center;
+    padding: 15px 10px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-light);
+    transition: var(--transition);
+    position: relative;
+}
+
+.login-tab:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+    color: var(--primary-color);
+}
+
+.login-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background-color: white;
+    position: relative;
+}
+
+.dark-mode .login-tab.active {
+    background-color: var(--light-color);
+}
+
+.login-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: var(--primary-color);
+    border-radius: 2px 2px 0 0;
+}
+
+/* ===== CONTENIDO DE PESTAÑAS ===== */
+.tab-content {
+    display: none;
+    animation: fadeInTab 0.3s ease-in-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeInTab {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== TRACKING WRAPPER Y FORMULARIO ===== */
+#tracking-wrapper {
+    position: relative;
+    min-height: 300px;
+}
+
+#tracking-form {
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+#tracking-form.state-loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+#tracking-form.state-error {
+    animation: shake 0.5s ease-in-out;
+}
+
+#tracking-form.state-success {
+    animation: pulse-success 0.6s ease-in-out;
+}
+
+/* ===== ESTILOS PARA INPUT DE FOLIO ===== */
+#folio-input,
+#folio {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 16px;
+}
+
+#folio-input::placeholder,
+#folio::placeholder {
+    font-family: var(--font-family);
+    font-weight: normal;
+    letter-spacing: normal;
+    text-transform: none;
+    font-size: 14px;
+}
+
+/* Estados de input */
+.input-error {
+    border-color: var(--danger-color) !important;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25) !important;
+    animation: pulse-error 0.6s ease-in-out;
+}
+
+.input-success {
+    border-color: var(--success-color) !important;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25) !important;
+    animation: pulse-success 0.6s ease-in-out;
+}
+
+/* ===== INFORMACIÓN DEL FORMULARIO ===== */
+.form-info {
+    display: flex;
+    align-items: center;
+    background-color: rgba(0, 123, 255, 0.1);
+    border-left: 4px solid var(--primary-color);
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.dark-mode .form-info {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.form-info i {
+    color: var(--primary-color);
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+/* ===== LINK DE RECUPERACIÓN ===== */
+.recovery-link-container {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.recovery-link-container a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: var(--transition);
+    padding: 5px 10px;
+    border-radius: var(--border-radius);
+}
+
+.recovery-link-container a:hover {
+    text-decoration: underline;
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* ===== RESULTADOS DE TRACKING ===== */
+#tracking-results,
+#modal-results {
+    transition: all 0.3s ease;
+    animation: fadeInResults 0.4s ease-in-out;
+}
+
+@keyframes fadeInResults {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== TARJETA DE RESULTADOS ===== */
+.tracking-result-card {
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    padding: 25px;
+    margin-bottom: 20px;
+    border-top: 4px solid var(--primary-color);
+    position: relative;
+    overflow: hidden;
+}
+
+.dark-mode .tracking-result-card {
+    background-color: var(--light-color);
+}
+
+.tracking-result-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+}
+
+.tracking-result-card h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border-color);
+    display: flex;
+    align-items: center;
+}
+
+.tracking-result-card h3::before {
+    content: '📋';
+    margin-right: 10px;
+    font-size: 24px;
+}
+
+/* ===== INFORMACIÓN DE TRACKING ===== */
+.tracking-info {
+    margin-bottom: 25px;
+}
+
+.tracking-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode .tracking-row {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.tracking-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.tracking-label {
+    width: 160px;
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.tracking-label::before {
+    content: '▪️';
+    margin-right: 8px;
+    color: var(--primary-color);
+}
+
+.tracking-value {
+    flex: 1;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+/* ===== SECCIÓN DE TRACKING ===== */
+.tracking-section {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 2px solid var(--border-color);
+    position: relative;
+}
+
+.tracking-section::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background-color: var(--primary-color);
+}
+
+.tracking-section h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+    font-weight: 600;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+}
+
+.tracking-section h4::before {
+    content: '📅';
+    margin-right: 10px;
+}
+
+/* ===== ANIMACIÓN DE CARGA ===== */
+.loading-results {
+    text-align: center;
+    padding: 40px 20px;
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+
+.dark-mode .loading-results {
+    background-color: var(--light-color);
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(0, 123, 255, 0.1);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+.loading-results p {
+    color: var(--text-light);
+    font-size: 16px;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* ===== BOTÓN DE NUEVA CONSULTA ===== */
+.new-query-btn {
+    width: auto !important;
+    padding: 12px 24px !important;
+    margin-top: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.new-query-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* ===== FORMULARIO DE RECUPERACIÓN ===== */
+.recuperar-folio-form {
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    padding: 25px;
+    animation: fadeInResults 0.4s ease-in-out;
+}
+
+.dark-mode .recuperar-folio-form {
+    background-color: var(--light-color);
+}
+
+.recuperar-folio-form h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+    font-weight: 600;
+    text-align: center;
+}
+
+.recuperar-folio-form p {
+    text-align: center;
+    color: var(--text-light);
+    margin-bottom: 25px;
+}
+
+.form-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.form-buttons button {
+    flex: 1;
+}
+
+/* ===== MODAL ESPECÍFICO PARA CLIENTE ===== */
+#cliente-modal .modal-content {
+    max-width: 500px;
+}
+
+#cliente-modal .modal-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+#cliente-modal .modal-header h3 {
+    color: white;
+}
+
+#cliente-modal .modal-header .close-modal {
+    color: white;
+}
+
+#cliente-modal .modal-header .close-modal:hover {
+    color: #ffcccc;
+}
+
+.modal-info {
+    background-color: rgba(0, 123, 255, 0.1);
+    border-left: 4px solid var(--primary-color);
+    padding: 12px 15px;
+    margin: 15px 0;
+    border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    font-size: 14px;
+    color: var(--text-color);
+}
+
+.dark-mode .modal-info {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.modal-info i {
+    color: var(--primary-color);
+    margin-right: 8px;
+}
+
+/* ===== ANIMACIONES ===== */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+@keyframes pulse-error {
+    0% { 
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+        border-color: var(--danger-color);
+    }
+    70% { 
+        box-shadow: 0 0 0 8px rgba(220, 53, 69, 0);
+        border-color: var(--danger-color);
+    }
+    100% { 
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+        border-color: var(--danger-color);
+    }
+}
+
+@keyframes pulse-success {
+    0% { 
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
+        border-color: var(--success-color);
+    }
+    70% { 
+        box-shadow: 0 0 0 8px rgba(40, 167, 69, 0);
+        border-color: var(--success-color);
+    }
+    100% { 
+        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
+        border-color: var(--success-color);
+    }
+}
+
+/* ===== BADGES EN RESULTADOS ===== */
+.tracking-value .badge {
+    font-size: 13px;
+    padding: 6px 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border-radius: 20px;
+    text-transform: uppercase;
+}
+
+.badge-success {
+    background: linear-gradient(135deg, var(--success-color), #20c997);
+    color: white;
+}
+
+.badge-warning {
+    background: linear-gradient(135deg, var(--warning-color), #f39c12);
+    color: #333;
+}
+
+.badge-danger {
+    background: linear-gradient(135deg, var(--danger-color), #e74c3c);
+    color: white;
+}
+
+/* ===== RESPONSIVE PARA TRACKING ===== */
+@media (max-width: 768px) {
+    .login-tabs {
+        margin-bottom: 20px;
+    }
+    
+    .login-tab {
+        padding: 12px 8px;
+        font-size: 13px;
+    }
+    
+    .tracking-row {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 12px 0;
+    }
+    
+    .tracking-label {
+        width: 100%;
+        margin-bottom: 5px;
+        font-size: 14px;
+    }
+    
+    .tracking-value {
+        padding-left: 20px;
+    }
+    
+    .tracking-result-card {
+        padding: 20px 15px;
+    }
+    
+    .form-buttons {
+        flex-direction: column;
+    }
+    
+    .form-buttons button {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+}
+
+@media (max-width: 576px) {
+    #cliente-modal .modal-content {
+        width: 95%;
+        margin: 20px auto;
+    }
+    
+    .tracking-result-card h3 {
+        font-size: 18px;
+    }
+    
+    .tracking-label {
+        font-size: 13px;
+    }
+    
+    .tracking-value {
+        font-size: 14px;
+    }
+    
+    .loading-spinner {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .new-query-btn {
+        width: 100% !important;
+        margin-top: 15px;
+    }
+}
+
+/* ===== ESTADOS DE BOTÓN DE TRACKING ===== */
+#tracking-button,
+#consultar-folio-btn {
+    position: relative;
+    overflow: hidden;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+#tracking-button:disabled,
+#consultar-folio-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+#tracking-button:not(:disabled):hover,
+#consultar-folio-btn:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+}
+
+/* ===== EFECTOS ESPECIALES ===== */
+.tracking-result-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    transition: all 0.3s ease;
+}
+
+.tracking-row:hover {
+    background-color: rgba(0, 123, 255, 0.02);
+    border-radius: var(--border-radius);
+    transition: all 0.2s ease;
+}
+
+/* ===== MODO OSCURO ESPECÍFICO ===== */
+.dark-mode .loading-spinner {
+    border-color: rgba(0, 123, 255, 0.1);
+    border-top-color: var(--primary-color);
+}
+
+.dark-mode .tracking-row:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.dark-mode .form-info {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.dark-mode .modal-info {
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+/* ===== TIMELINE ESPECÍFICA PARA TRACKING ===== */
+.timeline-container {
+    margin: 30px 0;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.dark-mode .timeline-container {
+    background-color: #2a2b3d;
+    border-color: #3f3f3f;
+}
+
+/* ===== ANIMACIÓN DE ENTRADA PARA ELEMENTOS ===== */
+.tracking-result-card,
+.timeline-container,
+.recuperar-folio-form {
+    animation: slideInUp 0.5s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== INDICADORES VISUALES ===== */
+.folio-display {
+    font-family: 'Courier New', monospace;
+    background-color: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: var(--border-radius);
+    border: 1px dashed var(--border-color);
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--primary-color);
+}
+
+.dark-mode .folio-display {
+    background-color: #2a2b3d;
+    border-color: #3f3f3f;
+}
+
+/* ===== MEJORAS FINALES ===== */
+.tracking-success-indicator {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 20px;
+    height: 20px;
+    background-color: var(--success-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.tracking-error-indicator {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 20px;
+    height: 20px;
+    background-color: var(--danger-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+}

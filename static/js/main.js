@@ -1,5 +1,5 @@
 /**
- * Archivo principal JavaScript para la aplicación
+ * ✅ ARCHIVO PRINCIPAL JavaScript - SISTEMA DE FOLIO RESTAURADO
  * Inicializa todos los módulos y gestiona la lógica principal
  */
 import CONFIG from './config.js';
@@ -18,105 +18,269 @@ let appState = {
 };
 
 /**
- * Inicializa los componentes de timeline en la interfaz
+ * ✅ INICIALIZACIÓN PRINCIPAL DE LA APLICACIÓN
  */
-function initTimeline() {
-    // Obtener los elementos de la timeline
-    const timelineItems = document.querySelectorAll('.timeline-item');
-    const statusSelect = document.getElementById('timeline-status');
-    const updateButton = document.getElementById('update-status');
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        console.log('🚀 Iniciando sistema de gestión de reclutas...');
+        
+        // ✅ 1. INICIALIZAR COMPONENTES BÁSICOS
+        UI.loadSavedTheme();
+        UI.initCommonEvents();
+        UI.initNavigation();
+        UI.initColorSelectors();
+        
+        // ✅ 2. INICIALIZAR SISTEMA DE TRACKING PÚBLICO (CRÍTICO)
+        console.log('📋 Inicializando sistema de tracking por folio...');
+        Client.init();
+        Timeline.init();
+        initPublicTracking();
+        
+        // ✅ 3. VERIFICAR AUTENTICACIÓN PARA PANEL ADMIN
+        try {
+            const user = await Auth.checkAuth();
+            if (user) {
+                console.log('👤 Usuario autenticado, mostrando dashboard...');
+                loginSuccess(user);
+            } else {
+                console.log('🔐 No hay sesión activa, mostrando pantalla pública...');
+                showLoginScreen();
+            }
+        } catch (error) {
+            console.warn('⚠️ Error verificando auth, mostrando pantalla pública:', error);
+            showLoginScreen();
+        }
+        
+        // ✅ 4. CONFIGURAR EVENTOS DE FORMULARIOS
+        setupFormEvents();
+        
+        console.log('✅ Sistema inicializado correctamente');
+        
+    } catch (error) {
+        console.error('❌ Error crítico en la inicialización:', error);
+        showError('Error al cargar el sistema. Por favor, recarga la página.');
+    }
+});
+
+/**
+ * ✅ INICIALIZACIÓN DEL SISTEMA DE TRACKING PÚBLICO
+ */
+function initPublicTracking() {
+    console.log('🎯 Configurando tracking público...');
     
-    // Si no hay elementos de timeline, salir
-    if (!timelineItems.length) return;
+    // ✅ Manejo de pestañas (Admin vs Seguimiento)
+    const adminLoginTab = document.getElementById('admin-login-tab');
+    const trackingTab = document.getElementById('tracking-tab');
+    const loginForm = document.getElementById('login-form');
+    const trackingWrapper = document.getElementById('tracking-wrapper');
+
+    if (adminLoginTab && trackingTab && loginForm && trackingWrapper) {
+        console.log('📑 Configurando pestañas...');
+        
+        adminLoginTab.addEventListener('click', function() {
+            switchToAdminTab();
+        });
+        
+        trackingTab.addEventListener('click', function() {
+            switchToTrackingTab();
+        });
+    }
+
+    // ✅ Eventos de tracking en la pestaña principal
+    const trackingButton = document.getElementById('tracking-button');
+    const folioInput = document.getElementById('folio-input');
     
-    // Cargar el estado guardado o usar el valor por defecto
-    const savedStatus = localStorage.getItem('currentStatus') || 'recibida';
+    if (trackingButton && folioInput) {
+        console.log('🔍 Configurando botón de consulta principal...');
+        
+        trackingButton.addEventListener('click', function() {
+            handleTrackingRequest(folioInput.value);
+        });
+
+        folioInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleTrackingRequest(this.value);
+            }
+        });
+    }
+
+    // ✅ Link de recuperación en pestaña
+    const tabRecuperarLink = document.getElementById('tab-recuperar-folio-link');
+    if (tabRecuperarLink) {
+        tabRecuperarLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            openRecoveryModal();
+        });
+    }
+
+    // ✅ Modal de cliente
+    initClientModal();
     
-    // Actualizar la visualización inicial de la timeline
-    updateTimelineStatus(savedStatus);
+    console.log('✅ Tracking público configurado');
+}
+
+/**
+ * ✅ CAMBIAR A PESTAÑA DE ADMINISTRADOR
+ */
+function switchToAdminTab() {
+    const adminTab = document.getElementById('admin-login-tab');
+    const trackingTab = document.getElementById('tracking-tab');
+    const loginForm = document.getElementById('login-form');
+    const trackingWrapper = document.getElementById('tracking-wrapper');
+    const trackingResults = document.getElementById('tracking-results');
     
-    // Establecer el valor seleccionado en el selector de estado
-    if (statusSelect) {
-        statusSelect.value = savedStatus;
+    // Activar pestaña admin
+    adminTab?.classList.add('active');
+    trackingTab?.classList.remove('active');
+    loginForm?.classList.add('active');
+    trackingWrapper?.classList.remove('active');
+    
+    // Ocultar resultados de tracking
+    if (trackingResults) {
+        trackingResults.style.display = 'none';
     }
     
-    // Configurar evento para el botón de actualizar estado
-    if (updateButton) {
-        updateButton.addEventListener('click', function() {
-            const newStatus = statusSelect ? statusSelect.value : 'recibida';
-            
-            // Actualizar visualización de la timeline
-            updateTimelineStatus(newStatus);
-            
-            // Guardar estado en localStorage
-            localStorage.setItem('currentStatus', newStatus);
-            
-            // Mostrar notificación
-            showSuccess(`Estado de proceso actualizado a "${newStatus}"`);
-        });
+    console.log('🔐 Cambiado a pestaña de administrador');
+}
+
+/**
+ * ✅ CAMBIAR A PESTAÑA DE SEGUIMIENTO
+ */
+function switchToTrackingTab() {
+    const adminTab = document.getElementById('admin-login-tab');
+    const trackingTab = document.getElementById('tracking-tab');
+    const loginForm = document.getElementById('login-form');
+    const trackingWrapper = document.getElementById('tracking-wrapper');
+    
+    // Activar pestaña tracking
+    trackingTab?.classList.add('active');
+    adminTab?.classList.remove('active');
+    trackingWrapper?.classList.add('active');
+    loginForm?.classList.remove('active');
+    
+    // Limpiar y enfocar input
+    const folioInput = document.getElementById('folio-input');
+    if (folioInput) {
+        folioInput.value = '';
+        setTimeout(() => folioInput.focus(), 100);
+    }
+    
+    console.log('📋 Cambiado a pestaña de seguimiento');
+}
+
+/**
+ * ✅ MANEJAR SOLICITUD DE TRACKING
+ */
+function handleTrackingRequest(folioValue) {
+    if (!folioValue || !folioValue.trim()) {
+        showError('Por favor, ingresa un número de folio');
+        return;
+    }
+    
+    console.log(`🔍 Procesando solicitud de tracking para folio: ${folioValue}`);
+    
+    // Usar el módulo Client para procesar
+    if (Client && typeof Client.processFolioValue === 'function') {
+        Client.processFolioValue(folioValue.trim());
+    } else {
+        console.error('❌ Módulo Client no disponible');
+        showError('Error interno: módulo de tracking no disponible');
     }
 }
 
-// Actualizar la visualización de la timeline según el estado
-function updateTimelineStatus(status) {
-    const timelineItems = document.querySelectorAll('.timeline-item');
-    if (!timelineItems.length) return;
-    
-    const statusOrder = ['recibida', 'revision', 'entrevista', 'evaluacion', 'finalizada'];
-    const currentIndex = statusOrder.indexOf(status);
-    
-    if (currentIndex === -1) return;
-    
-    timelineItems.forEach((item, index) => {
-        // Eliminar clases anteriores
-        item.classList.remove('active', 'completed');
-        
-        if (index < currentIndex) {
-            // Estados completados
-            item.classList.add('completed');
-        } else if (index === currentIndex) {
-            // Estado actual
-            item.classList.add('active');
+/**
+ * ✅ ABRIR MODAL DE RECUPERACIÓN
+ */
+function openRecoveryModal() {
+    const modal = document.getElementById('cliente-modal');
+    if (modal) {
+        modal.style.display = 'block';
+        // Esperar a que el modal se muestre y luego mostrar formulario de recuperación
+        setTimeout(() => {
+            if (Client && typeof Client.showRecuperarFolioForm === 'function') {
+                Client.showRecuperarFolioForm();
+            }
+        }, 150);
+    }
+}
+
+/**
+ * ✅ INICIALIZAR MODAL DE CLIENTE
+ */
+function initClientModal() {
+    const modal = document.getElementById('cliente-modal');
+    const consultarBtn = document.getElementById('consultar-folio-btn');
+    const folioModalInput = document.getElementById('folio');
+    const recuperarLink = document.getElementById('recuperar-folio-link');
+    const closeButtons = document.querySelectorAll('.close-modal, .close-modal-btn');
+
+    if (!modal) return;
+
+    console.log('🖥️ Configurando modal de cliente...');
+
+    // Botón consultar en modal
+    if (consultarBtn && folioModalInput) {
+        consultarBtn.addEventListener('click', function() {
+            if (Client && typeof Client.processFolio === 'function') {
+                Client.processFolio();
+            }
+        });
+    }
+
+    // Enter en input del modal
+    if (folioModalInput) {
+        folioModalInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (Client && typeof Client.processFolio === 'function') {
+                    Client.processFolio();
+                }
+            }
+        });
+    }
+
+    // Link de recuperación en modal
+    if (recuperarLink) {
+        recuperarLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (Client && typeof Client.showRecuperarFolioForm === 'function') {
+                Client.showRecuperarFolioForm();
+            }
+        });
+    }
+
+    // Cerrar modal
+    closeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            closeClientModal();
+        });
+    });
+
+    // Cerrar al hacer clic fuera
+    window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            closeClientModal();
         }
     });
 }
 
 /**
- * Inicialización principal de la aplicación
+ * ✅ CERRAR MODAL DE CLIENTE
  */
-document.addEventListener('DOMContentLoaded', async function() {
-    // Comprobar si hay un tema guardado y aplicarlo
-    UI.loadSavedTheme();
-
-    // Inicializar módulo de cliente
-    Client.init();
-    
-    // Inicializar elementos comunes de la interfaz
-    UI.initCommonEvents();
-    UI.initNavigation();
-    UI.initColorSelectors();
-    
-    // Comprobar si hay una sesión activa
-    try {
-        const user = await Auth.checkAuth();
-        if (user) {
-            // Usuario autenticado, mostrar dashboard
-            loginSuccess(user);
-        } else {
-            // No hay sesión, mostrar login
-            showLoginScreen();
+function closeClientModal() {
+    const modal = document.getElementById('cliente-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        // Resetear formulario
+        if (Client && typeof Client.resetFolioForm === 'function') {
+            Client.resetFolioForm();
         }
-    } catch (error) {
-        console.error('Error en la inicialización:', error);
-        showLoginScreen();
     }
-    
-    // Configurar eventos de formularios
-    setupFormEvents();
-});
+}
 
 /**
- * Configura los eventos para formularios y acciones principales
+ * ✅ CONFIGURAR EVENTOS DE FORMULARIOS ADMIN
  */
 function setupFormEvents() {
     // Login form
@@ -134,7 +298,7 @@ function setupFormEvents() {
         loginButton.addEventListener('click', login);
     }
     
-    // También permitir login con Enter en los campos
+    // Enter en campos de login
     const emailField = document.getElementById('email');
     const passwordField = document.getElementById('password');
     
@@ -180,14 +344,14 @@ function setupFormEvents() {
 }
 
 /**
- * Función de login
+ * ✅ FUNCIÓN DE LOGIN
  */
 async function login() {
     const email = document.getElementById('email')?.value;
     const password = document.getElementById('password')?.value;
 
     if (!email || !password) {
-        showNotification('Completa los campos de usuario y contraseña', 'warning');
+        showError('Completa los campos de usuario y contraseña');
         return;
     }
 
@@ -202,7 +366,7 @@ async function login() {
         loginSuccess(user);
     } catch (error) {
         console.error('Error de login:', error);
-        showNotification('Usuario o contraseña incorrectos', 'error');
+        showError('Usuario o contraseña incorrectos');
     } finally {
         if (loginButton) {
             loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar Sesión';
@@ -212,63 +376,46 @@ async function login() {
 }
 
 /**
- * Acciones a realizar tras un login exitoso
- * @param {Object} usuario - Datos del usuario autenticado
+ * ✅ ACCIONES TRAS LOGIN EXITOSO
  */
 async function loginSuccess(usuario) {
     try {
-        console.log('=== INICIO LOGIN SUCCESS ===');
-        console.log('Usuario recibido:', usuario);
+        console.log('✅ Login exitoso, configurando dashboard...');
         
-        // 1. Actualizar usuario actual PRIMERO
+        // Actualizar usuario actual
         Auth.updateUserData(usuario);
-        console.log('Usuario actualizado en Auth:', Auth.currentUser);
         
-        // 2. Asegurar elementos del DOM
+        // Cambiar de pantalla
         const loginSection = document.getElementById('login-section');
         const dashboardSection = document.getElementById('dashboard-section');
         
-        if (!loginSection || !dashboardSection) {
-            console.error('Error: Elementos del DOM no encontrados');
-            showError('Error al cargar la interfaz. Por favor, recarga la página.');
-            return;
+        if (loginSection && dashboardSection) {
+            loginSection.style.display = 'none';
+            dashboardSection.style.display = 'block';
         }
         
-        // 3. Cambiar de pantalla ANTES de configurar UI
-        loginSection.style.display = 'none';
-        dashboardSection.style.display = 'block';
-        
-        // 4. Configurar UI según rol INMEDIATAMENTE
+        // Configurar UI según rol
         const userRole = usuario.rol || 'admin';
-        console.log('Configurando UI para rol:', userRole);
         configureDashboardForRole(userRole);
         
-        // 5. Actualizar información de usuario
+        // Actualizar información de usuario
         updateUserInfo(usuario);
         
-        // 6. Inicializar módulos
+        // Inicializar módulos si no están inicializados
         if (!appState.initialized) {
-            console.log('Inicializando módulos principales...');
+            console.log('📦 Inicializando módulos del dashboard...');
             
-            // Inicializar Reclutas con rol específico
             try {
                 if (typeof Reclutas !== 'undefined' && Reclutas.init) {
-                    console.log('Inicializando módulo de reclutas...');
-                    // Pasar el rol al módulo de reclutas
                     Reclutas.userRole = userRole;
                     await Reclutas.init();
-                    console.log('Reclutas inicializado correctamente');
-                    
-                    // Cargar datos iniciales
                     await Reclutas.loadAndDisplayReclutas();
-                    console.log('Datos de reclutas cargados');
                 }
             } catch (e) {
-                console.error('Error al inicializar módulo de reclutas:', e);
+                console.error('Error al inicializar reclutas:', e);
                 showError('Error al cargar reclutas: ' + e.message);
             }
             
-            // Inicializar otros módulos
             try {
                 if (typeof Calendar !== 'undefined' && Calendar.init) {
                     await Calendar.init();
@@ -285,7 +432,7 @@ async function loginSuccess(usuario) {
             
             appState.initialized = true;
         } else {
-            // Solo recargar datos si ya está inicializado
+            // Recargar datos si ya está inicializado
             try {
                 await Reclutas.loadAndDisplayReclutas();
             } catch (e) {
@@ -293,57 +440,39 @@ async function loginSuccess(usuario) {
             }
         }
         
-        // 7. Mostrar saludo personalizado según rol - CON MANEJO DE ERRORES
-try {
-    const welcomeMessage = getWelcomeMessage(usuario);
-    showSuccess(welcomeMessage);
-} catch (e) {
-    console.error('Error al generar mensaje de bienvenida:', e);
-    // Fallback: mensaje simple si falla getWelcomeMessage
-    const nombre = usuario.nombre || usuario.email || 'Usuario';
-    showSuccess(`¡Bienvenido ${nombre}!`);
-}
+        // Mensaje de bienvenida
+        const welcomeMessage = getWelcomeMessage(usuario);
+        showSuccess(welcomeMessage);
         
-        console.log('=== LOGIN SUCCESS COMPLETADO ===');
+        console.log('✅ Dashboard configurado correctamente');
         
     } catch (error) {
         console.error('Error en loginSuccess:', error);
         showError('Error al cargar el dashboard: ' + error.message);
-        
-        // En caso de error crítico, volver al login
-        document.getElementById('login-section').style.display = 'block';
-        document.getElementById('dashboard-section').style.display = 'none';
+        showLoginScreen();
     }
 }
 
-
 /**
- * Actualiza la información del usuario en la interfaz
- * @param {Object} usuario - Datos del usuario
+ * ✅ RESTO DE FUNCIONES (sin cambios, solo cleanup)
  */
-function updateUserInfo(usuario) {
-    if (!usuario) {
-        console.error('Error: Datos de usuario no proporcionados');
-        return;
-    }
 
-    // Nombre en el header y dropdown
+function updateUserInfo(usuario) {
+    if (!usuario) return;
+
     const gerenteName = document.getElementById('gerente-name');
     const dropdownUserName = document.getElementById('dropdown-user-name');
     
     if (gerenteName) gerenteName.textContent = usuario.nombre || usuario.email;
     if (dropdownUserName) dropdownUserName.textContent = usuario.nombre || usuario.email;
     
-    // ✅ NUEVO: Configurar dashboard según rol
     configureDashboardForRole(usuario.rol);
     
-    // Foto de perfil
     const profilePic = document.getElementById('dashboard-profile-pic');
     if (profilePic) {
         profilePic.src = usuario.foto_url || '/api/placeholder/100/100';
     }
     
-    // Campos del formulario de perfil
     const userName = document.getElementById('user-name');
     const userEmail = document.getElementById('user-email');
     const userPhone = document.getElementById('user-phone');
@@ -351,19 +480,10 @@ function updateUserInfo(usuario) {
     if (userName) userName.value = usuario.nombre || '';
     if (userEmail) userEmail.value = usuario.email || '';
     if (userPhone) userPhone.value = usuario.telefono || '';
-    
-    console.log('Información de usuario actualizada correctamente');
 }
 
-/**
- * Genera un mensaje de bienvenida personalizado según el rol del usuario
- * @param {Object} usuario - Datos del usuario
- * @returns {string} - Mensaje de bienvenida
- */
 function getWelcomeMessage(usuario) {
-    if (!usuario) {
-        return '¡Bienvenido al sistema!';
-    }
+    if (!usuario) return '¡Bienvenido al sistema!';
     
     const nombre = usuario.nombre || usuario.email;
     const rol = usuario.rol || 'usuario';
@@ -380,45 +500,15 @@ function getWelcomeMessage(usuario) {
     }
 }
 
-/**
- * Muestra mensaje de bienvenida para administradores
- */
-function showAdminWelcome() {
-    const estadisticasSection = document.getElementById('estadisticas-section');
-    if (estadisticasSection && !estadisticasSection.querySelector('.admin-welcome')) {
-        const welcomeDiv = document.createElement('div');
-        welcomeDiv.className = 'admin-welcome';
-        welcomeDiv.style.cssText = `
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-            color: white;
-            padding: 20px;
-            border-radius: var(--border-radius);
-            margin-bottom: 20px;
-            text-align: center;
-        `;
-        welcomeDiv.innerHTML = `
-            <h3><i class="fas fa-crown"></i> Panel de Administración</h3>
-            <p>Gestiona todos los reclutas, asigna asesores, ve estadísticas completas y programa entrevistas para todo el equipo.</p>
-        `;
-        estadisticasSection.insertBefore(welcomeDiv, estadisticasSection.firstChild);
-    }
-}
-
-/**
- * Configura el dashboard según el rol del usuario 
- * @param {string} rol - Rol del usuario ('admin' o 'asesor')
- */
 function configureDashboardForRole(rol) {
     const dashboardNav = document.querySelector('.dashboard-nav ul');
     const profileRole = document.querySelector('.profile-role');
     
     if (!dashboardNav) return;
     
-    // Añadir clase CSS al body
     document.body.classList.remove('admin-view', 'asesor-view');
     document.body.classList.add(rol === 'admin' ? 'admin-view' : 'asesor-view');
     
-    // Actualizar texto del rol
     if (profileRole) {
         const roleNames = {
             'admin': 'Administrador',
@@ -429,333 +519,43 @@ function configureDashboardForRole(rol) {
     }
     
     if (rol === 'admin') {
-        // Dashboard completo para administradores
         dashboardNav.innerHTML = `
             <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Gestión de Reclutas</a></li>
             <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
             <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Estadísticas</a></li>
             <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Configuración</a></li>
         `;
-        
-        // Mostrar mensaje de bienvenida para admin
-        showAdminWelcome();
     } else {
-        // Dashboard simplificado para asesores/gerentes
         dashboardNav.innerHTML = `
             <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Mis Reclutas</a></li>
             <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Mis Entrevistas</a></li>
             <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Mi Perfil</a></li>
         `;
-        
-        // Mostrar mensaje de bienvenida para asesor
-        showAsesorWelcome();
     }
     
-    // Re-inicializar eventos de navegación
     UI.initNavigation();
     
-    // ✅ ASEGURAR que Reclutas configure su UI según el rol
     if (typeof Reclutas !== 'undefined' && Reclutas.configureUIForRole) {
-        // Establecer el rol en el módulo Reclutas
         Reclutas.userRole = rol;
-        
-        // Configurar UI inmediatamente
-        setTimeout(() => {
-            Reclutas.configureUIForRole();
-        }, 100);
+        setTimeout(() => Reclutas.configureUIForRole(), 100);
     }
 }
 
-/**
- * Muestra mensaje de bienvenida para asesores
- */
-function showAsesorWelcome() {
-    const reclutasSection = document.getElementById('reclutas-section');
-    if (reclutasSection && !reclutasSection.querySelector('.asesor-welcome')) {
-        const welcomeDiv = document.createElement('div');
-        welcomeDiv.className = 'asesor-welcome';
-        welcomeDiv.style.cssText = `
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: white;
-            padding: 15px;
-            border-radius: var(--border-radius);
-            margin-bottom: 20px;
-            text-align: center;
-        `;
-        welcomeDiv.innerHTML = `
-            <h4><i class="fas fa-handshake"></i> Panel de Asesor de Reclutamiento</h4>
-            <p>Gestiona tus reclutas asignados, programa entrevistas y haz seguimiento a los procesos de selección.</p>
-        `;
-        
-        const sectionHeader = reclutasSection.querySelector('.section-header');
-        if (sectionHeader && sectionHeader.nextSibling) {
-            reclutasSection.insertBefore(welcomeDiv, sectionHeader.nextSibling);
-        }
-    }
-}
-
-/**
- * Inicializa los módulos principales de la aplicación
- */
-function initializeModules() {
-    // Inicializar módulo de reclutas
-    Reclutas.init();
-    
-    // Inicializar módulo de calendario
-    Calendar.init();
-    
-    // Inicializar estadísticas
-    loadEstadisticas();
-}
-
-// Alternar entre login y seguimiento
-const adminLoginTab = document.getElementById('admin-login-tab');
-const trackingTab = document.getElementById('tracking-tab');
-const loginForm = document.getElementById('login-form');
-const trackingForm = document.getElementById('tracking-form');
-const trackingResults = document.getElementById('tracking-results');
-
-if (adminLoginTab && trackingTab) {
-    adminLoginTab.addEventListener('click', function() {
-        adminLoginTab.classList.add('active');
-        trackingTab.classList.remove('active');
-        loginForm.classList.add('active');
-        trackingForm.classList.remove('active');
-        trackingResults.style.display = 'none';
-    });
-    
-    trackingTab.addEventListener('click', function() {
-        trackingTab.classList.add('active');
-        adminLoginTab.classList.remove('active');
-        trackingForm.classList.add('active');
-        loginForm.classList.remove('active');
-    });
-}
-
-// Manejar envío del formulario de seguimiento
-const trackingButton = document.getElementById('tracking-button');
-if (trackingForm) {
-    trackingForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        trackFolio();
-    });
-}
-
-// Función para realizar el seguimiento por folio
-async function trackFolio() {
-    const folioInput = document.getElementById('folio-input');
-    const folio = folioInput ? folioInput.value.trim() : '';
-    
-    if (!folio) {
-        showNotification('Por favor, ingresa un número de folio', 'warning');
-        return;
-    }
-    
-    // Mostrar estado de carga
-    const trackingButton = document.getElementById('tracking-button');
-    if (trackingButton) {
-        trackingButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
-        trackingButton.disabled = true;
-    }
-    
-    try {
-        const response = await fetch(`/api/tracking/${folio}`);
-        const data = await response.json();
-        
-        if (response.ok && data.success) {
-            displayTrackingResults(data.tracking_info);
-        } else {
-            showNotification(data.message || 'No se encontró información para este folio', 'error');
-            const trackingResults = document.getElementById('tracking-results');
-            if (trackingResults) trackingResults.style.display = 'none';
-        }
-    } catch (error) {
-        console.error('Error de seguimiento:', error);
-        showNotification('Error al consultar el folio. Intenta más tarde.', 'error');
-    } finally {
-        if (trackingButton) {
-            trackingButton.innerHTML = '<i class="fas fa-search"></i> Consultar Estado';
-            trackingButton.disabled = false;
-        }
-    }
-}
-
-// Función para mostrar los resultados del seguimiento
-function displayTrackingResults(info) {
-    if (!info) return;
-    
-    // Obtener el contenedor de resultados
-    const resultsContainer = document.getElementById('tracking-results');
-    const trackingForm = document.getElementById('tracking-form');
-    
-    if (!resultsContainer) return;
-
-    // Scroll hacia arriba para mostrar los resultados
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-    // Crear contenido de resultados (mismo código existente)
-    resultsContainer.innerHTML = `...`;
-    
-    // Ocultar el formulario y mostrar resultados con animación
-    if (trackingForm) {
-        trackingForm.style.display = 'none';
-    }
-    resultsContainer.style.display = 'block';
-    
-    // Crear contenido de resultados
-    resultsContainer.innerHTML = `
-        <div class="tracking-result-card">
-            <h3>Información de Proceso</h3>
-            <div class="tracking-info">
-                <div class="tracking-row">
-                    <div class="tracking-label">Candidato:</div>
-                    <div class="tracking-value">${info.nombre}</div>
-                </div>
-                <div class="tracking-row">
-                    <div class="tracking-label">Estado:</div>
-                    <div class="tracking-value">
-                        <span class="badge ${getBadgeClass(info.estado)}">${info.estado}</span>
-                    </div>
-                </div>
-                <div class="tracking-row">
-                    <div class="tracking-label">Fecha de registro:</div>
-                    <div class="tracking-value">${info.fecha_registro || 'No disponible'}</div>
-                </div>
-                <div class="tracking-row">
-                    <div class="tracking-label">Última actualización:</div>
-                    <div class="tracking-value">${info.ultima_actualizacion || 'No disponible'}</div>
-                </div>
-                ${info.proxima_entrevista ? `
-                <div class="tracking-section">
-                    <h4>Próxima Entrevista</h4>
-                    <div class="tracking-row">
-                        <div class="tracking-label">Fecha:</div>
-                        <div class="tracking-value">${info.proxima_entrevista.fecha}</div>
-                    </div>
-                    <div class="tracking-row">
-                        <div class="tracking-label">Hora:</div>
-                        <div class="tracking-value">${info.proxima_entrevista.hora}</div>
-                    </div>
-                    <div class="tracking-row">
-                        <div class="tracking-label">Tipo:</div>
-                        <div class="tracking-value">${getEntrevistaType(info.proxima_entrevista.tipo)}</div>
-                    </div>
-                </div>
-                ` : ''}
-            </div>
-        </div>
-    `;
-    
-    // Mostrar el contenedor de resultados
-    resultsContainer.style.display = 'block';
-    
-    // Ocultar el formulario
-    if (trackingForm) {
-        trackingForm.style.display = 'none';
-    }
-    
-    // Añadir botón para volver
-    backButton.onclick = function() {
-    // Transición suave
-    resultsContainer.style.opacity = '0';
-    
-    setTimeout(() => {
-        resultsContainer.style.display = 'none';
-        if (trackingForm) {
-            trackingForm.style.display = 'block';
-            trackingForm.classList.add('active');
-            
-            // Animar la aparición del formulario
-            trackingForm.style.opacity = '0';
-            setTimeout(() => {
-                trackingForm.style.opacity = '1';
-            }, 50);
-        }
-        
-        // Limpiar y enfocar el input
-        const folioInput = document.getElementById('folio-input');
-        if (folioInput) {
-            folioInput.value = '';
-            folioInput.focus();
-        }
-        
-        resultsContainer.style.opacity = '1';
-    }, 300);
-};
-    
-    resultsContainer.appendChild(backButton);
-}
-
-// Función para obtener la clase del badge según el estado
-function getBadgeClass(estado) {
-    switch(estado) {
-        case 'Activo': return 'badge-success';
-        case 'En proceso': return 'badge-warning';
-        case 'Rechazado': return 'badge-danger';
-        default: return 'badge-secondary';
-    }
-}
-
-// Función para obtener el texto del tipo de entrevista
-function getEntrevistaType(tipo) {
-    switch(tipo) {
-        case 'presencial': return 'Presencial';
-        case 'virtual': return 'Virtual (Videollamada)';
-        case 'telefonica': return 'Telefónica';
-        default: return tipo;
-    }
-}
-
-/**
- * Carga las estadísticas del sistema
- */
 async function loadEstadisticas() {
     try {
-        console.log('Cargando estadísticas...');
         const response = await fetch(`${CONFIG.API_URL}/estadisticas`);
-        
-        if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`Error ${response.status}`);
         
         const data = await response.json();
         if (data.success) {
             updateEstadisticasUI(data);
-            console.log('Estadísticas cargadas correctamente');
-        } else {
-            throw new Error(data.message || 'Error desconocido al cargar estadísticas');
         }
     } catch (error) {
         console.error('Error al cargar estadísticas:', error);
-        // Intentar mostrar mensaje de error en la interfaz
-        const statsContainer = document.querySelector('.stats-grid');
-        if (statsContainer) {
-            statsContainer.innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-icon"><i class="fas fa-exclamation-circle"></i></div>
-                    <div class="stat-content">
-                        <h4>Error</h4>
-                        <p>No se pudieron cargar las estadísticas</p>
-                        <button class="btn-link retry-stats">Reintentar</button>
-                    </div>
-                </div>
-            `;
-            
-            // Añadir evento para reintentar carga
-            const retryButton = statsContainer.querySelector('.retry-stats');
-            if (retryButton) {
-                retryButton.addEventListener('click', loadEstadisticas);
-            }
-        }
     }
 }
 
-/**
- * Actualiza la UI con las estadísticas
- * @param {Object} data - Datos de estadísticas
- */
 function updateEstadisticasUI(data) {
-    // Actualizar tarjetas de estadísticas
     const stats = {
         totalReclutas: document.querySelector('.stat-card:nth-child(1) .stat-number'),
         reclutasActivos: document.querySelector('.stat-card:nth-child(2) .stat-number'),
@@ -767,22 +567,14 @@ function updateEstadisticasUI(data) {
     if (stats.reclutasActivos) stats.reclutasActivos.textContent = data.reclutas.activos;
     if (stats.enProceso) stats.enProceso.textContent = data.reclutas.en_proceso;
     if (stats.entrevistasPendientes) stats.entrevistasPendientes.textContent = data.entrevistas.pendientes;
-    
-    // Aquí se podría agregar código para actualizar gráficas si se implementan
 }
 
-/**
- * Cierra la sesión del usuario
- */
 async function logout() {
     try {
         await Auth.logout();
         Auth.currentUser = null;
-        
-        // Cambiar a la pantalla de login
         showLoginScreen();
         
-        // Limpiar campos
         const emailField = document.getElementById('email');
         const passwordField = document.getElementById('password');
         
@@ -796,17 +588,14 @@ async function logout() {
     }
 }
 
-/**
- * Muestra la pantalla de login
- */
 function showLoginScreen() {
-    document.getElementById('login-section').style.display = 'block';
-    document.getElementById('dashboard-section').style.display = 'none';
+    const loginSection = document.getElementById('login-section');
+    const dashboardSection = document.getElementById('dashboard-section');
+    
+    if (loginSection) loginSection.style.display = 'block';
+    if (dashboardSection) dashboardSection.style.display = 'none';
 }
 
-/**
- * Cambia la contraseña del usuario
- */
 async function changePassword() {
     const currentPassword = document.getElementById('current-password')?.value;
     const newPassword = document.getElementById('new-password')?.value;
@@ -831,7 +620,6 @@ async function changePassword() {
     try {
         await Auth.changePassword(currentPassword, newPassword);
         
-        // Limpiar campos
         document.getElementById('current-password').value = '';
         document.getElementById('new-password').value = '';
         document.getElementById('confirm-password').value = '';
@@ -848,9 +636,6 @@ async function changePassword() {
     }
 }
 
-/**
- * Actualiza perfil del usuario
- */
 async function updateProfile() {
     const nombre = document.getElementById('user-name')?.value;
     const telefono = document.getElementById('user-phone')?.value;
@@ -867,7 +652,6 @@ async function updateProfile() {
     }
     
     try {
-        // Crear FormData si hay foto
         let data;
         if (window.profileImage) {
             data = new FormData();
@@ -878,7 +662,6 @@ async function updateProfile() {
             data = { nombre, telefono };
         }
         
-        // Actualizar en API
         const response = await fetch(`${CONFIG.API_URL}/perfil`, {
             method: 'PUT',
             body: data instanceof FormData ? data : JSON.stringify(data),
@@ -887,21 +670,13 @@ async function updateProfile() {
             }
         });
         
-        if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`Error ${response.status}`);
         
         const responseData = await response.json();
         if (responseData.success) {
-            // Actualizar usuario actual
             Auth.currentUser = responseData.usuario;
-            
-            // Actualizar UI
             updateUserInfo(responseData.usuario);
-            
-            // Limpiar variable de imagen
             window.profileImage = null;
-            
             showSuccess('Perfil actualizado correctamente');
         } else {
             throw new Error(responseData.message || 'Error al actualizar perfil');
@@ -917,99 +692,14 @@ async function updateProfile() {
     }
 }
 
-// Inicialización manual del botón de agregar recluta
-document.addEventListener('DOMContentLoaded', function() {
-    // Esperar un poco para asegurar que todos los módulos estén cargados
-    setTimeout(() => {
-        const addReclutaButton = document.getElementById('open-add-recluta-modal');
-        if (addReclutaButton) {
-            // Remover listeners previos
-            addReclutaButton.replaceWith(addReclutaButton.cloneNode(true));
-            const newButton = document.getElementById('open-add-recluta-modal');
-            
-            newButton.addEventListener('click', function(e) {
-                e.preventDefault();
-                console.log('Botón Agregar Recluta clickeado');
-                
-                // Verificar si Reclutas está disponible
-                if (typeof Reclutas !== 'undefined' && Reclutas.openAddReclutaModal) {
-                    Reclutas.openAddReclutaModal();
-                } else {
-                    // Fallback: abrir modal directamente
-                    const modal = document.getElementById('add-recluta-modal');
-                    if (modal) {
-                        modal.style.display = 'block';
-                        console.log('Modal abierto directamente (fallback)');
-                    } else {
-                        console.error('Modal add-recluta-modal no encontrado');
-                        showError('No se puede abrir el formulario de agregar recluta');
-                    }
-                }
-            });
-            
-            console.log('Evento de botón Agregar Recluta inicializado correctamente');
-        } else {
-            console.error('Botón open-add-recluta-modal no encontrado en el DOM');
-        }
-    }, 1000); // Esperar 1 segundo para que los módulos se carguen
-});
-
-window.openAddReclutaModal = function() {
-    console.log('Función global openAddReclutaModal llamada');
-    
-    if (typeof Reclutas !== 'undefined' && Reclutas.openAddReclutaModal) {
-        Reclutas.openAddReclutaModal();
-    } else {
-        // Fallback
-        const modal = document.getElementById('add-recluta-modal');
-        if (modal) {
-            modal.style.display = 'block';
-            
-            // Limpiar formulario
-            const form = document.getElementById('add-recluta-form');
-            if (form) form.reset();
-            
-            // Limpiar preview de imagen
-            const picPreview = document.getElementById('recluta-pic-preview');
-            if (picPreview) {
-                picPreview.innerHTML = '<i class="fas fa-user-circle"></i>';
-            }
-        } else {
-            console.error('Modal no encontrado');
-            if (typeof showError !== 'undefined') {
-                showError('No se puede abrir el formulario');
-            }
-        }
-    }
-};
-
-// Función global para guardar recluta (para usar desde HTML)
-window.addRecluta = function() {
-    console.log('Función global addRecluta llamada');
-    
-    if (typeof Reclutas !== 'undefined' && Reclutas.saveNewRecluta) {
-        Reclutas.saveNewRecluta();
-    } else {
-        console.error('Módulo Reclutas no disponible');
-        if (typeof showError !== 'undefined') {
-            showError('Error: Módulo de reclutas no disponible');
-        }
-    }
-};
-
-/**
- * Maneja cambios en la imagen de perfil
- * @param {Event} event - Evento de cambio de archivo
- */
 function handleProfileImageChange(event) {
-    if (!event || !event.target || !event.target.files || !event.target.files[0]) return;
+    if (!event?.target?.files?.[0]) return;
     
     const file = event.target.files[0];
     const profilePic = document.getElementById('dashboard-profile-pic');
     
     if (!profilePic) return;
     
-    // Validar tamaño
     if (file.size > CONFIG.MAX_UPLOAD_SIZE) {
         showError(`La imagen es demasiado grande. Máximo ${CONFIG.MAX_UPLOAD_SIZE / (1024 * 1024)}MB.`);
         event.target.value = '';
@@ -1018,32 +708,40 @@ function handleProfileImageChange(event) {
     
     const reader = new FileReader();
     reader.onload = function(e) {
-        if (!e || !e.target || !e.target.result) return;
-        
-        profilePic.src = e.target.result;
-        window.profileImage = file;
-        
-        // Notificar al usuario
-        showNotification('Foto de perfil actualizada. No olvides guardar los cambios.', 'info');
-        
-        // Asegurarse de que existe el botón de guardar
-        const configSection = document.querySelector('.config-section:first-child');
-        const existingButton = document.getElementById('update-profile-btn');
-        
-        if (configSection && !existingButton) {
-            const saveButton = document.createElement('button');
-            saveButton.id = 'update-profile-btn';
-            saveButton.className = 'btn-primary';
-            saveButton.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
-            saveButton.onclick = updateProfile;
-            configSection.appendChild(saveButton);
+        if (e?.target?.result) {
+            profilePic.src = e.target.result;
+            window.profileImage = file;
+            showNotification('Foto actualizada. Guarda los cambios.', 'info');
         }
     };
     
     reader.readAsDataURL(file);
 }
 
-// Exponer algunas funciones al ámbito global para usarlas en el HTML
+// ✅ EXPONER FUNCIONES GLOBALMENTE PARA COMPATIBILIDAD
 window.login = login;
 window.logout = logout;
 window.loginSuccess = loginSuccess;
+window.Client = Client;
+window.Timeline = Timeline;
+window.showNotification = showNotification;
+window.showError = showError;
+window.showSuccess = showSuccess;
+
+// ✅ FUNCIONES GLOBALES PARA RECLUTAS (COMPATIBILIDAD)
+window.openAddReclutaModal = function() {
+    if (typeof Reclutas !== 'undefined' && Reclutas.openAddReclutaModal) {
+        Reclutas.openAddReclutaModal();
+    } else {
+        const modal = document.getElementById('add-recluta-modal');
+        if (modal) modal.style.display = 'block';
+    }
+};
+
+window.addRecluta = function() {
+    if (typeof Reclutas !== 'undefined' && Reclutas.saveNewRecluta) {
+        Reclutas.saveNewRecluta();
+    }
+};
+
+console.log('✅ main.js cargado - Sistema de folio restaurado');
