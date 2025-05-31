@@ -20,9 +20,14 @@ api_bp = Blueprint('api', __name__)
 def get_asesores():
     """
     Obtiene la lista de usuarios que pueden ser asesores.
+    Solo devuelve usuarios con rol 'asesor' o 'gerente', no administradores.
     """
     try:
-        asesores = Usuario.query.filter_by(is_active=True).all()
+        # Filtrar solo usuarios con rol de asesor o gerente
+        asesores = Usuario.query.filter(
+            Usuario.is_active == True,
+            Usuario.rol.in_(['asesor', 'gerente'])
+        ).all()
         
         return jsonify({
             "success": True,

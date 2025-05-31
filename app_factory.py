@@ -198,13 +198,12 @@ def initialize_database(app):
         admin = Usuario(
             email=admin_email,
             nombre='Administrador Principal',
-            rol='admin'  # Asegurar que tenga rol admin
+            rol='admin'
         )
-        admin.password = 'admin'  # Se encriptará automáticamente
+        admin.password = 'admin'
         db.session.add(admin)
         app.logger.info(f'Usuario admin creado: {admin_email}')
     else:
-        # Asegurar que tenga rol admin
         if not admin_user.rol:
             admin_user.rol = 'admin'
             db.session.commit()
@@ -217,17 +216,57 @@ def initialize_database(app):
         admin2 = Usuario(
             email=admin2_email,
             nombre='Admin Secundario',
-            rol='admin'  # Asegurar que tenga rol admin
+            rol='admin'
         )
-        admin2.password = 'admin2'  # Se encriptará automáticamente
+        admin2.password = 'admin2'
         db.session.add(admin2)
         app.logger.info(f'Usuario admin2 creado: {admin2_email}')
     else:
-        # Asegurar que tenga rol admin
         if not admin2_user.rol:
             admin2_user.rol = 'admin'
             db.session.commit()
             app.logger.info(f'Rol admin asignado a usuario existente: {admin2_email}')
+    
+    # ✅ AGREGAR: Crear asesores de prueba
+    asesores_prueba = [
+        {
+            'email': 'asesor1@example.com',
+            'nombre': 'María García',
+            'password': 'asesor1',
+            'rol': 'asesor'
+        },
+        {
+            'email': 'asesor2@example.com', 
+            'nombre': 'Juan Rodríguez',
+            'password': 'asesor2',
+            'rol': 'asesor'
+        },
+        {
+            'email': 'gerente1@example.com',
+            'nombre': 'Ana López',
+            'password': 'gerente1',
+            'rol': 'gerente'
+        }
+    ]
+    
+    for asesor_data in asesores_prueba:
+        existing_asesor = Usuario.query.filter_by(email=asesor_data['email']).first()
+        if not existing_asesor:
+            nuevo_asesor = Usuario(
+                email=asesor_data['email'],
+                nombre=asesor_data['nombre'],
+                rol=asesor_data['rol']
+            )
+            nuevo_asesor.password = asesor_data['password']
+            db.session.add(nuevo_asesor)
+            app.logger.info(f'Usuario {asesor_data["rol"]} creado: {asesor_data["email"]}')
+        else:
+            # Asegurar que tenga el rol correcto
+            if existing_asesor.rol != asesor_data['rol']:
+                existing_asesor.rol = asesor_data['rol']
+                existing_asesor.nombre = asesor_data['nombre']
+                db.session.commit()
+                app.logger.info(f'Rol {asesor_data["rol"]} asignado a usuario existente: {asesor_data["email"]}')
     
     # Commit de cambios
     db.session.commit()

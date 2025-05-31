@@ -1990,3 +1990,78 @@ input:checked + .slider:before {
 .asesor-view .asesor-selector-group {
     display: none !important;
 }
+
+/* ===== CONTROL DE ROLES ===== */
+
+/* Para usuarios asesor - ocultar elementos de admin por defecto */
+body.asesor-view .asesor-selector-group {
+    display: none !important;
+}
+
+body.asesor-view #upload-excel-btn,
+body.asesor-view #download-template-btn {
+    display: none !important;
+}
+
+body.asesor-view .asesor-column {
+    display: none !important;
+}
+
+/* Para usuarios admin - mostrar todo */
+body.admin-view .asesor-selector-group {
+    display: block;
+}
+
+body.admin-view #upload-excel-btn,
+body.admin-view #download-template-btn {
+    display: inline-block;
+}
+
+body.admin-view .asesor-column {
+    display: table-cell;
+}
+
+/* Estilos específicos para selectores de asesor */
+.asesor-selector-group {
+    transition: opacity 0.3s ease;
+}
+
+.asesor-selector-group.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Ocultar columna de asesor en tabla para no-admin */
+body.asesor-view #reclutas-table th:nth-child(7),
+body.asesor-view #reclutas-table td:nth-child(7) {
+    display: none !important;
+}
+
+/* Ajustar ancho de tabla cuando se oculta columna */
+body.asesor-view #reclutas-table {
+    table-layout: auto;
+}
+
+/* Indicador visual para usuarios asesor */
+body.asesor-view .dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #28a745, #20c997);
+    z-index: 1;
+}
+
+/* Indicador visual para usuarios admin */
+body.admin-view .dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-dark));
+    z-index: 1;
+}

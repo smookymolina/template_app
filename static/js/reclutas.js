@@ -37,10 +37,12 @@ configureUIForRole: function() {
         this.setupExcelUpload();
         this.showAsesorColumn();
         this.showAdminWelcome();
+        this.setupAdminFeatures();
     } else {
         this.hideAdminElements();
         this.hideAsesorColumn();
         this.showAsesorWelcome();
+        this.setupAsesorFeatures();
     }
 },
 
@@ -243,7 +245,86 @@ showAsesorWelcome: function() {
 },
 
 /**
- * ✅ NUEVA FUNCIÓN: Descarga la plantilla Excel
+ * ✅ NUEVA FUNCIÓN: Configura características para administradores
+ */
+setupAdminFeatures: function() {
+    console.log('Configurando características de administrador');
+    
+    // Mostrar botones de Excel
+    this.setupExcelUpload();
+    
+    // Mostrar columna de asesor
+    this.showAsesorColumn();
+    
+    // Mostrar selectores de asesor en formularios
+    this.showAsesorSelectors();
+    
+    // Cargar asesores disponibles
+    this.loadAsesores().then(() => {
+        this.populateAsesorSelectors();
+    });
+    
+    // Mensaje de bienvenida
+    this.showAdminWelcome();
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Configura características para asesores
+ */
+setupAsesorFeatures: function() {
+    console.log('Configurando características de asesor');
+    
+    // Ocultar botones de Excel
+    this.hideExcelButtons();
+    
+    // Ocultar columna de asesor
+    this.hideAsesorColumn();
+    
+    // Ocultar selectores de asesor
+    this.hideAsesorSelectors();
+    
+    // Mensaje de bienvenida
+    this.showAsesorWelcome();
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Muestra selectores de asesor
+ */
+showAsesorSelectors: function() {
+    const asesorSelectors = document.querySelectorAll('.asesor-selector-group');
+    asesorSelectors.forEach(group => {
+        if (group) group.style.display = 'block';
+    });
+    
+    console.log('Selectores de asesor mostrados');
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Oculta selectores de asesor
+ */
+hideAsesorSelectors: function() {
+    const asesorSelectors = document.querySelectorAll('.asesor-selector-group');
+    asesorSelectors.forEach(group => {
+        if (group) group.style.display = 'none';
+    });
+    
+    console.log('Selectores de asesor ocultados');
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Oculta botones de Excel
+ */
+hideExcelButtons: function() {
+    const excelButtons = document.querySelectorAll('#upload-excel-btn, #download-template-btn');
+    excelButtons.forEach(button => {
+        if (button) button.style.display = 'none';
+    });
+    
+    console.log('Botones de Excel ocultados');
+},
+
+/**
+ * Descarga la plantilla Excel
  */
 downloadExcelTemplate: async function() {
     try {
@@ -1340,42 +1421,58 @@ getFotoUrl: function(fotoUrl) {
      * Rellena los selectores de asesores en los formularios
      */
     populateAsesorSelectors: function() {
-        const addSelector = document.getElementById('recluta-asesor');
-        const editSelector = document.getElementById('edit-recluta-asesor');
+    // Solo ejecutar si es admin
+    if (this.userRole !== 'admin') {
+        console.log('Saltando población de asesores - usuario no es admin');
+        return;
+    }
+    
+    const addSelector = document.getElementById('recluta-asesor');
+    const editSelector = document.getElementById('edit-recluta-asesor');
 
-        if (!this.asesores || this.asesores.length === 0) {
-            // Si no hay asesores, intentar cargarlos
-            this.loadAsesores()
-                .then(() => this.populateAsesorSelectors())
-                .catch(error => console.error('No se pudieron cargar los asesores:', error));
-            return;
+    if (!this.asesores || this.asesores.length === 0) {
+        console.log('No hay asesores cargados, intentando cargar...');
+        this.loadAsesores()
+            .then(() => this.populateAsesorSelectors())
+            .catch(error => console.error('No se pudieron cargar los asesores:', error));
+        return;
+    }
+
+    // Función para rellenar un selector
+    const fillSelector = (selector) => {
+        if (!selector) return;
+
+        // Limpiar opciones existentes excepto la por defecto
+        const defaultOption = selector.querySelector('option[value=""]');
+        selector.innerHTML = '';
+
+        // Restaurar opción por defecto
+        if (defaultOption) {
+            selector.appendChild(defaultOption.cloneNode(true));
+        } else {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = '-- Seleccionar asesor --';
+            selector.appendChild(option);
         }
 
-        // Función para rellenar un selector
-        const fillSelector = (selector) => {
-            if (!selector) return;
+        // Añadir opciones para cada asesor
+        this.asesores.forEach(asesor => {
+            const option = document.createElement('option');
+            option.value = asesor.id;
+            option.textContent = asesor.nombre || asesor.email;
+            selector.appendChild(option);
+        });
+        
+        console.log(`Selector poblado con ${this.asesores.length} asesores`);
+    };
 
-            // Mantener la opción por defecto
-            const defaultOption = selector.querySelector('option[value=""]');
-            selector.innerHTML = '';
-
-            if (defaultOption) {
-                selector.appendChild(defaultOption);
-            }
-
-            // Añadir opciones para cada asesor
-            this.asesores.forEach(asesor => {
-                const option = document.createElement('option');
-                option.value = asesor.id;
-                option.textContent = asesor.nombre || asesor.email;
-                selector.appendChild(option);
-            });
-        };
-
-        // Rellenar ambos selectores
-        fillSelector(addSelector);
-        fillSelector(editSelector);
-    },
+    // Rellenar ambos selectores
+    fillSelector(addSelector);
+    fillSelector(editSelector);
+    
+    console.log('Selectores de asesor poblados correctamente');
+},
 
     /**
      * Añade un nuevo recluta
