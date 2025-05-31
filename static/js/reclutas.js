@@ -2168,28 +2168,55 @@ deleteCurrentRecluta: async function() {
     },
 
     /**
-     * Abre el modal para añadir un nuevo recluta
-     */
-    openAddReclutaModal: function() {
-    console.log('Intentando abrir modal...');
+ * Abrir modal con verificaciones
+ */
+openAddReclutaModal: function() {
+    console.log('🔄 Abriendo modal de agregar recluta...');
+    
     const modal = document.getElementById('add-recluta-modal');
     if (!modal) {
-        console.error('Modal no encontrado en el DOM');
+        console.error('❌ Modal add-recluta-modal no encontrado');
+        showError('Error: No se puede abrir el formulario');
         return;
     }
     
-    // Mostrar el modal directamente en vez de usar UI.showModal
+    // Verificar que los elementos del formulario existan
+    if (!this.verifyFormElements()) {
+        showError('Error: El formulario no está completo. Recarga la página.');
+        return;
+    }
+    
+    // Mostrar modal
     modal.style.display = 'block';
-    console.log('Modal mostrado');
+    console.log('✅ Modal mostrado correctamente');
     
-    // Limpiar el formulario si es necesario
+    // Limpiar formulario
     const form = document.getElementById('add-recluta-form');
-    if (form) form.reset();
+    if (form) {
+        form.reset();
+        
+        // Establecer valor por defecto para estado
+        const estadoSelect = document.getElementById('recluta-estado');
+        if (estadoSelect) {
+            estadoSelect.value = 'En proceso';
+        }
+    }
     
-    // Limpiar preview de imagen si existe
+    // Limpiar preview de imagen
     const picPreview = document.getElementById('recluta-pic-preview');
     if (picPreview) {
         picPreview.innerHTML = '<i class="fas fa-user-circle"></i>';
+    }
+    
+    // Si es admin, asegurar que el selector de asesor esté poblado
+    if (this.userRole === 'admin' && this.asesores && this.asesores.length > 0) {
+        this.populateAsesorSelectors();
+    }
+    
+    // Enfocar el primer campo
+    const nombreInput = document.getElementById('recluta-nombre');
+    if (nombreInput) {
+        setTimeout(() => nombreInput.focus(), 100);
     }
 },
 
@@ -2229,63 +2256,181 @@ deleteCurrentRecluta: async function() {
     },
 
         /**
-     * Guarda un nuevo recluta desde el formulario de añadir
-     */
-    saveNewRecluta: async function() {
-        const modal = document.getElementById('add-recluta-modal');
-        if (!modal) return;
+ * 🔥 FUNCIÓN CORREGIDA: Guarda un nuevo recluta con validación defensiva
+ */
+saveNewRecluta: async function() {
+    console.log('🔄 Iniciando guardado de nuevo recluta...');
+    
+    const modal = document.getElementById('add-recluta-modal');
+    if (!modal) {
+        console.error('❌ Modal add-recluta-modal no encontrado');
+        showError('Error: Modal no encontrado');
+        return;
+    }
 
-        const form = document.getElementById('add-recluta-form');
-        if (!form) return;
+    const form = document.getElementById('add-recluta-form');
+    if (!form) {
+        console.error('❌ Formulario add-recluta-form no encontrado');
+        showError('Error: Formulario no encontrado');
+        return;
+    }
 
-        // Obtener valores usando IDs directos
-        const reclutaData = {
-            nombre: document.getElementById('recluta-nombre').value.trim(),
-            email: document.getElementById('recluta-email').value.trim(),
-            telefono: document.getElementById('recluta-telefono').value.trim(),
-            estado: document.getElementById('recluta-estado').value,
-            puesto: document.getElementById('recluta-puesto')?.value.trim() || '',
-            notas: document.getElementById('recluta-notas')?.value.trim() || '',
-            asesor_id: document.getElementById('recluta-asesor')?.value || null
-        };
+    // 🛡️ VALIDACIÓN DEFENSIVA: Verificar que todos los elementos existan
+    const elementos = {
+        nombre: document.getElementById('recluta-nombre'),
+        email: document.getElementById('recluta-email'),
+        telefono: document.getElementById('recluta-telefono'),
+        estado: document.getElementById('recluta-estado'),
+        puesto: document.getElementById('recluta-puesto'),
+        notas: document.getElementById('recluta-notas'),
+        asesor: document.getElementById('recluta-asesor')
+    };
 
-        // Validación
-        if (!reclutaData.nombre || !reclutaData.email || !reclutaData.telefono) {
-            showError('Por favor, completa todos los campos obligatorios');
-            return;
-        }
+    // Verificar elementos críticos (requeridos)
+    const elementosRequeridos = ['nombre', 'email', 'telefono', 'estado'];
+    const elementosFaltantes = [];
 
-        // Validar formato de email
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(reclutaData.email)) {
-            showError('Por favor, ingresa un email válido');
-            return;
-        }
-
-        const saveButton = modal.querySelector('.btn-primary');
-        if (saveButton) {
-            saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-            saveButton.disabled = true;
-        }
-
-        const fotoInput = document.getElementById('recluta-upload');
-        const foto = fotoInput && fotoInput.files.length > 0 ? fotoInput.files[0] : null;
-
-        try {
-            const newRecluta = await this.addRecluta(reclutaData, foto);
-            showSuccess(`Recluta "${newRecluta.nombre}" añadido con éxito`);
-            UI.closeModal('add-recluta-modal');
-            this.loadAndDisplayReclutas();
-        } catch (error) {
-            console.error('Error al guardar nuevo recluta:', error);
-            showError('Error al guardar el recluta: ' + error.message);
-        } finally {
-            if (saveButton) {
-                saveButton.innerHTML = '<i class="fas fa-save"></i> Guardar Recluta';
-                saveButton.disabled = false;
-            }
+    for (const campo of elementosRequeridos) {
+        if (!elementos[campo]) {
+            elementosFaltantes.push(campo);
         }
     }
+
+    if (elementosFaltantes.length > 0) {
+        console.error('❌ Elementos faltantes en el DOM:', elementosFaltantes);
+        showError(`Error: Campos faltantes en el formulario: ${elementosFaltantes.join(', ')}`);
+        return;
+    }
+
+    // 📝 EXTRACCIÓN SEGURA DE DATOS
+    const reclutaData = {
+        nombre: elementos.nombre.value?.trim() || '',
+        email: elementos.email.value?.trim() || '',
+        telefono: elementos.telefono.value?.trim() || '',
+        estado: elementos.estado.value || 'En proceso',
+        puesto: elementos.puesto?.value?.trim() || '',
+        notas: elementos.notas?.value?.trim() || '',
+        asesor_id: elementos.asesor?.value || null
+    };
+
+    console.log('📋 Datos extraídos:', reclutaData);
+
+    // 🔍 VALIDACIONES FRONTEND
+    if (!reclutaData.nombre) {
+        showError('El nombre es requerido');
+        elementos.nombre.focus();
+        return;
+    }
+
+    if (!reclutaData.email) {
+        showError('El email es requerido');
+        elementos.email.focus();
+        return;
+    }
+
+    if (!reclutaData.telefono) {
+        showError('El teléfono es requerido');
+        elementos.telefono.focus();
+        return;
+    }
+
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(reclutaData.email)) {
+        showError('Por favor, ingresa un email válido');
+        elementos.email.focus();
+        return;
+    }
+
+    // 🔄 ESTADO DE CARGA
+    const saveButton = modal.querySelector('.btn-primary');
+    const originalButtonHTML = saveButton?.innerHTML;
+    
+    if (saveButton) {
+        saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        saveButton.disabled = true;
+    }
+
+    try {
+        // 📸 MANEJO DE FOTO
+        const fotoInput = document.getElementById('recluta-upload');
+        const foto = fotoInput && fotoInput.files && fotoInput.files.length > 0 ? fotoInput.files[0] : null;
+
+        if (foto) {
+            console.log('📸 Foto seleccionada:', foto.name, 'Tamaño:', foto.size);
+        }
+
+        // 🚀 ENVIAR DATOS AL SERVIDOR
+        console.log('🚀 Enviando datos al servidor...');
+        const newRecluta = await this.addRecluta(reclutaData, foto);
+        
+        console.log('✅ Recluta creado exitosamente:', newRecluta);
+        showSuccess(`Recluta "${newRecluta.nombre}" añadido con éxito`);
+        
+        // 🔄 ACTUALIZAR INTERFAZ
+        if (typeof UI !== 'undefined' && UI.closeModal) {
+            UI.closeModal('add-recluta-modal');
+        } else {
+            modal.style.display = 'none';
+        }
+        
+        // Limpiar formulario
+        form.reset();
+        const picPreview = document.getElementById('recluta-pic-preview');
+        if (picPreview) {
+            picPreview.innerHTML = '<i class="fas fa-user-circle"></i>';
+        }
+        
+        // Recargar lista de reclutas
+        await this.loadAndDisplayReclutas();
+
+    } catch (error) {
+        console.error('❌ Error al guardar recluta:', error);
+        
+        // Mostrar error específico si está disponible
+        let errorMessage = 'Error al guardar el recluta';
+        if (error.message) {
+            errorMessage += ': ' + error.message;
+        }
+        
+        showError(errorMessage);
+        
+    } finally {
+        // 🔄 RESTAURAR ESTADO DEL BOTÓN
+        if (saveButton && originalButtonHTML) {
+            saveButton.innerHTML = originalButtonHTML;
+            saveButton.disabled = false;
+        }
+    }
+},
+
+/**
+ * Verificar si el DOM está listo para el formulario
+ */
+verifyFormElements: function() {
+    const requiredElements = [
+        'recluta-nombre',
+        'recluta-email', 
+        'recluta-telefono',
+        'recluta-estado'
+    ];
+    
+    const missing = [];
+    requiredElements.forEach(id => {
+        if (!document.getElementById(id)) {
+            missing.push(id);
+        }
+    });
+    
+    if (missing.length > 0) {
+        console.warn('⚠️ Elementos faltantes en el formulario:', missing);
+        return false;
+    }
+    
+    console.log('✅ Todos los elementos del formulario están presentes');
+    return true;
+},
+
 };
 
 // Exponer la función addRecluta al ámbito global para que funcione con onclick en HTML
