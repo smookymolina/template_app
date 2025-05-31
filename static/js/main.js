@@ -720,6 +720,7 @@ function handleProfileImageChange(event) {
 
 // ✅ EXPONER FUNCIONES GLOBALMENTE PARA COMPATIBILIDAD
 window.login = login;
+window.Reclutas = Reclutas;
 window.logout = logout;
 window.loginSuccess = loginSuccess;
 window.Client = Client;
@@ -735,6 +736,24 @@ window.openAddReclutaModal = function() {
     } else {
         const modal = document.getElementById('add-recluta-modal');
         if (modal) modal.style.display = 'block';
+    }
+};
+
+window.viewRecluta = function(id) {
+    if (typeof Reclutas !== 'undefined' && Reclutas.viewRecluta) {
+        Reclutas.viewRecluta(id);
+    }
+};
+
+window.editRecluta = function(id) {
+    if (typeof Reclutas !== 'undefined' && Reclutas.editRecluta) {
+        Reclutas.editRecluta(id);
+    }
+};
+
+window.deleteRecluta = function(id) {
+    if (typeof Reclutas !== 'undefined' && Reclutas.confirmDeleteRecluta) {
+        Reclutas.confirmDeleteRecluta(id);
     }
 };
 

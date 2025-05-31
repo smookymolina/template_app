@@ -1780,8 +1780,13 @@ setupActionButtons: function(row, reclutaId) {
     // Botón de ver detalles
     const viewBtn = row.querySelector('.view-btn');
     if (viewBtn) {
-        viewBtn.addEventListener('click', (e) => {
+        // Limpiar eventos previos
+        viewBtn.replaceWith(viewBtn.cloneNode(true));
+        const newViewBtn = row.querySelector('.view-btn');
+        
+        newViewBtn.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             console.log('Ver recluta:', reclutaId);
             this.viewRecluta(reclutaId);
         });
@@ -1790,8 +1795,13 @@ setupActionButtons: function(row, reclutaId) {
     // Botón de editar
     const editBtn = row.querySelector('.edit-btn');
     if (editBtn) {
-        editBtn.addEventListener('click', (e) => {
+        // Limpiar eventos previos
+        editBtn.replaceWith(editBtn.cloneNode(true));
+        const newEditBtn = row.querySelector('.edit-btn');
+        
+        newEditBtn.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             console.log('Editar recluta:', reclutaId);
             this.editRecluta(reclutaId);
         });
@@ -1800,24 +1810,15 @@ setupActionButtons: function(row, reclutaId) {
     // Botón de eliminar
     const deleteBtn = row.querySelector('.delete-btn');
     if (deleteBtn) {
-        deleteBtn.addEventListener('click', (e) => {
+        // Limpiar eventos previos
+        deleteBtn.replaceWith(deleteBtn.cloneNode(true));
+        const newDeleteBtn = row.querySelector('.delete-btn');
+        
+        newDeleteBtn.addEventListener('click', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             console.log('Eliminar recluta:', reclutaId);
             this.confirmDeleteRecluta(reclutaId);
-        });
-    }
-
-    // NUEVO: Select de cambio de estado
-    const estadoSelect = row.querySelector('.estado-select');
-    if (estadoSelect) {
-        estadoSelect.addEventListener('change', (e) => {
-            e.preventDefault();
-            const nuevoEstado = e.target.value;
-            const estadoActual = e.target.dataset.current;
-            
-            if (nuevoEstado !== estadoActual) {
-                this.changeReclutaEstado(reclutaId, nuevoEstado, estadoActual);
-            }
         });
     }
 },
@@ -1827,8 +1828,14 @@ setupActionButtons: function(row, reclutaId) {
      * @param {number} id - ID del recluta
      */
     viewRecluta: async function(id) {
-        try {
-            const data = await this.getRecluta(id);
+    try {
+        // Verificar que los modales estén inicializados
+        if (!this.ensureModalsInitialized()) {
+            showError('Error: Los modales no están correctamente inicializados');
+            return;
+        }
+
+        const data = await this.getRecluta(id);
             // Extraer el objeto recluta de la respuesta
             const recluta = data.recluta || data;
             this.currentReclutaId = id;
@@ -1920,6 +1927,37 @@ enableEditMode: function() {
 },
 
 /**
+ * Verifica si los modales están correctamente inicializados
+ */
+ensureModalsInitialized: function() {
+    // Verificar que el modal de detalles existe
+    const viewModal = document.getElementById('view-recluta-modal');
+    if (!viewModal) {
+        console.error('Modal view-recluta-modal no encontrado');
+        return false;
+    }
+
+    // Verificar que todos los elementos necesarios existen
+    const requiredElements = [
+        'detail-recluta-nombre',
+        'detail-recluta-email', 
+        'detail-recluta-telefono',
+        'detail-recluta-estado',
+        'view-mode-buttons',
+        'edit-mode-form'
+    ];
+
+    const missingElements = requiredElements.filter(id => !document.getElementById(id));
+    
+    if (missingElements.length > 0) {
+        console.error('Elementos faltantes en el modal:', missingElements);
+        return false;
+    }
+
+    return true;
+},
+
+/**
  * Cancela la edición y vuelve al modo vista
  */
 cancelEdit: function() {
@@ -1931,40 +1969,56 @@ cancelEdit: function() {
 },
 
     /**
-     * Guarda los cambios realizados en la edición del recluta
-     */
-    saveReclutaChanges: async function() {
-        const modal = document.getElementById('edit-recluta-modal');
-        if (!modal || !this.currentReclutaId) return;
+ * Guarda los cambios realizados en la edición del recluta
+ */
+saveReclutaChanges: async function() {
+    if (!this.currentReclutaId) return;
 
-        const form = modal.querySelector('form');
-        if (!form) return;
+    // Obtener datos del formulario de edición
+    const reclutaData = {
+        nombre: document.getElementById('edit-recluta-nombre')?.value || '',
+        email: document.getElementById('edit-recluta-email')?.value || '',
+        telefono: document.getElementById('edit-recluta-telefono')?.value || '',
+        puesto: document.getElementById('edit-recluta-puesto')?.value || '',
+        estado: document.getElementById('edit-recluta-estado')?.value || '',
+        notas: document.getElementById('edit-recluta-notas')?.value || ''
+    };
 
-        const reclutaData = {
-            nombre: form.elements.edit_nombre.value,
-            puesto: form.elements.edit_puesto.value,
-            email: form.elements.edit_email.value,
-            telefono: form.elements.edit_telefono.value,
-            fecha_postulacion: form.elements.edit_fecha.value,
-            notas: form.elements.edit_notas.value,
-            estado: form.elements.edit_estado.value,
-            asesor_id: form.elements.edit_recluta_asesor.value || null
-        };
+    // Validaciones básicas
+    if (!reclutaData.nombre || !reclutaData.email || !reclutaData.telefono) {
+        showError('Completa todos los campos requeridos');
+        return;
+    }
 
-        const fotoInput = document.getElementById('edit-recluta-upload');
-        const foto = fotoInput && fotoInput.files.length > 0 ? fotoInput.files[0] : null;
+    const saveButton = document.querySelector('[data-action="save-changes"]');
+    if (saveButton) {
+        saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        saveButton.disabled = true;
+    }
 
-        try {
-            const updatedRecluta = await this.updateRecluta(this.currentReclutaId, reclutaData, foto);
-            showSuccess(`Recluta "${updatedRecluta.nombre}" actualizado con éxito`);
-            UI.closeModal('edit-recluta-modal');
-            this.loadAndDisplayReclutas(); // Recargar la lista para ver los cambios
-            this.viewRecluta(this.currentReclutaId); // Volver a mostrar los detalles actualizados
-        } catch (error) {
-            console.error('Error al guardar cambios:', error);
-            showError('Error al guardar los cambios');
+    try {
+        const updatedRecluta = await this.updateRecluta(this.currentReclutaId, reclutaData);
+        showSuccess(`Recluta "${updatedRecluta.nombre}" actualizado con éxito`);
+        
+        // Volver al modo vista
+        this.cancelEdit();
+        
+        // Actualizar la vista de detalles
+        this.viewRecluta(this.currentReclutaId);
+        
+        // Recargar la lista
+        this.loadAndDisplayReclutas();
+        
+    } catch (error) {
+        console.error('Error al guardar cambios:', error);
+        showError('Error al guardar los cambios: ' + error.message);
+    } finally {
+        if (saveButton) {
+            saveButton.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+            saveButton.disabled = false;
         }
-    },
+    }
+},
 
     /**
  * Programa una entrevista para el recluta actual

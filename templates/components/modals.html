@@ -369,3 +369,48 @@
         </div>
     </div>
 </div>
+
+<script>
+// Event listeners para los modales de reclutas
+document.addEventListener('DOMContentLoaded', function() {
+    // Modal de ver recluta - eventos de botones
+    const viewModal = document.getElementById('view-recluta-modal');
+    if (viewModal) {
+        // Botones de modo vista
+        viewModal.addEventListener('click', function(e) {
+            const target = e.target.closest('[data-action]');
+            if (!target) return;
+            
+            const action = target.dataset.action;
+            
+            switch(action) {
+                case 'edit':
+                    if (window.Reclutas && window.Reclutas.enableEditMode) {
+                        window.Reclutas.enableEditMode();
+                    }
+                    break;
+                case 'delete':
+                    if (window.Reclutas && window.Reclutas.confirmDeleteRecluta && window.Reclutas.currentReclutaId) {
+                        window.Reclutas.confirmDeleteRecluta(window.Reclutas.currentReclutaId);
+                    }
+                    break;
+                case 'schedule-interview':
+                    if (window.Reclutas && window.Reclutas.programarEntrevista) {
+                        window.Reclutas.programarEntrevista();
+                    }
+                    break;
+                case 'cancel-edit':
+                    if (window.Reclutas && window.Reclutas.cancelEdit) {
+                        window.Reclutas.cancelEdit();
+                    }
+                    break;
+                case 'save-changes':
+                    if (window.Reclutas && window.Reclutas.saveReclutaChanges) {
+                        window.Reclutas.saveReclutaChanges();
+                    }
+                    break;
+            }
+        });
+    }
+});
+</script>
