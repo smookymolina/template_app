@@ -1,6 +1,4 @@
-
-
-/* Variables globales y estilos base */
+/* ===== VARIABLES GLOBALES Y CONFIGURACIÓN BASE ===== */
 :root {
     --primary-color: #007bff;
     --primary-dark: #0056b3;
@@ -22,9 +20,7 @@
     --font-family: 'Poppins', sans-serif;
 }
 
-
-
-/* Modo oscuro */
+/* ===== MODO OSCURO ===== */
 body.dark-mode {
     --primary-light: #252836;
     --light-color: #1e1e2c;
@@ -35,6 +31,7 @@ body.dark-mode {
     background-color: #181924 !important;
 }
 
+/* ===== RESET Y CONFIGURACIÓN BASE ===== */
 * {
     margin: 0;
     padding: 0;
@@ -56,7 +53,7 @@ body {
     padding: 20px;
 }
 
-/* Notificaciones */
+/* ===== SISTEMA DE NOTIFICACIONES ===== */
 .notification {
     position: fixed;
     top: 20px;
@@ -80,17 +77,9 @@ body {
     opacity: 1;
 }
 
-.notification.success {
-    border-left: 4px solid var(--success-color);
-}
-
-.notification.error {
-    border-left: 4px solid var(--danger-color);
-}
-
-.notification.warning {
-    border-left: 4px solid var(--warning-color);
-}
+.notification.success { border-left: 4px solid var(--success-color); }
+.notification.error { border-left: 4px solid var(--danger-color); }
+.notification.warning { border-left: 4px solid var(--warning-color); }
 
 #notification-message {
     flex: 1;
@@ -110,7 +99,7 @@ body {
     color: var(--danger-color);
 }
 
-/* Encabezado */
+/* ===== ENCABEZADO ===== */
 header {
     background-color: var(--primary-color);
     color: white;
@@ -172,12 +161,12 @@ header {
     background-color: rgba(255, 255, 255, 0.25);
 }
 
-/* Login */
+/* ===== SECCIÓN DE LOGIN ===== */
 #login-section {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;  
+    height: 100vh;
 }
 
 .login-card {
@@ -188,14 +177,67 @@ header {
     width: 100%;
     max-width: 400px;
     transition: var(--transition);
-    justify-content: center; /* Centra verticalmente los elementos dentro */
-    align-items: center;    /* Centra horizontalmente los elementos dentro */
 }
 
 .dark-mode .login-card {
     background-color: var(--light-color);
 }
 
+/* ===== PESTAÑAS DE LOGIN ===== */
+.login-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 25px;
+    background-color: #f8f9fa;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    overflow: hidden;
+}
+
+.dark-mode .login-tabs {
+    background-color: #2a2b3d;
+    border-bottom-color: #3f3f3f;
+}
+
+.login-tab {
+    flex: 1;
+    text-align: center;
+    padding: 15px 10px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-light);
+    transition: var(--transition);
+    position: relative;
+}
+
+.login-tab:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+    color: var(--primary-color);
+}
+
+.login-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background-color: white;
+}
+
+.dark-mode .login-tab.active {
+    background-color: var(--light-color);
+}
+
+.tab-content {
+    display: none;
+    animation: fadeInTab 0.3s ease-in-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ===== FORMULARIOS ===== */
 .card-header {
     text-align: center;
     margin-bottom: 25px;
@@ -254,6 +296,7 @@ header {
     color: var(--primary-color);
 }
 
+/* ===== INPUTS Y CONTROLES ===== */
 input[type="email"],
 input[type="password"],
 input[type="text"],
@@ -294,35 +337,31 @@ textarea {
     resize: vertical;
 }
 
-.remember-forgot {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    font-size: 14px;
+/* Estados especiales para inputs */
+.input-error {
+    border-color: var(--danger-color) !important;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25) !important;
 }
 
-.checkbox-container {
-    display: flex;
-    align-items: center;
+.input-success {
+    border-color: var(--success-color) !important;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25) !important;
 }
 
-input[type="checkbox"] {
-    margin-right: 8px;
+/* Input de folio específico */
+#folio-input,
+#folio {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 16px;
 }
 
-.forgot-password {
-    color: var(--primary-color);
-    text-decoration: none;
-    transition: var(--transition);
-}
-
-.forgot-password:hover {
-    text-decoration: underline;
-}
-
-/* Botones */
-.btn-primary, .btn-secondary, .btn-danger {
+/* ===== BOTONES ===== */
+.btn-primary, 
+.btn-secondary, 
+.btn-danger {
     width: 100%;
     padding: 12px;
     border: none;
@@ -369,11 +408,117 @@ input[type="checkbox"] {
     box-shadow: var(--shadow-sm);
 }
 
-.btn-primary i, .btn-secondary i, .btn-danger i {
+.btn-primary i, 
+.btn-secondary i, 
+.btn-danger i {
     margin-right: 8px;
 }
 
-/* Dashboard */
+/* ===== BOTONES DE ACCIÓN EN TABLAS ===== */
+.actions-column {
+    text-align: center;
+    white-space: nowrap;
+    padding: 8px 12px !important;
+    min-width: 140px;
+    width: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+}
+
+.action-btn {
+    background: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 8px;
+    margin: 0;
+    border-radius: var(--border-radius);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    position: relative;
+    flex-shrink: 0;
+    text-decoration: none;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    border-width: 1px;
+    border-style: solid;
+}
+
+.action-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.action-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+    background-color: #f8f9fa !important;
+    color: #6c757d !important;
+    border-color: transparent !important;
+}
+
+/* Tipos específicos de botones de acción */
+.view-btn {
+    color: var(--primary-color);
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+.view-btn:hover {
+    background-color: rgba(0, 123, 255, 0.1);
+    border-color: var(--primary-color);
+    color: var(--primary-dark);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.25);
+}
+
+.edit-btn {
+    color: var(--warning-color);
+    background-color: rgba(255, 193, 7, 0.05);
+}
+
+.edit-btn:hover {
+    background-color: rgba(255, 193, 7, 0.1);
+    border-color: var(--warning-color);
+    color: #e0a800;
+    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.25);
+}
+
+.delete-btn {
+    color: var(--danger-color);
+    background-color: rgba(220, 53, 69, 0.05);
+}
+
+.delete-btn:hover {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: var(--danger-color);
+    color: #c82333;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.25);
+}
+
+.action-btn i {
+    font-size: 14px;
+    pointer-events: none;
+    line-height: 1;
+    font-weight: 900;
+}
+
+/* ===== DASHBOARD ===== */
 #dashboard-section {
     min-height: calc(100vh - 120px);
 }
@@ -386,10 +531,34 @@ input[type="checkbox"] {
     background-color: white;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-sm);
+    position: relative;
 }
 
 .dark-mode .dashboard-header {
     background-color: var(--light-color);
+}
+
+/* Indicadores visuales por rol */
+body.admin-view .dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color), var(--primary-dark));
+    z-index: 1;
+}
+
+body.asesor-view .dashboard-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #28a745, #20c997);
+    z-index: 1;
 }
 
 .profile-section {
@@ -444,9 +613,10 @@ input[type="checkbox"] {
     font-size: 14px;
     color: var(--text-light);
     margin: 0;
+    font-weight: 600;
 }
 
-/* Navegación del dashboard */
+/* ===== NAVEGACIÓN DEL DASHBOARD ===== */
 .dashboard-nav {
     flex: 1;
     margin: 0 20px;
@@ -485,7 +655,7 @@ input[type="checkbox"] {
     color: white;
 }
 
-/* Dropdown de perfil */
+/* ===== DROPDOWN DE PERFIL ===== */
 .profile-dropdown {
     position: relative;
 }
@@ -564,12 +734,7 @@ input[type="checkbox"] {
     animation: fadeIn 0.2s ease;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Contenido del dashboard */
+/* ===== CONTENIDO DEL DASHBOARD ===== */
 .dashboard-content {
     background-color: white;
     border-radius: var(--border-radius);
@@ -639,7 +804,7 @@ input[type="checkbox"] {
     color: var(--text-light);
 }
 
-/* Tabla de reclutas */
+/* ===== TABLAS ===== */
 .reclutas-container {
     margin-top: 20px;
 }
@@ -710,6 +875,148 @@ td {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* ===== TABLA DE RECLUTAS OPTIMIZADA ===== */
+
+/* Configuración principal de tabla */
+#reclutas-table {
+    table-layout: fixed; /* Controlar anchos de columnas */
+    background-color: white;
+}
+
+.dark-mode #reclutas-table {
+    background-color: var(--light-color);
+}
+
+/* Headers de tabla mejorados */
+#reclutas-table th {
+    background-color: #f8f9fa;
+    color: var(--text-color);
+    font-weight: 600;
+    border-bottom: 2px solid var(--border-color);
+    padding: 12px 15px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.dark-mode #reclutas-table th {
+    background-color: #2a2b3d;
+    border-bottom-color: #3f3f3f;
+}
+
+/* ===== ANCHOS ESPECÍFICOS DE COLUMNAS ===== */
+
+/* 1. Columna Foto */
+#reclutas-table th:nth-child(1),
+#reclutas-table td:nth-child(1) {
+    width: 60px;
+    text-align: center;
+}
+
+/* 2. Columna Nombre */
+#reclutas-table th:nth-child(2),
+#reclutas-table td:nth-child(2) {
+    width: 15%;
+    min-width: 120px;
+}
+
+/* 3. Columna Email */
+#reclutas-table th:nth-child(3),
+#reclutas-table td:nth-child(3) {
+    width: 20%;
+    min-width: 150px;
+}
+
+/* 4. Columna Teléfono */
+#reclutas-table th:nth-child(4),
+#reclutas-table td:nth-child(4) {
+    width: 12%;
+    min-width: 100px;
+}
+
+/* 5. Columna Puesto */
+#reclutas-table th:nth-child(5),
+#reclutas-table td:nth-child(5) {
+    width: 15%;
+    min-width: 120px;
+}
+
+/* 6. Columna Folio */
+#reclutas-table th:nth-child(6),
+#reclutas-table td:nth-child(6) {
+    width: 120px;
+    text-align: center;
+}
+
+/* 7. Columna Estado */
+#reclutas-table th:nth-child(7),
+#reclutas-table td:nth-child(7) {
+    width: 100px;
+    text-align: center;
+}
+
+/* 8. Columna Asesor (solo para admin) */
+#reclutas-table th:nth-child(8),
+#reclutas-table td:nth-child(8) {
+    width: 12%;
+    min-width: 100px;
+}
+
+/* 9. Columna Acciones - SIEMPRE la última */
+#reclutas-table th:last-child,
+#reclutas-table td:last-child {
+    width: 140px;
+    text-align: center;
+}
+
+/* ===== CELDAS DE TABLA MEJORADAS ===== */
+#reclutas-table td {
+    border-bottom: 1px solid var(--border-color);
+    padding: 12px 15px;
+    vertical-align: middle;
+    word-wrap: break-word;
+}
+
+.dark-mode #reclutas-table td {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ===== HOVER EFFECTS PARA FILAS ===== */
+#reclutas-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+#reclutas-table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.03);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode #reclutas-table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* ===== FOTO DE RECLUTA MEJORADA ===== */
+.recluta-foto {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.recluta-foto:hover {
+    transform: scale(1.1);
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.dark-mode .recluta-foto {
+    border-color: #3f3f3f;
+}
+
 .recluta-foto {
     width: 40px;
     height: 40px;
@@ -717,6 +1024,7 @@ td {
     object-fit: cover;
 }
 
+/* ===== BADGES ===== */
 .badge {
     display: inline-block;
     padding: 5px 10px;
@@ -726,66 +1034,21 @@ td {
 }
 
 .badge-success {
-    background-color: rgba(40, 167, 69, 0.15);
-    color: var(--success-color);
+    background: linear-gradient(135deg, var(--success-color), #20c997);
+    color: white;
 }
 
 .badge-warning {
-    background-color: rgba(255, 193, 7, 0.15);
-    color: #d39e00;
+    background: linear-gradient(135deg, var(--warning-color), #f39c12);
+    color: #333;
 }
 
 .badge-danger {
-    background-color: rgba(220, 53, 69, 0.15);
-    color: var(--danger-color);
-}
-
-.action-btn {
-    background: none;
-    border: none;
-    color: var(--primary-color);
-    cursor: pointer;
-    font-size: 16px;
-    padding: 5px;
-    transition: var(--transition);
-}
-
-.action-btn:hover {
-    color: var(--primary-dark);
-}
-
-.pagination {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-}
-
-.pagination-btn {
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    padding: 8px 12px;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.pagination-btn:hover:not(:disabled) {
-    background-color: var(--primary-color);
+    background: linear-gradient(135deg, var(--danger-color), #e74c3c);
     color: white;
-    border-color: var(--primary-color);
 }
 
-.pagination-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-#pagination-numbers {
-    padding: 0 10px;
-}
-
-/* NUEVO: Estilos para folio display */
+/* ===== FOLIO DISPLAY ===== */
 .folio-display {
     font-family: 'Courier New', monospace;
     background-color: #f8f9fa;
@@ -804,62 +1067,234 @@ td {
     border-color: #3f3f3f;
 }
 
-/* NUEVO: Container para estado con select */
-.estado-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+/* ===== SISTEMA DE ROLES CORREGIDO ===== */
+
+/* Ocultar elementos para usuarios asesor - CORREGIDO */
+body.asesor-view .asesor-selector-group {
+    display: none !important;
 }
 
-/* NUEVO: Select de estado */
-.estado-select {
-    padding: 4px 8px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
+/* Ocultar columna de asesor dinámicamente */
+.asesor-view .asesor-column {
+    display: none !important;
+}
+
+/* ✅ Asegurar que las acciones siempre sean visibles */
+.asesor-view .action-btn,
+.admin-view .action-btn {
+    display: inline-block !important;
+}
+
+/* ✅ Para admin: mostrar columna de asesor */
+.admin-view .asesor-column {
+    display: table-cell !important;
+}
+
+/* Forzar ocultación completa de columna asesor */
+body.asesor-view table th:nth-child(8),
+body.asesor-view table td:nth-child(8) {
+    display: none !important;
+    width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+}
+
+/* Mostrar elementos para administradores */
+body.admin-view .asesor-selector-group {
+    display: block !important;
+}
+
+body.admin-view .asesor-column,
+body.admin-view #asesor-header,
+body.admin-view #reclutas-table th:nth-child(8),
+body.admin-view #reclutas-table td:nth-child(8) {
+    display: table-cell !important;
+}
+
+/* Asegurar que acciones siempre sea la última columna visible */
+body.asesor-view #reclutas-table th:last-child,
+body.asesor-view #reclutas-table td:last-child {
+    width: 140px;
+    text-align: center;
+}
+
+body.admin-view #reclutas-table th:last-child,
+body.admin-view #reclutas-table td:last-child {
+    width: 140px;
+    text-align: center;
+}
+
+/* ===== SISTEMA DE TRACKING ===== */
+#tracking-wrapper {
+    position: relative;
+    min-height: 300px;
+}
+
+#tracking-form {
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+#tracking-form.state-loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.tracking-result-card {
     background-color: white;
-    font-size: 12px;
-    min-width: 100px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    padding: 25px;
+    margin-bottom: 20px;
+    border-top: 4px solid var(--primary-color);
+    position: relative;
+    overflow: hidden;
+    animation: slideInUp 0.5s ease-out;
+}
+
+.dark-mode .tracking-result-card {
+    background-color: var(--light-color);
+}
+
+.tracking-result-card h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.tracking-info {
+    margin-bottom: 25px;
+}
+
+.tracking-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode .tracking-row {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.tracking-label {
+    width: 160px;
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.tracking-value {
+    flex: 1;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.loading-results {
+    text-align: center;
+    padding: 40px 20px;
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+
+.dark-mode .loading-results {
+    background-color: var(--light-color);
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(0, 123, 255, 0.1);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+/* ===== MODALES ===== */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    overflow: auto;
+}
+
+.modal-content {
+    background-color: white;
+    margin: 50px auto;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    width: 90%;
+    max-width: 600px;
+    animation: modalFadeIn 0.3s;
+}
+
+.dark-mode .modal-content {
+    background-color: var(--light-color);
+}
+
+.modal-sm {
+    max-width: 400px;
+}
+
+.modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.close-modal {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-light);
     cursor: pointer;
     transition: var(--transition);
 }
 
-.dark-mode .estado-select {
-    background-color: #2a2b3d;
-    color: var(--text-color);
-    border-color: #3f3f3f;
+.close-modal:hover {
+    color: var(--danger-color);
 }
 
-.estado-select:hover {
-    border-color: var(--primary-color);
+.modal-body {
+    padding: 20px;
 }
 
-.estado-select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
 }
 
-/* NUEVO: Mejorar badges con colores específicos */
-.badge-success {
-    background: linear-gradient(135deg, #28a745, #20c997);
-    color: white;
-    border: none;
+.modal-footer button {
+    width: auto;
 }
 
-.badge-warning {
-    background: linear-gradient(135deg, #ffc107, #fd7e14);
-    color: #333;
-    border: none;
-}
-
-.badge-danger {
-    background: linear-gradient(135deg, #dc3545, #e74c3c);
-    color: white;
-    border: none;
-}
-
-/* Estadísticas */
+/* ===== ESTADÍSTICAS ===== */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -916,1678 +1351,32 @@ td {
     color: var(--text-color);
 }
 
-.stat-growth {
-    font-size: 12px;
-    margin: 0;
-    display: flex;
-    align-items: center;
-}
-
-.stat-growth i {
-    margin-right: 5px;
-}
-
-.positive {
-    color: var(--success-color);
-}
-
-.negative {
-    color: var(--danger-color);
-}
-
-.neutral {
-    color: var(--text-light);
-}
-
-.charts-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-
-.chart-card {
-    background-color: white;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-sm);
-    padding: 20px;
-}
-
-.dark-mode .chart-card {
-    background-color: var(--light-color);
-}
-
-.chart-card h4 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-weight: 600;
-    color: var(--text-color);
-}
-
-.chart-placeholder {
-    height: 250px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background-color: #f8f9fa;
-    border-radius: var(--border-radius);
-}
-
-.dark-mode .chart-placeholder {
-    background-color: #2a2b3d;
-}
-
-.chart-placeholder i {
-    font-size: 40px;
-    color: var(--text-light);
-    margin-bottom: 10px;
-}
-
-.chart-placeholder p {
-    color: var(--text-light);
-    margin: 0;
-}
-
-/* Calendario */
-.calendar-container {
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 20px;
-}
-
-.calendar-sidebar {
-    background-color: white;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-sm);
-    padding: 20px;
-}
-
-.dark-mode .calendar-sidebar {
-    background-color: var(--light-color);
-}
-
-.calendar-month {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-}
-
-.calendar-month h4 {
-    margin: 0;
-    font-weight: 600;
-    color: var(--text-color);
-}
-
-.calendar-nav-btn {
-    background: none;
-    border: 1px solid var(--border-color);
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.calendar-nav-btn:hover {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-.upcoming-events h5 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-weight: 600;
-    color: var(--text-color);
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.event-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.event-date {
-    width: 50px;
-    height: 50px;
-    border-radius: 8px;
-    background-color: var(--primary-color);
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    margin-right: 15px;
-}
-
-.event-day {
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1;
-}
-
-.event-month {
-    font-size: 12px;
-    text-transform: uppercase;
-}
-
-.event-details h6 {
-    margin: 0 0 5px;
-    font-weight: 600;
-    color: var(--text-color);
-}
-
-.event-details p {
-    margin: 0;
-    font-size: 12px;
-    color: var(--text-light);
-    display: flex;
-    align-items: center;
-}
-
-.event-details p i {
-    margin-right: 5px;
-}
-
-.calendar-main {
-    background-color: white;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-sm);
-    padding: 20px;
-}
-
-.dark-mode .calendar-main {
-    background-color: var(--light-color);
-}
-
-.calendar-header {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    text-align: center;
-    margin-bottom: 10px;
-}
-
-.day-name {
-    font-weight: 600;
-    color: var(--text-color);
-    padding: 10px;
-}
-
-.calendar-grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(6, 1fr);
-    gap: 5px;
-    height: 400px;
-}
-
-.calendar-day {
-    border: 1px solid var(--border-color);
-    border-radius: 5px;
-    padding: 5px;
-    min-height: 60px;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.calendar-day:hover {
-    background-color: rgba(0, 123, 255, 0.05);
-}
-
-.calendar-day.today {
-    background-color: rgba(0, 123, 255, 0.1);
-    border-color: var(--primary-color);
-}
-
-.calendar-day.other-month {
-    opacity: 0.3;
-}
-
-.calendar-day-number {
-    font-weight: 600;
-    margin-bottom: 5px;
-}
-
-.calendar-event {
-    background-color: var(--primary-color);
-    color: white;
-    font-size: 10px;
-    padding: 2px 4px;
-    border-radius: 3px;
-    margin-bottom: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Configuración */
-.config-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-
-.config-section {
-    margin-bottom: 25px;
-}
-
-.config-section:last-child {
-    margin-bottom: 0;
-}
-
-.config-section h5 {
-    font-weight: 600;
-    color: var(--text-color);
-    margin-top: 0;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.config-option {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 50px;
-    height: 24px;
-}
-
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: var(--transition);
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 16px;
-    width: 16px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: var(--transition);
-}
-
-input:checked + .slider {
-    background-color: var(--primary-color);
-}
-
-input:focus + .slider {
-    box-shadow: 0 0 1px var(--primary-color);
-}
-
-input:checked + .slider:before {
-    transform: translateX(26px);
-}
-
-.slider.round {
-    border-radius: 34px;
-}
-
-.slider.round:before {
-    border-radius: 50%;
-}
-
-.color-options {
-    display: flex;
-    gap: 10px;
-}
-
-.color-option {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    cursor: pointer;
-    position: relative;
-}
-
-.color-option input {
-    opacity: 0;
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    cursor: pointer;
-}
-
-.color-option.selected::after {
-    content: "✓";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 14px;
-}
-
-/* Modal */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    overflow: auto;
-}
-
-.modal-content {
-    background-color: white;
-    margin: 50px auto;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-lg);
-    width: 90%;
-    max-width: 600px;
-    animation: modalFadeIn 0.3s;
-}
-
-.dark-mode .modal-content {
-    background-color: var(--light-color);
-}
-
-.modal-sm {
-    max-width: 400px;
-}
-
-@keyframes modalFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-50px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.modal-header {
-    padding: 15px 20px;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.modal-header h3 {
-    margin: 0;
-    font-weight: 600;
-    color: var(--text-color);
-}
-
-.close-modal {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--text-light);
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.close-modal:hover {
-    color: var(--danger-color);
-}
-
-.modal-body {
-    padding: 20px;
-}
-
-.modal-footer {
-    padding: 15px 20px;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-.modal-footer button {
-    width: auto;
-}
-
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin-bottom: 15px;
-}
-
-.modal-profile {
-    margin: 0 auto 20px;
-}
-
-.profile-pic-preview {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    background-color: #f8f9fa;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 48px;
-    color: #ccc;
-    margin: 0 auto;
-}
-
-.dark-mode .profile-pic-preview {
-    background-color: #2a2b3d;
-}
-
-/* Detalles de recluta */
-.recluta-details-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.recluta-info {
-    flex: 1;
-}
-
-.recluta-info h4 {
-    margin: 0 0 5px;
-    font-weight: 600;
-    color: var(--text-color);
-}
-
-.recluta-info p {
-    margin: 0 0 10px;
-    color: var(--text-light);
-}
-
-.detail-row {
-    display: flex;
-    margin-bottom: 15px;
-}
-
-.detail-label {
-    width: 120px;
-    font-weight: 600;
-    color: var(--text-color);
-    display: flex;
-    align-items: center;
-}
-
-.detail-label i {
-    margin-right: 8px;
-    color: var(--primary-color);
-}
-
-.detail-value {
-    flex: 1;
-}
-
-.view-mode-buttons,
-.edit-mode-buttons {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.interview-candidate {
-    display: flex;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.interview-candidate-info {
-    margin-left: 15px;
-}
-
-.interview-candidate-info h4 {
-    margin: 0 0 5px;
-    font-weight: 600;
-    color: var(--text-color);
-}
-
-.interview-candidate-info p {
-    margin: 0;
-    color: var(--text-light);
-}
-
-/* Responsive */
-@media (max-width: 992px) {
-    .config-container,
-    .charts-container {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 768px) {
-    .header-container {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .header-buttons {
-        margin-top: 10px;
-        width: 100%;
-        justify-content: flex-end;
-    }
-    
-    .dashboard-header {
-        flex-direction: column;
-    }
-    
-    .profile-section {
-        margin-bottom: 15px;
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .dashboard-nav {
-        width: 100%;
-        margin: 15px 0;
-    }
-    
-    .dashboard-nav ul {
-        overflow-x: auto;
-        padding-bottom: 5px;
-    }
-    
-    .profile-dropdown {
-        width: 100%;
-    }
-    
-    .profile-dropdown-button {
-        width: 100%;
-        justify-content: center;
-    }
-    
-    .calendar-container {
-        grid-template-columns: 1fr;
-    }
-    
-    .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .section-actions {
-        margin-top: 15px;
-        width: 100%;
-    }
-    
-    .search-container {
-        width: 100%;
-    }
-    
-    .search-container input {
-        width: 100%;
-    }
-    
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-    
-    .filter-controls {
-        flex-direction: column;
-        gap: 10px;
-    }
-    
-    .stats-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-@media (max-width: 576px) {
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    table {
-        display: block;
-        overflow-x: auto;
-    }
-    
-    .modal-content {
-        width: 95%;
-        margin: 30px auto;
-    }
-    
-    .recluta-details-header {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .recluta-details-header .profile-pic-container {
-        margin: 0 auto 15px;
-    }
-    
-    .detail-row {
-        flex-direction: column;
-    }
-    
-    .detail-label {
-        width: 100%;
-        margin-bottom: 5px;
-    }
-    
-    .view-mode-buttons,
-    .edit-mode-buttons {
-        flex-direction: column;
-    }
-}
-
-/* Estilos para las pestañas en la pantalla de login */
-.login-tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 20px;
-}
-
-.login-tab {
-    flex: 1;
-    text-align: center;
-    padding: 10px;
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent;
-    cursor: pointer;
-    font-weight: 500;
-    color: var(--text-light);
-    transition: var(--transition);
-}
-
-.login-tab.active {
-    color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
-}
-
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* Estilos para los resultados de seguimiento */
-.tracking-result-card {
-    background-color: white;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-sm);
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.dark-mode .tracking-result-card {
-    background-color: var(--light-color);
-}
-
-.tracking-result-card h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: var(--primary-color);
-    font-weight: 600;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.tracking-result-card h4 {
-    margin-top: 20px;
-    margin-bottom: 10px;
-    color: var(--text-color);
-    font-weight: 600;
-}
-
-.tracking-info {
-    margin-bottom: 20px;
-}
-
-.tracking-row {
-    display: flex;
-    margin-bottom: 12px;
-}
-
-.tracking-label {
-    width: 140px;
-    font-weight: 600;
-    color: var(--text-color);
-}
-
-.tracking-value {
-    flex: 1;
-}
-
-.tracking-section {
-    margin-top: 20px;
-    padding-top: 10px;
-    border-top: 1px solid var(--border-color);
-}
-
-/* Estilos responsive */
-@media (max-width: 576px) {
-    .tracking-row {
-        flex-direction: column;
-    }
-    
-    .tracking-label {
-        width: 100%;
-        margin-bottom: 4px;
-    }
-}
-
-/* Estilos para el modal de cliente */
-.modal-info {
-    background-color: rgba(0, 123, 255, 0.1);
-    border-left: 4px solid var(--primary-color);
-    padding: 10px;
-    margin-top: 15px;
-    border-radius: 4px;
-    font-size: 14px;
-    color: var(--text-color);
-}
-
-.modal-info i {
-    color: var(--primary-color);
-    margin-right: 5px;
-}
-
-/* Modal con tamaño más reducido para el formulario simple */
-.modal-sm {
-    max-width: 400px;
-}
-
-/* Asegura que los enlaces en el modal funcionen correctamente */
-#cliente-modal a {
-    color: var(--primary-color);
-    text-decoration: none;
-    transition: var(--transition);
-}
-
-#cliente-modal a:hover {
-    text-decoration: underline;
-}
-
-/* Alineación de botones en el footer del modal */
-#cliente-modal .modal-footer {
-    justify-content: space-between;
-}
-
-/* Estilos para el botón de consultar */
-#consultar-folio-btn {
-    width: auto;
-    padding-left: 20px;
-    padding-right: 20px;
-}
-
-/* Estilos para estados de formulario de consulta */
-#tracking-form {
-    position: relative;
-    transition: all 0.3s ease;
-}
-
-#tracking-form.state-loading {
-    opacity: 0.7;
-}
-
-#tracking-form.state-error {
-    animation: pulse-error 1s ease;
-}
-
-#tracking-form.state-success {
-    animation: pulse-success 1s ease;
-}
-
-/* Estilos para inputs con estados */
-.input-error {
-    border-color: var(--danger-color) !important;
-    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25) !important;
-}
-
-.input-success {
-    border-color: var(--success-color) !important;
-    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25) !important;
-}
-
-/* Animaciones */
-@keyframes pulse-error {
-    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.2); }
-    70% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
-}
-
-@keyframes pulse-success {
-    0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.2); }
-    70% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
-}
-
-/* Animación de vibración para errores */
-.shake-animation {
-    animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-    transform: translate3d(0, 0, 0);
-}
-
-@keyframes shake {
-    10%, 90% { transform: translate3d(-1px, 0, 0); }
-    20%, 80% { transform: translate3d(2px, 0, 0); }
-    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-    40%, 60% { transform: translate3d(4px, 0, 0); }
-}
-
-/* Mensajes de formulario */
-.form-message {
-    margin-top: 15px;
-    padding: 10px 15px;
-    border-radius: var(--border-radius);
-    display: flex;
-    align-items: center;
-    font-size: 14px;
-    transform: translateY(-10px);
-    opacity: 0;
-    transition: all 0.3s ease;
-}
-
-.form-message.show-message {
-    transform: translateY(0);
-    opacity: 1;
-}
-
-.form-message i {
-    margin-right: 8px;
-    font-size: 16px;
-}
-
-.message-error {
-    background-color: rgba(220, 53, 69, 0.1);
-    border-left: 4px solid var(--danger-color);
-    color: var(--danger-color);
-}
-
-.message-success {
-    background-color: rgba(40, 167, 69, 0.1);
-    border-left: 4px solid var(--success-color);
-    color: var(--success-color);
-}
-
-.message-info {
-    background-color: rgba(0, 123, 255, 0.1);
-    border-left: 4px solid var(--primary-color);
-    color: var(--primary-color);
-}
-
-/* Animación de carga en resultados */
-.loading-results {
-    text-align: center;
-    padding: 30px 0;
-}
-
-.loading-spinner {
-    display: inline-block;
-    width: 50px;
-    height: 50px;
-    border: 4px solid rgba(0, 123, 255, 0.1);
-    border-radius: 50%;
-    border-top-color: var(--primary-color);
-    animation: spin 1s linear infinite;
-    margin-bottom: 15px;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.loading-results p {
-    color: var(--text-light);
-    font-size: 14px;
-}
-
-#tracking-wrapper {
-    position: relative;
-    min-height: 400px;
-}
-
-#tracking-results {
-    animation: fadeIn 0.3s ease-in;
-}
-
+/* ===== ANIMACIONES ===== */
 @keyframes fadeIn {
-    from { 
-        opacity: 0; 
-        transform: translateY(20px);
-    }
-    to { 
-        opacity: 1; 
-        transform: translateY(0);
-    }
-}
-
-/* Ajustar el height del tracking-form para evitar saltos */
-#tracking-form {
-    transition: all 0.3s ease;
-}
-
-/* Transición suave para mostrar/ocultar resultados */
-#tracking-results {
-    transition: opacity 0.3s ease;
-}
-
-/* Mejora del diseño para el botón de consulta */
-#consultar-folio-btn {
-    min-width: 120px;
-    transition: all 0.3s ease;
-}
-
-#consultar-folio-btn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
-
-
-
-/* Estilo para el modal de cliente en modo oscuro */
-.dark-mode .loading-spinner {
-    border-color: rgba(0, 123, 255, 0.05);
-}
-
-.dark-mode .message-error {
-    background-color: rgba(220, 53, 69, 0.05);
-}
-
-.dark-mode .message-success {
-    background-color: rgba(40, 167, 69, 0.05);
-}
-
-.dark-mode .message-info {
-    background-color: rgba(0, 123, 255, 0.05);
-}
-
-/* Ajustes responsive */
-@media (max-width: 576px) {
-    #cliente-modal .modal-footer {
-        flex-direction: column-reverse;
-        gap: 10px;
-    }
-    
-    #cliente-modal .modal-footer button {
-        width: 100%;
-    }
-}
-
-/* Modo oscuro */
-.dark-mode .modal-info {
-    background-color: rgba(0, 123, 255, 0.05);
-}
-
-/* ===== ESTILOS ESPECÍFICOS PARA ROLES ===== */
-
-/* Ocultar elementos para asesores */
-.asesor-view #upload-excel-btn,
-.asesor-view #download-template-btn {
-    display: none !important;
-}
-
-/* Ocultar columna de asesor para asesores */
-.asesor-view #reclutas-table th:nth-child(7),
-.asesor-view #reclutas-table td:nth-child(7) {
-    display: none !important;
-}
-
-/* Mostrar elementos para administradores */
-.admin-view #upload-excel-btn,
-.admin-view #download-template-btn {
-    display: inline-block !important;
-}
-
-/* Estilos para mensajes de bienvenida específicos por rol */
-.admin-welcome {
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)) !important;
-    color: white !important;
-    padding: 15px !important;
-    border-radius: var(--border-radius) !important;
-    margin-bottom: 20px !important;
-    text-align: center !important;
-    animation: slideIn 0.5s ease-out;
-}
-
-.asesor-welcome {
-    background: linear-gradient(135deg, #28a745, #20c997) !important;
-    color: white !important;
-    padding: 15px !important;
-    border-radius: var(--border-radius) !important;
-    margin-bottom: 20px !important;
-    text-align: center !important;
-    animation: slideIn 0.5s ease-out;
-}
-
-/* Botones específicos de Excel */
-#upload-excel-btn {
-    background-color: var(--success-color) !important;
-    border-color: var(--success-color) !important;
-}
-
-#upload-excel-btn:hover {
-    background-color: #218838 !important;
-    border-color: #1e7e34 !important;
-}
-
-#download-template-btn {
-    background-color: var(--secondary-color) !important;
-    border-color: var(--secondary-color) !important;
-}
-
-#download-template-btn:hover {
-    background-color: #5a6268 !important;
-    border-color: #545b62 !important;
-}
-
-/* Animación para elementos que aparecen */
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Indicadores visuales de rol */
-.profile-role {
-    font-weight: 600;
-    color: var(--primary-color);
-}
-
-/* Estilos para elementos de configuración por rol */
-.role-indicator {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.role-indicator.admin {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-.role-indicator.asesor {
-    background-color: var(--success-color);
-    color: white;
-}
-
-/* Ocultar selectores de asesor para no-admins */
-.asesor-view .form-group:has(#recluta-asesor),
-.asesor-view .form-group:has(#edit-recluta-asesor) {
-    display: none !important;
-}
-
-/* ===== ESTILOS ESPECÍFICOS PARA ROLES ===== */
-
-/* Ocultar elementos para asesores */
-.asesor-view #upload-excel-btn,
-.asesor-view #download-template-btn {
-    display: none !important;
-}
-
-/* Ocultar columna de asesor para asesores */
-.asesor-view .asesor-column,
-.asesor-view .asesor-cell {
-    display: none !important;
-}
-
-/* Ocultar selectores de asesor para asesores */
-.asesor-view .asesor-selector-group {
-    display: none !important;
-}
-
-/* ===== CONTROL DE ROLES ===== */
-
-/* Para usuarios asesor - ocultar elementos de admin por defecto */
-body.asesor-view .asesor-selector-group {
-    display: none !important;
-}
-
-body.asesor-view #upload-excel-btn,
-body.asesor-view #download-template-btn {
-    display: none !important;
-}
-
-body.asesor-view .asesor-column {
-    display: none !important;
-}
-
-/* Para usuarios admin - mostrar todo */
-body.admin-view .asesor-selector-group {
-    display: block;
-}
-
-body.admin-view #upload-excel-btn,
-body.admin-view #download-template-btn {
-    display: inline-block;
-}
-
-body.admin-view .asesor-column {
-    display: table-cell;
-}
-
-/* Estilos específicos para selectores de asesor */
-.asesor-selector-group {
-    transition: opacity 0.3s ease;
-}
-
-.asesor-selector-group.hidden {
-    opacity: 0;
-    pointer-events: none;
-}
-
-/* Ocultar columna de asesor en tabla para no-admin */
-body.asesor-view #reclutas-table th:nth-child(8),
-body.asesor-view #reclutas-table td:nth-child(8) {
-    display: none !important;
-}
-
-/* Ajustar ancho de tabla cuando se oculta columna */
-body.asesor-view #reclutas-table {
-    table-layout: auto;
-}
-
-/* Indicador visual para usuarios asesor */
-body.asesor-view .dashboard-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #28a745, #20c997);
-    z-index: 1;
-}
-
-/* Indicador visual para usuarios admin */
-body.admin-view .dashboard-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--primary-color), var(--primary-dark));
-    z-index: 1;
-}
-
-/* ✅ ESTILOS ESPECÍFICOS PARA SISTEMA DE TRACKING POR FOLIO */
-
-/* ===== PESTAÑAS DE LOGIN Y TRACKING ===== */
-.login-tabs {
-    display: flex;
-    border-bottom: 2px solid var(--border-color);
-    margin-bottom: 25px;
-    background-color: #f8f9fa;
-    border-radius: var(--border-radius) var(--border-radius) 0 0;
-    overflow: hidden;
-}
-
-.dark-mode .login-tabs {
-    background-color: #2a2b3d;
-    border-bottom-color: #3f3f3f;
-}
-
-.login-tab {
-    flex: 1;
-    text-align: center;
-    padding: 15px 10px;
-    background: none;
-    border: none;
-    border-bottom: 3px solid transparent;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;
-    color: var(--text-light);
-    transition: var(--transition);
-    position: relative;
-}
-
-.login-tab:hover {
-    background-color: rgba(0, 123, 255, 0.05);
-    color: var(--primary-color);
-}
-
-.login-tab.active {
-    color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
-    background-color: white;
-    position: relative;
-}
-
-.dark-mode .login-tab.active {
-    background-color: var(--light-color);
-}
-
-.login-tab.active::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background-color: var(--primary-color);
-    border-radius: 2px 2px 0 0;
-}
-
-/* ===== CONTENIDO DE PESTAÑAS ===== */
-.tab-content {
-    display: none;
-    animation: fadeInTab 0.3s ease-in-out;
-}
-
-.tab-content.active {
-    display: block;
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes fadeInTab {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* ===== TRACKING WRAPPER Y FORMULARIO ===== */
-#tracking-wrapper {
-    position: relative;
-    min-height: 300px;
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: translateY(-50px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-#tracking-form {
-    transition: all 0.3s ease;
-    position: relative;
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-#tracking-form.state-loading {
-    opacity: 0.7;
-    pointer-events: none;
+@keyframes slideInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-#tracking-form.state-error {
-    animation: shake 0.5s ease-in-out;
-}
-
-#tracking-form.state-success {
-    animation: pulse-success 0.6s ease-in-out;
-}
-
-/* ===== ESTILOS PARA INPUT DE FOLIO ===== */
-#folio-input,
-#folio {
-    font-family: 'Courier New', monospace;
-    font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    font-size: 16px;
-}
-
-#folio-input::placeholder,
-#folio::placeholder {
-    font-family: var(--font-family);
-    font-weight: normal;
-    letter-spacing: normal;
-    text-transform: none;
-    font-size: 14px;
-}
-
-/* Estados de input */
-.input-error {
-    border-color: var(--danger-color) !important;
-    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25) !important;
-    animation: pulse-error 0.6s ease-in-out;
-}
-
-.input-success {
-    border-color: var(--success-color) !important;
-    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25) !important;
-    animation: pulse-success 0.6s ease-in-out;
-}
-
-/* ===== INFORMACIÓN DEL FORMULARIO ===== */
-.form-info {
-    display: flex;
-    align-items: center;
-    background-color: rgba(0, 123, 255, 0.1);
-    border-left: 4px solid var(--primary-color);
-    padding: 12px 15px;
-    margin: 15px 0;
-    border-radius: 0 var(--border-radius) var(--border-radius) 0;
-    font-size: 14px;
-    color: var(--text-color);
-}
-
-.dark-mode .form-info {
-    background-color: rgba(0, 123, 255, 0.05);
-}
-
-.form-info i {
-    color: var(--primary-color);
-    margin-right: 8px;
-    font-size: 16px;
-}
-
-/* ===== LINK DE RECUPERACIÓN ===== */
-.recovery-link-container {
-    text-align: center;
-    margin: 20px 0;
-}
-
-.recovery-link-container a {
-    color: var(--primary-color);
-    text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    transition: var(--transition);
-    padding: 5px 10px;
-    border-radius: var(--border-radius);
-}
-
-.recovery-link-container a:hover {
-    text-decoration: underline;
-    background-color: rgba(0, 123, 255, 0.05);
-}
-
-/* ===== RESULTADOS DE TRACKING ===== */
-#tracking-results,
-#modal-results {
-    transition: all 0.3s ease;
-    animation: fadeInResults 0.4s ease-in-out;
-}
-
-@keyframes fadeInResults {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* ===== TARJETA DE RESULTADOS ===== */
-.tracking-result-card {
-    background-color: white;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-md);
-    padding: 25px;
-    margin-bottom: 20px;
-    border-top: 4px solid var(--primary-color);
-    position: relative;
-    overflow: hidden;
-}
-
-.dark-mode .tracking-result-card {
-    background-color: var(--light-color);
-}
-
-.tracking-result-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary-color), var(--success-color));
-}
-
-.tracking-result-card h3 {
-    margin-top: 0;
-    margin-bottom: 20px;
-    color: var(--primary-color);
-    font-weight: 700;
-    font-size: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid var(--border-color);
-    display: flex;
-    align-items: center;
-}
-
-.tracking-result-card h3::before {
-    content: '📋';
-    margin-right: 10px;
-    font-size: 24px;
-}
-
-/* ===== INFORMACIÓN DE TRACKING ===== */
-.tracking-info {
-    margin-bottom: 25px;
-}
-
-.tracking-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 15px;
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.dark-mode .tracking-row {
-    border-bottom-color: rgba(255, 255, 255, 0.1);
-}
-
-.tracking-row:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-}
-
-.tracking-label {
-    width: 160px;
-    font-weight: 600;
-    color: var(--text-color);
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-}
-
-.tracking-label::before {
-    content: '▪️';
-    margin-right: 8px;
-    color: var(--primary-color);
-}
-
-.tracking-value {
-    flex: 1;
-    color: var(--text-color);
-    font-weight: 500;
-}
-
-/* ===== SECCIÓN DE TRACKING ===== */
-.tracking-section {
-    margin-top: 25px;
-    padding-top: 20px;
-    border-top: 2px solid var(--border-color);
-    position: relative;
-}
-
-.tracking-section::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: 0;
-    width: 60px;
-    height: 2px;
-    background-color: var(--primary-color);
-}
-
-.tracking-section h4 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: var(--primary-color);
-    font-weight: 600;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-}
-
-.tracking-section h4::before {
-    content: '📅';
-    margin-right: 10px;
-}
-
-/* ===== ANIMACIÓN DE CARGA ===== */
-.loading-results {
-    text-align: center;
-    padding: 40px 20px;
-    background-color: white;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-sm);
-}
-
-.dark-mode .loading-results {
-    background-color: var(--light-color);
-}
-
-.loading-spinner {
-    display: inline-block;
-    width: 60px;
-    height: 60px;
-    border: 4px solid rgba(0, 123, 255, 0.1);
-    border-radius: 50%;
-    border-top-color: var(--primary-color);
-    animation: spin 1s linear infinite;
-    margin-bottom: 20px;
-}
-
-.loading-results p {
-    color: var(--text-light);
-    font-size: 16px;
-    margin: 0;
-    font-weight: 500;
-}
-
-/* ===== BOTÓN DE NUEVA CONSULTA ===== */
-.new-query-btn {
-    width: auto !important;
-    padding: 12px 24px !important;
-    margin-top: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border-radius: 25px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
-
-.new-query-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-}
-
-/* ===== FORMULARIO DE RECUPERACIÓN ===== */
-.recuperar-folio-form {
-    background-color: white;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-sm);
-    padding: 25px;
-    animation: fadeInResults 0.4s ease-in-out;
-}
-
-.dark-mode .recuperar-folio-form {
-    background-color: var(--light-color);
-}
-
-.recuperar-folio-form h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: var(--primary-color);
-    font-weight: 600;
-    text-align: center;
-}
-
-.recuperar-folio-form p {
-    text-align: center;
-    color: var(--text-light);
-    margin-bottom: 25px;
-}
-
-.form-buttons {
-    display: flex;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.form-buttons button {
-    flex: 1;
-}
-
-/* ===== MODAL ESPECÍFICO PARA CLIENTE ===== */
-#cliente-modal .modal-content {
-    max-width: 500px;
-}
-
-#cliente-modal .modal-header {
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-    color: white;
-    border-radius: var(--border-radius) var(--border-radius) 0 0;
-}
-
-#cliente-modal .modal-header h3 {
-    color: white;
-}
-
-#cliente-modal .modal-header .close-modal {
-    color: white;
-}
-
-#cliente-modal .modal-header .close-modal:hover {
-    color: #ffcccc;
-}
-
-.modal-info {
-    background-color: rgba(0, 123, 255, 0.1);
-    border-left: 4px solid var(--primary-color);
-    padding: 12px 15px;
-    margin: 15px 0;
-    border-radius: 0 var(--border-radius) var(--border-radius) 0;
-    font-size: 14px;
-    color: var(--text-color);
-}
-
-.dark-mode .modal-info {
-    background-color: rgba(0, 123, 255, 0.05);
-}
-
-.modal-info i {
-    color: var(--primary-color);
-    margin-right: 8px;
-}
-
-/* ===== ANIMACIONES ===== */
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
@@ -2599,305 +1388,523 @@ body.admin-view .dashboard-header::before {
     20%, 40%, 60%, 80% { transform: translateX(5px); }
 }
 
-@keyframes pulse-error {
-    0% { 
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
-        border-color: var(--danger-color);
+/* ===== RESPONSIVE MEJORADO PARA TABLA ===== */
+
+@media (max-width: 1200px) {
+    /* Ajustar anchos en pantallas medianas */
+    #reclutas-table th:nth-child(2),
+    #reclutas-table td:nth-child(2) { width: 12%; }
+    
+    #reclutas-table th:nth-child(3),
+    #reclutas-table td:nth-child(3) { width: 18%; }
+    
+    #reclutas-table th:nth-child(5),
+    #reclutas-table td:nth-child(5) { width: 12%; }
+}
+
+@media (max-width: 992px) {
+    /* Ocultar algunas columnas en tablets */
+    #reclutas-table th:nth-child(4),
+    #reclutas-table td:nth-child(4) {
+        display: none; /* Ocultar teléfono */
     }
-    70% { 
-        box-shadow: 0 0 0 8px rgba(220, 53, 69, 0);
-        border-color: var(--danger-color);
+    
+    #reclutas-table th:nth-child(5),
+    #reclutas-table td:nth-child(5) {
+        display: none; /* Ocultar puesto */
     }
-    100% { 
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-        border-color: var(--danger-color);
+    
+    /* Ajustar container de tabla */
+    .reclutas-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 }
 
-@keyframes pulse-success {
-    0% { 
-        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.4);
-        border-color: var(--success-color);
-    }
-    70% { 
-        box-shadow: 0 0 0 8px rgba(40, 167, 69, 0);
-        border-color: var(--success-color);
-    }
-    100% { 
-        box-shadow: 0 0 0 0 rgba(40, 167, 69, 0);
-        border-color: var(--success-color);
-    }
-}
-
-/* ===== BADGES EN RESULTADOS ===== */
-.tracking-value .badge {
-    font-size: 13px;
-    padding: 6px 12px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    border-radius: 20px;
-    text-transform: uppercase;
-}
-
-.badge-success {
-    background: linear-gradient(135deg, var(--success-color), #20c997);
-    color: white;
-}
-
-.badge-warning {
-    background: linear-gradient(135deg, var(--warning-color), #f39c12);
-    color: #333;
-}
-
-.badge-danger {
-    background: linear-gradient(135deg, var(--danger-color), #e74c3c);
-    color: white;
-}
-
-/* ===== RESPONSIVE PARA TRACKING ===== */
 @media (max-width: 768px) {
-    .login-tabs {
-        margin-bottom: 20px;
+    /* Configuración existente para header y navegación... */
+    
+    /* AGREGAR ESTAS REGLAS PARA TABLA: */
+    
+    /* Scroll horizontal en móvil */
+    .reclutas-container {
+        overflow-x: auto;
     }
     
-    .login-tab {
-        padding: 12px 8px;
-        font-size: 13px;
+    #reclutas-table {
+        min-width: 600px;
+        table-layout: auto;
     }
     
-    .tracking-row {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 12px 0;
-    }
-    
-    .tracking-label {
-        width: 100%;
-        margin-bottom: 5px;
+    #reclutas-table th,
+    #reclutas-table td {
+        padding: 8px 6px;
         font-size: 14px;
     }
     
-    .tracking-value {
-        padding-left: 20px;
+    /* Ajustar elementos específicos */
+    .recluta-foto {
+        width: 32px;
+        height: 32px;
     }
     
-    .tracking-result-card {
-        padding: 20px 15px;
+    .folio-display {
+        font-size: 10px;
+        padding: 4px 6px;
+        min-width: 60px;
     }
     
-    .form-buttons {
-        flex-direction: column;
+    .badge {
+        font-size: 10px;
+        padding: 4px 8px;
+        min-width: 60px;
     }
     
-    .form-buttons button {
-        width: 100%;
-        margin-bottom: 10px;
+    /* Botones de acción en móvil - YA EXISTENTES, MEJORAR: */
+    .action-btn {
+        font-size: 14px;
+        padding: 6px;
+        width: 32px;
+        height: 32px;
+    }
+    
+    .action-btn i {
+        font-size: 12px;
+    }
+    
+    .actions-column {
+        padding: 6px 8px !important;
+        gap: 4px;
+        min-width: 120px;
+        width: 120px;
     }
 }
 
 @media (max-width: 576px) {
-    #cliente-modal .modal-content {
-        width: 95%;
-        margin: 20px auto;
+    /* Configuración existente... */
+    
+    /* AGREGAR ESTAS REGLAS ESPECÍFICAS: */
+    
+    /* Mostrar solo columnas esenciales */
+    #reclutas-table th:nth-child(1),
+    #reclutas-table td:nth-child(1) {
+        display: none; /* Ocultar foto */
     }
     
-    .tracking-result-card h3 {
-        font-size: 18px;
+    #reclutas-table th:nth-child(6),
+    #reclutas-table td:nth-child(6) {
+        display: none; /* Ocultar folio */
     }
     
-    .tracking-label {
-        font-size: 13px;
+    #reclutas-table {
+        min-width: 400px;
     }
     
-    .tracking-value {
-        font-size: 14px;
+    /* Botones más pequeños - YA EXISTENTES, MEJORAR: */
+    .action-btn {
+        width: 28px;
+        height: 28px;
+        padding: 4px;
     }
     
-    .loading-spinner {
-        width: 50px;
-        height: 50px;
+    .action-btn i {
+        font-size: 11px;
     }
     
-    .new-query-btn {
-        width: 100% !important;
-        margin-top: 15px;
+    .actions-column {
+        gap: 2px;
+        min-width: 100px;
+        width: 100px;
+    }
+    
+    /* Ocultar tooltips en móvil - YA EXISTE, VERIFICAR: */
+    .action-btn[title]:hover::after,
+    .action-btn[title]:hover::before {
+        display: none;
     }
 }
 
-/* ===== ESTADOS DE BOTÓN DE TRACKING ===== */
-#tracking-button,
-#consultar-folio-btn {
+/* ===== RESPONSIVE ESPECÍFICO PARA ROLES ===== */
+
+/* Asegurar que columnas se oculten correctamente en responsive */
+@media (max-width: 768px) {
+    /* Para asesores - forzar ocultación de columna asesor */
+    body.asesor-view #reclutas-table th:nth-child(8),
+    body.asesor-view #reclutas-table td:nth-child(8) {
+        display: none !important;
+    }
+    
+    /* Para admins - mostrar si hay espacio */
+    body.admin-view #reclutas-table th:nth-child(8),
+    body.admin-view #reclutas-table td:nth-child(8) {
+        display: table-cell !important;
+        font-size: 12px;
+        padding: 6px 4px;
+    }
+}
+
+@media (max-width: 576px) {
+    /* En móvil pequeño, ocultar asesor para ambos roles */
+    body.admin-view #reclutas-table th:nth-child(8),
+    body.admin-view #reclutas-table td:nth-child(8),
+    body.asesor-view #reclutas-table th:nth-child(8),
+    body.asesor-view #reclutas-table td:nth-child(8) {
+        display: none !important;
+    }
+}
+
+/* ===== TOOLTIPS PARA BOTONES DE ACCIÓN ===== */
+
+/* Configurar posición relativa para tooltips */
+.action-btn[title] {
     position: relative;
-    overflow: hidden;
-    font-weight: 600;
-    transition: all 0.3s ease;
 }
 
-#tracking-button:disabled,
-#consultar-folio-btn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none !important;
-}
-
-#tracking-button:not(:disabled):hover,
-#consultar-folio-btn:not(:disabled):hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
-}
-
-/* ===== EFECTOS ESPECIALES ===== */
-.tracking-result-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-    transition: all 0.3s ease;
-}
-
-.tracking-row:hover {
-    background-color: rgba(0, 123, 255, 0.02);
-    border-radius: var(--border-radius);
-    transition: all 0.2s ease;
-}
-
-/* ===== MODO OSCURO ESPECÍFICO ===== */
-.dark-mode .loading-spinner {
-    border-color: rgba(0, 123, 255, 0.1);
-    border-top-color: var(--primary-color);
-}
-
-.dark-mode .tracking-row:hover {
-    background-color: rgba(0, 123, 255, 0.05);
-}
-
-.dark-mode .form-info {
-    background-color: rgba(0, 123, 255, 0.1);
-}
-
-.dark-mode .modal-info {
-    background-color: rgba(0, 123, 255, 0.1);
-}
-
-/* ===== TIMELINE ESPECÍFICA PARA TRACKING ===== */
-.timeline-container {
-    margin: 30px 0;
-    padding: 20px;
-    background-color: #f8f9fa;
-    border-radius: var(--border-radius);
-    border: 1px solid var(--border-color);
-}
-
-.dark-mode .timeline-container {
-    background-color: #2a2b3d;
-    border-color: #3f3f3f;
-}
-
-/* ===== ANIMACIÓN DE ENTRADA PARA ELEMENTOS ===== */
-.tracking-result-card,
-.timeline-container,
-.recuperar-folio-form {
-    animation: slideInUp 0.5s ease-out;
-}
-
-@keyframes slideInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* ===== INDICADORES VISUALES ===== */
-.folio-display {
-    font-family: 'Courier New', monospace;
-    background-color: #f8f9fa;
-    padding: 8px 12px;
-    border-radius: var(--border-radius);
-    border: 1px dashed var(--border-color);
-    font-weight: 700;
-    letter-spacing: 1px;
-    color: var(--primary-color);
-}
-
-.dark-mode .folio-display {
-    background-color: #2a2b3d;
-    border-color: #3f3f3f;
-}
-
-/* ===== MEJORAS FINALES ===== */
-.tracking-success-indicator {
+/* Tooltip principal */
+.action-btn[title]:hover::after {
+    content: attr(title);
     position: absolute;
-    top: -5px;
-    right: -5px;
-    width: 20px;
-    height: 20px;
-    background-color: var(--success-color);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.9);
     color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
     font-size: 12px;
-    font-weight: bold;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.tracking-error-indicator {
+/* Flecha del tooltip */
+.action-btn[title]:hover::before {
+    content: '';
     position: absolute;
-    top: -5px;
-    right: -5px;
-    width: 20px;
-    height: 20px;
-    background-color: var(--danger-color);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 5px solid rgba(0, 0, 0, 0.9);
+    z-index: 1001;
+    pointer-events: none;
+}
+
+/* ===== VERIFICACIONES FONTAWESOME ===== */
+
+/* Asegurar que FontAwesome funcione correctamente */
+.action-btn .fas,
+.action-btn .far,
+.action-btn .fab,
+.action-btn .fal,
+.action-btn .fad {
+    font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro", "Font Awesome 6 Brands" !important;
+    font-weight: 900 !important;
+    font-style: normal !important;
+    font-variant: normal !important;
+    text-rendering: auto;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Iconos específicos para botones de acción */
+.action-btn .fa-eye::before { content: "\f06e"; }
+.action-btn .fa-edit::before { content: "\f044"; }
+.action-btn .fa-trash-alt::before { content: "\f2ed"; }
+.action-btn .fa-trash::before { content: "\f1f8"; }
+
+/* ===== FALLBACKS SI FONTAWESOME NO CARGA ===== */
+
+/* Fallback para botón ver si FontAwesome falla */
+.view-btn:not(.fas):not(.fa)::before {
+    content: "👁";
+    font-size: 14px;
+    display: inline-block;
+}
+
+/* Fallback para botón editar si FontAwesome falla */
+.edit-btn:not(.fas):not(.fa)::before {
+    content: "✏️";
+    font-size: 14px;
+    display: inline-block;
+}
+
+/* Fallback para botón eliminar si FontAwesome falla */
+.delete-btn:not(.fas):not(.fa)::before {
+    content: "🗑";
+    font-size: 14px;
+    display: inline-block;
+}
+
+/* ===== ASEGURAR VISIBILIDAD DE BOTONES ===== */
+
+/* Prevenir que otros elementos interfieran con botones */
+#reclutas-table .actions-column {
+    position: relative;
+    z-index: 2;
+}
+
+.action-btn {
+    z-index: 1;
+    position: relative;
+    min-width: 36px; /* Evitar colapso */
+}
+
+/* ===== DARK MODE PARA TOOLTIPS ===== */
+.dark-mode .action-btn[title]:hover::after {
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #333;
+}
+
+.dark-mode .action-btn[title]:hover::before {
+    border-bottom-color: rgba(255, 255, 255, 0.9);
+}
+
+/* ===== UTILIDADES ===== */
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-left { text-align: left; }
+.mb-0 { margin-bottom: 0; }
+.mt-0 { margin-top: 0; }
+.hidden { display: none !important; }
+.visible { display: block !important; }
+
+/* =====================================================
+   VERIFICACIONES FINALES Y DEBUGGING
+   ===================================================== */
+
+/* ===== VARIABLES ADICIONALES PARA CONSISTENCY ===== */
+:root {
+    --action-btn-size: 36px;
+    --action-btn-size-mobile: 32px;
+    --action-btn-size-small: 28px;
+    --actions-column-width: 140px;
+    --actions-column-width-mobile: 120px;
+    --actions-column-width-small: 100px;
+}
+
+/* ===== ACCESIBILIDAD ===== */
+
+/* Focus visible para navegación por teclado */
+.action-btn:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Alto contraste para usuarios con dificultades visuales */
+@media (prefers-contrast: high) {
+    .action-btn {
+        border: 2px solid;
+    }
+    
+    .view-btn {
+        border-color: var(--primary-color);
+        background-color: white;
+        color: var(--primary-color);
+    }
+    
+    .edit-btn {
+        border-color: var(--warning-color);
+        background-color: white;
+        color: var(--warning-color);
+    }
+    
+    .delete-btn {
+        border-color: var(--danger-color);
+        background-color: white;
+        color: var(--danger-color);
+    }
+}
+
+/* Reducir movimiento para usuarios sensibles */
+@media (prefers-reduced-motion: reduce) {
+    .action-btn,
+    .admin-welcome,
+    .asesor-welcome,
+    #reclutas-table tbody tr {
+        transition: none;
+        animation: none;
+    }
+    
+    .action-btn:hover {
+        transform: none;
+    }
+}
+
+/* ===== CORRECCIONES PARA DISPOSITIVOS TÁCTILES ===== */
+
+/* Mejorar área táctil en móviles */
+@media (pointer: coarse) {
+    .action-btn {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 10px;
+    }
+    
+    .action-btn i {
+        font-size: 16px;
+    }
+}
+
+/* ===== PRINT STYLES ===== */
+
+/* Estilos para impresión */
+@media print {
+    .action-btn,
+    .actions-column {
+        display: none !important;
+    }
+    
+    #reclutas-table {
+        font-size: 12px;
+    }
+    
+    .admin-welcome,
+    .asesor-welcome {
+        background: none !important;
+        color: black !important;
+        border: 1px solid black;
+    }
+}
+
+/* ===== CORRECCIONES FINALES ===== */
+
+/* Prevenir overflow horizontal */
+.reclutas-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Smooth scrolling para navegación */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Optimización de rendimiento */
+.action-btn,
+#reclutas-table tbody tr {
+    will-change: transform;
+}
+
+/* ===== STATES PARA DEBUGGING (ACTIVAR SI ES NECESARIO) ===== */
+
+/* Descomentar estas líneas solo para debugging: */
+/*
+.debug-buttons .action-btn {
+    border: 2px solid lime !important;
+    background-color: rgba(0, 255, 0, 0.1) !important;
+}
+
+.debug-buttons .action-btn::after {
+    content: " [" attr(class) "]";
+    font-size: 10px;
+    color: red;
+    position: absolute;
+    top: -15px;
+    left: 0;
+    white-space: nowrap;
+}
+
+.debug-table {
+    border: 3px solid red !important;
+}
+
+.debug-table .actions-column {
+    background-color: rgba(255, 0, 0, 0.2) !important;
+}
+*/
+
+/* ===== ESTADOS DE CARGA PARA TABLA ===== */
+
+/* Estado de carga para tabla */
+.table-loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.table-loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    z-index: 10;
+}
+
+.dark-mode .table-loading::after {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* ===== VERIFICACIÓN DE FONTAWESOME ===== */
+
+/* Verificar que FontAwesome esté cargado */
+.fontawesome-test::before {
+    font-family: "Font Awesome 6 Free";
+    content: "\f00c"; /* checkmark */
+}
+
+/* Si este elemento no muestra un checkmark, FontAwesome no está cargado */
+.fontawesome-status {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.8);
     color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
     font-size: 12px;
-    font-weight: bold;
+    z-index: 9999;
+    display: none; /* Mostrar solo para debugging */
 }
 
-/* ===== CORRECCIÓN ESPECÍFICA PARA TABLA DE RECLUTAS ===== */
-
-/* Ocultar columna de asesor para asesores - Más específico */
-body.asesor-view #reclutas-table th:nth-child(7),
-body.asesor-view #reclutas-table td:nth-child(7) {
-    display: none !important;
+/* ===== RESPONSIVE CON VARIABLES ===== */
+@media (max-width: 768px) {
+    .action-btn {
+        width: var(--action-btn-size-mobile);
+        height: var(--action-btn-size-mobile);
+    }
+    
+    .actions-column {
+        width: var(--actions-column-width-mobile);
+        min-width: var(--actions-column-width-mobile);
+    }
 }
 
-/* Asegurar que la tabla se ajuste correctamente sin la columna de asesor */
-body.asesor-view #reclutas-table {
-    table-layout: auto;
+@media (max-width: 576px) {
+    .action-btn {
+        width: var(--action-btn-size-small);
+        height: var(--action-btn-size-small);
+    }
+    
+    .actions-column {
+        width: var(--actions-column-width-small);
+        min-width: var(--actions-column-width-small);
+    }
 }
 
-/* Para administradores, asegurar que la columna sea visible */
-body.admin-view #reclutas-table th:nth-child(7),
-body.admin-view #reclutas-table td:nth-child(7) {
-    display: table-cell !important;
-}
+/* ===== VERIFICACIÓN FINAL DE CLASE CSS ===== */
 
-/* Estilos para mostrar el folio en la tabla */
-.folio-display {
-    font-family: 'Courier New', monospace;
-    background-color: #f8f9fa;
-    padding: 4px 8px;
-    border-radius: var(--border-radius);
-    border: 1px solid var(--border-color);
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    color: var(--primary-color);
-    font-size: 12px;
-}
-
-.dark-mode .folio-display {
-    background-color: #2a2b3d;
-    border-color: #3f3f3f;
-}
-
-/* Ajustar columna de asesor para no-admin */
-body.asesor-view #reclutas-table th:nth-child(8),
-body.asesor-view #reclutas-table td:nth-child(8) {
-    display: none !important;
+/* Esta regla debe aparecer al final para verificar que el CSS se cargó completamente */
+body::after {
+    content: "CSS-LOADED-✓";
+    position: fixed;
+    bottom: -50px;
+    right: 10px;
+    background: var(--success-color);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    z-index: 9999;
+    /* Cambiar bottom a 10px para mostrar durante debugging */
 }

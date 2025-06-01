@@ -4,40 +4,10 @@
 import Auth from './auth.js';
 
 const Permissions = {
-    /**
-     * Verifica si el usuario actual puede subir archivos Excel
-     * @returns {boolean}
-     */
-    canUploadExcel: function() {
-        const user = Auth.currentUser;
-        if (!user) return false;
-        
-        // Verificar por rol
-        if (user.rol === 'admin') return true;
-        
-        // Verificar por permisos específicos
-        if (user.permisos && user.permisos.can_upload_excel) return true;
-        
-        return false;
-    },
-    
-    /**
-     * Verifica si el usuario actual puede descargar plantilla Excel
-     * @returns {boolean}
-     */
-    canDownloadTemplate: function() {
-        const user = Auth.currentUser;
-        if (!user) return false;
-        
-        // Verificar por rol
-        if (user.rol === 'admin') return true;
-        
-        // Verificar por permisos específicos
-        if (user.permisos && user.permisos.can_download_template) return true;
-        
-        return false;
-    },
-    
+    // ❌ ELIMINAR ESTAS FUNCIONES COMPLETAMENTE:
+    // canUploadExcel: function() { ... }
+    // canDownloadTemplate: function() { ... }
+
     /**
      * Verifica si el usuario actual puede ver todos los reclutas
      * @returns {boolean}
@@ -170,10 +140,8 @@ const Permissions = {
         const user = Auth.currentUser;
         if (!user) return false;
         
-        // Mapeo de permisos a funciones
+        // Mapeo de permisos a funciones (SIN EXCEL)
         const permissionMap = {
-            'upload_excel': this.canUploadExcel,
-            'download_template': this.canDownloadTemplate,
             'see_all_reclutas': this.canSeeAllReclutas,
             'assign_asesores': this.canAssignAsesores,
             'show_asesor_column': this.canShowAsesorColumn,
@@ -200,14 +168,13 @@ const Permissions = {
     configureUIByPermissions: function() {
         console.log('Configurando UI según permisos del usuario');
         
-        // Botones de Excel
-        if (!this.canUploadExcel()) {
-            this.hideElementsIfNoPermission('upload_excel', ['#upload-excel-btn']);
-        }
-        
-        if (!this.canDownloadTemplate()) {
-            this.hideElementsIfNoPermission('download_template', ['#download-template-btn']);
-        }
+        // ❌ ELIMINAR ESTAS LÍNEAS:
+        // if (!this.canUploadExcel()) {
+        //     this.hideElementsIfNoPermission('upload_excel', ['#upload-excel-btn']);
+        // }
+        // if (!this.canDownloadTemplate()) {
+        //     this.hideElementsIfNoPermission('download_template', ['#download-template-btn']);
+        // }
         
         // Columna de asesor
         if (!this.canShowAsesorColumn()) {

@@ -34,7 +34,6 @@ configureUIForRole: function() {
     document.body.classList.add(role === 'admin' ? 'admin-view' : 'asesor-view');
     
     if (role === 'admin') {
-        this.setupExcelUpload();
         this.showAsesorColumn();
         this.showAdminWelcome();
         this.setupAdminFeatures();
@@ -145,113 +144,11 @@ showAsesorWelcome: function() {
     }
 },
 
-showAsesorColumn: function() {
-    console.log('Mostrando columna de asesor');
-    
-    // Mostrar header de asesor
-    const asesorHeader = document.querySelector('#asesor-header');
-    if (asesorHeader) {
-        asesorHeader.style.display = 'table-cell';
-    }
-    
-    // Remover estilos que ocultan la columna
-    const existingStyle = document.querySelector('#hide-asesor-style');
-    if (existingStyle) {
-        existingStyle.remove();
-    }
-},
-
-hideAsesorColumn: function() {
-    console.log('Ocultando columna de asesor');
-    
-    // Crear estilo para ocultar columna de asesor
-    const style = document.createElement('style');
-    style.id = 'hide-asesor-style';
-    style.textContent = `
-        #reclutas-table th:nth-child(7),
-        #reclutas-table td:nth-child(7) { 
-            display: none !important; 
-        }
-    `;
-    document.head.appendChild(style);
-},
-
-hideAdminElements: function() {
-    console.log('Ocultando elementos de administrador');
-    
-    // Ocultar botón de Excel
-    const excelButton = document.getElementById('upload-excel-btn');
-    const templateButton = document.getElementById('download-template-btn');
-    
-    if (excelButton) excelButton.style.display = 'none';
-    if (templateButton) templateButton.style.display = 'none';
-    
-    // Ocultar selectores de asesor en formularios
-    const asesorSelectors = document.querySelectorAll('#recluta-asesor, #edit-recluta-asesor');
-    asesorSelectors.forEach(selector => {
-        const formGroup = selector ? selector.closest('.form-group') : null;
-        if (formGroup) formGroup.style.display = 'none';
-    });
-},
-
-showAdminWelcome: function() {
-    const reclutasSection = document.getElementById('reclutas-section');
-    if (reclutasSection && !reclutasSection.querySelector('.admin-welcome')) {
-        const welcomeDiv = document.createElement('div');
-        welcomeDiv.className = 'admin-welcome';
-        welcomeDiv.style.cssText = `
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-            color: white;
-            padding: 15px;
-            border-radius: var(--border-radius);
-            margin-bottom: 20px;
-            text-align: center;
-        `;
-        welcomeDiv.innerHTML = `
-            <h4><i class="fas fa-crown"></i> Panel de Administrador</h4>
-            <p>Gestiona todos los reclutas, asigna asesores y supervisa el proceso completo de reclutamiento.</p>
-        `;
-        
-        const sectionHeader = reclutasSection.querySelector('.section-header');
-        if (sectionHeader && sectionHeader.nextSibling) {
-            reclutasSection.insertBefore(welcomeDiv, sectionHeader.nextSibling);
-        }
-    }
-},
-
-showAsesorWelcome: function() {
-    const reclutasSection = document.getElementById('reclutas-section');
-    if (reclutasSection && !reclutasSection.querySelector('.asesor-welcome')) {
-        const welcomeDiv = document.createElement('div');
-        welcomeDiv.className = 'asesor-welcome';
-        welcomeDiv.style.cssText = `
-            background: linear-gradient(135deg, #28a745, #20c997);
-            color: white;
-            padding: 15px;
-            border-radius: var(--border-radius);
-            margin-bottom: 20px;
-            text-align: center;
-        `;
-        welcomeDiv.innerHTML = `
-            <h4><i class="fas fa-handshake"></i> Panel de Gerente</h4>
-            <p>Gestiona tus reclutas asignados y programa entrevistas para tus candidatos.</p>
-        `;
-        
-        const sectionHeader = reclutasSection.querySelector('.section-header');
-        if (sectionHeader && sectionHeader.nextSibling) {
-            reclutasSection.insertBefore(welcomeDiv, sectionHeader.nextSibling);
-        }
-    }
-},
-
 /**
  * Configura características para administradores
  */
 setupAdminFeatures: function() {
     console.log('Configurando características de administrador');
-    
-    // Mostrar botones de Excel
-    this.setupExcelUpload();
     
     // Mostrar columna de asesor
     this.showAsesorColumn();
@@ -269,13 +166,10 @@ setupAdminFeatures: function() {
 },
 
 /**
- * ✅ NUEVA FUNCIÓN: Configura características para asesores
+ * Configura características para asesores
  */
 setupAsesorFeatures: function() {
     console.log('Configurando características de asesor');
-    
-    // Ocultar botones de Excel
-    this.hideExcelButtons();
     
     // Ocultar columna de asesor
     this.hideAsesorColumn();
@@ -325,751 +219,6 @@ hideExcelButtons: function() {
     
     console.log('Botón de subir Excel ocultado para asesor');
 },
-
-/**
- * Descarga la plantilla Excel
- */
-downloadExcelTemplate: async function() {
-    try {
-        const response = await fetch(`${CONFIG.API_URL}/reclutas/plantilla-excel`);
-        
-        if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-        
-        // Crear blob y descargar
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'plantilla_reclutas.xlsx';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        
-        showSuccess('Plantilla Excel descargada correctamente');
-    } catch (error) {
-        console.error('Error al descargar plantilla:', error);
-        showError('Error al descargar la plantilla Excel');
-    }
-},
-
-/**
- * Configura la funcionalidad de subir Excel
- */
-setupExcelUpload: function() {
-    console.log('Configurando botones de Excel para administrador');
-    
-    // Buscar el contenedor de acciones de la sección
-    const sectionActions = document.querySelector('#reclutas-section .section-actions');
-    if (!sectionActions) {
-        console.error('No se encontró el contenedor de acciones');
-        return;
-    }
-    
-    // Verificar si ya existen los botones
-    let excelButton = document.getElementById('upload-excel-btn');
-    let templateButton = document.getElementById('download-template-btn');
-    
-    // Crear botón de plantilla si no existe
-    if (!templateButton) {
-        templateButton = document.createElement('button');
-        templateButton.id = 'download-template-btn';
-        templateButton.className = 'btn-secondary';
-        templateButton.innerHTML = '<i class="fas fa-download"></i> Plantilla Excel';
-        templateButton.style.marginRight = '10px';
-        templateButton.title = 'Descargar plantilla Excel para importación masiva';
-        
-        // Insertar antes del botón "Agregar Nuevo Recluta"
-        const addButton = document.getElementById('open-add-recluta-modal');
-        if (addButton) {
-            sectionActions.insertBefore(templateButton, addButton);
-        } else {
-            sectionActions.appendChild(templateButton);
-        }
-        
-        console.log('Botón de plantilla Excel creado');
-    }
-    
-    // Crear botón de subir Excel si no existe
-    if (!excelButton) {
-        excelButton = document.createElement('button');
-        excelButton.id = 'upload-excel-btn';
-        excelButton.className = 'btn-success';
-        excelButton.innerHTML = '<i class="fas fa-file-excel"></i> Subir Excel';
-        excelButton.style.marginRight = '10px';
-        excelButton.title = 'Importar reclutas desde archivo Excel';
-        
-        // Insertar antes del botón "Agregar Nuevo Recluta"
-        const addButton = document.getElementById('open-add-recluta-modal');
-        if (addButton) {
-            sectionActions.insertBefore(excelButton, addButton);
-        } else {
-            sectionActions.appendChild(excelButton);
-        }
-        
-        console.log('Botón de subir Excel creado');
-    }
-    
-    // Mostrar los botones si estaban ocultos
-    excelButton.style.display = 'inline-block';
-    templateButton.style.display = 'inline-block';
-    
-    // Crear input file oculto si no existe
-    let fileInput = document.getElementById('excel-file-input');
-    if (!fileInput) {
-        fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.id = 'excel-file-input';
-        fileInput.accept = '.xlsx,.xls';
-        fileInput.style.display = 'none';
-        document.body.appendChild(fileInput);
-    }
-    
-    // Configurar eventos (remover listeners previos)
-    templateButton.replaceWith(templateButton.cloneNode(true));
-    excelButton.replaceWith(excelButton.cloneNode(true));
-    
-    // Obtener referencias actualizadas
-    templateButton = document.getElementById('download-template-btn');
-    excelButton = document.getElementById('upload-excel-btn');
-    
-    templateButton.addEventListener('click', () => {
-        console.log('Descargando plantilla Excel...');
-        this.downloadExcelTemplate();
-    });
-    
-    excelButton.addEventListener('click', () => {
-        console.log('Abriendo selector de archivo Excel...');
-        fileInput.click();
-    });
-    
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            console.log('Archivo Excel seleccionado:', e.target.files[0].name);
-            this.handleExcelUpload(e.target.files[0]);
-        }
-    });
-    
-    console.log('Configuración de Excel completada');
-},
-
-/**
- * ✅ NUEVA FUNCIÓN: Maneja la subida de archivo Excel
- * @param {File} file - Archivo Excel seleccionado
- */
-handleExcelUpload: async function(file) {
-    if (!file) return;
-    
-    // Validar tipo de archivo
-    const validTypes = [
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-        'application/vnd.ms-excel' // .xls
-    ];
-    
-    if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls)$/i)) {
-        showError('Por favor selecciona un archivo Excel válido (.xlsx o .xls)');
-        return;
-    }
-    
-    // Validar tamaño (máximo 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-        showError('El archivo es demasiado grande. Máximo 5MB permitido.');
-        return;
-    }
-    
-    // Mostrar modal de confirmación/progreso
-    this.showExcelUploadModal(file);
-},
-
-/**
- * ✅ NUEVA FUNCIÓN: Muestra modal de confirmación para subir Excel
- * @param {File} file - Archivo Excel a procesar
- */
-showExcelUploadModal: function(file) {
-    // Crear modal dinámicamente
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.style.display = 'block';
-    modal.innerHTML = `
-        <div class="modal-content modal-sm">
-            <div class="modal-header">
-                <h3>Importar Reclutas desde Excel</h3>
-                <span class="close-modal">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="excel-upload-info">
-                    <p><strong>Archivo seleccionado:</strong> ${file.name}</p>
-                    <p><strong>Tamaño:</strong> ${(file.size / 1024).toFixed(1)} KB</p>
-                    
-                    <div style="margin: 20px 0; padding: 15px; background-color: rgba(0, 123, 255, 0.1); border-radius: 5px;">
-                        <h4 style="margin-top: 0;"><i class="fas fa-info-circle"></i> Formato Requerido</h4>
-                        <p style="margin-bottom: 10px;">El archivo Excel debe tener las siguientes columnas:</p>
-                        <ul style="margin-bottom: 0; padding-left: 20px;">
-                            <li><strong>nombre</strong> - Nombre completo (requerido)</li>
-                            <li><strong>email</strong> - Correo electrónico (requerido)</li>
-                            <li><strong>telefono</strong> - Número de teléfono (requerido)</li>
-                            <li><strong>puesto</strong> - Puesto al que aplica (opcional)</li>
-                            <li><strong>estado</strong> - Estado: "Activo", "En proceso", "Rechazado" (opcional, por defecto "En proceso")</li>
-                            <li><strong>notas</strong> - Notas adicionales (opcional)</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="upload-progress" style="display: none;">
-                        <div style="display: flex; align-items: center; margin: 15px 0;">
-                            <i class="fas fa-spinner fa-spin" style="margin-right: 10px;"></i>
-                            <span>Procesando archivo...</span>
-                        </div>
-                        <div style="background-color: #f0f0f0; border-radius: 10px; overflow: hidden;">
-                            <div class="progress-bar" style="height: 8px; background-color: var(--primary-color); width: 0%; transition: width 0.3s;"></div>
-                        </div>
-                        <div class="progress-text" style="text-align: center; margin-top: 10px; font-size: 12px; color: var(--text-light);">0%</div>
-                    </div>
-                    
-                    <div class="upload-results" style="display: none;">
-                        <!-- Los resultados se mostrarán aquí -->
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary cancel-upload">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
-                <button class="btn-primary confirm-upload">
-                    <i class="fas fa-upload"></i> Procesar Archivo
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Configurar eventos
-    const closeButtons = modal.querySelectorAll('.close-modal, .cancel-upload');
-    closeButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.body.removeChild(modal);
-            // Limpiar input file
-            const fileInput = document.getElementById('excel-file-input');
-            if (fileInput) fileInput.value = '';
-        });
-    });
-    
-    const confirmButton = modal.querySelector('.confirm-upload');
-    confirmButton.addEventListener('click', () => {
-        this.processExcelFile(file, modal);
-    });
-},
-
-/**
- * ✅ NUEVA FUNCIÓN: Procesa el archivo Excel y sube los reclutas
- * @param {File} file - Archivo Excel
- * @param {HTMLElement} modal - Modal de progreso
- */
-processExcelFile: async function(file, modal) {
-    const progressContainer = modal.querySelector('.upload-progress');
-    const resultsContainer = modal.querySelector('.upload-results');
-    const confirmButton = modal.querySelector('.confirm-upload');
-    const cancelButton = modal.querySelector('.cancel-upload');
-    
-    // Mostrar progreso
-    progressContainer.style.display = 'block';
-    confirmButton.style.display = 'none';
-    
-    try {
-        // Crear FormData para enviar el archivo
-        const formData = new FormData();
-        formData.append('excel_file', file);
-        
-        // Simular progreso
-        this.updateProgress(modal, 20, 'Subiendo archivo...');
-        
-        // Enviar archivo al backend
-        const response = await fetch(`${CONFIG.API_URL}/reclutas/import-excel`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        this.updateProgress(modal, 60, 'Procesando datos...');
-        
-        if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        this.updateProgress(modal, 100, 'Completado');
-        
-        // Mostrar resultados
-        setTimeout(() => {
-            this.showUploadResults(data, modal);
-        }, 500);
-        
-    } catch (error) {
-        console.error('Error al procesar Excel:', error);
-        this.showUploadError(error.message, modal);
-    }
-},
-
-/**
- * ✅ NUEVA FUNCIÓN: Actualiza la barra de progreso
- * @param {HTMLElement} modal - Modal
- * @param {number} percentage - Porcentaje de progreso
- * @param {string} text - Texto de estado
- */
-updateProgress: function(modal, percentage, text) {
-    const progressBar = modal.querySelector('.progress-bar');
-    const progressText = modal.querySelector('.progress-text');
-    
-    if (progressBar) progressBar.style.width = `${percentage}%`;
-    if (progressText) progressText.textContent = `${percentage}% - ${text}`;
-},
-
-/**
- * ✅ NUEVA FUNCIÓN: Muestra los resultados de la importación
- * @param {Object} data - Datos de respuesta del servidor
- * @param {HTMLElement} modal - Modal
- */
-showUploadResults: function(data, modal) {
-    const progressContainer = modal.querySelector('.upload-progress');
-    const resultsContainer = modal.querySelector('.upload-results');
-    const cancelButton = modal.querySelector('.cancel-upload');
-    
-    progressContainer.style.display = 'none';
-    resultsContainer.style.display = 'block';
-    
-    let resultsHTML = '';
-    
-    if (data.success) {
-        resultsHTML = `
-            <div style="color: var(--success-color); text-align: center; margin-bottom: 15px;">
-                <i class="fas fa-check-circle" style="font-size: 48px;"></i>
-                <h4>¡Importación Exitosa!</h4>
-            </div>
-            <div style="background-color: rgba(40, 167, 69, 0.1); padding: 15px; border-radius: 5px; margin-bottom: 15px;">
-                <p><strong>Reclutas procesados:</strong> ${data.processed || 0}</p>
-                <p><strong>Reclutas importados:</strong> ${data.imported || 0}</p>
-                ${data.skipped > 0 ? `<p><strong>Reclutas omitidos:</strong> ${data.skipped} (ya existían)</p>` : ''}
-                ${data.errors > 0 ? `<p style="color: var(--warning-color);"><strong>Errores:</strong> ${data.errors}</p>` : ''}
-            </div>
-        `;
-        
-        if (data.error_details && data.error_details.length > 0) {
-            resultsHTML += `
-                <details style="margin-top: 10px;">
-                    <summary style="cursor: pointer; color: var(--warning-color);">Ver errores detallados</summary>
-                    <ul style="margin-top: 10px; padding-left: 20px; font-size: 12px;">
-                        ${data.error_details.map(error => `<li>${error}</li>`).join('')}
-                    </ul>
-                </details>
-            `;
-        }
-        
-        // Actualizar lista de reclutas
-        setTimeout(() => {
-            this.loadAndDisplayReclutas();
-        }, 1000);
-        
-    } else {
-        resultsHTML = `
-            <div style="color: var(--danger-color); text-align: center; margin-bottom: 15px;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 48px;"></i>
-                <h4>Error en la Importación</h4>
-                <p>${data.message || 'Error desconocido'}</p>
-            </div>
-        `;
-    }
-    
-    resultsContainer.innerHTML = resultsHTML;
-    
-    // Cambiar botón de cancelar a cerrar
-    cancelButton.innerHTML = '<i class="fas fa-check"></i> Cerrar';
-    cancelButton.className = 'btn-primary';
-},
-
-/**
- * ✅ NUEVA FUNCIÓN: Muestra error en la importación
- * @param {string} errorMessage - Mensaje de error
- * @param {HTMLElement} modal - Modal
- */
-showUploadError: function(errorMessage, modal) {
-    const progressContainer = modal.querySelector('.upload-progress');
-    const resultsContainer = modal.querySelector('.upload-results');
-    const cancelButton = modal.querySelector('.cancel-upload');
-    
-    progressContainer.style.display = 'none';
-    resultsContainer.style.display = 'block';
-    
-    resultsContainer.innerHTML = `
-        <div style="color: var(--danger-color); text-align: center;">
-            <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px;"></i>
-            <h4>Error al Procesar Archivo</h4>
-            <p>${errorMessage}</p>
-            <div style="margin-top: 15px; padding: 10px; background-color: rgba(220, 53, 69, 0.1); border-radius: 5px;">
-                <small>Verifica que el archivo tenga el formato correcto y vuelve a intentarlo.</small>
-            </div>
-        </div>
-    `;
-    
-    cancelButton.innerHTML = '<i class="fas fa-times"></i> Cerrar';
-    cancelButton.className = 'btn-danger';
-},
-
-/**
- * Configura la funcionalidad de subir Excel
- */
-setupExcelUpload: function() {
-    console.log('Configurando botones de Excel para administrador');
-    
-    // Buscar el contenedor de acciones de la sección
-    const sectionActions = document.querySelector('#reclutas-section .section-actions');
-    if (!sectionActions) {
-        console.error('No se encontró el contenedor de acciones');
-        return;
-    }
-    
-    // Verificar si ya existen los botones
-    let templateButton = document.getElementById('download-template-btn');
-    
-    // Crear botón de plantilla si no existe
-    if (!templateButton) {
-        templateButton = document.createElement('button');
-        templateButton.id = 'download-template-btn';
-        templateButton.className = 'btn-secondary';
-        templateButton.innerHTML = '<i class="fas fa-download"></i> Plantilla Excel';
-        templateButton.style.marginRight = '10px';
-        templateButton.title = 'Descargar plantilla Excel para importación masiva';
-        
-        // Insertar antes del botón "Agregar Nuevo Recluta"
-        const addButton = document.getElementById('open-add-recluta-modal');
-        if (addButton) {
-            sectionActions.insertBefore(templateButton, addButton);
-        } else {
-            sectionActions.appendChild(templateButton);
-        }
-        
-        console.log('Botón de plantilla Excel creado');
-    }
-    
-    // SOLO CREAR BOTÓN DE SUBIR EXCEL PARA ADMINISTRADORES
-    if (this.userRole === 'admin') {
-        let excelButton = document.getElementById('upload-excel-btn');
-        
-        if (!excelButton) {
-            excelButton = document.createElement('button');
-            excelButton.id = 'upload-excel-btn';
-            excelButton.className = 'btn-success';
-            excelButton.innerHTML = '<i class="fas fa-file-excel"></i> Subir Excel';
-            excelButton.style.marginRight = '10px';
-            excelButton.title = 'Importar reclutas desde archivo Excel';
-            
-            // Insertar antes del botón "Agregar Nuevo Recluta"
-            const addButton = document.getElementById('open-add-recluta-modal');
-            if (addButton) {
-                sectionActions.insertBefore(excelButton, addButton);
-            } else {
-                sectionActions.appendChild(excelButton);
-            }
-            
-            console.log('Botón de subir Excel creado (solo admin)');
-        }
-        
-        // Crear input file oculto si no existe
-        let fileInput = document.getElementById('excel-file-input');
-        if (!fileInput) {
-            fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.id = 'excel-file-input';
-            fileInput.accept = '.xlsx,.xls';
-            fileInput.style.display = 'none';
-            document.body.appendChild(fileInput);
-        }
-        
-        // Configurar eventos para subir Excel
-        excelButton.addEventListener('click', () => {
-            console.log('Abriendo selector de archivo Excel...');
-            fileInput.click();
-        });
-        
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                console.log('Archivo Excel seleccionado:', e.target.files[0].name);
-                this.handleExcelUpload(e.target.files[0]);
-            }
-        });
-    }
-    
-    // Configurar evento para plantilla (disponible para todos los roles)
-    templateButton.addEventListener('click', () => {
-        console.log('Descargando plantilla Excel...');
-        this.downloadExcelTemplate();
-    });
-    
-    console.log('Configuración de Excel completada');
-},
-
-/**
- * Maneja la subida de archivo Excel
- * @param {File} file - Archivo Excel seleccionado
- */
-handleExcelUpload: async function(file) {
-    if (!file) return;
-    
-    // Validar tipo de archivo
-    const validTypes = [
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-        'application/vnd.ms-excel' // .xls
-    ];
-    
-    if (!validTypes.includes(file.type) && !file.name.match(/\.(xlsx|xls)$/i)) {
-        showError('Por favor selecciona un archivo Excel válido (.xlsx o .xls)');
-        return;
-    }
-    
-    // Validar tamaño (máximo 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-        showError('El archivo es demasiado grande. Máximo 5MB permitido.');
-        return;
-    }
-    
-    // Mostrar modal de confirmación/progreso
-    this.showExcelUploadModal(file);
-},
-
-/**
- * ✅ NUEVA FUNCIÓN: Muestra modal de confirmación para subir Excel
- * @param {File} file - Archivo Excel a procesar
- */
-showExcelUploadModal: function(file) {
-    // Crear modal dinámicamente
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.style.display = 'block';
-    modal.innerHTML = `
-        <div class="modal-content modal-sm">
-            <div class="modal-header">
-                <h3>Importar Reclutas desde Excel</h3>
-                <span class="close-modal">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="excel-upload-info">
-                    <p><strong>Archivo seleccionado:</strong> ${file.name}</p>
-                    <p><strong>Tamaño:</strong> ${(file.size / 1024).toFixed(1)} KB</p>
-                    
-                    <div style="margin: 20px 0; padding: 15px; background-color: rgba(0, 123, 255, 0.1); border-radius: 5px;">
-                        <h4 style="margin-top: 0;"><i class="fas fa-info-circle"></i> Formato Requerido</h4>
-                        <p style="margin-bottom: 10px;">El archivo Excel debe tener las siguientes columnas:</p>
-                        <ul style="margin-bottom: 0; padding-left: 20px;">
-                            <li><strong>nombre</strong> - Nombre completo (requerido)</li>
-                            <li><strong>email</strong> - Correo electrónico (requerido)</li>
-                            <li><strong>telefono</strong> - Número de teléfono (requerido)</li>
-                            <li><strong>puesto</strong> - Puesto al que aplica (opcional)</li>
-                            <li><strong>estado</strong> - Estado: "Activo", "En proceso", "Rechazado" (opcional, por defecto "En proceso")</li>
-                            <li><strong>notas</strong> - Notas adicionales (opcional)</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="upload-progress" style="display: none;">
-                        <div style="display: flex; align-items: center; margin: 15px 0;">
-                            <i class="fas fa-spinner fa-spin" style="margin-right: 10px;"></i>
-                            <span>Procesando archivo...</span>
-                        </div>
-                        <div style="background-color: #f0f0f0; border-radius: 10px; overflow: hidden;">
-                            <div class="progress-bar" style="height: 8px; background-color: var(--primary-color); width: 0%; transition: width 0.3s;"></div>
-                        </div>
-                        <div class="progress-text" style="text-align: center; margin-top: 10px; font-size: 12px; color: var(--text-light);">0%</div>
-                    </div>
-                    
-                    <div class="upload-results" style="display: none;">
-                        <!-- Los resultados se mostrarán aquí -->
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-secondary cancel-upload">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
-                <button class="btn-primary confirm-upload">
-                    <i class="fas fa-upload"></i> Procesar Archivo
-                </button>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    // Configurar eventos
-    const closeButtons = modal.querySelectorAll('.close-modal, .cancel-upload');
-    closeButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.body.removeChild(modal);
-            // Limpiar input file
-            const fileInput = document.getElementById('excel-file-input');
-            if (fileInput) fileInput.value = '';
-        });
-    });
-    
-    const confirmButton = modal.querySelector('.confirm-upload');
-    confirmButton.addEventListener('click', () => {
-        this.processExcelFile(file, modal);
-    });
-},
-
-/**
- * ✅ NUEVA FUNCIÓN: Procesa el archivo Excel y sube los reclutas
- * @param {File} file - Archivo Excel
- * @param {HTMLElement} modal - Modal de progreso
- */
-processExcelFile: async function(file, modal) {
-    const progressContainer = modal.querySelector('.upload-progress');
-    const resultsContainer = modal.querySelector('.upload-results');
-    const confirmButton = modal.querySelector('.confirm-upload');
-    const cancelButton = modal.querySelector('.cancel-upload');
-    
-    // Mostrar progreso
-    progressContainer.style.display = 'block';
-    confirmButton.style.display = 'none';
-    
-    try {
-        // Crear FormData para enviar el archivo
-        const formData = new FormData();
-        formData.append('excel_file', file);
-        
-        // Simular progreso
-        this.updateProgress(modal, 20, 'Subiendo archivo...');
-        
-        // Enviar archivo al backend
-        const response = await fetch(`${CONFIG.API_URL}/reclutas/import-excel`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        this.updateProgress(modal, 60, 'Procesando datos...');
-        
-        if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        this.updateProgress(modal, 100, 'Completado');
-        
-        // Mostrar resultados
-        setTimeout(() => {
-            this.showUploadResults(data, modal);
-        }, 500);
-        
-    } catch (error) {
-        console.error('Error al procesar Excel:', error);
-        this.showUploadError(error.message, modal);
-    }
-},
-
-/**
- * ✅ NUEVA FUNCIÓN: Actualiza la barra de progreso
- * @param {HTMLElement} modal - Modal
- * @param {number} percentage - Porcentaje de progreso
- * @param {string} text - Texto de estado
- */
-updateProgress: function(modal, percentage, text) {
-    const progressBar = modal.querySelector('.progress-bar');
-    const progressText = modal.querySelector('.progress-text');
-    
-    if (progressBar) progressBar.style.width = `${percentage}%`;
-    if (progressText) progressText.textContent = `${percentage}% - ${text}`;
-},
-
-/**
- * ✅ NUEVA FUNCIÓN: Muestra los resultados de la importación
- * @param {Object} data - Datos de respuesta del servidor
- * @param {HTMLElement} modal - Modal
- */
-showUploadResults: function(data, modal) {
-    const progressContainer = modal.querySelector('.upload-progress');
-    const resultsContainer = modal.querySelector('.upload-results');
-    const cancelButton = modal.querySelector('.cancel-upload');
-    
-    progressContainer.style.display = 'none';
-    resultsContainer.style.display = 'block';
-    
-    let resultsHTML = '';
-    
-    if (data.success) {
-        resultsHTML = `
-            <div style="color: var(--success-color); text-align: center; margin-bottom: 15px;">
-                <i class="fas fa-check-circle" style="font-size: 48px;"></i>
-                <h4>¡Importación Exitosa!</h4>
-            </div>
-            <div style="background-color: rgba(40, 167, 69, 0.1); padding: 15px; border-radius: 5px; margin-bottom: 15px;">
-                <p><strong>Reclutas procesados:</strong> ${data.processed || 0}</p>
-                <p><strong>Reclutas importados:</strong> ${data.imported || 0}</p>
-                ${data.skipped > 0 ? `<p><strong>Reclutas omitidos:</strong> ${data.skipped} (ya existían)</p>` : ''}
-                ${data.errors > 0 ? `<p style="color: var(--warning-color);"><strong>Errores:</strong> ${data.errors}</p>` : ''}
-            </div>
-        `;
-        
-        if (data.error_details && data.error_details.length > 0) {
-            resultsHTML += `
-                <details style="margin-top: 10px;">
-                    <summary style="cursor: pointer; color: var(--warning-color);">Ver errores detallados</summary>
-                    <ul style="margin-top: 10px; padding-left: 20px; font-size: 12px;">
-                        ${data.error_details.map(error => `<li>${error}</li>`).join('')}
-                    </ul>
-                </details>
-            `;
-        }
-        
-        // Actualizar lista de reclutas
-        setTimeout(() => {
-            this.loadAndDisplayReclutas();
-        }, 1000);
-        
-    } else {
-        resultsHTML = `
-            <div style="color: var(--danger-color); text-align: center; margin-bottom: 15px;">
-                <i class="fas fa-exclamation-triangle" style="font-size: 48px;"></i>
-                <h4>Error en la Importación</h4>
-                <p>${data.message || 'Error desconocido'}</p>
-            </div>
-        `;
-    }
-    
-    resultsContainer.innerHTML = resultsHTML;
-    
-    // Cambiar botón de cancelar a cerrar
-    cancelButton.innerHTML = '<i class="fas fa-check"></i> Cerrar';
-    cancelButton.className = 'btn-primary';
-},
-
-/**
- * ✅ NUEVA FUNCIÓN: Muestra error en la importación
- * @param {string} errorMessage - Mensaje de error
- * @param {HTMLElement} modal - Modal
- */
-showUploadError: function(errorMessage, modal) {
-    const progressContainer = modal.querySelector('.upload-progress');
-    const resultsContainer = modal.querySelector('.upload-results');
-    const cancelButton = modal.querySelector('.cancel-upload');
-    
-    progressContainer.style.display = 'none';
-    resultsContainer.style.display = 'block';
-    
-    resultsContainer.innerHTML = `
-        <div style="color: var(--danger-color); text-align: center;">
-            <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 15px;"></i>
-            <h4>Error al Procesar Archivo</h4>
-            <p>${errorMessage}</p>
-            <div style="margin-top: 15px; padding: 10px; background-color: rgba(220, 53, 69, 0.1); border-radius: 5px;">
-                <small>Verifica que el archivo tenga el formato correcto y vuelve a intentarlo.</small>
-            </div>
-        </div>
-    `;
-    
-    cancelButton.innerHTML = '<i class="fas fa-times"></i> Cerrar';
-    cancelButton.className = 'btn-danger';
-},
-
      /**
  * Inicializa todos los elementos y eventos de gestión de reclutas
  */
@@ -1306,8 +455,8 @@ renderReclutasTable: function(container) {
     
     if (!this.reclutas || this.reclutas.length === 0) {
         const row = document.createElement('tr');
-        // ✅ CORREGIR COLSPAN SEGÚN ROL
-        const colspan = this.userRole === 'admin' ? '9' : '8';
+        // ✅ CORREGIR COLSPAN - Siempre 9 columnas en HTML, CSS oculta las necesarias
+        const colspan = '9';
         row.innerHTML = `<td colspan="${colspan}" style="text-align: center; padding: 20px;">
             <i class="fas fa-users"></i> No se encontraron reclutas. 
             <button class="btn-link" onclick="Reclutas.openAddReclutaModal()">¡Agrega tu primer recluta!</button>
@@ -1322,7 +471,7 @@ renderReclutasTable: function(container) {
         const badgeClass = this.getEstadoBadgeClass(recluta.estado);
         const fotoUrl = this.getFotoUrl(recluta.foto_url);
         
-        // ✅ AÑADIR COLUMNA FOLIO
+        // ✅ SIEMPRE RENDERIZAR TODAS LAS COLUMNAS - CSS se encarga de ocultar
         row.innerHTML = `
             <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"></td>
             <td>${recluta.nombre}</td>
@@ -1331,8 +480,8 @@ renderReclutasTable: function(container) {
             <td>${recluta.puesto || 'No especificado'}</td>
             <td><span class="folio-display">${recluta.folio || 'N/A'}</span></td>
             <td><span class="badge ${badgeClass}">${recluta.estado}</span></td>
-            ${this.userRole === 'admin' ? `<td>${recluta.asesor_nombre || 'No asignado'}</td>` : ''}
-            <td>
+            <td class="asesor-column">${recluta.asesor_nombre || 'No asignado'}</td>
+            <td class="actions-column">
                 <button class="action-btn view-btn" title="Ver detalles" data-id="${recluta.id}">
                     <i class="fas fa-eye"></i>
                 </button>
@@ -1383,58 +532,32 @@ getFotoUrl: function(fotoUrl) {
      * Configura la interfaz de usuario según el rol
      */
     configureUIForRole: function() {
-        // Obtener rol de manera segura, usando el almacenado en este módulo
-        // o consultando Auth si no está disponible
-        const role = this.userRole || Auth.getUserRole() || 'user';
-        
-        // Establece el rol usado localmente
-        this.userRole = role;
-        
-        // Configurar UI para no-administradores
-        if (role !== 'admin') {
-            // Ocultar selectores de asesor en formularios
-            const asesorSelectors = document.querySelectorAll('#recluta-asesor, #edit-recluta-asesor');
-            asesorSelectors.forEach(selector => {
-                if (selector) {
-                    const formGroup = selector.closest('.form-group');
-                    if (formGroup) {
-                        formGroup.style.display = 'none';
-                    }
-                }
-            });
-            
-            // Ocultar columna de asesor en la tabla
-            const asesorHeader = document.querySelector('#reclutas-table th:nth-child(7)');
-            if (asesorHeader) {
-                asesorHeader.style.display = 'none';
-            }
-            
-            // Ocultar elementos de la columna de asesor en cada fila
-            document.querySelectorAll('#reclutas-list tr').forEach(row => {
-                const asesorCell = row.querySelector('td:nth-child(7)');
-                if (asesorCell) asesorCell.style.display = 'none';
-            });
-            
-            // Mostrar mensaje informativo para asesores
-            if (role === 'asesor') {
-                const reclutasSection = document.querySelector('#reclutas-section .section-header');
-                if (reclutasSection) {
-                    // Verificar si ya existe el mensaje para no duplicarlo
-                    if (!reclutasSection.querySelector('.info-message')) {
-                        const infoMessage = document.createElement('div');
-                        infoMessage.className = 'info-message';
-                        infoMessage.innerHTML = '<i class="fas fa-info-circle"></i> Vista filtrada: solo se muestran los reclutas asignados a ti.';
-                        infoMessage.style.color = 'var(--primary-color)';
-                        infoMessage.style.marginTop = '10px';
-                        infoMessage.style.fontSize = '14px';
-                        reclutasSection.appendChild(infoMessage);
-                    }
-                }
-            }
+    const role = this.userRole || Auth.getUserRole() || 'asesor';
+    this.userRole = role;
+    
+    console.log('🔧 Configurando UI de reclutas para rol:', role);
+    
+    // Añadir clase CSS al body según el rol
+    document.body.classList.remove('admin-view', 'asesor-view');
+    document.body.classList.add(role === 'admin' ? 'admin-view' : 'asesor-view');
+    
+    if (role === 'admin') {
+        this.setupAdminFeatures();
+        console.log('✅ Modo ADMIN activado - Botones de acción visibles');
+    } else {
+        this.setupAsesorFeatures();
+        console.log('✅ Modo ASESOR activado - Botones de acción visibles');
+    }
+    
+    // ✅ VERIFICAR que los botones de acción sean visibles para AMBOS roles
+    setTimeout(() => {
+        const actionButtons = document.querySelectorAll('.action-btn');
+        console.log(`🔍 Botones de acción encontrados: ${actionButtons.length}`);
+        if (actionButtons.length === 0) {
+            console.error('❌ NO se encontraron botones de acción - Problema en renderizado');
         }
-        
-        console.log(`UI configurada para rol: ${role}`);
-    },
+    }, 1000);
+},
 
     /**
      * Obtiene datos de un recluta específico
@@ -1716,187 +839,70 @@ getFotoUrl: function(fotoUrl) {
         this.filters.sortOrder = order;
     },
 
-    /**
- * Configura la funcionalidad de plantilla Excel (solo descarga)
- */
-setupExcelUpload: function() {
-    console.log('Configurando botón de plantilla Excel para administrador');
-    
-    const sectionActions = document.querySelector('#reclutas-section .section-actions');
-    if (!sectionActions) {
-        console.error('No se encontró el contenedor de acciones');
-        return;
-    }
-    
-    // ✅ SOLO CREAR BOTÓN DE PLANTILLA EXCEL
-    let templateButton = document.getElementById('download-template-btn');
-    
-    if (!templateButton) {
-        templateButton = document.createElement('button');
-        templateButton.id = 'download-template-btn';
-        templateButton.className = 'btn-secondary';
-        templateButton.innerHTML = '<i class="fas fa-download"></i> Plantilla Excel';
-        templateButton.style.marginRight = '10px';
-        templateButton.title = 'Descargar plantilla Excel para importación masiva';
-        
-        const addButton = document.getElementById('open-add-recluta-modal');
-        if (addButton) {
-            sectionActions.insertBefore(templateButton, addButton);
-        } else {
-            sectionActions.appendChild(templateButton);
-        }
-        
-        console.log('Botón de plantilla Excel creado');
-    }
-    
-    templateButton.style.display = 'inline-block';
-    
-    // ✅ ELIMINAR REFERENCIAS AL BOTÓN DE SUBIR EXCEL
-    const uploadButton = document.getElementById('upload-excel-btn');
-    if (uploadButton) {
-        uploadButton.remove();
-    }
-    
-    // Configurar evento solo para plantilla
-    templateButton.replaceWith(templateButton.cloneNode(true));
-    templateButton = document.getElementById('download-template-btn');
-    
-    templateButton.addEventListener('click', () => {
-        console.log('Descargando plantilla Excel...');
-        this.downloadExcelTemplate();
-    });
-    
-    console.log('Configuración de plantilla Excel completada');
-},
-
 /**
  * Configura los botones de acción para un recluta
  * @param {HTMLElement} row - Fila de la tabla
  * @param {number} reclutaId - ID del recluta
  */
 setupActionButtons: function(row, reclutaId) {
-    if (!row || !reclutaId) return;
+    if (!row || !reclutaId) {
+        console.error('❌ setupActionButtons: Falta row o reclutaId');
+        return;
+    }
+    
+    console.log(`🔧 Configurando botones para recluta ${reclutaId}`);
     
     // Botón de ver detalles
     const viewBtn = row.querySelector('.view-btn');
     if (viewBtn) {
-        // Limpiar eventos previos
         viewBtn.replaceWith(viewBtn.cloneNode(true));
         const newViewBtn = row.querySelector('.view-btn');
         
         newViewBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Ver recluta:', reclutaId);
+            console.log('👁️ Ver recluta:', reclutaId);
             this.viewRecluta(reclutaId);
         });
+        console.log('✅ Botón Ver configurado');
+    } else {
+        console.error('❌ Botón Ver NO encontrado');
     }
 
     // Botón de editar
     const editBtn = row.querySelector('.edit-btn');
     if (editBtn) {
-        // Limpiar eventos previos
         editBtn.replaceWith(editBtn.cloneNode(true));
         const newEditBtn = row.querySelector('.edit-btn');
         
         newEditBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Editar recluta:', reclutaId);
+            console.log('✏️ Editar recluta:', reclutaId);
             this.editRecluta(reclutaId);
         });
+        console.log('✅ Botón Editar configurado');
+    } else {
+        console.error('❌ Botón Editar NO encontrado');
     }
 
     // Botón de eliminar
     const deleteBtn = row.querySelector('.delete-btn');
     if (deleteBtn) {
-        // Limpiar eventos previos
         deleteBtn.replaceWith(deleteBtn.cloneNode(true));
         const newDeleteBtn = row.querySelector('.delete-btn');
         
         newDeleteBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Eliminar recluta:', reclutaId);
+            console.log('🗑️ Eliminar recluta:', reclutaId);
             this.confirmDeleteRecluta(reclutaId);
         });
+        console.log('✅ Botón Eliminar configurado');
+    } else {
+        console.error('❌ Botón Eliminar NO encontrado');
     }
 },
-
-    /**
-     * Muestra los detalles de un recluta
-     * @param {number} id - ID del recluta
-     */
-    viewRecluta: async function(id) {
-    try {
-        // Verificar que los modales estén inicializados
-        if (!this.ensureModalsInitialized()) {
-            showError('Error: Los modales no están correctamente inicializados');
-            return;
-        }
-
-        const data = await this.getRecluta(id);
-            // Extraer el objeto recluta de la respuesta
-            const recluta = data.recluta || data;
-            this.currentReclutaId = id;
-
-            // Rellenar datos en el modal
-            const elements = {
-                nombre: document.getElementById('detail-recluta-nombre'),
-                puesto: document.getElementById('detail-recluta-puesto'),
-                email: document.getElementById('detail-recluta-email'),
-                telefono: document.getElementById('detail-recluta-telefono'),
-                fecha: document.getElementById('detail-recluta-fecha'),
-                notas: document.getElementById('detail-recluta-notas'),
-                estado: document.getElementById('detail-recluta-estado'),
-                foto: document.getElementById('detail-recluta-pic'),
-                folio: document.getElementById('detail-recluta-folio'),
-                asesor: document.getElementById('detail-recluta-asesor')
-            };
-
-            // Rellenar todos los campos
-            if (elements.nombre) elements.nombre.textContent = recluta.nombre || 'N/A';
-            if (elements.puesto) elements.puesto.textContent = recluta.puesto || 'N/A';
-            if (elements.email) elements.email.textContent = recluta.email || 'N/A';
-            if (elements.telefono) elements.telefono.textContent = recluta.telefono || 'N/A';
-            if (elements.fecha) {
-                const fecha = recluta.fecha_registro ? new Date(recluta.fecha_registro).toLocaleDateString() : 'N/A';
-                elements.fecha.textContent = fecha;
-            }
-            if (elements.notas) elements.notas.textContent = recluta.notas || 'Sin notas';
-            if (elements.folio) elements.folio.textContent = recluta.folio || 'Sin folio';
-            if (elements.asesor) elements.asesor.textContent = recluta.asesor_nombre || 'No asignado';
-
-            // Estado con badge
-            if (elements.estado) {
-                const estadoConfig = CONFIG.ESTADOS_RECLUTA.find(e => e.value === recluta.estado);
-                if (estadoConfig) {
-                    elements.estado.textContent = estadoConfig.label;
-                    elements.estado.className = `badge ${estadoConfig.badgeClass}`;
-                } else {
-                    elements.estado.textContent = recluta.estado || 'N/A';
-                    elements.estado.className = 'badge badge-secondary';
-                }
-            }
-
-            // Mostrar foto
-            if (elements.foto) {
-                const fotoUrl = recluta.foto_url ?
-                    (recluta.foto_url.startsWith('http') ?
-                        recluta.foto_url :
-                        `/${recluta.foto_url}`) :
-                    "/api/placeholder/150/150";
-                elements.foto.src = fotoUrl;
-                elements.foto.alt = recluta.nombre || 'Foto de recluta';
-            }
-
-            // Mostrar modal de detalles
-            UI.showModal('view-recluta-modal');
-        } catch (error) {
-            console.error('Error al cargar detalles del recluta:', error);
-            showError('Error al cargar detalles del recluta');
-        }
-    },
 
 /**
  * Habilita el modo de edición en el modal de detalles
