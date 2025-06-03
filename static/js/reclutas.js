@@ -252,6 +252,94 @@ init: async function() {
 },
 
 /**
+ * Muestra los detalles de un recluta en el modal
+ * @param {number} id - ID del recluta a ver
+ */
+viewRecluta: async function(id) {
+    try {
+        console.log('👁️ Viendo detalles del recluta:', id);
+        
+        // Verificar que el modal existe
+        if (!this.ensureModalsInitialized()) {
+            showError('Error: El modal de detalles no está disponible');
+            return;
+        }
+        
+        const modal = document.getElementById('view-recluta-modal');
+        if (!modal) {
+            showError('No se puede mostrar los detalles del recluta');
+            return;
+        }
+        
+        // Obtener datos del recluta
+        const recluta = await this.getRecluta(id);
+        this.currentReclutaId = id;
+        
+        // Rellenar elementos del modal
+        const elements = {
+            pic: document.getElementById('detail-recluta-pic'),
+            nombre: document.getElementById('detail-recluta-nombre'),
+            email: document.getElementById('detail-recluta-email'),
+            telefono: document.getElementById('detail-recluta-telefono'),
+            puesto: document.getElementById('detail-recluta-puesto'),
+            folio: document.getElementById('detail-recluta-folio'),
+            estado: document.getElementById('detail-recluta-estado'),
+            asesor: document.getElementById('detail-recluta-asesor'),
+            fecha: document.getElementById('detail-recluta-fecha'),
+            notas: document.getElementById('detail-recluta-notas')
+        };
+        
+        // Verificar elementos críticos
+        const missingElements = [];
+        ['nombre', 'email', 'telefono', 'estado'].forEach(key => {
+            if (!elements[key]) missingElements.push(key);
+        });
+        
+        if (missingElements.length > 0) {
+            console.error('Elementos faltantes en modal:', missingElements);
+            showError('Error: El modal no está completo');
+            return;
+        }
+        
+        // Rellenar datos
+        if (elements.pic) {
+            elements.pic.src = recluta.foto_url || '/api/placeholder/100/100';
+        }
+        if (elements.nombre) elements.nombre.textContent = recluta.nombre || 'N/A';
+        if (elements.email) elements.email.textContent = recluta.email || 'N/A';
+        if (elements.telefono) elements.telefono.textContent = recluta.telefono || 'N/A';
+        if (elements.puesto) elements.puesto.textContent = recluta.puesto || 'No especificado';
+        if (elements.folio) elements.folio.textContent = recluta.folio || 'N/A';
+        if (elements.asesor) elements.asesor.textContent = recluta.asesor_nombre || 'No asignado';
+        if (elements.fecha) {
+            elements.fecha.textContent = recluta.fecha_registro 
+                ? new Date(recluta.fecha_registro).toLocaleDateString('es-ES')
+                : 'N/A';
+        }
+        if (elements.notas) elements.notas.textContent = recluta.notas || 'Sin notas';
+        
+        // Configurar badge de estado
+        if (elements.estado) {
+            const badgeClass = this.getEstadoBadgeClass(recluta.estado);
+            elements.estado.className = `badge ${badgeClass}`;
+            elements.estado.textContent = recluta.estado;
+        }
+        
+        // Asegurar que está en modo vista (no edición)
+        this.cancelEdit();
+        
+        // Mostrar modal
+        UI.showModal('view-recluta-modal');
+        
+        console.log('✅ Modal de detalles mostrado correctamente');
+        
+    } catch (error) {
+        console.error('❌ Error al ver recluta:', error);
+        showError('Error al cargar los detalles: ' + error.message);
+    }
+},
+
+/**
  * Editar un recluta directamente (para botón en la tabla)
  * @param {number} id - ID del recluta a editar
  */
@@ -855,13 +943,14 @@ setupActionButtons: function(row, reclutaId) {
     // Botón de ver detalles
     const viewBtn = row.querySelector('.view-btn');
     if (viewBtn) {
-        viewBtn.replaceWith(viewBtn.cloneNode(true));
-        const newViewBtn = row.querySelector('.view-btn');
+        // Limpiar eventos previos
+        const newViewBtn = viewBtn.cloneNode(true);
+        viewBtn.parentNode.replaceChild(newViewBtn, viewBtn);
         
         newViewBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('👁️ Ver recluta:', reclutaId);
+            console.log('👁️ Click en Ver recluta:', reclutaId);
             this.viewRecluta(reclutaId);
         });
         console.log('✅ Botón Ver configurado');
@@ -872,13 +961,14 @@ setupActionButtons: function(row, reclutaId) {
     // Botón de editar
     const editBtn = row.querySelector('.edit-btn');
     if (editBtn) {
-        editBtn.replaceWith(editBtn.cloneNode(true));
-        const newEditBtn = row.querySelector('.edit-btn');
+        // Limpiar eventos previos
+        const newEditBtn = editBtn.cloneNode(true);
+        editBtn.parentNode.replaceChild(newEditBtn, editBtn);
         
         newEditBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('✏️ Editar recluta:', reclutaId);
+            console.log('✏️ Click en Editar recluta:', reclutaId);
             this.editRecluta(reclutaId);
         });
         console.log('✅ Botón Editar configurado');
@@ -889,13 +979,14 @@ setupActionButtons: function(row, reclutaId) {
     // Botón de eliminar
     const deleteBtn = row.querySelector('.delete-btn');
     if (deleteBtn) {
-        deleteBtn.replaceWith(deleteBtn.cloneNode(true));
-        const newDeleteBtn = row.querySelector('.delete-btn');
+        // Limpiar eventos previos
+        const newDeleteBtn = deleteBtn.cloneNode(true);
+        deleteBtn.parentNode.replaceChild(newDeleteBtn, deleteBtn);
         
         newDeleteBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('🗑️ Eliminar recluta:', reclutaId);
+            console.log('🗑️ Click en Eliminar recluta:', reclutaId);
             this.confirmDeleteRecluta(reclutaId);
         });
         console.log('✅ Botón Eliminar configurado');
