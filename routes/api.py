@@ -41,7 +41,7 @@ def get_asesores():
 @login_required
 def get_reclutas():
     try:
-        # Parámetros existentes...
+        # Parámetros existentes
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', current_app.config['DEFAULT_PAGE_SIZE'], type=int)
         search = request.args.get('search', '')
@@ -49,19 +49,50 @@ def get_reclutas():
         sort_by = request.args.get('sort_by', 'id')
         sort_order = request.args.get('sort_order', 'asc')
         
+        # 🆕 NUEVO: Parámetro de filtro por asesor
+        asesor_id = request.args.get('asesor_id', '')
+        
         per_page = min(per_page, current_app.config['MAX_PAGE_SIZE'])
         
-        # AGREGAR FILTRADO POR ROL
+        # Construir query base
+        query = Recluta.query
+        
+        # 🆕 NUEVO: Filtrar por rol del usuario actual
         if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
-            pagination = Recluta.get_all(
-                page=page, per_page=per_page, search=search, estado=estado,
-                sort_by=sort_by, sort_order=sort_order, current_user=current_user
+            # Si es asesor, solo sus reclutas
+            query = query.filter_by(asesor_id=current_user.id)
+        elif hasattr(current_user, 'rol') and current_user.rol == 'admin' and asesor_id:
+            # Si es admin y especifica un asesor, filtrar por ese asesor
+            if asesor_id == 'sin_asignar':
+                query = query.filter(Recluta.asesor_id.is_(None))
+            elif asesor_id.isdigit():
+                query = query.filter_by(asesor_id=int(asesor_id))
+        
+        # Aplicar filtros existentes
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                db.or_(
+                    Recluta.nombre.ilike(search_term),
+                    Recluta.email.ilike(search_term),
+                    Recluta.telefono.ilike(search_term),
+                    Recluta.puesto.ilike(search_term),
+                    Recluta.folio.ilike(search_term)
+                )
             )
-        else:
-            pagination = Recluta.get_all(
-                page=page, per_page=per_page, search=search, estado=estado,
-                sort_by=sort_by, sort_order=sort_order
-            )
+        
+        if estado:
+            query = query.filter_by(estado=estado)
+        
+        # Aplicar ordenamiento
+        if hasattr(Recluta, sort_by):
+            attr = getattr(Recluta, sort_by)
+            if sort_order.lower() == 'desc':
+                attr = attr.desc()
+            query = query.order_by(attr)
+        
+        # Paginación
+        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
         
         return jsonify({
             "success": True,
@@ -72,7 +103,12 @@ def get_reclutas():
             "per_page": per_page,
             "has_next": pagination.has_next,
             "has_prev": pagination.has_prev,
-            "user_role": getattr(current_user, 'rol', 'user')  # AGREGAR ROL
+            "user_role": getattr(current_user, 'rol', 'user'),
+            "applied_filters": {  # 🆕 NUEVO: Información de filtros aplicados
+                "asesor_id": asesor_id,
+                "estado": estado,
+                "search": search
+            }
         })
     except Exception as e:
         current_app.logger.error(f"Error al obtener reclutas: {str(e)}")

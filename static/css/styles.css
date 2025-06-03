@@ -1908,3 +1908,103 @@ body::after {
     z-index: 9999;
     /* Cambiar bottom a 10px para mostrar durante debugging */
 }
+
+/* ===== FILTRO POR ASESOR PARA ADMIN ===== */
+
+/* Contenedor del filtro por asesor */
+.admin-only-filter {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 15px;
+    margin-left: 15px;
+    background-color: rgba(0, 123, 255, 0.05);
+    border-radius: 4px;
+    padding: 10px 15px;
+}
+
+.dark-mode .admin-only-filter {
+    background-color: rgba(0, 123, 255, 0.03);
+    border-left-color: var(--primary-color);
+}
+
+/* Selector de asesor mejorado */
+#filter-asesor {
+    min-width: 180px;
+    font-weight: 500;
+    border: 2px solid var(--border-color);
+    background-color: white;
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23007bff"><path d="M7 10l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 35px;
+    transition: all 0.3s ease;
+}
+
+#filter-asesor:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    background-color: #f8f9ff;
+}
+
+.dark-mode #filter-asesor {
+    background-color: #2a2b3d;
+    border-color: #3f3f3f;
+    color: var(--text-color);
+}
+
+/* Label del filtro por asesor */
+.admin-only-filter label {
+    color: var(--primary-color);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.admin-only-filter label::before {
+    content: "👥";
+    margin-right: 5px;
+    font-size: 14px;
+}
+
+/* Indicador de filtro activo */
+#filter-asesor:not([value="todos"]) {
+    border-color: var(--success-color);
+    background-color: rgba(40, 167, 69, 0.05);
+}
+
+.dark-mode #filter-asesor:not([value="todos"]) {
+    background-color: rgba(40, 167, 69, 0.03);
+}
+
+/* Responsive para filtros */
+@media (max-width: 768px) {
+    .filter-controls {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .admin-only-filter {
+        margin-left: 0;
+        border-left: none;
+        border-top: 3px solid var(--primary-color);
+        padding-left: 10px;
+        padding-top: 15px;
+    }
+    
+    #filter-asesor {
+        width: 100%;
+        min-width: auto;
+    }
+}
+
+/* Animación para mostrar/ocultar filtro */
+.admin-only-filter {
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+.admin-only-filter[style*="flex"] {
+    opacity: 1;
+    transform: translateY(0);
+}

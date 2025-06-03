@@ -14,11 +14,102 @@ const Reclutas = {
     filters: {
         search: '',
         estado: 'todos',
+        asesor_id: 'todos',
         sortBy: 'nombre',
         sortOrder: 'asc'
     },
     currentReclutaId: null,
     asesores: [], // Añadido para almacenar la lista de asesores
+
+    /**
+ * Configura el filtro por asesor (solo para administradores)
+ */
+setupAsesorFilter: function() {
+    if (this.userRole !== 'admin') {
+        console.log('Usuario no es admin, ocultando filtro de asesor');
+        const filterGroup = document.getElementById('filter-asesor-group');
+        if (filterGroup) filterGroup.style.display = 'none';
+        return;
+    }
+    
+    console.log('Configurando filtro de asesor para admin');
+    
+    // Mostrar el filtro
+    const filterGroup = document.getElementById('filter-asesor-group');
+    if (filterGroup) filterGroup.style.display = 'flex';
+    
+    // Poblar el selector con asesores
+    this.populateAsesorFilter();
+    
+    // Configurar evento
+    const filterAsesor = document.getElementById('filter-asesor');
+    if (filterAsesor) {
+        filterAsesor.addEventListener('change', () => {
+            this.filterByAsesor(filterAsesor.value);
+            this.loadAndDisplayReclutas();
+        });
+    }
+},
+
+/**
+ * Pobla el selector de filtro por asesor
+ */
+populateAsesorFilter: async function() {
+    const filterAsesor = document.getElementById('filter-asesor');
+    if (!filterAsesor) return;
+    
+    try {
+        // Cargar asesores si no están cargados
+        if (!this.asesores || this.asesores.length === 0) {
+            await this.loadAsesores();
+        }
+        
+        // Limpiar opciones existentes (mantener las por defecto)
+        const defaultOptions = filterAsesor.querySelectorAll('option[value="todos"], option[value="sin_asignar"]');
+        filterAsesor.innerHTML = '';
+        
+        // Restaurar opciones por defecto
+        defaultOptions.forEach(option => {
+            filterAsesor.appendChild(option.cloneNode(true));
+        });
+        
+        // Si no había opciones por defecto, crearlas
+        if (defaultOptions.length === 0) {
+            const todosOption = document.createElement('option');
+            todosOption.value = 'todos';
+            todosOption.textContent = 'Todos los asesores';
+            filterAsesor.appendChild(todosOption);
+            
+            const sinAsignarOption = document.createElement('option');
+            sinAsignarOption.value = 'sin_asignar';
+            sinAsignarOption.textContent = 'Sin asignar';
+            filterAsesor.appendChild(sinAsignarOption);
+        }
+        
+        // Agregar opciones de asesores
+        this.asesores.forEach(asesor => {
+            const option = document.createElement('option');
+            option.value = asesor.id;
+            option.textContent = asesor.nombre || asesor.email;
+            filterAsesor.appendChild(option);
+        });
+        
+        console.log(`Filtro de asesor poblado con ${this.asesores.length} asesores`);
+        
+    } catch (error) {
+        console.error('Error al poblar filtro de asesor:', error);
+    }
+},
+
+/**
+ * Filtra reclutas por asesor
+ * @param {string} asesorId - ID del asesor ('todos', 'sin_asignar', o ID numérico)
+ */
+filterByAsesor: function(asesorId) {
+    this.filters.asesor_id = asesorId;
+    this.currentPage = 1; // Resetear a primera página
+    console.log('Filtrando por asesor:', asesorId);
+},
 
 /**
  * Configura la interfaz de usuario según el rol
@@ -152,6 +243,10 @@ setupAdminFeatures: function() {
     
     // Mostrar columna de asesor
     this.showAsesorColumn();
+    this.showAsesorSelectors();
+
+    // Configurar filtro por asesor
+    this.setupAsesorFilter();
     
     // Mostrar selectores de asesor en formularios
     this.showAsesorSelectors();
@@ -159,6 +254,7 @@ setupAdminFeatures: function() {
     // Cargar asesores disponibles
     this.loadAsesores().then(() => {
         this.populateAsesorSelectors();
+        this.populateAsesorFilter();
     });
     
     // Mensaje de bienvenida
@@ -389,15 +485,16 @@ editRecluta: async function(id) {
      * Carga la lista de reclutas con paginación y filtros
      */
     loadReclutas: async function() {
-        try {
-            const queryParams = new URLSearchParams({
-                page: this.currentPage,
-                per_page: this.itemsPerPage,
-                search: this.filters.search,
-                estado: this.filters.estado !== 'todos' ? this.filters.estado : '',
-                sort_by: this.filters.sortBy,
-                sort_order: this.filters.sortOrder
-            });
+    try {
+        const queryParams = new URLSearchParams({
+            page: this.currentPage,
+            per_page: this.itemsPerPage,
+            search: this.filters.search,
+            estado: this.filters.estado !== 'todos' ? this.filters.estado : '',
+            asesor_id: this.filters.asesor_id !== 'todos' ? this.filters.asesor_id : '', 
+            sort_by: this.filters.sortBy,
+            sort_order: this.filters.sortOrder
+        });
             
             // No es necesario enviar el rol como parámetro, ya que el servidor 
             // usar los datos de la sesión para aplicar permisos
