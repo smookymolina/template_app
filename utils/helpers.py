@@ -131,3 +131,178 @@ def paginate_data(data, page, per_page):
         'has_prev': page > 1,
         'has_next': page < pages
     }
+
+import openpyxl
+from datetime import datetime
+from models.recluta import Recluta
+from models import db
+
+def procesar_y_distribuir_excel(archivo, asesores):
+    """
+    Procesa archivo Excel y distribuye reclutas automáticamente entre asesores.
+    
+    Args:
+        archivo: Archivo Excel uploadado
+        asesores: Lista de usuarios asesores activos
+        
+    Returns:
+        Dict con resultado del procesamiento
+    """
+    try:
+        # Leer Excel
+        workbook = openpyxl.load_workbook(archivo, data_only=True)
+        sheet = workbook.active
+        
+        # Validar headers
+        headers_esperados = ["Fecha de creación", "Nombre", "Teléfono"]
+        headers_encontrados = [cell.value for cell in sheet[1]]
+        
+        if headers_encontrados != headers_esperados:
+            return {
+                "success": False,
+                "message": f"Headers incorrectos. Esperados: {headers_esperados}, Encontrados: {headers_encontrados}"
+            }
+        
+        # Extraer datos
+        datos_excel = []
+        errores = []
+        telefonos_existentes = set()
+        
+        # Obtener teléfonos ya existentes en BD
+        telefonos_bd = set(r[0] for r in db.session.query(Recluta.telefono).all())
+        
+        for row_num, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+            fecha_str, nombre, telefono = row[:3]
+            
+            # Validaciones
+            error_fila = None
+            
+            if not nombre or str(nombre).strip() == '':
+                error_fila = "Nombre vacío"
+            elif not telefono:
+                error_fila = "Teléfono vacío"
+            else:
+                telefono_str = str(telefono).strip()
+                if telefono_str in telefonos_bd or telefono_str in telefonos_existentes:
+                    error_fila = "Teléfono duplicado"
+                else:
+                    telefonos_existentes.add(telefono_str)
+            
+            if error_fila:
+                errores.append({"fila": row_num, "error": error_fila})
+            else:
+                # Procesar fecha
+                fecha_procesada = None
+                if fecha_str:
+                    try:
+                        if isinstance(fecha_str, datetime):
+                            fecha_procesada = fecha_str
+                        else:
+                            # Intentar varios formatos
+                            for formato in ["%d/%m/%Y %I:%M%p", "%d/%m/%Y", "%Y-%m-%d"]:
+                                try:
+                                    fecha_procesada = datetime.strptime(str(fecha_str), formato)
+                                    break
+                                except ValueError:
+                                    continue
+                    except:
+                        pass
+                
+                datos_excel.append({
+                    'nombre': str(nombre).strip(),
+                    'telefono': str(telefono).strip(),
+                    'fecha_registro': fecha_procesada or datetime.utcnow(),
+                    'fila': row_num
+                })
+        
+        # Distribuir entre asesores
+        distribucion = distribuir_equitativamente(datos_excel, asesores)
+        
+        # Crear reclutas en BD
+        reclutas_creados = 0
+        errores_bd = []
+        
+        for asesor_email, reclutas_asignados in distribucion.items():
+            asesor = next((a for a in asesores if a.email == asesor_email), None)
+            if not asesor:
+                continue
+                
+            for datos_recluta in reclutas_asignados:
+                try:
+                    nuevo_recluta = Recluta(
+                        nombre=datos_recluta['nombre'],
+                        email=f"temp_{datos_recluta['telefono']}@temp.com",  # Email temporal
+                        telefono=datos_recluta['telefono'],
+                        estado='En proceso',
+                        asesor_id=asesor.id,
+                        fecha_registro=datos_recluta['fecha_registro']
+                    )
+                    nuevo_recluta.save()
+                    reclutas_creados += 1
+                    
+                except Exception as e:
+                    errores_bd.append({
+                        "fila": datos_recluta['fila'], 
+                        "error": f"Error BD: {str(e)}"
+                    })
+        
+        # Combinar todos los errores
+        todos_errores = errores + errores_bd
+        
+        # Preparar reporte
+        reporte_distribucion = {
+            asesor.email: len(reclutas) 
+            for asesor.email, reclutas in distribucion.items()
+        }
+        
+        return {
+            "success": True,
+            "total_procesados": len(datos_excel) + len(errores),
+            "exitosos": reclutas_creados,
+            "errores": len(todos_errores),
+            "distribucion": reporte_distribucion,
+            "errores_detalle": todos_errores[:10]  # Máximo 10 errores para UI
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error al procesar Excel: {str(e)}"
+        }
+
+def distribuir_equitativamente(datos_excel, asesores):
+    """
+    Distribuye lista de datos equitativamente entre asesores.
+    
+    Args:
+        datos_excel: Lista de datos de reclutas
+        asesores: Lista de objetos Usuario asesor
+        
+    Returns:
+        Dict con distribución por email de asesor
+    """
+    if not asesores or not datos_excel:
+        return {}
+    
+    total_reclutas = len(datos_excel)
+    num_asesores = len(asesores)
+    
+    # Calcular distribución base
+    reclutas_por_asesor = total_reclutas // num_asesores
+    sobrantes = total_reclutas % num_asesores
+    
+    # Distribuir
+    distribucion = {}
+    indice_actual = 0
+    
+    for i, asesor in enumerate(asesores):
+        # Asignar cantidad base + 1 extra si hay sobrantes
+        cantidad_asignar = reclutas_por_asesor + (1 if i < sobrantes else 0)
+        
+        # Tomar slice de datos
+        reclutas_asesor = datos_excel[indice_actual:indice_actual + cantidad_asignar]
+        distribucion[asesor.email] = reclutas_asesor
+        
+        indice_actual += cantidad_asignar
+    
+    return distribucion

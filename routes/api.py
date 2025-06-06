@@ -1040,4 +1040,75 @@ def recuperar_folio():
             "message": "Error al procesar la solicitud. Inténtelo más tarde."
         }), 500
 
+@api_bp.route('/asesores', methods=['GET'])
+@login_required
+def get_asesores():
+    """
+    Obtiene la lista de usuarios que pueden ser asesores.
+    Solo devuelve usuarios con rol 'asesor' o 'gerente', no administradores.
+    """
+    try:
+        # Filtrar solo usuarios con rol de asesor o gerente
+        asesores = Usuario.query.filter(
+            Usuario.is_active == True,
+            Usuario.rol.in_(['asesor', 'gerente'])
+        ).all()
+        
+        return jsonify({
+            "success": True,
+            "asesores": [a.serialize() for a in asesores]
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener asesores: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al obtener asesores: {str(e)}"}), 500
+
+@api_bp.route('/reclutas/distribuir-excel', methods=['POST'])
+@admin_required
+def distribuir_reclutas_excel():
+    """
+    Distribuye reclutas desde Excel automáticamente entre asesores activos.
+    Solo disponible para administradores.
+    """
+    try:
+        # Verificar que se subió un archivo
+        if 'excel_file' not in request.files:
+            return jsonify({"success": False, "message": "No se encontró archivo Excel"}), 400
+        
+        archivo = request.files['excel_file']
+        if archivo.filename == '':
+            return jsonify({"success": False, "message": "No se seleccionó archivo"}), 400
+        
+        # Validar extensión
+        if not archivo.filename.lower().endswith(('.xlsx', '.xls')):
+            return jsonify({"success": False, "message": "Solo se permiten archivos Excel (.xlsx, .xls)"}), 400
+        
+        # Obtener asesores activos
+        asesores = Usuario.query.filter(
+            Usuario.is_active == True,
+            Usuario.rol.in_(['asesor', 'gerente'])
+        ).all()
+        
+        if not asesores:
+            return jsonify({
+                "success": False, 
+                "message": "No hay asesores activos para asignar reclutas"
+            }), 400
+        
+        # Procesar Excel y distribuir
+        from utils.helpers import procesar_y_distribuir_excel
+        resultado = procesar_y_distribuir_excel(archivo, asesores)
+        
+        if resultado['success']:
+            current_app.logger.info(f"Distribución Excel exitosa: {resultado['total_procesados']} reclutas")
+            return jsonify(resultado), 200
+        else:
+            return jsonify(resultado), 400
+            
+    except Exception as e:
+        current_app.logger.error(f"Error en distribución Excel: {str(e)}")
+        return jsonify({
+            "success": False, 
+            "message": f"Error al procesar distribución: {str(e)}"
+        }), 500
+
 

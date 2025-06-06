@@ -244,6 +244,10 @@ setupAdminFeatures: function() {
     // Mostrar columna de asesor
     this.showAsesorColumn();
     this.showAsesorSelectors();
+    this.setupAsesorFilter();
+
+    // Configurar botón de distribución Excel
+    this.setupDistribucionExcelButton();
 
     // Configurar filtro por asesor
     this.setupAsesorFilter();
@@ -259,6 +263,421 @@ setupAdminFeatures: function() {
     
     // Mensaje de bienvenida
     this.showAdminWelcome();
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Configura botón de distribución automática Excel
+ */
+setupDistribucionExcelButton: function() {
+    console.log('🔧 Configurando botón distribución Excel para admin');
+    
+    // Buscar contenedor de botones de sección
+    const sectionActions = document.querySelector('.section-actions');
+    if (!sectionActions) {
+        console.error('❌ No se encontró contenedor .section-actions');
+        return;
+    }
+    
+    // Crear botón si no existe
+    let distribucionBtn = document.getElementById('distribuir-excel-btn');
+    if (!distribucionBtn) {
+        distribucionBtn = document.createElement('button');
+        distribucionBtn.id = 'distribuir-excel-btn';
+        distribucionBtn.className = 'btn-success';
+        distribucionBtn.style.marginRight = '10px';
+        distribucionBtn.innerHTML = '<i class="fas fa-chart-line"></i> Distribuir Reclutas Excel';
+        
+        // Insertar antes del botón "Agregar Nuevo Recluta"
+        const addButton = document.getElementById('open-add-recluta-modal');
+        if (addButton) {
+            sectionActions.insertBefore(distribucionBtn, addButton);
+        } else {
+            sectionActions.appendChild(distribucionBtn);
+        }
+    }
+    
+    // Configurar evento click
+    distribucionBtn.addEventListener('click', () => {
+        this.openDistribucionExcelModal();
+    });
+    
+    // Crear input file oculto
+    let fileInput = document.getElementById('distribucion-excel-input');
+    if (!fileInput) {
+        fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.id = 'distribucion-excel-input';
+        fileInput.accept = '.xlsx,.xls';
+        fileInput.style.display = 'none';
+        document.body.appendChild(fileInput);
+        
+        fileInput.addEventListener('change', (e) => {
+            this.handleDistribucionExcelFile(e.target.files[0]);
+        });
+    }
+    
+    console.log('✅ Botón distribución Excel configurado');
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Abre modal para distribución Excel
+ */
+openDistribucionExcelModal: function() {
+    console.log('📤 Abriendo modal distribución Excel');
+    
+    // Crear modal dinámicamente
+    const modalId = 'distribucion-excel-modal';
+    let modal = document.getElementById(modalId);
+    
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-chart-line"></i> Distribución Automática de Reclutas</h3>
+                    <span class="close-modal">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="distribucion-info">
+                        <div class="info-box">
+                            <h4><i class="fas fa-info-circle"></i> Información del Proceso</h4>
+                            <ul>
+                                <li>📊 <strong>Función:</strong> Distribuye reclutas automáticamente entre asesores activos</li>
+                                <li>📄 <strong>Formato:</strong> Excel (.xlsx, .xls) con headers: "Fecha de creación", "Nombre", "Teléfono"</li>
+                                <li>⚖️ <strong>Distribución:</strong> Equitativa entre todos los asesores disponibles</li>
+                                <li>🔍 <strong>Validación:</strong> Evita duplicados de teléfono</li>
+                            </ul>
+                        </div>
+                        <div class="file-drop-zone" id="distribucion-drop-zone">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Haz clic para seleccionar archivo Excel</p>
+                            <small>o arrastra y suelta aquí</small>
+                        </div>
+                        <div class="progress-container" id="distribucion-progress" style="display: none;">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="distribucion-progress-fill"></div>
+                            </div>
+                            <p id="distribucion-status">Procesando...</p>
+                        </div>
+                        <div class="results-container" id="distribucion-results" style="display: none;">
+                            <!-- Resultados se mostrarán aquí -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary close-modal">
+                        <i class="fas fa-times"></i> Cerrar
+                    </button>
+                    <button type="button" class="btn-primary" id="confirm-distribucion" style="display: none;">
+                        <i class="fas fa-check"></i> Confirmar Distribución
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // Configurar eventos del modal
+        this.setupDistribucionModalEvents(modal);
+    }
+    
+    // Resetear modal
+    this.resetDistribucionModal();
+    
+    // Mostrar modal
+    modal.style.display = 'block';
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Configura eventos del modal distribución
+ */
+setupDistribucionModalEvents: function(modal) {
+    // Cerrar modal
+    const closeButtons = modal.querySelectorAll('.close-modal');
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    });
+    
+    // Drop zone
+    const dropZone = modal.querySelector('#distribucion-drop-zone');
+    if (dropZone) {
+        dropZone.addEventListener('click', () => {
+            document.getElementById('distribucion-excel-input').click();
+        });
+        
+        // Drag & drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                this.handleDistribucionExcelFile(files[0]);
+            }
+        });
+    }
+    
+    // Botón confirmar
+    const confirmBtn = modal.querySelector('#confirm-distribucion');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', () => {
+            this.executeDistribucionExcel();
+        });
+    }
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Maneja archivo Excel seleccionado
+ */
+handleDistribucionExcelFile: function(file) {
+    console.log('📄 Archivo seleccionado:', file.name);
+    
+    // Validar archivo
+    if (!file) return;
+    
+    if (!file.name.toLowerCase().endsWith('.xlsx') && !file.name.toLowerCase().endsWith('.xls')) {
+        showError('Solo se permiten archivos Excel (.xlsx, .xls)');
+        return;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) { // 10MB
+        showError('El archivo es demasiado grande (máximo 10MB)');
+        return;
+    }
+    
+    // Mostrar información del archivo
+    const dropZone = document.getElementById('distribucion-drop-zone');
+    if (dropZone) {
+        dropZone.innerHTML = `
+            <i class="fas fa-file-excel"></i>
+            <p><strong>${file.name}</strong></p>
+            <small>Tamaño: ${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+        `;
+        dropZone.style.backgroundColor = '#e8f5e8';
+        dropZone.style.borderColor = '#28a745';
+    }
+    
+    // Mostrar botón confirmar
+    const confirmBtn = document.getElementById('confirm-distribucion');
+    if (confirmBtn) {
+        confirmBtn.style.display = 'inline-block';
+        confirmBtn.dataset.file = file.name;
+    }
+    
+    // Guardar archivo para posterior uso
+    this.selectedDistribucionFile = file;
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Ejecuta la distribución Excel
+ */
+executeDistribucionExcel: async function() {
+    if (!this.selectedDistribucionFile) {
+        showError('No hay archivo seleccionado');
+        return;
+    }
+    
+    console.log('🚀 Ejecutando distribución Excel...');
+    
+    // Mostrar progress
+    this.showDistribucionProgress();
+    
+    try {
+        // Preparar FormData
+        const formData = new FormData();
+        formData.append('excel_file', this.selectedDistribucionFile);
+        
+        // Enviar al backend
+        const response = await fetch(`${CONFIG.API_URL}/reclutas/distribuir-excel`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            this.showDistribucionResults(data);
+            showSuccess(`¡Distribución exitosa! ${data.exitosos} reclutas procesados`);
+        } else {
+            this.hideDistribucionProgress();
+            showError(data.message || 'Error en la distribución');
+        }
+        
+    } catch (error) {
+        console.error('❌ Error en distribución:', error);
+        this.hideDistribucionProgress();
+        showError('Error al conectar con el servidor');
+    }
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Muestra progress bar
+ */
+showDistribucionProgress: function() {
+    const progressContainer = document.getElementById('distribucion-progress');
+    const confirmBtn = document.getElementById('confirm-distribucion');
+    
+    if (progressContainer) {
+        progressContainer.style.display = 'block';
+    }
+    if (confirmBtn) {
+        confirmBtn.style.display = 'none';
+    }
+    
+    // Animar progress bar
+    let progress = 0;
+    const progressFill = document.getElementById('distribucion-progress-fill');
+    const statusText = document.getElementById('distribucion-status');
+    
+    const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 90) progress = 90;
+        
+        if (progressFill) {
+            progressFill.style.width = progress + '%';
+        }
+        if (statusText) {
+            statusText.textContent = progress < 30 ? 'Leyendo Excel...' :
+                                   progress < 60 ? 'Validando datos...' :
+                                   progress < 90 ? 'Distribuyendo reclutas...' :
+                                   'Finalizando...';
+        }
+    }, 200);
+    
+    this.distribucionInterval = interval;
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Oculta progress bar
+ */
+hideDistribucionProgress: function() {
+    const progressContainer = document.getElementById('distribucion-progress');
+    if (progressContainer) {
+        progressContainer.style.display = 'none';
+    }
+    
+    if (this.distribucionInterval) {
+        clearInterval(this.distribucionInterval);
+    }
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Muestra resultados de distribución
+ */
+showDistribucionResults: function(data) {
+    this.hideDistribucionProgress();
+    
+    const resultsContainer = document.getElementById('distribucion-results');
+    if (!resultsContainer) return;
+    
+    // Preparar HTML de resultados
+    const distributionRows = Object.entries(data.distribucion || {})
+        .map(([email, count]) => 
+            `<tr><td>${email}</td><td><strong>${count}</strong> reclutas</td></tr>`
+        ).join('');
+    
+    const errorsHtml = data.errores_detalle && data.errores_detalle.length > 0 ? 
+        `<div class="errors-section">
+            <h5><i class="fas fa-exclamation-triangle"></i> Errores Encontrados (${data.errores})</h5>
+            <ul>
+                ${data.errores_detalle.map(err => `<li>Fila ${err.fila}: ${err.error}</li>`).join('')}
+            </ul>
+        </div>` : '';
+    
+    resultsContainer.innerHTML = `
+        <div class="results-summary">
+            <h4><i class="fas fa-check-circle"></i> Distribución Completada</h4>
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Total Procesados:</span>
+                    <span class="stat-value">${data.total_procesados}</span>
+                </div>
+                <div class="stat-item success">
+                    <span class="stat-label">Exitosos:</span>
+                    <span class="stat-value">${data.exitosos}</span>
+                </div>
+                ${data.errores > 0 ? `
+                <div class="stat-item error">
+                    <span class="stat-label">Errores:</span>
+                    <span class="stat-value">${data.errores}</span>
+                </div>` : ''}
+            </div>
+        </div>
+        
+        <div class="distribution-table">
+            <h5><i class="fas fa-users"></i> Distribución por Asesor</h5>
+            <table>
+                <thead>
+                    <tr><th>Asesor</th><th>Reclutas Asignados</th></tr>
+                </thead>
+                <tbody>
+                    ${distributionRows}
+                </tbody>
+            </table>
+        </div>
+        
+        ${errorsHtml}
+        
+        <div class="results-actions">
+            <button class="btn-primary" onclick="Reclutas.loadAndDisplayReclutas()">
+                <i class="fas fa-sync"></i> Actualizar Lista
+            </button>
+        </div>
+    `;
+    
+    resultsContainer.style.display = 'block';
+    
+    // Completar progress bar
+    const progressFill = document.getElementById('distribucion-progress-fill');
+    if (progressFill) {
+        progressFill.style.width = '100%';
+    }
+    
+    setTimeout(() => {
+        this.hideDistribucionProgress();
+    }, 1000);
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Resetea modal de distribución
+ */
+resetDistribucionModal: function() {
+    // Resetear drop zone
+    const dropZone = document.getElementById('distribucion-drop-zone');
+    if (dropZone) {
+        dropZone.innerHTML = `
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>Haz clic para seleccionar archivo Excel</p>
+            <small>o arrastra y suelta aquí</small>
+        `;
+        dropZone.style.backgroundColor = '';
+        dropZone.style.borderColor = '';
+    }
+    
+    // Ocultar elementos
+    const elementsToHide = ['distribucion-progress', 'distribucion-results', 'confirm-distribucion'];
+    elementsToHide.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = 'none';
+    });
+    
+    // Limpiar archivo seleccionado
+    this.selectedDistribucionFile = null;
+    
+    // Limpiar input
+    const fileInput = document.getElementById('distribucion-excel-input');
+    if (fileInput) fileInput.value = '';
 },
 
 /**

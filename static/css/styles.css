@@ -2074,3 +2074,436 @@ body.dark-mode {
 #dark-mode-toggle:hover i {
     transform: rotate(15deg);
 }
+
+/* ===== DISTRIBUCIÓN EXCEL MODAL ===== */
+#distribucion-excel-modal .modal-content {
+    max-width: 700px;
+}
+
+.distribucion-info {
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.info-box {
+    background-color: rgba(0, 123, 255, 0.05);
+    border-left: 4px solid var(--primary-color);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.dark-mode .info-box {
+    background-color: rgba(0, 123, 255, 0.03);
+}
+
+.info-box h4 {
+    margin: 0 0 15px;
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.info-box ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.info-box li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+/* ===== FILE DROP ZONE ===== */
+.file-drop-zone {
+    border: 3px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #fafafa;
+    margin-bottom: 20px;
+}
+
+.dark-mode .file-drop-zone {
+    background-color: #2a2b3d;
+    border-color: #3f3f3f;
+}
+
+.file-drop-zone:hover,
+.file-drop-zone.drag-over {
+    border-color: var(--primary-color);
+    background-color: rgba(0, 123, 255, 0.05);
+    transform: scale(1.02);
+}
+
+.file-drop-zone i {
+    font-size: 48px;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    display: block;
+}
+
+.file-drop-zone p {
+    margin: 0 0 5px;
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 16px;
+}
+
+.file-drop-zone small {
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+/* ===== PROGRESS BAR ===== */
+.progress-container {
+    text-align: center;
+    margin: 20px 0;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background-color: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 15px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .progress-bar {
+    background-color: #3f3f3f;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--success-color));
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background-image: linear-gradient(
+        -45deg,
+        rgba(255, 255, 255, 0.2) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0.2) 75%,
+        transparent 75%,
+        transparent
+    );
+    background-size: 30px 30px;
+    animation: progress-animation 1s linear infinite;
+}
+
+@keyframes progress-animation {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 30px 0;
+    }
+}
+
+#distribucion-status {
+    font-weight: 600;
+    color: var(--primary-color);
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ===== RESULTS CONTAINER ===== */
+.results-container {
+    margin-top: 25px;
+    border-top: 2px solid var(--border-color);
+    padding-top: 25px;
+}
+
+.results-summary {
+    background-color: rgba(40, 167, 69, 0.05);
+    border-left: 4px solid var(--success-color);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.dark-mode .results-summary {
+    background-color: rgba(40, 167, 69, 0.03);
+}
+
+.results-summary h4 {
+    margin: 0 0 15px;
+    color: var(--success-color);
+    font-weight: 600;
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: white;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.dark-mode .stat-item {
+    background-color: var(--light-color);
+    border-color: #3f3f3f;
+}
+
+.stat-item.success {
+    border-color: var(--success-color);
+    background-color: rgba(40, 167, 69, 0.03);
+}
+
+.stat-item.error {
+    border-color: var(--danger-color);
+    background-color: rgba(220, 53, 69, 0.03);
+}
+
+.stat-label {
+    font-weight: 500;
+    color: var(--text-light);
+}
+
+.stat-value {
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--text-color);
+}
+
+.stat-item.success .stat-value {
+    color: var(--success-color);
+}
+
+.stat-item.error .stat-value {
+    color: var(--danger-color);
+}
+
+/* ===== DISTRIBUTION TABLE ===== */
+.distribution-table {
+    margin-bottom: 25px;
+}
+
+.distribution-table h5 {
+    margin: 0 0 15px;
+    color: var(--primary-color);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.distribution-table h5 i {
+    margin-right: 8px;
+}
+
+.distribution-table table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: white;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .distribution-table table {
+    background-color: var(--light-color);
+}
+
+.distribution-table th,
+.distribution-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.distribution-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.dark-mode .distribution-table th {
+    background-color: #2a2b3d;
+}
+
+.distribution-table tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* ===== ERRORS SECTION ===== */
+.errors-section {
+    background-color: rgba(220, 53, 69, 0.05);
+    border-left: 4px solid var(--danger-color);
+    border-radius: 6px;
+    padding: 20px;
+    margin-bottom: 25px;
+}
+
+.dark-mode .errors-section {
+    background-color: rgba(220, 53, 69, 0.03);
+}
+
+.errors-section h5 {
+    margin: 0 0 15px;
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+.errors-section ul {
+    margin: 0;
+    padding-left: 20px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.errors-section li {
+    margin-bottom: 5px;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+/* ===== RESULTS ACTIONS ===== */
+.results-actions {
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.results-actions button {
+    min-width: 200px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    #distribucion-excel-modal .modal-content {
+        margin: 20px;
+        max-width: calc(100vw - 40px);
+    }
+    
+    .file-drop-zone {
+        padding: 30px 15px;
+    }
+    
+    .file-drop-zone i {
+        font-size: 36px;
+    }
+    
+    .summary-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 5px;
+    }
+    
+    .distribution-table table {
+        font-size: 14px;
+    }
+    
+    .distribution-table th,
+    .distribution-table td {
+        padding: 8px 10px;
+    }
+}
+
+/* ===== BOTÓN DISTRIBUCIÓN EXCEL ===== */
+#distribuir-excel-btn {
+    background: linear-gradient(135deg, #17a2b8, #20c997);
+    border: none;
+    color: white;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(23, 162, 184, 0.3);
+}
+
+#distribuir-excel-btn:hover {
+    background: linear-gradient(135deg, #138496, #1e7e34);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(23, 162, 184, 0.4);
+}
+
+#distribuir-excel-btn i {
+    margin-right: 8px;
+}
+
+/* ===== ANIMACIONES ===== */
+@keyframes slideInFromTop {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.results-container {
+    animation: slideInFromTop 0.5s ease-out;
+}
+
+.distribution-table table {
+    animation: slideInFromTop 0.6s ease-out;
+}
+
+/* ===== ACCESIBILIDAD ===== */
+.file-drop-zone:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .file-drop-zone,
+    .progress-fill,
+    #distribuir-excel-btn {
+        transition: none;
+        animation: none;
+    }
+    
+    .file-drop-zone:hover {
+        transform: none;
+    }
+    
+    #distribuir-excel-btn:hover {
+        transform: none;
+    }
+}
+
+/* ===== MODO ALTO CONTRASTE ===== */
+@media (prefers-contrast: high) {
+    .file-drop-zone {
+        border-width: 4px;
+        border-style: solid;
+    }
+    
+    .info-box,
+    .results-summary,
+    .errors-section {
+        border-width: 3px;
+    }
+    
+    .stat-item {
+        border-width: 2px;
+    }
+}
