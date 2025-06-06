@@ -45,42 +45,75 @@ const UI = {
      * @returns {boolean} - Estado final del modo oscuro
      */
     toggleDarkMode: function(enabled) {
-        if (enabled === undefined) {
-            enabled = !document.body.classList.contains('dark-mode');
+    // ✅ SOLUCIÓN: Verificar Auth de forma defensiva
+    const isAuthAvailable = typeof Auth !== 'undefined' && Auth !== null;
+    const isAuthenticated = isAuthAvailable && typeof Auth.isAuthenticated === 'function' ? Auth.isAuthenticated() : false;
+    
+    if (enabled === undefined) {
+        enabled = !document.body.classList.contains('dark-mode');
+    }
+    
+    if (enabled) {
+        document.body.classList.add('dark-mode');
+    } else {
+        document.body.classList.remove('dark-mode');
+    }
+    
+    // ✅ SOLUCIÓN: Solo guardar si Auth está disponible Y hay usuario
+    if (isAuthAvailable && isAuthenticated) {
+        const currentUser = Auth.currentUser;
+        if (currentUser && currentUser.email) {
+            const userThemeKey = `${CONFIG.STORAGE_KEYS.THEME}_${currentUser.email}`;
+            localStorage.setItem(userThemeKey, enabled);
+            console.log(`🌙 Tema ${enabled ? 'oscuro' : 'claro'} guardado para usuario: ${currentUser.email}`);
         }
-        
-        if (enabled) {
-            document.body.classList.add('dark-mode');
-        } else {
-            document.body.classList.remove('dark-mode');
-        }
-        
-        // Guardar preferencia
+    } else {
+        // Si no hay Auth disponible, usar localStorage básico (temporal)
         localStorage.setItem(CONFIG.STORAGE_KEYS.THEME, enabled);
-        
-        // Actualizar switch en configuración
-        const darkThemeToggle = document.getElementById('dark-theme-toggle');
-        if (darkThemeToggle) {
-            darkThemeToggle.checked = enabled;
-        }
-        
-        return enabled;
-    },
+        console.log(`🌙 Tema ${enabled ? 'oscuro' : 'claro'} guardado temporalmente`);
+    }
+    
+    // Actualizar switch en configuración
+    const darkThemeToggle = document.getElementById('dark-theme-toggle');
+    if (darkThemeToggle) {
+        darkThemeToggle.checked = enabled;
+    }
+    
+    return enabled;
+},
     
     /**
      * Cambia el color primario de la interfaz
      * @param {string} color - Color en formato hexadecimal (#RRGGBB)
      */
     changePrimaryColor: function(color) {
-        if (!color) return;
-        
-        // Cambiar variables CSS
+    if (!color) {
+        console.warn('⚠️ Color no especificado');
+        return;
+    }
+    
+    try {
+        // Cambiar variables CSS (esto siempre funciona)
         document.documentElement.style.setProperty('--primary-color', color);
         document.documentElement.style.setProperty('--primary-dark', this.darkenColor(color, 20));
         document.documentElement.style.setProperty('--primary-light', this.lightenColor(color, 80));
         
-        // Guardar preferencia
-        localStorage.setItem(CONFIG.STORAGE_KEYS.PRIMARY_COLOR, color);
+        // ✅ SOLUCIÓN: Verificar Auth de forma defensiva
+        const isAuthAvailable = typeof Auth !== 'undefined' && Auth !== null;
+        const isAuthenticated = isAuthAvailable && typeof Auth.isAuthenticated === 'function' ? Auth.isAuthenticated() : false;
+        
+        if (isAuthAvailable && isAuthenticated) {
+            const currentUser = Auth.currentUser;
+            if (currentUser && currentUser.email) {
+                const userColorKey = `${CONFIG.STORAGE_KEYS.PRIMARY_COLOR}_${currentUser.email}`;
+                localStorage.setItem(userColorKey, color);
+                console.log(`🎨 Color ${color} guardado para usuario: ${currentUser.email}`);
+            }
+        } else {
+            // Si no hay Auth disponible, usar localStorage básico (temporal)
+            localStorage.setItem(CONFIG.STORAGE_KEYS.PRIMARY_COLOR, color);
+            console.log(`🎨 Color ${color} guardado temporalmente`);
+        }
         
         // Actualizar selección de botones de colores
         document.querySelectorAll('.color-option').forEach(option => {
@@ -88,26 +121,143 @@ const UI = {
             const input = option.querySelector('input');
             if (input && input.value === color) {
                 option.classList.add('selected');
+                input.checked = true;
             }
         });
-    },
-    
+        
+    } catch (error) {
+        console.error('❌ Error al cambiar color primario:', error);
+    }
+},
+
     /**
      * Carga las preferencias de tema guardadas
      */
     loadSavedTheme: function() {
-        // Cargar modo oscuro
-        const savedTheme = localStorage.getItem(CONFIG.STORAGE_KEYS.THEME);
-        if (savedTheme === 'true') {
-            this.toggleDarkMode(true);
+    console.log('📥 Cargando configuraciones de tema...');
+    
+    try {
+        // ✅ SOLUCIÓN: Verificar si Auth está disponible (DEFENSIVO)
+        const isAuthAvailable = typeof Auth !== 'undefined' && Auth !== null;
+        const currentUser = isAuthAvailable ? Auth.currentUser : null;
+        
+        if (!isAuthAvailable) {
+            console.log('⚠️ Auth no disponible aún, usando configuración por defecto');
+            this.resetUIToDefault();
+            return;
         }
         
-        // Cargar color primario
-        const savedColor = localStorage.getItem(CONFIG.STORAGE_KEYS.PRIMARY_COLOR);
-        if (savedColor) {
-            this.changePrimaryColor(savedColor);
+        if (!currentUser || !currentUser.email) {
+            console.log('👤 No hay usuario autenticado, usando configuración por defecto');
+            this.resetUIToDefault();
+            return;
         }
-    },
+        
+        // ✅ RESTO DE LA FUNCIÓN (si Auth está disponible)
+        const userThemeKey = `${CONFIG.STORAGE_KEYS.THEME}_${currentUser.email}`;
+        const userColorKey = `${CONFIG.STORAGE_KEYS.PRIMARY_COLOR}_${currentUser.email}`;
+        
+        // Cargar modo oscuro del usuario
+        const savedTheme = localStorage.getItem(userThemeKey);
+        if (savedTheme === 'true') {
+            this.toggleDarkMode(true);
+            console.log(`🌙 Modo oscuro cargado para: ${currentUser.email}`);
+        } else {
+            this.toggleDarkMode(false);
+        }
+        
+        // Cargar color primario del usuario
+        const savedColor = localStorage.getItem(userColorKey);
+        if (savedColor && this.isValidColor(savedColor)) {
+            this.changePrimaryColor(savedColor);
+            console.log(`🎨 Color ${savedColor} cargado para: ${currentUser.email}`);
+        } else {
+            // Usar color por defecto
+            this.changePrimaryColor(CONFIG.DEFAULTS.PRIMARY_COLOR);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error al cargar configuraciones:', error);
+        // En caso de error, usar configuración por defecto
+        this.resetUIToDefault();
+    }
+},
+
+/**
+ * Validar si un color es válido
+ * Agregar al objeto UI
+ */
+isValidColor: function(color) {
+    if (!color || typeof color !== 'string') return false;
+    
+    // Verificar formato hexadecimal
+    const hexPattern = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+    return hexPattern.test(color);
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Limpiar configuraciones de usuario específico
+ * Agregar al objeto UI
+ */
+clearUserSpecificConfigurations: function(userEmail) {
+    if (!userEmail) {
+        console.warn('⚠️ Email de usuario no especificado para limpiar configuraciones');
+        return;
+    }
+    
+    console.log(`🧹 Limpiando configuraciones específicas para: ${userEmail}`);
+    
+    const userKeys = [
+        `${CONFIG.STORAGE_KEYS.THEME}_${userEmail}`,
+        `${CONFIG.STORAGE_KEYS.PRIMARY_COLOR}_${userEmail}`,
+        `user_preferences_${userEmail}`,
+        `dashboard_layout_${userEmail}`
+    ];
+    
+    userKeys.forEach(key => {
+        try {
+            localStorage.removeItem(key);
+            console.log(`📦 Configuración eliminada: ${key}`);
+        } catch (error) {
+            console.warn(`⚠️ Error al eliminar ${key}:`, error);
+        }
+    });
+    
+    console.log(`✅ Configuraciones limpiadas para: ${userEmail}`);
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Inicializar configuraciones para nuevo usuario
+ * Agregar al objeto UI
+ */
+initializeForUser: function(usuario) {
+    if (!usuario || !usuario.email) {
+        console.warn('⚠️ Usuario no válido para inicializar configuraciones');
+        return;
+    }
+    
+    console.log(`⚙️ Inicializando configuraciones para: ${usuario.email}`);
+    
+    // Primero resetear a valores por defecto
+    this.resetUIToDefault();
+    
+    // Luego cargar configuraciones específicas del usuario (si existen)
+    this.loadSavedTheme();
+    
+    // Configurar elementos específicos según rol
+    const userRole = usuario.rol || 'asesor';
+    if (userRole === 'admin') {
+        // Configuraciones específicas para admin
+        document.body.classList.add('admin-view');
+        console.log('👑 Configuraciones de admin aplicadas');
+    } else {
+        // Configuraciones específicas para asesor
+        document.body.classList.add('asesor-view');
+        console.log('👤 Configuraciones de asesor aplicadas');
+    }
+    
+    console.log(`✅ Configuraciones inicializadas para: ${usuario.email}`);
+},
     
     /**
      * Oscurece un color hexadecimal
@@ -264,6 +414,144 @@ const UI = {
         // Mostrar modal
         this.showModal(modalId);
     },
+
+    /**
+ * Resetea UI a configuración por defecto
+ * Agregar al objeto UI
+ */
+resetUIToDefault: function() {
+    console.log('🎨 Reseteando UI a configuración por defecto...');
+    
+    try {
+        // 1. Resetear variables CSS a valores por defecto
+        const defaultColor = (typeof CONFIG !== 'undefined' && CONFIG.DEFAULTS) ? 
+                            CONFIG.DEFAULTS.PRIMARY_COLOR : '#007bff';
+        
+        document.documentElement.style.setProperty('--primary-color', defaultColor);
+        document.documentElement.style.setProperty('--primary-dark', this.darkenColor(defaultColor, 20));
+        document.documentElement.style.setProperty('--primary-light', this.lightenColor(defaultColor, 80));
+        
+        // 2. Remover modo oscuro
+        document.body.classList.remove('dark-mode');
+        
+        // 3. Resetear selecciones de colores
+        document.querySelectorAll('.color-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+        
+        // 4. Seleccionar color por defecto
+        const defaultColorOption = document.querySelector(`input[name="primary-color"][value="${defaultColor}"]`);
+        if (defaultColorOption) {
+            defaultColorOption.parentElement.classList.add('selected');
+            defaultColorOption.checked = true;
+        }
+        
+        // 5. Resetear toggle de tema oscuro
+        const darkThemeToggle = document.getElementById('dark-theme-toggle');
+        if (darkThemeToggle) {
+            darkThemeToggle.checked = false;
+        }
+        
+        // 6. Resetear otros toggles de configuración
+        const configToggles = document.querySelectorAll('#email-notifications, #interview-reminders');
+        configToggles.forEach(toggle => {
+            if (toggle) toggle.checked = true; // Valores por defecto activados
+        });
+        
+        console.log('✅ UI reseteada a configuración por defecto');
+        
+    } catch (error) {
+        console.error('❌ Error al resetear UI:', error);
+    }
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Inicialización diferida cuando Auth esté disponible
+ * AGREGAR al objeto UI
+ */
+initializeWithAuth: function() {
+    console.log('⚙️ Inicializando UI con Auth disponible...');
+    
+    // Verificar que Auth esté realmente disponible
+    if (typeof Auth === 'undefined' || !Auth) {
+        console.warn('⚠️ Auth aún no está disponible para inicializar UI');
+        return false;
+    }
+    
+    try {
+        // Ahora sí podemos cargar configuraciones por usuario
+        this.loadSavedTheme();
+        
+        // Configurar eventos que requieren Auth
+        this.initAuthDependentEvents();
+        
+        console.log('✅ UI inicializada con Auth');
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error al inicializar UI con Auth:', error);
+        return false;
+    }
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Eventos que dependen de Auth
+ * AGREGAR al objeto UI
+ */
+initAuthDependentEvents: function() {
+    console.log('🔧 Inicializando eventos dependientes de Auth...');
+    
+    // Toggle modo oscuro con validación de Auth
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
+    if (darkModeToggle) {
+        // Remover listeners anteriores para evitar duplicados
+        darkModeToggle.removeEventListener('click', this._darkModeHandler);
+        
+        // Crear handler con validación
+        this._darkModeHandler = () => {
+            if (typeof Auth !== 'undefined' && Auth.isAuthenticated && Auth.isAuthenticated()) {
+                this.toggleDarkMode();
+            } else {
+                console.warn('⚠️ Debe autenticarse para cambiar el tema');
+                darkModeToggle.checked = !darkModeToggle.checked; // Revertir cambio
+            }
+        };
+        
+        darkModeToggle.addEventListener('click', this._darkModeHandler);
+    }
+    
+    console.log('✅ Eventos dependientes de Auth inicializados');
+},
+
+/**
+ * Limpia todas las configuraciones guardadas
+ * Agregar al objeto UI
+ */
+clearStoredConfigurations: function() {
+    console.log('🗑️ Limpiando configuraciones almacenadas...');
+    
+    const configKeys = [
+        CONFIG.STORAGE_KEYS.THEME,
+        CONFIG.STORAGE_KEYS.PRIMARY_COLOR,
+        CONFIG.STORAGE_KEYS.CALENDAR_EVENTS,
+        'user_preferences',
+        'dashboard_layout',
+        'sidebar_collapsed',
+        'notification_settings',
+        'last_section_visited'
+    ];
+    
+    configKeys.forEach(key => {
+        try {
+            localStorage.removeItem(key);
+            console.log(`📦 Configuración eliminada: ${key}`);
+        } catch (error) {
+            console.warn(`⚠️ No se pudo eliminar ${key}:`, error);
+        }
+    });
+    
+    console.log('✅ Configuraciones almacenadas limpiadas');
+},
     
     /**
      * Crea un elemento para mostrar un badge de estado
@@ -314,62 +602,90 @@ const UI = {
      * Inicializa eventos para elementos comunes de la interfaz
      */
     initCommonEvents: function() {
-        // Toggle dropdown de perfil
-        const profileDropdownBtn = document.getElementById('profile-dropdown-button');
-        if (profileDropdownBtn) {
-            profileDropdownBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const dropdown = document.getElementById('profile-dropdown-content');
-                if (dropdown) {
-                    dropdown.classList.toggle('show');
-                }
-            });
-        }
-        
-        // Cerrar dropdowns al hacer clic fuera
-        document.addEventListener('click', (e) => {
-            const dropdowns = document.querySelectorAll('.dropdown-content.show');
-            dropdowns.forEach(dropdown => {
-                if (!dropdown.parentElement.contains(e.target)) {
-                    dropdown.classList.remove('show');
-                }
-            });
+    console.log('🔧 Inicializando eventos comunes de UI...');
+    
+    // Toggle dropdown de perfil
+    const profileDropdownBtn = document.getElementById('profile-dropdown-button');
+    if (profileDropdownBtn) {
+        profileDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const dropdown = document.getElementById('profile-dropdown-content');
+            if (dropdown) {
+                dropdown.classList.toggle('show');
+            }
         });
+    }
+    
+    // Cerrar dropdowns al hacer clic fuera
+    document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        console.log('🚀 Iniciando sistema de gestión de reclutas...');
         
-        // Toggle modo oscuro
-        const darkModeToggle = document.getElementById('dark-mode-toggle');
-        if (darkModeToggle) {
-            darkModeToggle.addEventListener('click', () => this.toggleDarkMode());
-        }
+        // ✅ FASE 1: INICIALIZAR COMPONENTES SIN DEPENDENCIAS
+        console.log('📦 Fase 1: Componentes básicos...');
         
-        // Toggle visibilidad de contraseña
-        const togglePasswordBtns = document.querySelectorAll('.toggle-password');
-        togglePasswordBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                const input = this.closest('.input-icon-wrapper').querySelector('input');
-                const icon = this.querySelector('i');
-                
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    icon.className = 'fas fa-eye-slash';
-                } else {
-                    input.type = 'password';
-                    icon.className = 'fas fa-eye';
-                }
-            });
+        // UI básico SIN dependencias de Auth
+        UI.initCommonEvents();
+        UI.initNavigation();
+        UI.initColorSelectors();
+        
+        // ✅ MOVIDO: loadSavedTheme se ejecutará después cuando Auth esté listo
+        // UI.loadSavedTheme(); // ❌ ESTA LÍNEA CAUSABA EL ERROR
+        
+        // ✅ FASE 2: INICIALIZAR SISTEMA DE TRACKING PÚBLICO
+        console.log('📋 Fase 2: Sistema de tracking...');
+        Client.init();
+        Timeline.init();
+        initPublicTracking();
+        
+        // ✅ FASE 3: VERIFICAR E INICIALIZAR AUTH
+        console.log('🔐 Fase 3: Verificando autenticación...');
+        await initializeAuthAndUI();
+        
+        // ✅ FASE 4: CONFIGURAR EVENTOS DE FORMULARIOS
+        console.log('📝 Fase 4: Eventos de formularios...');
+        setupFormEvents();
+        
+        console.log('✅ Sistema inicializado correctamente');
+        
+    } catch (error) {
+        console.error('❌ Error crítico en la inicialización:', error);
+        showError('Error al cargar el sistema. Por favor, recarga la página.');
+    }
+});
+    
+    // ✅ REMOVIDO: Toggle modo oscuro (se inicializa en initAuthDependentEvents)
+    
+    // Toggle visibilidad de contraseña
+    const togglePasswordBtns = document.querySelectorAll('.toggle-password');
+    togglePasswordBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const input = this.closest('.input-icon-wrapper').querySelector('input');
+            const icon = this.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
         });
-        
-        // Cerrar notificaciones
-        const notificationCloseBtn = document.getElementById('notification-close');
-        if (notificationCloseBtn) {
-            notificationCloseBtn.addEventListener('click', () => {
-                const notification = document.getElementById('notification');
-                if (notification) {
-                    notification.classList.remove('show');
-                }
-            });
-        }
-    },
+    });
+    
+    // Cerrar notificaciones
+    const notificationCloseBtn = document.getElementById('notification-close');
+    if (notificationCloseBtn) {
+        notificationCloseBtn.addEventListener('click', () => {
+            const notification = document.getElementById('notification');
+            if (notification) {
+                notification.classList.remove('show');
+            }
+        });
+    }
+    
+    console.log('✅ Eventos comunes de UI inicializados');
+},
     
     /**
      * Inicializa eventos para navegación entre secciones
@@ -389,13 +705,26 @@ const UI = {
      * Inicializa selectores de colores en la configuración
      */
     initColorSelectors: function() {
-        const colorOptions = document.querySelectorAll('input[name="primary-color"]');
-        colorOptions.forEach(option => {
-            option.addEventListener('change', () => {
+    console.log('🎨 Inicializando selectores de colores...');
+    
+    const colorOptions = document.querySelectorAll('input[name="primary-color"]');
+    colorOptions.forEach(option => {
+        option.addEventListener('change', () => {
+            // ✅ SOLUCIÓN: Verificar Auth de forma defensiva
+            const isAuthAvailable = typeof Auth !== 'undefined' && Auth !== null;
+            const isAuthenticated = isAuthAvailable && typeof Auth.isAuthenticated === 'function' ? Auth.isAuthenticated() : false;
+            
+            if (isAuthAvailable && isAuthenticated) {
                 this.changePrimaryColor(option.value);
-            });
+            } else {
+                console.log('ℹ️ Cambiando color sin autenticación (temporal)');
+                this.changePrimaryColor(option.value);
+            }
         });
-    }
+    });
+    
+    console.log('✅ Selectores de colores inicializados');
+}
 };
 
 export default UI;

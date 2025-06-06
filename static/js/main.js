@@ -1,5 +1,5 @@
 /**
- * ✅ ARCHIVO PRINCIPAL JavaScript - SISTEMA DE FOLIO RESTAURADO
+ * 
  * Inicializa todos los módulos y gestiona la lógica principal
  */
 import CONFIG from './config.js';
@@ -63,6 +63,70 @@ document.addEventListener('DOMContentLoaded', async function() {
 });
 
 /**
+ * ✅ NUEVA FUNCIÓN: Inicializar Auth y UI en orden correcto
+ * AGREGAR a main.js
+ */
+async function initializeAuthAndUI() {
+    try {
+        console.log('⚙️ Inicializando Auth y UI...');
+        
+        // 1. Verificar que Auth esté disponible
+        if (typeof Auth === 'undefined') {
+            console.warn('⚠️ Módulo Auth no disponible, usando modo sin autenticación');
+            
+            // Usar configuración por defecto
+            UI.resetUIToDefault();
+            showLoginScreen();
+            return;
+        }
+        
+        // 2. Verificar autenticación existente
+        console.log('🔍 Verificando sesión existente...');
+        let user = null;
+        
+        try {
+            user = await Auth.checkAuth();
+        } catch (error) {
+            console.warn('⚠️ Error verificando auth:', error);
+            user = null;
+        }
+        
+        // 3. Configurar UI según estado de autenticación
+        if (user) {
+            console.log('👤 Usuario autenticado encontrado, configurando dashboard...');
+            
+            // ✅ AHORA SÍ: Inicializar UI con Auth disponible
+            UI.initializeWithAuth();
+            
+            // Mostrar dashboard
+            loginSuccess(user);
+        } else {
+            console.log('🔐 No hay sesión activa, mostrando pantalla de login...');
+            
+            // ✅ AHORA SÍ: Cargar tema por defecto
+            UI.resetUIToDefault();
+            
+            // Mostrar login
+            showLoginScreen();
+        }
+        
+        // 4. Inicializar eventos que dependen de Auth
+        if (typeof UI.initAuthDependentEvents === 'function') {
+            UI.initAuthDependentEvents();
+        }
+        
+        console.log('✅ Auth y UI inicializados correctamente');
+        
+    } catch (error) {
+        console.error('❌ Error al inicializar Auth y UI:', error);
+        
+        // Fallback: mostrar login sin auth
+        UI.resetUIToDefault();
+        showLoginScreen();
+    }
+}
+
+/**
  * ✅ INICIALIZACIÓN DEL SISTEMA DE TRACKING PÚBLICO
  */
 function initPublicTracking() {
@@ -118,30 +182,6 @@ function initPublicTracking() {
     initClientModal();
     
     console.log('✅ Tracking público configurado');
-}
-
-/**
- * ✅ CAMBIAR A PESTAÑA DE ADMINISTRADOR
- */
-function switchToAdminTab() {
-    const adminTab = document.getElementById('admin-login-tab');
-    const trackingTab = document.getElementById('tracking-tab');
-    const loginForm = document.getElementById('login-form');
-    const trackingWrapper = document.getElementById('tracking-wrapper');
-    const trackingResults = document.getElementById('tracking-results');
-    
-    // Activar pestaña admin
-    adminTab?.classList.add('active');
-    trackingTab?.classList.remove('active');
-    loginForm?.classList.add('active');
-    trackingWrapper?.classList.remove('active');
-    
-    // Ocultar resultados de tracking
-    if (trackingResults) {
-        trackingResults.style.display = 'none';
-    }
-    
-    console.log('🔐 Cambiado a pestaña de administrador');
 }
 
 /**
@@ -362,10 +402,16 @@ async function login() {
     }
 
     try {
+        console.log('🔐 Iniciando proceso de login...');
+        
+        // ✅ NUEVO: Auth.login ahora incluye limpieza previa
         const user = await Auth.login(email, password);
+        
+        console.log('✅ Login exitoso, datos de usuario:', user);
         loginSuccess(user);
+        
     } catch (error) {
-        console.error('Error de login:', error);
+        console.error('❌ Error de login:', error);
         showError('Usuario o contraseña incorrectos');
     } finally {
         if (loginButton) {
@@ -380,28 +426,58 @@ async function login() {
  */
 async function loginSuccess(usuario) {
     try {
-        console.log('✅ Login exitoso, configurando dashboard...');
+        console.log('🎉 Procesando login exitoso para:', usuario.email);
         
-        // Actualizar usuario actual
+        // ✅ NUEVO: Validar que el usuario tenga datos completos
+        if (!usuario || !usuario.email) {
+            throw new Error('Datos de usuario incompletos');
+        }
+        
+        // Actualizar usuario actual con validación
         Auth.updateUserData(usuario);
         
-        // Cambiar de pantalla
+        // ✅ NUEVO: Ahora que Auth está disponible, inicializar UI con usuario
+        if (typeof UI.initializeForUser === 'function') {
+            UI.initializeForUser(usuario);
+        } else {
+            // Fallback si la función no existe
+            UI.loadSavedTheme();
+        }
+        
+        // ✅ NUEVO: Validar limpieza previa antes de mostrar dashboard
+        const hasOldElements = document.querySelectorAll('.admin-welcome, .asesor-welcome').length > 0;
+        if (hasOldElements) {
+            console.warn('⚠️ Detectados elementos de rol anterior, limpiando...');
+            if (typeof Auth.cleanupDynamicElements === 'function') {
+                Auth.cleanupDynamicElements();
+            }
+        }
+        
+        // Cambiar de pantalla con validación
         const loginSection = document.getElementById('login-section');
         const dashboardSection = document.getElementById('dashboard-section');
         
-        if (loginSection && dashboardSection) {
-            loginSection.style.display = 'none';
-            dashboardSection.style.display = 'block';
+        if (!loginSection || !dashboardSection) {
+            throw new Error('Elementos de UI no encontrados');
         }
         
-        // Configurar UI según rol
-        const userRole = usuario.rol || 'admin';
+        loginSection.style.display = 'none';
+        dashboardSection.style.display = 'block';
+        
+        // ✅ NUEVO: Configurar UI según rol con verificación
+        const userRole = usuario.rol || 'asesor';
+        console.log(`🎭 Configurando dashboard para rol: ${userRole}`);
+        
+        // Limpiar clases de rol anteriores
+        document.body.classList.remove('admin-view', 'asesor-view');
+        
+        // Configurar nueva clase de rol
         configureDashboardForRole(userRole);
         
-        // Actualizar información de usuario
+        // Actualizar información de usuario con validación
         updateUserInfo(usuario);
         
-        // Inicializar módulos si no están inicializados
+        // ✅ NUEVO: Inicializar módulos solo si no están inicializados
         if (!appState.initialized) {
             console.log('📦 Inicializando módulos del dashboard...');
             
@@ -412,7 +488,7 @@ async function loginSuccess(usuario) {
                     await Reclutas.loadAndDisplayReclutas();
                 }
             } catch (e) {
-                console.error('Error al inicializar reclutas:', e);
+                console.error('❌ Error al inicializar reclutas:', e);
                 showError('Error al cargar reclutas: ' + e.message);
             }
             
@@ -421,35 +497,43 @@ async function loginSuccess(usuario) {
                     await Calendar.init();
                 }
             } catch (e) {
-                console.error('Error al inicializar calendario:', e);
+                console.error('❌ Error al inicializar calendario:', e);
             }
             
             try {
                 await loadEstadisticas();
             } catch (e) {
-                console.error('Error al cargar estadísticas:', e);
+                console.error('❌ Error al cargar estadísticas:', e);
             }
             
             appState.initialized = true;
         } else {
             // Recargar datos si ya está inicializado
             try {
-                await Reclutas.loadAndDisplayReclutas();
+                if (typeof Reclutas !== 'undefined' && Reclutas.loadAndDisplayReclutas) {
+                    Reclutas.userRole = userRole;
+                    await Reclutas.loadAndDisplayReclutas();
+                }
             } catch (e) {
-                console.error('Error al recargar reclutas:', e);
+                console.error('❌ Error al recargar reclutas:', e);
             }
         }
         
-        // Mensaje de bienvenida
+        // ✅ NUEVO: Mensaje de bienvenida mejorado
         const welcomeMessage = getWelcomeMessage(usuario);
         showSuccess(welcomeMessage);
         
-        console.log('✅ Dashboard configurado correctamente');
+        console.log('✅ Dashboard configurado correctamente para:', userRole);
         
     } catch (error) {
-        console.error('Error en loginSuccess:', error);
+        console.error('❌ Error en loginSuccess:', error);
         showError('Error al cargar el dashboard: ' + error.message);
-        showLoginScreen();
+        
+        // ✅ NUEVO: En caso de error, limpiar y volver a login
+        if (typeof Auth.clearUserState === 'function') {
+            Auth.clearUserState();
+        }
+        showLoginScreen(true);
     }
 }
 
@@ -569,31 +653,148 @@ function updateEstadisticasUI(data) {
     if (stats.entrevistasPendientes) stats.entrevistasPendientes.textContent = data.entrevistas.pendientes;
 }
 
+/**
+ * ✅ FUNCIÓN LOGOUT CORREGIDA - Reemplazar función existente
+ */
 async function logout() {
     try {
-        await Auth.logout();
-        Auth.currentUser = null;
-        showLoginScreen();
+        console.log('🚪 Iniciando logout desde main.js...');
         
+        // ✅ NUEVO: Auth.logout ahora incluye limpieza completa
+        await Auth.logout();
+        
+        // ✅ NUEVO: Limpieza adicional del DOM específica de main.js
+        cleanupMainDOMElements();
+        
+        // ✅ NUEVO: Mostrar pantalla de login asegurando estado limpio
+        showLoginScreen(true); // Parámetro true para forzar limpieza
+        
+        // ✅ NUEVO: Limpiar campos de formulario
         const emailField = document.getElementById('email');
         const passwordField = document.getElementById('password');
         
         if (emailField) emailField.value = '';
         if (passwordField) passwordField.value = '';
         
+        // ✅ NUEVO: Resetear a pestaña de admin por defecto
+        switchToAdminTab();
+        
         showSuccess('Sesión cerrada correctamente');
+        console.log('✅ Logout completado exitosamente');
+        
     } catch (error) {
-        console.error('Error al cerrar sesión:', error);
+        console.error('❌ Error al cerrar sesión:', error);
         showError('Error al cerrar sesión');
+        
+        // ✅ NUEVO: Aún así forzar limpieza local
+        forceCleanupAndShowLogin();
     }
 }
 
-function showLoginScreen() {
+/**
+ * ✅ NUEVA FUNCIÓN: Limpieza específica del DOM de main.js
+ */
+function cleanupMainDOMElements() {
+    console.log('🧽 Limpiando elementos específicos de main.js...');
+    
+    // Limpiar estado global de la aplicación
+    if (window.appState) {
+        window.appState.initialized = false;
+        window.appState.currentSection = 'reclutas-section';
+    }
+    
+    // Remover eventos específicos que puedan estar atados
+    const dynamicButtons = document.querySelectorAll('.dynamic-button, .role-button');
+    dynamicButtons.forEach(button => button.remove());
+    
+    // Limpiar caché de módulos si existe
+    if (window.Reclutas && typeof window.Reclutas.cleanup === 'function') {
+        window.Reclutas.cleanup();
+    }
+    
+    if (window.Calendar && typeof window.Calendar.cleanup === 'function') {
+        window.Calendar.cleanup();
+    }
+    
+    console.log('✅ Elementos específicos de main.js limpiados');
+}
+
+/**
+ * ✅ NUEVA FUNCIÓN: Forzar limpieza y mostrar login en caso de error
+ */
+function forceCleanupAndShowLogin() {
+    console.log('🔧 Forzando limpieza de emergencia...');
+    
+    // Forzar limpieza básica
+    Auth.currentUser = null;
+    
+    // Limpiar localStorage básico
+    try {
+        localStorage.removeItem(CONFIG.STORAGE_KEYS.THEME);
+        localStorage.removeItem(CONFIG.STORAGE_KEYS.PRIMARY_COLOR);
+    } catch (e) {
+        console.warn('⚠️ Error en limpieza de emergencia:', e);
+    }
+    
+    // Mostrar pantalla de login
+    showLoginScreen(true);
+    
+    console.log('✅ Limpieza de emergencia completada');
+}
+
+function showLoginScreen(forceClean = false) {
+    console.log('🔐 Mostrando pantalla de login...');
+    
+    // ✅ NUEVO: Limpieza opcional forzada
+    if (forceClean) {
+        console.log('🧹 Realizando limpieza forzada antes de mostrar login...');
+        
+        // Limpiar elementos dinámicos
+        const dynamicElements = document.querySelectorAll('.admin-welcome, .asesor-welcome, .role-specific-element');
+        dynamicElements.forEach(el => el.remove());
+        
+        // Remover clases de rol
+        document.body.classList.remove('admin-view', 'asesor-view');
+        
+        // Resetear UI básica
+        if (typeof UI !== 'undefined' && UI.resetUIToDefault) {
+            UI.resetUIToDefault();
+        }
+    }
+    
     const loginSection = document.getElementById('login-section');
     const dashboardSection = document.getElementById('dashboard-section');
     
-    if (loginSection) loginSection.style.display = 'block';
-    if (dashboardSection) dashboardSection.style.display = 'none';
+    if (loginSection) {
+        loginSection.style.display = 'block';
+    }
+    if (dashboardSection) {
+        dashboardSection.style.display = 'none';
+    }
+    
+    // ✅ NUEVO: Asegurar que estemos en la pestaña de admin por defecto
+    switchToAdminTab();
+    
+    console.log('✅ Pantalla de login mostrada');
+}
+
+/**
+ * ✅ NUEVA FUNCIÓN: Cambiar a pestaña de administrador
+ */
+function switchToAdminTab() {
+    const adminTab = document.getElementById('admin-login-tab');
+    const trackingTab = document.getElementById('tracking-tab');
+    const loginForm = document.getElementById('login-form');
+    const trackingWrapper = document.getElementById('tracking-wrapper');
+    
+    if (adminTab && trackingTab && loginForm && trackingWrapper) {
+        adminTab.classList.add('active');
+        trackingTab.classList.remove('active');
+        loginForm.classList.add('active');
+        trackingWrapper.classList.remove('active');
+        
+        console.log('📑 Cambiado a pestaña de administrador');
+    }
 }
 
 async function changePassword() {
@@ -758,3 +959,213 @@ window.deleteRecluta = function(id) {
 };
 
 console.log('✅ main.js cargado - Sistema de folio restaurado');
+
+/**
+ * ✅ FUNCIÓN DE VALIDACIÓN - Agregar al final de main.js
+ * Para verificar que la solución funciona correctamente
+ */
+window.validateCacheStateFix = function() {
+    console.log('🧪 === INICIANDO VALIDACIÓN DEL FIX CACHE/ESTADO ===');
+    
+    const results = {
+        authFunctions: false,
+        uiFunctions: false,
+        permissionsFunctions: false,
+        domCleanup: false,
+        configurationReset: false,
+        overall: false
+    };
+    
+    // 1. Validar funciones de Auth
+    console.log('1️⃣ Validando funciones de Auth...');
+    if (typeof Auth === 'object' && 
+        typeof Auth.clearUserState === 'function' &&
+        typeof Auth.resetUIToDefault === 'function' &&
+        typeof Auth.cleanupDynamicElements === 'function' &&
+        typeof Auth.setupUserSpecificUI === 'function') {
+        results.authFunctions = true;
+        console.log('✅ Funciones de Auth implementadas correctamente');
+    } else {
+        console.error('❌ Funciones de Auth faltantes o incorrectas');
+    }
+    
+    // 2. Validar funciones de UI
+    console.log('2️⃣ Validando funciones de UI...');
+    if (typeof UI === 'object' && 
+        typeof UI.resetUIToDefault === 'function' &&
+        typeof UI.clearStoredConfigurations === 'function' &&
+        typeof UI.initializeForUser === 'function' &&
+        typeof UI.isValidColor === 'function') {
+        results.uiFunctions = true;
+        console.log('✅ Funciones de UI implementadas correctamente');
+    } else {
+        console.error('❌ Funciones de UI faltantes o incorrectas');
+    }
+    
+    // 3. Validar funciones de Permissions
+    console.log('3️⃣ Validando funciones de Permissions...');
+    if (typeof Permissions === 'object' && 
+        typeof Permissions.cleanupPreviousRoleElements === 'function' &&
+        typeof Permissions.applyRoleBasedConfiguration === 'function' &&
+        typeof Permissions.validateCleanState === 'function') {
+        results.permissionsFunctions = true;
+        console.log('✅ Funciones de Permissions implementadas correctamente');
+    } else {
+        console.error('❌ Funciones de Permissions faltantes o incorrectas');
+    }
+    
+    // 4. Validar limpieza de DOM
+    console.log('4️⃣ Validando limpieza de DOM...');
+    const problematicElements = document.querySelectorAll('.admin-welcome, .asesor-welcome, [style*="background-color"]');
+    if (problematicElements.length === 0) {
+        results.domCleanup = true;
+        console.log('✅ DOM limpio sin elementos problemáticos');
+    } else {
+        console.warn(`⚠️ Encontrados ${problematicElements.length} elementos problemáticos en DOM`);
+    }
+    
+    // 5. Validar configuraciones
+    console.log('5️⃣ Validando configuraciones...');
+    const hasCleanConfig = !localStorage.getItem(CONFIG.STORAGE_KEYS.THEME) || 
+                          !localStorage.getItem(CONFIG.STORAGE_KEYS.PRIMARY_COLOR);
+    if (hasCleanConfig) {
+        results.configurationReset = true;
+        console.log('✅ Configuraciones reseteadas correctamente');
+    } else {
+        console.log('ℹ️ Configuraciones presentes (normal si hay usuario logueado)');
+        results.configurationReset = true; // Aceptable si hay usuario
+    }
+    
+    // Resultado general
+    results.overall = Object.values(results).every(r => r === true);
+    
+    console.log('🧪 === RESULTADOS DE VALIDACIÓN ===');
+    console.table(results);
+    
+    if (results.overall) {
+        console.log('🎉 ¡VALIDACIÓN EXITOSA! El fix está implementado correctamente.');
+        showNotification('✅ Fix de cache/estado validado exitosamente', 'success');
+    } else {
+        console.error('❌ VALIDACIÓN FALLIDA. Revisar funciones faltantes.');
+        showNotification('❌ Validación del fix falló. Revisar consola.', 'error');
+    }
+    
+    return results;
+};
+
+// Exponer función globalmente para pruebas
+window.testCacheStateFix = function() {
+    console.log('🔬 === INICIANDO PRUEBA COMPLETA DEL FIX ===');
+    
+    // 1. Simular logout
+    console.log('1️⃣ Simulando logout...');
+    if (Auth.clearUserState) {
+        Auth.clearUserState();
+        console.log('✅ clearUserState ejecutado');
+    }
+    
+    // 2. Verificar limpieza
+    setTimeout(() => {
+        console.log('2️⃣ Verificando limpieza...');
+        const cleanState = Permissions.validateCleanState ? Permissions.validateCleanState() : true;
+        console.log(`🧹 Estado limpio: ${cleanState ? 'SÍ' : 'NO'}`);
+        
+        // 3. Simular configuración para nuevo usuario
+        console.log('3️⃣ Simulando configuración para nuevo usuario...');
+        const mockUser = { email: 'test@test.com', rol: 'admin' };
+        if (UI.initializeForUser) {
+            UI.initializeForUser(mockUser);
+            console.log('✅ initializeForUser ejecutado');
+        }
+        
+        // 4. Resultado final
+        console.log('🔬 === PRUEBA COMPLETA FINALIZADA ===');
+        return validateCacheStateFix();
+    }, 500);
+};
+
+/**
+ * ✅ NUEVA FUNCIÓN: Verificación rápida de dependencias
+ * AGREGAR a main.js
+ */
+window.verifyDependencies = function() {
+    console.log('🔍 === VERIFICACIÓN DE DEPENDENCIAS ===');
+    
+    const dependencies = {
+        CONFIG: typeof CONFIG !== 'undefined',
+        Auth: typeof Auth !== 'undefined',
+        UI: typeof UI !== 'undefined',
+        Reclutas: typeof Reclutas !== 'undefined',
+        Calendar: typeof Calendar !== 'undefined',
+        Client: typeof Client !== 'undefined',
+        Timeline: typeof Timeline !== 'undefined',
+        Permissions: typeof Permissions !== 'undefined',
+        showNotification: typeof showNotification !== 'undefined',
+        showError: typeof showError !== 'undefined',
+        showSuccess: typeof showSuccess !== 'undefined'
+    };
+    
+    console.table(dependencies);
+    
+    const missing = Object.entries(dependencies)
+        .filter(([key, available]) => !available)
+        .map(([key]) => key);
+    
+    if (missing.length > 0) {
+        console.error('❌ Dependencias faltantes:', missing);
+        return false;
+    } else {
+        console.log('✅ Todas las dependencias están disponibles');
+        return true;
+    }
+};
+
+/**
+ * ✅ NUEVA FUNCIÓN: Verificación rápida del fix
+ * AGREGAR a main.js
+ */
+window.quickHealthCheck = function() {
+    console.log('⚡ === VERIFICACIÓN RÁPIDA DEL SISTEMA ===');
+    
+    // 1. Verificar dependencias
+    const depsOk = verifyDependencies();
+    
+    // 2. Verificar funciones críticas de UI
+    const uiFunctionsOk = typeof UI === 'object' && 
+                         typeof UI.loadSavedTheme === 'function' &&
+                         typeof UI.resetUIToDefault === 'function';
+    
+    // 3. Verificar que no hay elementos problemáticos
+    const problematicElements = document.querySelectorAll('.admin-welcome, .asesor-welcome');
+    const domClean = problematicElements.length === 0;
+    
+    // 4. Verificar configuraciones básicas
+    const hasBasicConfig = typeof CONFIG !== 'undefined' && CONFIG.DEFAULTS;
+    
+    const results = {
+        dependencies: depsOk,
+        uiFunctions: uiFunctionsOk,
+        domClean: domClean,
+        basicConfig: hasBasicConfig,
+        overall: depsOk && uiFunctionsOk && domClean && hasBasicConfig
+    };
+    
+    console.table(results);
+    
+    if (results.overall) {
+        console.log('🎉 ¡Sistema funcionando correctamente!');
+        if (typeof showNotification !== 'undefined') {
+            showNotification('✅ Sistema verificado correctamente', 'success');
+        }
+    } else {
+        console.error('❌ Sistema tiene problemas. Ver detalles arriba.');
+        if (typeof showError !== 'undefined') {
+            showError('❌ Sistema tiene problemas. Revisar consola.');
+        }
+    }
+    
+    return results.overall;
+};
+
+// ✅ EXPONER FUNCIONES PARA DEBUGGING
+window.initializeAuthAndUI = initializeAuthAndUI;

@@ -232,7 +232,238 @@ const Auth = {
         nombre: this.currentUser.nombre
     });
 },
+
     
+/**
+ * Limpia completamente el estado del usuario y configuraciones
+ * ✅ NUEVA FUNCIÓN - Agregar al objeto Auth
+ */
+clearUserState: function() {
+    console.log('🧹 Iniciando limpieza completa de estado de usuario...');
+    
+    // 1. Limpiar usuario actual
+    this.currentUser = null;
+    
+    // 2. Limpiar localStorage relacionado con usuario
+    const userKeys = [
+        CONFIG.STORAGE_KEYS.THEME,
+        CONFIG.STORAGE_KEYS.PRIMARY_COLOR,
+        'user_preferences',
+        'dashboard_settings',
+        'last_user_role',
+        'user_config'
+    ];
+    
+    userKeys.forEach(key => {
+        try {
+            localStorage.removeItem(key);
+            console.log(`📦 Limpiado localStorage: ${key}`);
+        } catch (e) {
+            console.warn(`⚠️ No se pudo limpiar ${key}:`, e);
+        }
+    });
+    
+    // 3. Limpiar sessionStorage
+    try {
+        sessionStorage.clear();
+        console.log('🗂️ sessionStorage limpiado');
+    } catch (e) {
+        console.warn('⚠️ Error limpiando sessionStorage:', e);
+    }
+    
+    // 4. Resetear configuraciones CSS a valores por defecto
+    this.resetUIToDefault();
+    
+    // 5. Limpiar elementos DOM dinámicos
+    this.cleanupDynamicElements();
+    
+    console.log('✅ Limpieza completa de estado finalizada');
+},
+
+/**
+ * Resetea la UI a configuración por defecto
+ * ✅ NUEVA FUNCIÓN
+ */
+resetUIToDefault: function() {
+    console.log('🎨 Reseteando UI a configuración por defecto...');
+    
+    // Resetear variables CSS
+    const root = document.documentElement;
+    root.style.setProperty('--primary-color', '#007bff');
+    root.style.setProperty('--primary-dark', '#0056b3');
+    root.style.setProperty('--primary-light', '#e9f2f9');
+    
+    // Remover modo oscuro
+    document.body.classList.remove('dark-mode');
+    
+    // Resetear selecciones de color
+    document.querySelectorAll('.color-option').forEach(option => {
+        option.classList.remove('selected');
+    });
+    
+    // Seleccionar color por defecto
+    const defaultColorOption = document.querySelector('input[name="primary-color"][value="#007bff"]');
+    if (defaultColorOption) {
+        defaultColorOption.parentElement.classList.add('selected');
+    }
+    
+    // Resetear toggle de tema oscuro
+    const darkToggle = document.getElementById('dark-theme-toggle');
+    if (darkToggle) {
+        darkToggle.checked = false;
+    }
+    
+    console.log('✅ UI reseteada a configuración por defecto');
+},
+
+/**
+ * Limpia elementos DOM dinámicos y de rol
+ * ✅ NUEVA FUNCIÓN
+ */
+cleanupDynamicElements: function() {
+    console.log('🧽 Limpiando elementos DOM dinámicos...');
+    
+    // Remover clases de rol del body
+    document.body.classList.remove('admin-view', 'asesor-view');
+    
+    // Remover elementos de bienvenida dinámicos
+    const welcomeElements = document.querySelectorAll('.admin-welcome, .asesor-welcome, .role-specific-element');
+    welcomeElements.forEach(element => {
+        console.log('🗑️ Removiendo elemento:', element.className);
+        element.remove();
+    });
+    
+    // Limpiar atributos style inline en elementos de rol
+    const elementsWithInlineStyle = document.querySelectorAll('[style*="display"], [style*="background"]');
+    elementsWithInlineStyle.forEach(element => {
+        // Solo limpiar estilos relacionados con roles si no es necesario
+        if (element.classList.contains('role-element') || 
+            element.innerHTML.includes('welcome') ||
+            element.innerHTML.includes('admin') ||
+            element.innerHTML.includes('asesor')) {
+            element.removeAttribute('style');
+            console.log('🎨 Limpiado style inline de:', element.tagName);
+        }
+    });
+    
+    // Resetear navegación del dashboard
+    const dashboardNav = document.querySelector('.dashboard-nav ul');
+    if (dashboardNav) {
+        dashboardNav.innerHTML = '';
+    }
+    
+    // Limpiar información de usuario en UI
+    const userNameElements = document.querySelectorAll('#gerente-name, #dropdown-user-name, #user-name');
+    userNameElements.forEach(el => {
+        if (el.tagName === 'INPUT') {
+            el.value = '';
+        } else {
+            el.textContent = '';
+        }
+    });
+    
+    console.log('✅ Elementos DOM dinámicos limpiados');
+},
+
+/**
+ * Logout mejorado con limpieza completa
+ * ✅ MODIFICAR FUNCIÓN EXISTENTE
+ */
+logout: async function() {
+    try {
+        console.log('🚪 Iniciando logout con limpieza completa...');
+        
+        // 1. Logout del backend
+        const response = await fetch(`${CONFIG.AUTH_URL}/logout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            // 2. ✅ NUEVA: Limpieza completa de estado
+            this.clearUserState();
+            
+            console.log('✅ Logout completado con limpieza total');
+            return true;
+        } else {
+            throw new Error(data.message || 'Error al cerrar sesión');
+        }
+    } catch (err) {
+        console.error('❌ Error de logout:', err);
+        // Aún así limpiar estado local
+        this.clearUserState();
+        throw err;
+    }
+},
+
+/**
+ * Login mejorado con validación de estado limpio
+ * ✅ MODIFICAR FUNCIÓN EXISTENTE (agregar al final)
+ */
+login: async function(email, password) {
+    try {
+        // ✅ NUEVA: Asegurar estado limpio antes de login
+        console.log('🧹 Pre-login: Asegurando estado limpio...');
+        this.clearUserState();
+        
+        const response = await fetch(`${CONFIG.AUTH_URL}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                throw new Error('Credenciales inválidas');
+            }
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        if (data.success) {
+            this.currentUser = data.usuario;
+            
+            // ✅ NUEVA: Configurar UI específica para usuario
+            this.setupUserSpecificUI(data.usuario);
+            
+            return data.usuario;
+        } else {
+            throw new Error(data.message || 'Error de autenticación');
+        }
+    } catch (err) {
+        console.error('❌ Error de login:', err);
+        throw err;
+    }
+},
+
+/**
+ * Configurar UI específica para el usuario logueado
+ *
+ */
+setupUserSpecificUI: function(usuario) {
+    console.log('⚙️ Configurando UI específica para usuario:', usuario.email);
+    
+    // Establecer configuraciones por defecto para este usuario
+    const userRole = usuario.rol || 'asesor';
+    
+    // Configurar tema por defecto según rol (opcional)
+    if (userRole === 'admin') {
+        // Configuración por defecto para admin
+        document.body.classList.add('admin-view');
+    } else {
+        // Configuración por defecto para asesor
+        document.body.classList.add('asesor-view');
+    }
+    
+    // No cargar configuraciones previas, usar siempre defaults
+    console.log(`✅ UI configurada para rol: ${userRole}`);
+},
+
     /**
      * Obtiene el rol del usuario desde el backend
      * @returns {Promise<Object>} - Datos del rol y permisos
@@ -268,7 +499,7 @@ const Auth = {
         }
     } catch (error) {
         console.error('Error al obtener rol del usuario:', error);
-        // ✅ CAMBIO: Usar 'asesor' como rol por defecto más seguro
+        // Usar 'asesor' como rol por defecto más seguro
         if (this.currentUser) {
             this.currentUser.rol = 'asesor';
         }
@@ -277,7 +508,7 @@ const Auth = {
             permisos: { 
                 is_admin: false, 
                 is_asesor: true,
-                can_upload_excel: false  // ✅ CLAVE: Por defecto NO puede Excel
+                can_upload_excel: false  // Por defecto NO puede Excel
             } 
         };
     }
