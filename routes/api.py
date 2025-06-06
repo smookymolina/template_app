@@ -1040,28 +1040,6 @@ def recuperar_folio():
             "message": "Error al procesar la solicitud. Inténtelo más tarde."
         }), 500
 
-@api_bp.route('/asesores', methods=['GET'])
-@login_required
-def get_asesores():
-    """
-    Obtiene la lista de usuarios que pueden ser asesores.
-    Solo devuelve usuarios con rol 'asesor' o 'gerente', no administradores.
-    """
-    try:
-        # Filtrar solo usuarios con rol de asesor o gerente
-        asesores = Usuario.query.filter(
-            Usuario.is_active == True,
-            Usuario.rol.in_(['asesor', 'gerente'])
-        ).all()
-        
-        return jsonify({
-            "success": True,
-            "asesores": [a.serialize() for a in asesores]
-        })
-    except Exception as e:
-        current_app.logger.error(f"Error al obtener asesores: {str(e)}")
-        return jsonify({"success": False, "message": f"Error al obtener asesores: {str(e)}"}), 500
-
 @api_bp.route('/reclutas/distribuir-excel', methods=['POST'])
 @admin_required
 def distribuir_reclutas_excel():
