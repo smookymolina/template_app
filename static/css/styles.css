@@ -2008,3 +2008,69 @@ body::after {
     opacity: 1;
     transform: translateY(0);
 }
+
+/* ✅ VERIFICAR: Variables CSS para modo oscuro */
+:root {
+    --primary-color: #007bff;
+    --primary-dark: #0056b3;
+    --primary-light: #e9f2f9;
+    --secondary-color: #6c757d;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+    --text-color: #333;
+    --text-light: #6c757d;
+    --border-color: #dee2e6;
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
+    --border-radius: 8px;
+    --transition: all 0.3s ease;
+    --font-family: 'Poppins', sans-serif;
+}
+
+/* ✅ MODO OSCURO */
+body.dark-mode {
+    --primary-light: #252836;
+    --light-color: #1e1e2c;
+    --dark-color: #f8f9fa;
+    --text-color: #e9ecef;
+    --text-light: #adb5bd;
+    --border-color: #4b4b4b;
+    background-color: #181924 !important;
+}
+
+/* ✅ ESTILOS ESPECÍFICOS PARA BOTÓN HEADER */
+.header-button {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    padding: 8px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: var(--transition);
+}
+
+.header-button:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
+}
+
+.header-button i {
+    margin-right: 5px;
+    transition: var(--transition);
+}
+
+/* ✅ ANIMACIÓN PARA CAMBIO DE ICONO */
+#dark-mode-toggle i {
+    transition: transform 0.3s ease, opacity 0.2s ease;
+}
+
+#dark-mode-toggle:hover i {
+    transform: rotate(15deg);
+}

@@ -45,41 +45,73 @@ const UI = {
      * @returns {boolean} - Estado final del modo oscuro
      */
     toggleDarkMode: function(enabled) {
-    // ✅ SOLUCIÓN: Verificar Auth de forma defensiva
-    const isAuthAvailable = typeof Auth !== 'undefined' && Auth !== null;
-    const isAuthenticated = isAuthAvailable && typeof Auth.isAuthenticated === 'function' ? Auth.isAuthenticated() : false;
-    
+    // Determinar estado si no se especifica
     if (enabled === undefined) {
         enabled = !document.body.classList.contains('dark-mode');
     }
     
+    console.log(`🌙 Cambiando a modo ${enabled ? 'oscuro' : 'claro'}`);
+    
+    // Aplicar/remover clase CSS
     if (enabled) {
         document.body.classList.add('dark-mode');
     } else {
         document.body.classList.remove('dark-mode');
     }
     
-    // ✅ SOLUCIÓN: Solo guardar si Auth está disponible Y hay usuario
-    if (isAuthAvailable && isAuthenticated) {
-        const currentUser = Auth.currentUser;
-        if (currentUser && currentUser.email) {
-            const userThemeKey = `${CONFIG.STORAGE_KEYS.THEME}_${currentUser.email}`;
-            localStorage.setItem(userThemeKey, enabled);
-            console.log(`🌙 Tema ${enabled ? 'oscuro' : 'claro'} guardado para usuario: ${currentUser.email}`);
-        }
-    } else {
-        // Si no hay Auth disponible, usar localStorage básico (temporal)
-        localStorage.setItem(CONFIG.STORAGE_KEYS.THEME, enabled);
-        console.log(`🌙 Tema ${enabled ? 'oscuro' : 'claro'} guardado temporalmente`);
-    }
+    // Sincronizar ambos controles
+    this.syncDarkModeControls(enabled);
     
-    // Actualizar switch en configuración
-    const darkThemeToggle = document.getElementById('dark-theme-toggle');
-    if (darkThemeToggle) {
-        darkThemeToggle.checked = enabled;
-    }
+    // Guardar preferencia
+    this.saveDarkModePreference(enabled);
     
     return enabled;
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Sincronizar ambos controles
+ */
+syncDarkModeControls: function(enabled) {
+    // Actualizar checkbox en configuración
+    const configToggle = document.getElementById('dark-theme-toggle');
+    if (configToggle) {
+        configToggle.checked = enabled;
+    }
+    
+    // Actualizar icono del header
+    const headerToggle = document.getElementById('dark-mode-toggle');
+    if (headerToggle) {
+        const icon = headerToggle.querySelector('i');
+        if (icon) {
+            icon.className = enabled ? 'fas fa-sun' : 'fas fa-moon';
+        }
+    }
+    
+    console.log(`🔄 Controles sincronizados: ${enabled ? 'oscuro' : 'claro'}`);
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Guardar preferencia de forma inteligente
+ */
+saveDarkModePreference: function(enabled) {
+    try {
+        // Verificar si Auth está disponible y hay usuario autenticado
+        const isAuthAvailable = typeof Auth !== 'undefined' && Auth !== null;
+        const currentUser = isAuthAvailable ? Auth.currentUser : null;
+        
+        if (currentUser && currentUser.email) {
+            // Usuario autenticado: guardar con su email
+            const userThemeKey = `${CONFIG.STORAGE_KEYS.THEME}_${currentUser.email}`;
+            localStorage.setItem(userThemeKey, enabled.toString());
+            console.log(`💾 Tema guardado para usuario: ${currentUser.email}`);
+        } else {
+            // Sin autenticación: guardar temporal
+            localStorage.setItem(CONFIG.STORAGE_KEYS.THEME, enabled.toString());
+            console.log(`💾 Tema guardado temporalmente`);
+        }
+    } catch (error) {
+        console.error('❌ Error al guardar preferencia de tema:', error);
+    }
 },
     
     /**
@@ -137,48 +169,45 @@ const UI = {
     console.log('📥 Cargando configuraciones de tema...');
     
     try {
-        // ✅ SOLUCIÓN: Verificar si Auth está disponible (DEFENSIVO)
+        let savedTheme = null;
+        let savedColor = null;
+        
+        // Verificar si Auth está disponible
         const isAuthAvailable = typeof Auth !== 'undefined' && Auth !== null;
         const currentUser = isAuthAvailable ? Auth.currentUser : null;
         
-        if (!isAuthAvailable) {
-            console.log('⚠️ Auth no disponible aún, usando configuración por defecto');
-            this.resetUIToDefault();
-            return;
-        }
-        
-        if (!currentUser || !currentUser.email) {
-            console.log('👤 No hay usuario autenticado, usando configuración por defecto');
-            this.resetUIToDefault();
-            return;
-        }
-        
-        // ✅ RESTO DE LA FUNCIÓN (si Auth está disponible)
-        const userThemeKey = `${CONFIG.STORAGE_KEYS.THEME}_${currentUser.email}`;
-        const userColorKey = `${CONFIG.STORAGE_KEYS.PRIMARY_COLOR}_${currentUser.email}`;
-        
-        // Cargar modo oscuro del usuario
-        const savedTheme = localStorage.getItem(userThemeKey);
-        if (savedTheme === 'true') {
-            this.toggleDarkMode(true);
-            console.log(`🌙 Modo oscuro cargado para: ${currentUser.email}`);
+        if (currentUser && currentUser.email) {
+            // Usuario autenticado: cargar configuración específica
+            const userThemeKey = `${CONFIG.STORAGE_KEYS.THEME}_${currentUser.email}`;
+            const userColorKey = `${CONFIG.STORAGE_KEYS.PRIMARY_COLOR}_${currentUser.email}`;
+            
+            savedTheme = localStorage.getItem(userThemeKey);
+            savedColor = localStorage.getItem(userColorKey);
+            
+            console.log(`👤 Cargando configuración para: ${currentUser.email}`);
         } else {
-            this.toggleDarkMode(false);
+            // Sin usuario: cargar configuración temporal o por defecto
+            savedTheme = localStorage.getItem(CONFIG.STORAGE_KEYS.THEME);
+            savedColor = localStorage.getItem(CONFIG.STORAGE_KEYS.PRIMARY_COLOR);
+            
+            console.log('🌐 Cargando configuración temporal');
         }
         
-        // Cargar color primario del usuario
-        const savedColor = localStorage.getItem(userColorKey);
+        // Aplicar tema
+        const isDarkMode = savedTheme === 'true';
+        this.toggleDarkMode(isDarkMode);
+        
+        // Aplicar color primario
         if (savedColor && this.isValidColor(savedColor)) {
             this.changePrimaryColor(savedColor);
-            console.log(`🎨 Color ${savedColor} cargado para: ${currentUser.email}`);
         } else {
-            // Usar color por defecto
             this.changePrimaryColor(CONFIG.DEFAULTS.PRIMARY_COLOR);
         }
         
+        console.log(`✅ Tema cargado: ${isDarkMode ? 'oscuro' : 'claro'}, Color: ${savedColor || 'default'}`);
+        
     } catch (error) {
         console.error('❌ Error al cargar configuraciones:', error);
-        // En caso de error, usar configuración por defecto
         this.resetUIToDefault();
     }
 },
@@ -604,6 +633,9 @@ clearStoredConfigurations: function() {
     initCommonEvents: function() {
     console.log('🔧 Inicializando eventos comunes de UI...');
     
+    // ✅ CORRECCIÓN: Manejar AMBOS toggles de dark mode
+    this.initDarkModeToggles();
+    
     // Toggle dropdown de perfil
     const profileDropdownBtn = document.getElementById('profile-dropdown-button');
     if (profileDropdownBtn) {
@@ -621,29 +653,37 @@ clearStoredConfigurations: function() {
     try {
         console.log('🚀 Iniciando sistema de gestión de reclutas...');
         
-        // ✅ FASE 1: INICIALIZAR COMPONENTES SIN DEPENDENCIAS
-        console.log('📦 Fase 1: Componentes básicos...');
-        
-        // UI básico SIN dependencias de Auth
-        UI.initCommonEvents();
+        // ✅ 1. INICIALIZAR COMPONENTES BÁSICOS (INCLUYENDO DARK MODE)
+        console.log('📦 Inicializando UI básica...');
+        UI.initCommonEvents();  // ✅ ESTO CONFIGURA EL DARK MODE TOGGLE
         UI.initNavigation();
         UI.initColorSelectors();
         
-        // ✅ MOVIDO: loadSavedTheme se ejecutará después cuando Auth esté listo
-        // UI.loadSavedTheme(); // ❌ ESTA LÍNEA CAUSABA EL ERROR
+        // ✅ 2. CARGAR TEMA POR DEFECTO SIEMPRE
+        UI.loadSavedTheme();  // ✅ AHORA ES SEGURO LLAMARLO
         
-        // ✅ FASE 2: INICIALIZAR SISTEMA DE TRACKING PÚBLICO
-        console.log('📋 Fase 2: Sistema de tracking...');
+        // ✅ 3. INICIALIZAR SISTEMA DE TRACKING PÚBLICO
+        console.log('📋 Inicializando sistema de tracking...');
         Client.init();
         Timeline.init();
         initPublicTracking();
         
-        // ✅ FASE 3: VERIFICAR E INICIALIZAR AUTH
-        console.log('🔐 Fase 3: Verificando autenticación...');
-        await initializeAuthAndUI();
+        // ✅ 4. VERIFICAR AUTENTICACIÓN PARA PANEL ADMIN
+        try {
+            const user = await Auth.checkAuth();
+            if (user) {
+                console.log('👤 Usuario autenticado, mostrando dashboard...');
+                loginSuccess(user);
+            } else {
+                console.log('🔐 No hay sesión activa, mostrando pantalla pública...');
+                showLoginScreen();
+            }
+        } catch (error) {
+            console.warn('⚠️ Error verificando auth, mostrando pantalla pública:', error);
+            showLoginScreen();
+        }
         
-        // ✅ FASE 4: CONFIGURAR EVENTOS DE FORMULARIOS
-        console.log('📝 Fase 4: Eventos de formularios...');
+        // ✅ 5. CONFIGURAR EVENTOS DE FORMULARIOS
         setupFormEvents();
         
         console.log('✅ Sistema inicializado correctamente');
@@ -653,8 +693,6 @@ clearStoredConfigurations: function() {
         showError('Error al cargar el sistema. Por favor, recarga la página.');
     }
 });
-    
-    // ✅ REMOVIDO: Toggle modo oscuro (se inicializa en initAuthDependentEvents)
     
     // Toggle visibilidad de contraseña
     const togglePasswordBtns = document.querySelectorAll('.toggle-password');
@@ -686,6 +724,37 @@ clearStoredConfigurations: function() {
     
     console.log('✅ Eventos comunes de UI inicializados');
 },
+
+/**
+ * ✅ NUEVA FUNCIÓN: Inicializar todos los toggles de dark mode
+ */
+initDarkModeToggles: function() {
+    console.log('🌙 Inicializando toggles de dark mode...');
+    
+    // 1. Button del header (sin Auth requerida)
+    const headerToggle = document.getElementById('dark-mode-toggle');
+    if (headerToggle) {
+        headerToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('🌙 Click en toggle header');
+            this.toggleDarkMode();
+        });
+        console.log('✅ Header dark mode toggle configurado');
+    }
+    
+    // 2. Checkbox de configuración (con Auth opcional)
+    const configToggle = document.getElementById('dark-theme-toggle');
+    if (configToggle) {
+        configToggle.addEventListener('change', (e) => {
+            console.log('🌙 Change en toggle config:', e.target.checked);
+            this.toggleDarkMode(e.target.checked);
+        });
+        console.log('✅ Config dark mode toggle configurado');
+    }
+    
+    console.log('✅ Todos los toggles de dark mode configurados');
+},
+
     
     /**
      * Inicializa eventos para navegación entre secciones
@@ -728,3 +797,35 @@ clearStoredConfigurations: function() {
 };
 
 export default UI;
+
+// ✅ FUNCIÓN DE TESTING - Agregar al final de ui.js
+window.testDarkMode = function() {
+    console.log('🧪 === TESTING DARK MODE ===');
+    
+    const headerToggle = document.getElementById('dark-mode-toggle');
+    const configToggle = document.getElementById('dark-theme-toggle');
+    const body = document.body;
+    
+    console.log('🔍 Elementos encontrados:');
+    console.log('Header toggle:', !!headerToggle);
+    console.log('Config toggle:', !!configToggle);
+    console.log('Modo oscuro actual:', body.classList.contains('dark-mode'));
+    
+    if (headerToggle) {
+        console.log('🔄 Testeando toggle...');
+        UI.toggleDarkMode();
+        
+        setTimeout(() => {
+            const isNowDark = body.classList.contains('dark-mode');
+            console.log('✅ Resultado:', isNowDark ? 'MODO OSCURO' : 'MODO CLARO');
+            
+            // Test de sincronización
+            if (configToggle) {
+                console.log('🔄 Estado checkbox:', configToggle.checked);
+                console.log('🎯 Sincronización:', configToggle.checked === isNowDark ? 'OK' : 'ERROR');
+            }
+        }, 100);
+    } else {
+        console.error('❌ Botón de toggle no encontrado');
+    }
+};
