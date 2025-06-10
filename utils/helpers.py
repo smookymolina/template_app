@@ -155,7 +155,12 @@ def procesar_y_distribuir_excel(archivo, asesores):
         
         # Validar headers
         headers_esperados = ["Fecha de creación", "Nombre", "Teléfono"]
-        headers_encontrados = [cell.value for cell in sheet[1]]
+        primera_fila = list(sheet.iter_rows(min_row=1, max_row=1, values_only=True))[0]
+        headers_encontrados = [cell for cell in primera_fila if cell is not None and str(cell).strip()]
+
+        indice_fecha = headers_encontrados.index("Fecha de creación")
+        indice_nombre = headers_encontrados.index("Nombre") 
+        indice_telefono = headers_encontrados.index("Teléfono")
         
         if headers_encontrados != headers_esperados:
             return {
@@ -172,7 +177,9 @@ def procesar_y_distribuir_excel(archivo, asesores):
         telefonos_bd = set(r[0] for r in db.session.query(Recluta.telefono).all())
         
         for row_num, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
-            fecha_str, nombre, telefono = row[:3]
+            fecha_str = row[indice_fecha] if len(row) > indice_fecha else None
+            nombre = row[indice_nombre] if len(row) > indice_nombre else None
+            telefono = row[indice_telefono] if len(row) > indice_telefono else None
             
             # Validaciones
             error_fila = None
