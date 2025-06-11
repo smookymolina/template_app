@@ -11,6 +11,8 @@ import Client from './client.js';
 import Timeline from './timeline.js';
 import { showNotification, showError, showSuccess } from './notifications.js';
 
+let MetricasAdmin = null;
+
 // Estado global de la aplicación
 let appState = {
     initialized: false,
@@ -29,6 +31,57 @@ document.addEventListener('DOMContentLoaded', async function() {
         UI.initCommonEvents();
         UI.initNavigation();
         UI.initColorSelectors();
+
+        // 🆕 INICIALIZACIÓN ESPECÍFICA PARA MÉTRICAS
+        const currentUser = getCurrentUser();
+    
+        if (currentUser?.rol === 'admin') {
+        console.log('👑 Usuario administrador detectado - Preparando métricas avanzadas');
+        
+        // Pre-cargar módulo si estamos en la página de dashboard
+        if (document.getElementById('dashboard-section')) {
+            // Cargar el módulo pero no inicializarlo hasta que sea necesario
+            loadMetricasAdminModule();
+        }
+        } else if (currentUser?.rol === 'asesor') {
+        console.log('👥 Usuario asesor detectado - Configurando vista simplificada');
+        
+        // Ocultar elementos admin inmediatamente
+        hideAdminFeatures();
+        }
+
+        // 🎨 AGREGAR ESTILOS BÁSICOS PARA GRÁFICOS SIMPLES
+        const basicChartStyles = `
+        <style>
+        .basic-chart {
+            display: flex;
+            height: 100px;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+        .chart-segment {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .chart-segment:hover {
+            transform: scale(1.05);
+            z-index: 1;
+        }
+        .chart-segment.verde { background: #10B981; }
+        .chart-segment.amarillo { background: #F59E0B; }
+        .chart-segment.rojo { background: #EF4444; }
+        </style>
+        `;
+          document.head.insertAdjacentHTML('beforeend', basicChartStyles);
         
         // ✅ 2. INICIALIZAR SISTEMA DE TRACKING PÚBLICO (CRÍTICO)
         console.log('📋 Inicializando sistema de tracking por folio...');
@@ -590,9 +643,11 @@ function configureDashboardForRole(rol) {
     
     if (!dashboardNav) return;
     
+    // Limpiar clases existentes
     document.body.classList.remove('admin-view', 'asesor-view');
     document.body.classList.add(rol === 'admin' ? 'admin-view' : 'asesor-view');
     
+    // Actualizar rol en perfil
     if (profileRole) {
         const roleNames = {
             'admin': 'Administrador',
@@ -602,40 +657,274 @@ function configureDashboardForRole(rol) {
         profileRole.textContent = roleNames[rol] || 'Usuario';
     }
     
+    // 🆕 CONFIGURAR NAVEGACIÓN SEGÚN ROL
     if (rol === 'admin') {
+        // ✅ NAVEGACIÓN PARA ADMINISTRADORES (con métricas avanzadas)
         dashboardNav.innerHTML = `
             <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Gestión de Reclutas</a></li>
             <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
-            <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Estadísticas</a></li>
+            <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Métricas Avanzadas</a></li>
             <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Configuración</a></li>
         `;
+        
+        // 🔧 CARGAR MÓDULO DE MÉTRICAS ADMINISTRATIVAS
+        loadMetricasAdminModule();
+        
     } else {
+        // 👥 NAVEGACIÓN PARA ASESORES (simplificada)
         dashboardNav.innerHTML = `
             <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Mis Reclutas</a></li>
             <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Mis Entrevistas</a></li>
+            <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Mis Estadísticas</a></li>
             <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Mi Perfil</a></li>
         `;
+        
+        // 🚫 OCULTAR FUNCIONALIDADES ADMIN
+        hideAdminFeatures();
     }
     
+    // Re-inicializar navegación
     UI.initNavigation();
     
+    // Configurar UI específica para reclutas
     if (typeof Reclutas !== 'undefined' && Reclutas.configureUIForRole) {
         Reclutas.userRole = rol;
         setTimeout(() => Reclutas.configureUIForRole(), 100);
     }
 }
 
+// Cargar módulo de métricas administrativas
+async function loadMetricasAdminModule() {
+    try {
+        // Verificar si el módulo ya está cargado
+        if (window.MetricasAdmin) {
+            console.log('📊 Módulo MetricasAdmin ya está cargado');
+            return;
+        }
+        
+        // Cargar dinámicamente el script de métricas
+        const script = document.createElement('script');
+        script.src = '/static/js/metricas-admin.js';
+        script.onload = () => {
+            console.log('✅ Módulo MetricasAdmin cargado exitosamente');
+            
+            // Inicializar módulo cuando esté cargado
+            if (window.MetricasAdmin) {
+                MetricasAdmin = window.MetricasAdmin;
+                
+                // Esperar a que el DOM esté listo antes de inicializar
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        initializeMetricasAdmin();
+                    });
+                } else {
+                    initializeMetricasAdmin();
+                }
+            }
+        };
+        script.onerror = () => {
+            console.error('❌ Error al cargar módulo MetricasAdmin');
+            Notifications.show('Error al cargar métricas avanzadas', 'error');
+        };
+        
+        document.head.appendChild(script);
+        
+        // También cargar estilos CSS específicos
+        const cssLink = document.createElement('link');
+        cssLink.rel = 'stylesheet';
+        cssLink.href = '/static/css/metricas-admin.css';
+        document.head.appendChild(cssLink);
+        
+    } catch (error) {
+        console.error('❌ Error al cargar módulo de métricas:', error);
+    }
+}
+
+// Inicializar métricas administrativas
+function initializeMetricasAdmin() {
+    // Solo inicializar si estamos en la sección de estadísticas y el usuario es admin
+    const estadisticasSection = document.getElementById('estadisticas-section');
+    const currentUser = getCurrentUser();
+    
+    if (estadisticasSection && currentUser?.rol === 'admin' && MetricasAdmin) {
+        try {
+            console.log('🎯 Inicializando métricas administrativas...');
+            MetricasAdmin.init();
+            
+            // Agregar contenedor específico para métricas admin si no existe
+            let metricasContainer = document.getElementById('metricas-admin-container');
+            if (!metricasContainer) {
+                metricasContainer = document.createElement('div');
+                metricasContainer.id = 'metricas-admin-container';
+                metricasContainer.className = 'admin-only';
+                estadisticasSection.appendChild(metricasContainer);
+            }
+            
+        } catch (error) {
+            console.error('❌ Error al inicializar métricas administrativas:', error);
+        }
+    }
+}
+
+// Ocultar funcionalidades admin para asesores
+function hideAdminFeatures() {
+    // Ocultar todos los elementos con clase admin-only
+    const adminElements = document.querySelectorAll('.admin-only');
+    adminElements.forEach(element => {
+        element.style.display = 'none';
+    });
+    
+    // Mostrar mensaje específico para asesores si existe
+    const asesorMessage = document.querySelector('.asesor-only-message');
+    if (asesorMessage) {
+        asesorMessage.style.display = 'block';
+    }
+    
+    console.log('🔒 Funcionalidades admin ocultas para usuario asesor');
+}
+
+
 async function loadEstadisticas() {
     try {
-        const response = await fetch(`${CONFIG.API_URL}/estadisticas`);
+        const currentUser = getCurrentUser();
+        
+        if (currentUser?.rol === 'admin') {
+            // 👑 ADMINISTRADORES: Cargar métricas avanzadas
+            console.log('📊 Cargando métricas administrativas avanzadas...');
+            
+            if (MetricasAdmin) {
+                await MetricasAdmin.loadMetricas(true);
+            } else {
+                // Si el módulo no está cargado, cargar estadísticas básicas primero
+                await loadEstadisticasBasicas();
+                
+                // Intentar cargar módulo de métricas
+                await loadMetricasAdminModule();
+            }
+        } else {
+            // 👥 ASESORES: Cargar solo estadísticas básicas de sus reclutas
+            console.log('📊 Cargando estadísticas básicas para asesor...');
+            await loadEstadisticasBasicas();
+        }
+        
+    } catch (error) {
+        console.error('❌ Error al cargar estadísticas:', error);
+        Notifications.show('Error al cargar estadísticas: ' + error.message, 'error');
+    }
+}
+
+// 🆕 NUEVA FUNCIÓN: Cargar estadísticas básicas (para asesores)
+async function loadEstadisticasBasicas() {
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/estadisticas`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            }
+        });
+        
         if (!response.ok) throw new Error(`Error ${response.status}`);
         
         const data = await response.json();
         if (data.success) {
-            updateEstadisticasUI(data);
+            updateEstadisticasBasicasUI(data);
         }
     } catch (error) {
-        console.error('Error al cargar estadísticas:', error);
+        console.error('Error al cargar estadísticas básicas:', error);
+        throw error;
+    }
+}
+
+// 🆕 NUEVA FUNCIÓN: Actualizar UI con estadísticas básicas
+function updateEstadisticasBasicasUI(data) {
+    // Actualizar contadores básicos
+    const statElements = {
+        'total-reclutas': data.total_reclutas || 0,
+        'reclutas-activos': data.reclutas_activos || 0,
+        'en-proceso': data.en_proceso || 0,
+        'entrevistas-pendientes': data.entrevistas_pendientes || 0
+    };
+    
+    Object.entries(statElements).forEach(([id, value]) => {
+        const element = document.querySelector(`[data-stat="${id}"]`) || 
+                       document.querySelector(`#${id}`) ||
+                       document.querySelector(`.stat-number`);
+        if (element) {
+            element.textContent = value;
+        }
+    });
+    
+    // Actualizar gráficos básicos si existen
+    if (data.distribucion_estados) {
+        updateBasicCharts(data.distribucion_estados);
+    }
+    
+    console.log('✅ Estadísticas básicas actualizadas');
+}
+
+// 🆕 NUEVA FUNCIÓN: Actualizar gráficos básicos
+function updateBasicCharts(distribucion) {
+    const chartContainer = document.querySelector('.chart-placeholder');
+    if (chartContainer && distribucion) {
+        const total = distribucion.activos + distribucion.proceso + distribucion.rechazados;
+        
+        if (total > 0) {
+            const porcentajes = {
+                activos: (distribucion.activos / total * 100).toFixed(1),
+                proceso: (distribucion.proceso / total * 100).toFixed(1),
+                rechazados: (distribucion.rechazados / total * 100).toFixed(1)
+            };
+            
+            chartContainer.innerHTML = `
+                <div class="basic-chart">
+                    <div class="chart-segment verde" style="flex: ${porcentajes.activos}">
+                        ${porcentajes.activos}%<br>Activos
+                    </div>
+                    <div class="chart-segment amarillo" style="flex: ${porcentajes.proceso}">
+                        ${porcentajes.proceso}%<br>Proceso
+                    </div>
+                    <div class="chart-segment rojo" style="flex: ${porcentajes.rechazados}">
+                        ${porcentajes.rechazados}%<br>Rechazados
+                    </div>
+                </div>
+            `;
+        }
+    }
+}
+
+const originalShowSection = showSection; // Guardar referencia original
+
+function showSection(sectionId) {
+    // Llamar a la función original
+    if (originalShowSection) {
+        originalShowSection(sectionId);
+    }
+    
+    // 🆕 LÓGICA ESPECÍFICA PARA ESTADÍSTICAS
+    if (sectionId === 'estadisticas-section') {
+        const currentUser = getCurrentUser();
+        
+        // Cargar estadísticas apropiadas según el rol
+        setTimeout(() => {
+            loadEstadisticas();
+        }, 100);
+        
+        // Si es admin y el módulo está cargado, inicializar
+        if (currentUser?.rol === 'admin' && MetricasAdmin) {
+            setTimeout(() => {
+                initializeMetricasAdmin();
+            }, 200);
+        }
+    }
+}
+
+// Obtener usuario actual
+function getCurrentUser() {
+    try {
+        const userDataStr = localStorage.getItem('user_data');
+        return userDataStr ? JSON.parse(userDataStr) : null;
+    } catch (error) {
+        console.error('Error al obtener datos del usuario:', error);
+        return null;
     }
 }
 
@@ -1166,6 +1455,13 @@ window.quickHealthCheck = function() {
     
     return results.overall;
 };
+
+// 🆕 EXPORTAR FUNCIONES PARA USO GLOBAL
+window.loadEstadisticas = loadEstadisticas;
+window.loadMetricasAdminModule = loadMetricasAdminModule;
+window.initializeMetricasAdmin = initializeMetricasAdmin;
+
+console.log('🔧 Integración de métricas administrativas completada');
 
 // ✅ EXPONER FUNCIONES PARA DEBUGGING
 window.initializeAuthAndUI = initializeAuthAndUI;

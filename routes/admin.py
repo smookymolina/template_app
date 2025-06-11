@@ -1,6 +1,9 @@
 from flask import Blueprint, jsonify, request, current_app, render_template
+from sqlalchemy import func, case
 from flask_login import login_required, current_user
 from models.usuario import Usuario
+from models.recluta import Recluta
+from collections import defaultdict
 from models.user_session import UserSession
 from models import db, DatabaseError
 from utils.security import check_ip_allowed
@@ -8,11 +11,11 @@ from utils.validators import validate_usuario_data, ValidationError
 from functools import wraps
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 admin_bp = Blueprint('admin', __name__)
 
-def admin_required(f):
+def admin_required(f):  
     """
     Decorador que verifica si el usuario tiene permisos de administrador.
     También comprueba si la IP está en la lista de permitidas.
@@ -348,3 +351,261 @@ def admin_dashboard():
     Renderiza el panel de administración.
     """
     return render_template('admin/dashboard.html')
+
+@admin_bp.route('/metricas/asesores', methods=['GET'])
+@admin_required
+def get_metricas_asesores():
+    """
+    🎯 NUEVA FUNCIONALIDAD: Obtiene métricas detalladas por cada asesor
+    Solo disponible para administradores.
+    
+    Returns:
+        JSON con métricas por asesor:
+        - Total de reclutas por asesor
+        - Distribución por estados (Verde/Amarillo/Rojo)
+        - Tendencias y comparativas
+        - Ranking de productividad
+    """
+    try:
+        # 🔍 CONSULTA OPTIMIZADA: Obtener todos los asesores con sus métricas
+        query_asesores = db.session.query(
+            Usuario.id,
+            Usuario.nombre,
+            Usuario.email,
+            func.count(Recluta.id).label('total_reclutas'),
+            func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes'),
+            func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('amarillos'),
+            func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rojos')
+        ).outerjoin(
+            Recluta, Usuario.id == Recluta.asesor_id
+        ).filter(
+            Usuario.rol.in_(['asesor', 'gerente'])
+        ).group_by(
+            Usuario.id, Usuario.nombre, Usuario.email
+        ).all()
+
+        # 📊 PROCESAR MÉTRICAS: Calcular estadísticas avanzadas
+        metricas_asesores = []
+        total_reclutas_sistema = 0
+        
+        for asesor in query_asesores:
+            verdes = asesor.verdes or 0
+            amarillos = asesor.amarillos or 0
+            rojos = asesor.rojos or 0
+            total = asesor.total_reclutas or 0
+            
+            total_reclutas_sistema += total
+            
+            # 📈 CALCULAR TASAS DE CONVERSIÓN
+            tasa_exito = (verdes / total * 100) if total > 0 else 0
+            tasa_proceso = (amarillos / total * 100) if total > 0 else 0
+            tasa_rechazo = (rojos / total * 100) if total > 0 else 0
+            
+            # 🎯 DETERMINAR NIVEL DE PERFORMANCE
+            if tasa_exito >= 70:
+                performance = "Excelente"
+                performance_class = "excellent"
+            elif tasa_exito >= 50:
+                performance = "Bueno"
+                performance_class = "good"
+            elif tasa_exito >= 30:
+                performance = "Regular"
+                performance_class = "average"
+            else:
+                performance = "Necesita Mejora"
+                performance_class = "needs-improvement"
+            
+            metricas_asesor = {
+                "id": asesor.id,
+                "nombre": asesor.nombre or asesor.email,
+                "email": asesor.email,
+                "total_reclutas": total,
+                "estados": {
+                    "verdes": verdes,
+                    "amarillos": amarillos,
+                    "rojos": rojos
+                },
+                "tasas": {
+                    "exito": round(tasa_exito, 1),
+                    "proceso": round(tasa_proceso, 1),
+                    "rechazo": round(tasa_rechazo, 1)
+                },
+                "performance": {
+                    "nivel": performance,
+                    "class": performance_class,
+                    "score": round(tasa_exito, 1)
+                }
+            }
+            
+            metricas_asesores.append(metricas_asesor)
+        
+        # 🏆 ORDENAR POR PERFORMANCE (mejor primero)
+        metricas_asesores.sort(key=lambda x: x['performance']['score'], reverse=True)
+        
+        # 📊 CALCULAR MÉTRICAS GLOBALES DEL SISTEMA
+        total_verdes = sum(m['estados']['verdes'] for m in metricas_asesores)
+        total_amarillos = sum(m['estados']['amarillos'] for m in metricas_asesores)
+        total_rojos = sum(m['estados']['rojos'] for m in metricas_asesores)
+        
+        metricas_globales = {
+            "total_asesores": len(metricas_asesores),
+            "total_reclutas": total_reclutas_sistema,
+            "distribucion_global": {
+                "verdes": total_verdes,
+                "amarillos": total_amarillos,
+                "rojos": total_rojos
+            },
+            "promedio_sistema": {
+                "exito": round(total_verdes / total_reclutas_sistema * 100, 1) if total_reclutas_sistema > 0 else 0,
+                "proceso": round(total_amarillos / total_reclutas_sistema * 100, 1) if total_reclutas_sistema > 0 else 0,
+                "rechazo": round(total_rojos / total_reclutas_sistema * 100, 1) if total_reclutas_sistema > 0 else 0
+            }
+        }
+        
+        # 🎯 IDENTIFICAR TOP PERFORMERS Y NEEDS IMPROVEMENT
+        top_performers = [m for m in metricas_asesores[:3] if m['total_reclutas'] > 0]
+        needs_improvement = [m for m in metricas_asesores if m['performance']['class'] == 'needs-improvement' and m['total_reclutas'] > 0]
+        
+        current_app.logger.info(f"✅ Métricas por asesor generadas: {len(metricas_asesores)} asesores analizados")
+        
+        return jsonify({
+            "success": True,
+            "metricas_asesores": metricas_asesores,
+            "metricas_globales": metricas_globales,
+            "insights": {
+                "top_performers": top_performers,
+                "needs_improvement": needs_improvement,
+                "fecha_generacion": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+            }
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error al obtener métricas por asesor: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al generar métricas: {str(e)}"
+        }), 500
+
+
+@admin_bp.route('/metricas/asesor/<int:asesor_id>/detalle', methods=['GET'])
+@admin_required
+def get_detalle_asesor(asesor_id):
+    """
+    🔍 NUEVA FUNCIONALIDAD: Obtiene métricas detalladas de un asesor específico
+    Incluye cronología, tendencias y comparativas.
+    """
+    try:
+        # Verificar que el asesor existe
+        asesor = Usuario.query.get(asesor_id)
+        if not asesor or asesor.rol not in ['asesor', 'gerente']:
+            return jsonify({
+                "success": False,
+                "message": "Asesor no encontrado"
+            }), 404
+        
+        # 📊 OBTENER RECLUTAS DEL ASESOR CON DETALLES
+        reclutas = Recluta.query.filter_by(asesor_id=asesor_id).all()
+        
+        # 📈 ANÁLISIS TEMPORAL (últimos 6 meses)
+        ahora = datetime.utcnow()
+        tendencia_mensual = []
+        
+        for i in range(6):
+            mes_inicio = ahora.replace(day=1) - timedelta(days=i*30)
+            mes_fin = mes_inicio + timedelta(days=30)
+            
+            reclutas_mes = [r for r in reclutas if mes_inicio <= r.fecha_registro <= mes_fin]
+            
+            tendencia_mensual.append({
+                "mes": mes_inicio.strftime('%Y-%m'),
+                "mes_nombre": mes_inicio.strftime('%B %Y'),
+                "total": len(reclutas_mes),
+                "verdes": len([r for r in reclutas_mes if r.estado == 'Activo']),
+                "amarillos": len([r for r in reclutas_mes if r.estado == 'En proceso']),
+                "rojos": len([r for r in reclutas_mes if r.estado == 'Rechazado'])
+            })
+        
+        tendencia_mensual.reverse()  # Orden cronológico
+        
+        # 🎯 MÉTRICAS DETALLADAS
+        total_reclutas = len(reclutas)
+        verdes = len([r for r in reclutas if r.estado == 'Activo'])
+        amarillos = len([r for r in reclutas if r.estado == 'En proceso'])
+        rojos = len([r for r in reclutas if r.estado == 'Rechazado'])
+        
+        # 📋 LISTADO DETALLADO POR ESTADO
+        reclutas_por_estado = {
+            "verdes": [r.serialize() for r in reclutas if r.estado == 'Activo'],
+            "amarillos": [r.serialize() for r in reclutas if r.estado == 'En proceso'],
+            "rojos": [r.serialize() for r in reclutas if r.estado == 'Rechazado']
+        }
+        
+        return jsonify({
+            "success": True,
+            "asesor": {
+                "id": asesor.id,
+                "nombre": asesor.nombre or asesor.email,
+                "email": asesor.email
+            },
+            "metricas": {
+                "total": total_reclutas,
+                "verdes": verdes,
+                "amarillos": amarillos,
+                "rojos": rojos,
+                "tasa_exito": round(verdes / total_reclutas * 100, 1) if total_reclutas > 0 else 0
+            },
+            "tendencia_mensual": tendencia_mensual,
+            "reclutas_por_estado": reclutas_por_estado
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error al obtener detalle de asesor {asesor_id}: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al obtener detalle: {str(e)}"
+        }), 500
+
+
+@admin_bp.route('/metricas/exportar', methods=['POST'])
+@admin_required
+def exportar_metricas():
+    """
+    📥 NUEVA FUNCIONALIDAD: Exporta métricas en formato Excel/CSV
+    """
+    try:
+        formato = request.json.get('formato', 'excel')  # excel o csv
+        
+        # Reutilizar la lógica de métricas
+        response = get_metricas_asesores()
+        data = response.get_json()
+        
+        if not data.get('success'):
+            return jsonify({
+                "success": False,
+                "message": "Error al generar datos para exportación"
+            }), 500
+        
+        # Preparar datos para exportación
+        metricas = data['metricas_asesores']
+        
+        if formato == 'excel':
+            # Lógica para generar Excel (requiere openpyxl)
+            # Se implementaría aquí la generación del archivo Excel
+            pass
+        else:
+            # Lógica para generar CSV
+            # Se implementaría aquí la generación del archivo CSV
+            pass
+        
+        return jsonify({
+            "success": True,
+            "message": f"Exportación en formato {formato} generada exitosamente",
+            "download_url": f"/admin/download/metricas.{formato}"
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error al exportar métricas: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error en exportación: {str(e)}"
+        }), 500

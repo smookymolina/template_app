@@ -8,8 +8,11 @@ from utils.decorators import admin_required, role_required
 from models.entrevista import Entrevista  # Importación específica desde el módulo
 from utils.helpers import guardar_archivo, eliminar_archivo
 from utils.validators import validate_recluta_data, validate_entrevista_data, ValidationError
-from datetime import datetime
+from sqlalchemy import func, case, extract, desc
+from datetime import datetime, timedelta
+from collections import defaultdict
 import os
+import calendar
 
 api_bp = Blueprint('api', __name__)
 
@@ -585,46 +588,570 @@ def delete_documento(id):
 @login_required
 def get_estadisticas():
     """
-    Obtiene estadísticas generales del sistema.
+    📊 RUTA MEJORADA: Estadísticas adaptativas según rol de usuario
+    
+    - Administradores: Estadísticas globales completas + resumen de asesores
+    - Asesores: Solo estadísticas de sus reclutas asignados
     """
     try:
-        # Contar reclutas por estado
-        total_reclutas = Recluta.query.count()
-        reclutas_activos = Recluta.query.filter_by(estado='Activo').count()
-        reclutas_proceso = Recluta.query.filter_by(estado='En proceso').count()
-        reclutas_rechazados = Recluta.query.filter_by(estado='Rechazado').count()
+        # Obtener filtros opcionales
+        periodo = request.args.get('periodo', '30')  # días
+        incluir_tendencias = request.args.get('tendencias', 'true').lower() == 'true'
+        incluir_comparativas = request.args.get('comparativas', 'true').lower() == 'true'
         
-        # Contar entrevistas por estado
-        entrevistas_pendientes = Entrevista.query.filter_by(estado='pendiente').count()
-        entrevistas_completadas = Entrevista.query.filter_by(estado='completada').count()
-        entrevistas_canceladas = Entrevista.query.filter_by(estado='cancelada').count()
+        # Calcular rango de fechas
+        fecha_fin = datetime.utcnow()
+        try:
+            dias = int(periodo)
+            fecha_inicio = fecha_fin - timedelta(days=dias)
+        except ValueError:
+            dias = 30
+            fecha_inicio = fecha_fin - timedelta(days=30)
         
-        # Obtener entrevistas próximas
-        entrevistas_proximas = Entrevista.get_upcoming(limit=5)
+        if current_user.rol == 'admin':
+            # 👑 ESTADÍSTICAS PARA ADMINISTRADORES
+            estadisticas = get_estadisticas_admin(fecha_inicio, fecha_fin, incluir_tendencias, incluir_comparativas)
+        else:
+            # 👥 ESTADÍSTICAS PARA ASESORES
+            estadisticas = get_estadisticas_asesor(current_user.id, fecha_inicio, fecha_fin, incluir_tendencias)
         
-        # Obtener distribución de entrevistas por mes para el año actual
-        year = datetime.now().year
-        entrevistas_por_mes = Entrevista.count_by_month(year)
+        # Agregar metadatos
+        estadisticas['metadata'] = {
+            'periodo_dias': dias,
+            'fecha_inicio': fecha_inicio.strftime('%Y-%m-%d'),
+            'fecha_fin': fecha_fin.strftime('%Y-%m-%d'),
+            'usuario_rol': current_user.rol,
+            'generado_en': datetime.utcnow().isoformat(),
+            'incluye_tendencias': incluir_tendencias,
+            'incluye_comparativas': incluir_comparativas
+        }
+        
+        current_app.logger.info(f"📊 Estadísticas generadas para {current_user.email} (rol: {current_user.rol})")
         
         return jsonify({
             "success": True,
-            "reclutas": {
-                "total": total_reclutas,
-                "activos": reclutas_activos,
-                "en_proceso": reclutas_proceso,
-                "rechazados": reclutas_rechazados
+            "estadisticas": estadisticas
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error al obtener estadísticas: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al generar estadísticas: {str(e)}"
+        }), 500
+
+
+def get_estadisticas_admin(fecha_inicio, fecha_fin, incluir_tendencias=True, incluir_comparativas=True):
+    """
+    👑 ESTADÍSTICAS COMPLETAS PARA ADMINISTRADORES
+    """
+    try:
+        # 📊 ESTADÍSTICAS GLOBALES BÁSICAS
+        query_base = Recluta.query.filter(
+            Recluta.fecha_registro >= fecha_inicio,
+            Recluta.fecha_registro <= fecha_fin
+        )
+        
+        total_reclutas = query_base.count()
+        reclutas_activos = query_base.filter_by(estado='Activo').count()
+        reclutas_proceso = query_base.filter_by(estado='En proceso').count()
+        reclutas_rechazados = query_base.filter_by(estado='Rechazado').count()
+        
+        # 📅 ENTREVISTAS EN EL PERÍODO
+        entrevistas_pendientes = Entrevista.query.filter(
+            Entrevista.fecha >= fecha_inicio.date(),
+            Entrevista.fecha <= fecha_fin.date(),
+            Entrevista.estado == 'pendiente'
+        ).count()
+        
+        entrevistas_completadas = Entrevista.query.filter(
+            Entrevista.fecha >= fecha_inicio.date(),
+            Entrevista.fecha <= fecha_fin.date(),
+            Entrevista.estado == 'completada'
+        ).count()
+        
+        # 📈 MÉTRICAS CALCULADAS
+        tasa_conversion = (reclutas_activos / total_reclutas * 100) if total_reclutas > 0 else 0
+        tasa_rechazo = (reclutas_rechazados / total_reclutas * 100) if total_reclutas > 0 else 0
+        
+        # 👥 RESUMEN DE ASESORES (para vista rápida)
+        resumen_asesores = db.session.query(
+            Usuario.id,
+            Usuario.nombre,
+            Usuario.email,
+            func.count(Recluta.id).label('total_reclutas'),
+            func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('activos'),
+            func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('proceso'),
+            func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rechazados')
+        ).outerjoin(
+            Recluta, Usuario.id == Recluta.asesor_id
+        ).filter(
+            Usuario.rol.in_(['asesor', 'gerente']),
+            Recluta.fecha_registro >= fecha_inicio,
+            Recluta.fecha_registro <= fecha_fin
+        ).group_by(
+            Usuario.id, Usuario.nombre, Usuario.email
+        ).all()
+        
+        # Procesar resumen de asesores
+        asesores_resumen = []
+        for asesor in resumen_asesores:
+            total = asesor.total_reclutas or 0
+            activos = asesor.activos or 0
+            
+            asesores_resumen.append({
+                'id': asesor.id,
+                'nombre': asesor.nombre or asesor.email,
+                'total': total,
+                'activos': activos,
+                'proceso': asesor.proceso or 0,
+                'rechazados': asesor.rechazados or 0,
+                'tasa_exito': round(activos / total * 100, 1) if total > 0 else 0
+            })
+        
+        # Ordenar por tasa de éxito
+        asesores_resumen.sort(key=lambda x: x['tasa_exito'], reverse=True)
+        
+        estadisticas = {
+            'globales': {
+                'total_reclutas': total_reclutas,
+                'reclutas_activos': reclutas_activos,
+                'reclutas_proceso': reclutas_proceso,
+                'reclutas_rechazados': reclutas_rechazados,
+                'entrevistas_pendientes': entrevistas_pendientes,
+                'entrevistas_completadas': entrevistas_completadas,
+                'tasa_conversion': round(tasa_conversion, 1),
+                'tasa_rechazo': round(tasa_rechazo, 1)
             },
-            "entrevistas": {
-                "pendientes": entrevistas_pendientes,
-                "completadas": entrevistas_completadas,
-                "canceladas": entrevistas_canceladas,
-                "proximas": [e.serialize() for e in entrevistas_proximas],
-                "por_mes": entrevistas_por_mes
+            'asesores_resumen': asesores_resumen[:10],  # Top 10
+            'total_asesores': len(asesores_resumen)
+        }
+        
+        # 📈 TENDENCIAS TEMPORALES (opcional)
+        if incluir_tendencias:
+            estadisticas['tendencias'] = get_tendencias_temporales(fecha_inicio, fecha_fin)
+        
+        # 📊 COMPARATIVAS MENSUALES (opcional)
+        if incluir_comparativas:
+            estadisticas['comparativas'] = get_comparativas_mensuales()
+        
+        return estadisticas
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en estadísticas admin: {str(e)}")
+        raise
+
+
+def get_estadisticas_asesor(asesor_id, fecha_inicio, fecha_fin, incluir_tendencias=True):
+    """
+    👥 ESTADÍSTICAS PERSONALIZADAS PARA ASESORES
+    """
+    try:
+        # 📊 ESTADÍSTICAS ESPECÍFICAS DEL ASESOR
+        query_base = Recluta.query.filter(
+            Recluta.asesor_id == asesor_id,
+            Recluta.fecha_registro >= fecha_inicio,
+            Recluta.fecha_registro <= fecha_fin
+        )
+        
+        total_reclutas = query_base.count()
+        reclutas_activos = query_base.filter_by(estado='Activo').count()
+        reclutas_proceso = query_base.filter_by(estado='En proceso').count()
+        reclutas_rechazados = query_base.filter_by(estado='Rechazado').count()
+        
+        # 📅 ENTREVISTAS DEL ASESOR
+        mis_entrevistas = db.session.query(Entrevista).join(
+            Recluta, Entrevista.recluta_id == Recluta.id
+        ).filter(
+            Recluta.asesor_id == asesor_id,
+            Entrevista.fecha >= fecha_inicio.date(),
+            Entrevista.fecha <= fecha_fin.date()
+        )
+        
+        entrevistas_pendientes = mis_entrevistas.filter_by(estado='pendiente').count()
+        entrevistas_completadas = mis_entrevistas.filter_by(estado='completada').count()
+        
+        # 📈 MÉTRICAS PERSONALES
+        tasa_conversion = (reclutas_activos / total_reclutas * 100) if total_reclutas > 0 else 0
+        productividad = total_reclutas / ((fecha_fin - fecha_inicio).days or 1)
+        
+        # 🎯 OBJETIVOS Y METAS (simulados - podrían venir de configuración)
+        meta_mensual = 50  # Meta de reclutas por mes
+        dias_transcurridos = (fecha_fin - fecha_inicio).days
+        meta_periodo = (meta_mensual * dias_transcurridos) / 30
+        progreso_meta = (total_reclutas / meta_periodo * 100) if meta_periodo > 0 else 0
+        
+        estadisticas = {
+            'personales': {
+                'total_reclutas': total_reclutas,
+                'reclutas_activos': reclutas_activos,
+                'reclutas_proceso': reclutas_proceso,
+                'reclutas_rechazados': reclutas_rechazados,
+                'entrevistas_pendientes': entrevistas_pendientes,
+                'entrevistas_completadas': entrevistas_completadas,
+                'tasa_conversion': round(tasa_conversion, 1),
+                'productividad_diaria': round(productividad, 2),
+                'progreso_meta': round(min(progreso_meta, 100), 1),
+                'meta_periodo': round(meta_periodo, 0)
+            }
+        }
+        
+        # 📈 TENDENCIAS PERSONALES (opcional)
+        if incluir_tendencias:
+            estadisticas['tendencias_personales'] = get_tendencias_asesor(asesor_id, fecha_inicio, fecha_fin)
+        
+        # 📊 COMPARACIÓN CON PROMEDIO GENERAL (sin revelar datos de otros asesores)
+        promedio_sistema = get_promedio_sistema_anonimo()
+        estadisticas['comparacion_anonima'] = {
+            'mi_tasa_conversion': round(tasa_conversion, 1),
+            'promedio_sistema': promedio_sistema,
+            'por_encima_promedio': tasa_conversion > promedio_sistema,
+            'diferencia': round(tasa_conversion - promedio_sistema, 1)
+        }
+        
+        return estadisticas
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en estadísticas asesor {asesor_id}: {str(e)}")
+        raise
+
+
+def get_tendencias_temporales(fecha_inicio, fecha_fin, granularidad='diaria'):
+    """
+    📈 GENERAR TENDENCIAS TEMPORALES
+    """
+    try:
+        tendencias = []
+        
+        if granularidad == 'diaria':
+            # Tendencias diarias
+            current_date = fecha_inicio.date()
+            while current_date <= fecha_fin.date():
+                next_date = current_date + timedelta(days=1)
+                
+                reclutas_dia = Recluta.query.filter(
+                    Recluta.fecha_registro >= current_date,
+                    Recluta.fecha_registro < next_date
+                ).count()
+                
+                tendencias.append({
+                    'fecha': current_date.strftime('%Y-%m-%d'),
+                    'reclutas': reclutas_dia,
+                    'fecha_formatted': current_date.strftime('%d/%m')
+                })
+                
+                current_date = next_date
+                
+        elif granularidad == 'semanal':
+            # Tendencias semanales
+            current_date = fecha_inicio.date()
+            while current_date <= fecha_fin.date():
+                week_end = min(current_date + timedelta(days=6), fecha_fin.date())
+                
+                reclutas_semana = Recluta.query.filter(
+                    Recluta.fecha_registro >= current_date,
+                    Recluta.fecha_registro <= week_end
+                ).count()
+                
+                tendencias.append({
+                    'periodo': f"{current_date.strftime('%d/%m')} - {week_end.strftime('%d/%m')}",
+                    'reclutas': reclutas_semana,
+                    'fecha_inicio': current_date.strftime('%Y-%m-%d'),
+                    'fecha_fin': week_end.strftime('%Y-%m-%d')
+                })
+                
+                current_date = week_end + timedelta(days=1)
+        
+        return tendencias
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en tendencias temporales: {str(e)}")
+        return []
+
+
+def get_comparativas_mensuales():
+    """
+    📊 COMPARATIVAS DE LOS ÚLTIMOS MESES
+    """
+    try:
+        comparativas = []
+        
+        # Últimos 6 meses
+        for i in range(6):
+            # Calcular mes
+            fecha_ref = datetime.utcnow() - timedelta(days=i*30)
+            mes_inicio = fecha_ref.replace(day=1)
+            
+            # Último día del mes
+            if mes_inicio.month == 12:
+                mes_fin = mes_inicio.replace(year=mes_inicio.year + 1, month=1) - timedelta(days=1)
+            else:
+                mes_fin = mes_inicio.replace(month=mes_inicio.month + 1) - timedelta(days=1)
+            
+            # Consultar datos del mes
+            reclutas_mes = Recluta.query.filter(
+                Recluta.fecha_registro >= mes_inicio,
+                Recluta.fecha_registro <= mes_fin
+            ).count()
+            
+            activos_mes = Recluta.query.filter(
+                Recluta.fecha_registro >= mes_inicio,
+                Recluta.fecha_registro <= mes_fin,
+                Recluta.estado == 'Activo'
+            ).count()
+            
+            nombre_mes = calendar.month_name[mes_inicio.month]
+            
+            comparativas.append({
+                'mes': f"{nombre_mes} {mes_inicio.year}",
+                'mes_corto': mes_inicio.strftime('%m/%Y'),
+                'total_reclutas': reclutas_mes,
+                'reclutas_activos': activos_mes,
+                'tasa_conversion': round(activos_mes / reclutas_mes * 100, 1) if reclutas_mes > 0 else 0
+            })
+        
+        # Ordenar cronológicamente (más reciente primero)
+        comparativas.reverse()
+        
+        return comparativas
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en comparativas mensuales: {str(e)}")
+        return []
+
+
+def get_tendencias_asesor(asesor_id, fecha_inicio, fecha_fin):
+    """
+    📈 TENDENCIAS ESPECÍFICAS PARA UN ASESOR
+    """
+    try:
+        tendencias = []
+        
+        # Tendencias semanales del asesor
+        current_date = fecha_inicio.date()
+        semana = 1
+        
+        while current_date <= fecha_fin.date():
+            week_end = min(current_date + timedelta(days=6), fecha_fin.date())
+            
+            reclutas_semana = Recluta.query.filter(
+                Recluta.asesor_id == asesor_id,
+                Recluta.fecha_registro >= current_date,
+                Recluta.fecha_registro <= week_end
+            ).count()
+            
+            activos_semana = Recluta.query.filter(
+                Recluta.asesor_id == asesor_id,
+                Recluta.fecha_registro >= current_date,
+                Recluta.fecha_registro <= week_end,
+                Recluta.estado == 'Activo'
+            ).count()
+            
+            tendencias.append({
+                'semana': semana,
+                'periodo': f"Semana {semana}",
+                'fecha_inicio': current_date.strftime('%d/%m'),
+                'fecha_fin': week_end.strftime('%d/%m'),
+                'total_reclutas': reclutas_semana,
+                'reclutas_activos': activos_semana,
+                'tasa_conversion': round(activos_semana / reclutas_semana * 100, 1) if reclutas_semana > 0 else 0
+            })
+            
+            current_date = week_end + timedelta(days=1)
+            semana += 1
+        
+        return tendencias
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en tendencias de asesor {asesor_id}: {str(e)}")
+        return []
+
+
+def get_promedio_sistema_anonimo():
+    """
+    📊 OBTENER PROMEDIO GENERAL DEL SISTEMA (sin revelar datos específicos)
+    """
+    try:
+        # Calcular promedio de tasa de conversión del sistema
+        total_reclutas = Recluta.query.count()
+        total_activos = Recluta.query.filter_by(estado='Activo').count()
+        
+        promedio = (total_activos / total_reclutas * 100) if total_reclutas > 0 else 0
+        
+        return round(promedio, 1)
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en promedio sistema: {str(e)}")
+        return 0.0
+
+# ============================================================================
+# Estadísticas en tiempo real (WebSocket-style con polling)
+# ============================================================================
+
+@api_bp.route('/estadisticas/tiempo-real', methods=['GET'])
+@login_required
+def get_estadisticas_tiempo_real():
+    """
+    ⏱️ ESTADÍSTICAS EN TIEMPO REAL
+    Versión ligera para actualizaciones frecuentes
+    """
+    try:
+        if current_user.rol == 'admin':
+            # Estadísticas globales básicas
+            estadisticas = {
+                'timestamp': datetime.utcnow().isoformat(),
+                'total_reclutas': Recluta.query.count(),
+                'reclutas_activos': Recluta.query.filter_by(estado='Activo').count(),
+                'reclutas_proceso': Recluta.query.filter_by(estado='En proceso').count(),
+                'entrevistas_hoy': Entrevista.query.filter(
+                    Entrevista.fecha == datetime.utcnow().date(),
+                    Entrevista.estado == 'pendiente'
+                ).count(),
+                'nuevos_hoy': Recluta.query.filter(
+                    func.date(Recluta.fecha_registro) == datetime.utcnow().date()
+                ).count()
+            }
+        else:
+            # Estadísticas del asesor
+            estadisticas = {
+                'timestamp': datetime.utcnow().isoformat(),
+                'mis_reclutas': Recluta.query.filter_by(asesor_id=current_user.id).count(),
+                'mis_activos': Recluta.query.filter_by(
+                    asesor_id=current_user.id, 
+                    estado='Activo'
+                ).count(),
+                'mis_entrevistas_hoy': db.session.query(Entrevista).join(
+                    Recluta, Entrevista.recluta_id == Recluta.id
+                ).filter(
+                    Recluta.asesor_id == current_user.id,
+                    Entrevista.fecha == datetime.utcnow().date(),
+                    Entrevista.estado == 'pendiente'
+                ).count()
+            }
+        
+        return jsonify({
+            "success": True,
+            "estadisticas_tiempo_real": estadisticas
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en estadísticas tiempo real: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error en estadísticas tiempo real: {str(e)}"
+        }), 500
+
+# ============================================================================
+# Rankings y competencias (solo admin)
+# ============================================================================
+
+@api_bp.route('/estadisticas/rankings', methods=['GET'])
+@login_required
+def get_rankings():
+    """
+    🏆 RANKINGS DE ASESORES (solo para administradores)
+    """
+    if current_user.rol != 'admin':
+        return jsonify({
+            "success": False,
+            "message": "Solo administradores pueden acceder a rankings"
+        }), 403
+    
+    try:
+        periodo = request.args.get('periodo', '30')
+        tipo_ranking = request.args.get('tipo', 'conversion')  # conversion, productividad, calidad
+        
+        # Calcular fechas
+        dias = int(periodo) if periodo.isdigit() else 30
+        fecha_inicio = datetime.utcnow() - timedelta(days=dias)
+        
+        # Query base para rankings
+        rankings_query = db.session.query(
+            Usuario.id,
+            Usuario.nombre,
+            Usuario.email,
+            func.count(Recluta.id).label('total_reclutas'),
+            func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('activos'),
+            func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('proceso'),
+            func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rechazados')
+        ).outerjoin(
+            Recluta, Usuario.id == Recluta.asesor_id
+        ).filter(
+            Usuario.rol.in_(['asesor', 'gerente']),
+            Recluta.fecha_registro >= fecha_inicio
+        ).group_by(
+            Usuario.id, Usuario.nombre, Usuario.email
+        ).having(
+            func.count(Recluta.id) > 0  # Solo asesores con reclutas
+        )
+        
+        rankings_data = rankings_query.all()
+        
+        # Procesar rankings según tipo
+        rankings = []
+        for asesor in rankings_data:
+            total = asesor.total_reclutas or 0
+            activos = asesor.activos or 0
+            
+            if tipo_ranking == 'conversion':
+                score = (activos / total * 100) if total > 0 else 0
+                ranking_label = "Tasa de Conversión"
+                ranking_unit = "%"
+            elif tipo_ranking == 'productividad':
+                score = total / dias  # Reclutas por día
+                ranking_label = "Productividad"
+                ranking_unit = " reclutas/día"
+            else:  # calidad (basado en ratio de activos)
+                score = activos
+                ranking_label = "Total de Activos"
+                ranking_unit = " activos"
+            
+            rankings.append({
+                'asesor_id': asesor.id,
+                'nombre': asesor.nombre or asesor.email,
+                'email': asesor.email,
+                'score': round(score, 2),
+                'total_reclutas': total,
+                'activos': activos,
+                'proceso': asesor.proceso or 0,
+                'rechazados': asesor.rechazados or 0
+            })
+        
+        # Ordenar por score
+        rankings.sort(key=lambda x: x['score'], reverse=True)
+        
+        # Agregar posiciones
+        for i, ranking in enumerate(rankings):
+            ranking['posicion'] = i + 1
+            
+            # Agregar badges
+            if i == 0:
+                ranking['badge'] = 'oro'
+            elif i == 1:
+                ranking['badge'] = 'plata'
+            elif i == 2:
+                ranking['badge'] = 'bronce'
+            else:
+                ranking['badge'] = None
+        
+        return jsonify({
+            "success": True,
+            "rankings": {
+                "tipo": tipo_ranking,
+                "label": ranking_label,
+                "unit": ranking_unit,
+                "periodo_dias": dias,
+                "total_participantes": len(rankings),
+                "datos": rankings
             }
         })
+        
     except Exception as e:
-        current_app.logger.error(f"Error al obtener estadísticas: {str(e)}")
-        return jsonify({"success": False, "message": f"Error al obtener estadísticas: {str(e)}"}), 500
+        current_app.logger.error(f"❌ Error en rankings: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al generar rankings: {str(e)}"
+        }), 500
 
 # ----- API DE SEGUIMIENTO DE FOLIOS -----
 
