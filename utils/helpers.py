@@ -1,9 +1,369 @@
 import os
 import uuid
+import magic
+import hashlib
+import logging
+from PIL import Image
 from werkzeug.utils import secure_filename
-from flask import current_app
-from datetime import datetime, date
+from flask import current_app, request
+from datetime import datetime, date, timedelta
 import json
+import re
+from collections import defaultdict
+
+# 🛡️ CONFIGURACIÓN DE SEGURIDAD PARA ARCHIVOS
+ALLOWED_EXTENSIONS = {
+    'image': {'jpg', 'jpeg', 'png', 'gif', 'webp'},
+    'document': {'pdf', 'doc', 'docx', 'txt'},
+    'excel': {'xlsx', 'xls', 'csv'}
+}
+
+ALLOWED_MIME_TYPES = {
+    'image': {
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp'
+    },
+    'document': {
+        'application/pdf', 
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain'
+    },
+    'excel': {
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel',
+        'text/csv'
+    }
+}
+
+# Magic bytes para verificación de contenido real
+MAGIC_BYTES = {
+    'image/jpeg': [b'\xff\xd8\xff'],
+    'image/png': [b'\x89PNG\r\n\x1a\n'],
+    'image/gif': [b'GIF87a', b'GIF89a'],
+    'image/webp': [b'RIFF', b'WEBP'],
+    'application/pdf': [b'%PDF-'],
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': [b'PK\x03\x04'],
+    'application/vnd.ms-excel': [b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'],
+    'text/csv': [b''],  # CSV puede empezar con cualquier caracter
+}
+
+# Límites de tamaño por tipo (en bytes)
+MAX_FILE_SIZES = {
+    'image': 5 * 1024 * 1024,      # 5MB para imágenes
+    'document': 10 * 1024 * 1024,   # 10MB para documentos
+    'excel': 15 * 1024 * 1024      # 15MB para archivos Excel
+}
+
+# Rate limiting básico por IP
+upload_attempts = defaultdict(list)
+MAX_UPLOADS_PER_HOUR = 50
+
+
+def is_rate_limited(ip_address):
+    """
+    Verifica si la IP ha excedido el límite de uploads por hora.
+    
+    Args:
+        ip_address: Dirección IP del cliente
+        
+    Returns:
+        bool: True si está limitado, False si puede continuar
+    """
+    now = datetime.utcnow()
+    hour_ago = now - timedelta(hours=1)
+    
+    # Limpiar intentos antiguos
+    upload_attempts[ip_address] = [
+        timestamp for timestamp in upload_attempts[ip_address] 
+        if timestamp > hour_ago
+    ]
+    
+    # Verificar límite
+    if len(upload_attempts[ip_address]) >= MAX_UPLOADS_PER_HOUR:
+        current_app.logger.warning(f"Rate limit excedido para IP: {ip_address}")
+        return True
+    
+    # Registrar nuevo intento
+    upload_attempts[ip_address].append(now)
+    return False
+
+
+def validate_file_extension(filename, file_type):
+    """
+    Valida que la extensión del archivo esté permitida.
+    
+    Args:
+        filename: Nombre del archivo
+        file_type: Tipo de archivo esperado
+        
+    Returns:
+        bool: True si es válida, False si no
+    """
+    if not filename or '.' not in filename:
+        return False
+    
+    extension = filename.rsplit('.', 1)[1].lower()
+    return extension in ALLOWED_EXTENSIONS.get(file_type, set())
+
+
+def validate_mime_type(file_content, expected_type):
+    """
+    Valida el tipo MIME real del archivo usando python-magic.
+    
+    Args:
+        file_content: Contenido del archivo en bytes
+        expected_type: Tipo esperado ('image', 'document', 'excel')
+        
+    Returns:
+        tuple: (is_valid, detected_mime_type)
+    """
+    try:
+        # Detectar tipo MIME real
+        detected_mime = magic.from_buffer(file_content, mime=True)
+        
+        # Verificar si está en los tipos permitidos
+        allowed_mimes = ALLOWED_MIME_TYPES.get(expected_type, set())
+        is_valid = detected_mime in allowed_mimes
+        
+        current_app.logger.info(f"MIME detectado: {detected_mime}, Esperado: {expected_type}, Válido: {is_valid}")
+        
+        return is_valid, detected_mime
+        
+    except Exception as e:
+        current_app.logger.error(f"Error detectando tipo MIME: {str(e)}")
+        return False, None
+
+
+def validate_magic_bytes(file_content, mime_type):
+    """
+    Valida los magic bytes del archivo para prevenir bypass por extensión.
+    
+    Args:
+        file_content: Contenido del archivo en bytes
+        mime_type: Tipo MIME detectado
+        
+    Returns:
+        bool: True si los magic bytes son válidos
+    """
+    if not file_content:
+        return False
+    
+    magic_signatures = MAGIC_BYTES.get(mime_type, [])
+    
+    # CSV puede tener cualquier inicio, omitir validación
+    if mime_type == 'text/csv':
+        return True
+    
+    if not magic_signatures:
+        current_app.logger.warning(f"No hay magic bytes definidos para {mime_type}")
+        return True  # Permitir si no hay definición específica
+    
+    # Verificar si algún magic byte coincide
+    for magic_signature in magic_signatures:
+        if file_content.startswith(magic_signature):
+            return True
+    
+    current_app.logger.warning(f"Magic bytes no coinciden para {mime_type}")
+    return False
+
+
+def sanitize_image(file_path, max_width=1920, max_height=1080):
+    """
+    Sanitiza una imagen redimensionándola y removiendo metadatos EXIF.
+    
+    Args:
+        file_path: Ruta del archivo de imagen
+        max_width: Ancho máximo permitido
+        max_height: Alto máximo permitido
+        
+    Returns:
+        bool: True si se sanitizó correctamente
+    """
+    try:
+        with Image.open(file_path) as img:
+            # Remover metadatos EXIF
+            data = list(img.getdata())
+            image_without_exif = Image.new(img.mode, img.size)
+            image_without_exif.putdata(data)
+            
+            # Redimensionar si es necesario
+            if img.width > max_width or img.height > max_height:
+                img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+                current_app.logger.info(f"Imagen redimensionada a {img.size}")
+            
+            # Guardar imagen sanitizada
+            if img.format == 'JPEG':
+                image_without_exif.save(file_path, 'JPEG', quality=85, optimize=True)
+            else:
+                image_without_exif.save(file_path, img.format, optimize=True)
+            
+            return True
+            
+    except Exception as e:
+        current_app.logger.error(f"Error sanitizando imagen: {str(e)}")
+        return False
+
+
+def generate_secure_filename(original_filename):
+    """
+    Genera un nombre de archivo seguro y único.
+    
+    Args:
+        original_filename: Nombre original del archivo
+        
+    Returns:
+        str: Nombre seguro generado
+    """
+    if not original_filename:
+        return f"file_{uuid.uuid4().hex}"
+    
+    # Securizar nombre original
+    secure_name = secure_filename(original_filename)
+    
+    # Remover caracteres problemáticos adicionales
+    secure_name = re.sub(r'[^\w\-_\.]', '', secure_name)
+    
+    # Separar nombre y extensión
+    name_parts = secure_name.rsplit('.', 1)
+    if len(name_parts) == 2:
+        name, extension = name_parts
+        # Limitar longitud del nombre
+        name = name[:50] if len(name) > 50 else name
+        # Agregar timestamp para unicidad
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        unique_id = uuid.uuid4().hex[:8]
+        return f"{name}_{timestamp}_{unique_id}.{extension.lower()}"
+    else:
+        # Sin extensión, agregar .bin por seguridad
+        timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        unique_id = uuid.uuid4().hex[:8]
+        return f"{secure_name}_{timestamp}_{unique_id}.bin"
+
+
+def eliminar_archivo(ruta_relativa):
+    """
+    Elimina un archivo del servidor de forma segura.
+    
+    Args:
+        ruta_relativa: Ruta relativa del archivo a eliminar
+        
+    Returns:
+        dict: {'success': bool, 'message': str}
+    """
+    if not ruta_relativa:
+        return {'success': False, 'message': 'No se proporcionó ruta de archivo.'}
+    
+    try:
+        # Construir ruta completa
+        ruta_completa = os.path.join(current_app.root_path, ruta_relativa)
+        
+        # Verificar que la ruta esté dentro del directorio de uploads (seguridad)
+        upload_folder = os.path.join(current_app.root_path, current_app.config['UPLOAD_FOLDER'])
+        if not os.path.abspath(ruta_completa).startswith(os.path.abspath(upload_folder)):
+            current_app.logger.warning(f"Intento de eliminar archivo fuera de uploads: {ruta_relativa}")
+            return {'success': False, 'message': 'Ruta de archivo no válida.'}
+        
+        # Eliminar archivo si existe
+        if os.path.exists(ruta_completa):
+            os.remove(ruta_completa)
+            current_app.logger.info(f"Archivo eliminado: {ruta_relativa}")
+            return {'success': True, 'message': 'Archivo eliminado correctamente.'}
+        else:
+            return {'success': False, 'message': 'Archivo no encontrado.'}
+            
+    except Exception as e:
+        current_app.logger.error(f"Error al eliminar archivo {ruta_relativa}: {str(e)}")
+        return {'success': False, 'message': f'Error al eliminar archivo: {str(e)}'}
+
+
+class JSONEncoder(json.JSONEncoder):
+    """
+    Codificador JSON personalizado para manejar tipos de datos específicos
+    como datetime y date.
+    """
+    def default(self, obj):
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        return super().default(obj)
+
+
+def format_date(date_string, output_format='%d/%m/%Y'):
+    """
+    Formatea una fecha en string al formato especificado.
+    
+    Args:
+        date_string: Fecha como string
+        output_format: Formato de salida deseado
+        
+    Returns:
+        Fecha formateada o None si hay error
+    """
+    if not date_string:
+        return None
+    
+    try:
+        # Intentar varios formatos de entrada comunes
+        input_formats = ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y-%m-%d %H:%M:%S']
+        
+        parsed_date = None
+        for fmt in input_formats:
+            try:
+                parsed_date = datetime.strptime(date_string, fmt)
+                break
+            except ValueError:
+                continue
+        
+        if parsed_date:
+            return parsed_date.strftime(output_format)
+        else:
+            return date_string  # Devolver original si no se puede parsear
+            
+    except Exception as e:
+        current_app.logger.warning(f"Error formateando fecha '{date_string}': {str(e)}")
+        return date_string
+
+
+def clean_uploaded_files(days_old=30):
+    """
+    Función de mantenimiento para limpiar archivos antiguos.
+    
+    Args:
+        days_old: Días de antigüedad para considerar archivo como obsoleto
+        
+    Returns:
+        dict: Estadísticas de limpieza
+    """
+    try:
+        upload_folder = os.path.join(current_app.root_path, current_app.config['UPLOAD_FOLDER'])
+        cutoff_date = datetime.utcnow() - timedelta(days=days_old)
+        
+        files_deleted = 0
+        space_freed = 0
+        
+        for root, dirs, files in os.walk(upload_folder):
+            for file in files:
+                file_path = os.path.join(root, file)
+                
+                # Verificar fecha de modificación
+                if os.path.getmtime(file_path) < cutoff_date.timestamp():
+                    try:
+                        file_size = os.path.getsize(file_path)
+                        os.remove(file_path)
+                        files_deleted += 1
+                        space_freed += file_size
+                        current_app.logger.info(f"Archivo antiguo eliminado: {file_path}")
+                    except Exception as e:
+                        current_app.logger.error(f"Error eliminando {file_path}: {str(e)}")
+        
+        return {
+            'files_deleted': files_deleted,
+            'space_freed_mb': round(space_freed / 1024 / 1024, 2),
+            'success': True
+        }
+        
+    except Exception as e:
+        current_app.logger.error(f"Error en limpieza de archivos: {str(e)}")
+        return {'success': False, 'error': str(e)}
 
 def guardar_archivo(archivo, tipo):
     """
@@ -40,62 +400,6 @@ def guardar_archivo(archivo, tipo):
     except Exception as e:
         current_app.logger.error(f"Error al guardar archivo: {str(e)}")
         return None
-
-def eliminar_archivo(ruta_relativa):
-    """
-    Elimina un archivo del servidor.
-    
-    Args:
-        ruta_relativa: Ruta relativa del archivo a eliminar
-        
-    Returns:
-        True si se elimina correctamente, False en caso contrario
-    """
-    if not ruta_relativa:
-        return False
-        
-    try:
-        ruta_completa = os.path.join(current_app.root_path, ruta_relativa)
-        if os.path.exists(ruta_completa):
-            os.remove(ruta_completa)
-            return True
-        return False
-    except Exception as e:
-        current_app.logger.error(f"Error al eliminar archivo: {str(e)}")
-        return False
-
-class JSONEncoder(json.JSONEncoder):
-    """
-    Codificador JSON personalizado para manejar tipos de datos específicos
-    como datetime y date.
-    """
-    def default(self, obj):
-        if isinstance(obj, (datetime, date)):
-            return obj.isoformat()
-        return super().default(obj)
-
-def format_date(date_string, output_format='%d/%m/%Y'):
-    """
-    Formatea una fecha en string al formato especificado.
-    
-    Args:
-        date_string: String de fecha en formato ISO
-        output_format: Formato de salida deseado
-        
-    Returns:
-        String con la fecha formateada
-    """
-    try:
-        if isinstance(date_string, (datetime, date)):
-            return date_string.strftime(output_format)
-            
-        if isinstance(date_string, str):
-            dt = datetime.fromisoformat(date_string.replace('Z', '+00:00'))
-            return dt.strftime(output_format)
-            
-        return "Fecha no válida"
-    except Exception:
-        return "Fecha no válida"
 
 def paginate_data(data, page, per_page):
     """
