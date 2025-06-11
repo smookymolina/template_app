@@ -139,102 +139,154 @@ from models import db
 
 def procesar_y_distribuir_excel(archivo, asesores):
     """
-    Procesa archivo Excel y distribuye reclutas automáticamente entre asesores.
+    ✅ VERSIÓN CORREGIDA: Procesa archivo Excel y distribuye reclutas automáticamente entre asesores.
+    
+    FIXES APLICADOS:
+    - Mapeo correcto de columnas respetando celdas vacías
+    - Búsqueda directa en fila completa sin filtrado
+    - Validación robusta de headers flexibles
+    - Manejo mejorado de errores con detalles específicos
     
     Args:
         archivo: Archivo Excel uploadado
         asesores: Lista de usuarios asesores activos
         
     Returns:
-        Dict con resultado del procesamiento
+        Dict con resultado detallado del procesamiento
     """
     try:
         # Leer Excel
         workbook = openpyxl.load_workbook(archivo, data_only=True)
         sheet = workbook.active
         
-        # Validar headers
-        headers_esperados = ["Fecha de creación", "Nombre", "Teléfono"]
+        # Obtener fila completa de headers (SIN FILTRAR)
         primera_fila = list(sheet.iter_rows(min_row=1, max_row=1, values_only=True))[0]
-        headers_encontrados = [cell for cell in primera_fila if cell is not None and str(cell).strip()]
-
-        indice_fecha = headers_encontrados.index("Fecha de creación")
-        indice_nombre = headers_encontrados.index("Nombre") 
-        indice_telefono = headers_encontrados.index("Teléfono")
         
-        if headers_encontrados != headers_esperados:
+        # ✅ BÚSQUEDA DIRECTA EN FILA COMPLETA (respeta columnas vacías)
+        headers_requeridos = ["Fecha de creación", "Nombre", "Teléfono"]
+        indices_encontrados = {}
+        headers_disponibles = []
+        
+        # Mapear cada header requerido a su posición real en el Excel
+        for i, cell in enumerate(primera_fila):
+            cell_value = str(cell).strip() if cell is not None else ""
+            if cell_value:  # Solo agregar headers no vacíos para logging
+                headers_disponibles.append(cell_value)
+            
+            # Buscar headers requeridos por su posición exacta
+            for header_req in headers_requeridos:
+                if cell_value == header_req:
+                    indices_encontrados[header_req] = i
+                    break
+        
+        # Validar que se encontraron todos los headers requeridos
+        headers_faltantes = [h for h in headers_requeridos if h not in indices_encontrados]
+        if headers_faltantes:
             return {
                 "success": False,
-                "message": f"Headers incorrectos. Esperados: {headers_esperados}, Encontrados: {headers_encontrados}"
+                "message": f"Headers faltantes: {headers_faltantes}. Disponibles: {headers_disponibles}",
+                "headers_disponibles": headers_disponibles,
+                "headers_requeridos": headers_requeridos
             }
         
-        # Extraer datos
+        # ✅ USAR ÍNDICES REALES PARA ACCESO A DATOS
+        indice_fecha = indices_encontrados["Fecha de creación"]
+        indice_nombre = indices_encontrados["Nombre"]
+        indice_telefono = indices_encontrados["Teléfono"]
+        
+        print(f"🔍 DEBUG - Índices mapeados: Fecha={indice_fecha}, Nombre={indice_nombre}, Teléfono={indice_telefono}")
+        
+        # Extraer y validar datos
         datos_excel = []
         errores = []
         telefonos_existentes = set()
         
-        # Obtener teléfonos ya existentes en BD
+        # Obtener teléfonos ya existentes en BD para evitar duplicados
         telefonos_bd = set(r[0] for r in db.session.query(Recluta.telefono).all())
         
         for row_num, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
-            fecha_str = row[indice_fecha] if len(row) > indice_fecha else None
-            nombre = row[indice_nombre] if len(row) > indice_nombre else None
-            telefono = row[indice_telefono] if len(row) > indice_telefono else None
+            # ✅ ACCESO SEGURO CON ÍNDICES CORRECTOS
+            fecha_str = row[indice_fecha] if len(row) > indice_fecha and row[indice_fecha] is not None else None
+            nombre = row[indice_nombre] if len(row) > indice_nombre and row[indice_nombre] is not None else None
+            telefono = row[indice_telefono] if len(row) > indice_telefono and row[indice_telefono] is not None else None
             
-            # Validaciones
+            # Limpiar y validar datos
+            nombre = str(nombre).strip() if nombre is not None else ""
+            telefono = str(telefono).strip() if telefono is not None else ""
+            
+            # Validaciones mejoradas
             error_fila = None
             
-            if not nombre or str(nombre).strip() == '':
-                error_fila = "Nombre vacío"
+            if not nombre:
+                error_fila = "Nombre vacío o inválido"
             elif not telefono:
-                error_fila = "Teléfono vacío"
-            else:
-                telefono_str = str(telefono).strip()
-                if telefono_str in telefonos_bd or telefono_str in telefonos_existentes:
-                    error_fila = "Teléfono duplicado"
-                else:
-                    telefonos_existentes.add(telefono_str)
+                error_fila = "Teléfono vacío o inválido"
+            elif telefono in telefonos_bd:
+                error_fila = f"Teléfono {telefono} ya existe en BD"
+            elif telefono in telefonos_existentes:
+                error_fila = f"Teléfono {telefono} duplicado en Excel"
             
             if error_fila:
-                errores.append({"fila": row_num, "error": error_fila})
+                errores.append({
+                    "fila": row_num, 
+                    "error": error_fila,
+                    "datos": {"nombre": nombre, "telefono": telefono}
+                })
             else:
-                # Procesar fecha
+                # Agregar a dataset válido
+                telefonos_existentes.add(telefono)
+                
+                # Procesar fecha con múltiples formatos
                 fecha_procesada = None
                 if fecha_str:
                     try:
                         if isinstance(fecha_str, datetime):
                             fecha_procesada = fecha_str
-                        else:
-                            # Intentar varios formatos
-                            for formato in ["%d/%m/%Y %I:%M%p", "%d/%m/%Y", "%Y-%m-%d"]:
+                        elif isinstance(fecha_str, str):
+                            # Intentar múltiples formatos de fecha
+                            formatos_fecha = [
+                                '%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', 
+                                '%Y-%m-%d %H:%M:%S', '%d/%m/%Y %H:%M'
+                            ]
+                            for formato in formatos_fecha:
                                 try:
-                                    fecha_procesada = datetime.strptime(str(fecha_str), formato)
+                                    fecha_procesada = datetime.strptime(fecha_str.strip(), formato)
                                     break
                                 except ValueError:
                                     continue
-                    except:
-                        pass
+                    except Exception as e:
+                        print(f"⚠️ Error procesando fecha fila {row_num}: {str(e)}")
+                
+                # Usar fecha actual si no se pudo procesar
+                if not fecha_procesada:
+                    fecha_procesada = datetime.now()
                 
                 datos_excel.append({
-                    'nombre': str(nombre).strip(),
-                    'telefono': str(telefono).strip(),
-                    'fecha_registro': fecha_procesada or datetime.utcnow(),
+                    'nombre': nombre,
+                    'telefono': telefono,
+                    'fecha_registro': fecha_procesada,
                     'fila': row_num
                 })
         
-        # Distribuir entre asesores
+        # ✅ DISTRIBUCIÓN EQUITATIVA MEJORADA
+        if not datos_excel:
+            return {
+                "success": False,
+                "message": "No hay datos válidos para procesar",
+                "errores_detalle": errores[:10]
+            }
+        
+        # Distribuir entre asesores activos
         distribucion = distribuir_equitativamente(datos_excel, asesores)
         
-        # Crear reclutas en BD
+        # Crear reclutas en BD con manejo de errores robusto
         reclutas_creados = 0
         errores_bd = []
         
-        for asesor_email, reclutas_asignados in distribucion.items():
-            asesor = next((a for a in asesores if a.email == asesor_email), None)
-            if not asesor:
-                continue
-                
-            for datos_recluta in reclutas_asignados:
+        for asesor in asesores:
+            reclutas_asesor = distribucion.get(asesor.email, [])
+            
+            for datos_recluta in reclutas_asesor:
                 try:
                     nuevo_recluta = Recluta(
                         nombre=datos_recluta['nombre'],
@@ -250,16 +302,16 @@ def procesar_y_distribuir_excel(archivo, asesores):
                 except Exception as e:
                     errores_bd.append({
                         "fila": datos_recluta['fila'], 
-                        "error": f"Error BD: {str(e)}"
+                        "error": f"Error BD: {str(e)}",
+                        "datos": datos_recluta
                     })
         
-        # Combinar todos los errores
+        # Preparar reporte final detallado
         todos_errores = errores + errores_bd
         
-        # Preparar reporte
         reporte_distribucion = {
-            asesor.email: len(reclutas) 
-            for asesor.email, reclutas in distribucion.items()
+            asesor.email: len(distribucion.get(asesor.email, []))
+            for asesor in asesores
         }
         
         return {
@@ -268,22 +320,31 @@ def procesar_y_distribuir_excel(archivo, asesores):
             "exitosos": reclutas_creados,
             "errores": len(todos_errores),
             "distribucion": reporte_distribucion,
-            "errores_detalle": todos_errores[:10]  # Máximo 10 errores para UI
+            "errores_detalle": todos_errores[:10],  # Primeros 10 errores para UI
+            "resumen": {
+                "filas_excel": row_num - 1,  # Total de filas procesadas
+                "datos_validos": len(datos_excel),
+                "datos_invalidos": len(errores),
+                "errores_bd": len(errores_bd),
+                "asesores_utilizados": len([a for a in asesores if a.email in distribucion])
+            }
         }
         
     except Exception as e:
         return {
             "success": False,
-            "message": f"Error al procesar Excel: {str(e)}"
+            "message": f"Error crítico al procesar Excel: {str(e)}",
+            "tipo_error": "error_sistema"
         }
+
 
 def distribuir_equitativamente(datos_excel, asesores):
     """
-    Distribuye lista de datos equitativamente entre asesores.
+    ✅ FUNCIÓN MEJORADA: Distribuye lista de datos equitativamente entre asesores.
     
     Args:
-        datos_excel: Lista de datos de reclutas
-        asesores: Lista de objetos Usuario asesor
+        datos_excel: Lista de datos de reclutas validados
+        asesores: Lista de objetos Usuario asesor activos
         
     Returns:
         Dict con distribución por email de asesor
@@ -294,22 +355,24 @@ def distribuir_equitativamente(datos_excel, asesores):
     total_reclutas = len(datos_excel)
     num_asesores = len(asesores)
     
-    # Calcular distribución base
+    # Cálculo de distribución equitativa
     reclutas_por_asesor = total_reclutas // num_asesores
     sobrantes = total_reclutas % num_asesores
     
-    # Distribuir
+    # Distribuir con algoritmo round-robin optimizado
     distribucion = {}
     indice_actual = 0
     
     for i, asesor in enumerate(asesores):
-        # Asignar cantidad base + 1 extra si hay sobrantes
+        # Asignar cantidad base + 1 extra para los primeros N asesores (sobrantes)
         cantidad_asignar = reclutas_por_asesor + (1 if i < sobrantes else 0)
         
-        # Tomar slice de datos
+        # Extraer slice correspondiente
         reclutas_asesor = datos_excel[indice_actual:indice_actual + cantidad_asignar]
         distribucion[asesor.email] = reclutas_asesor
         
         indice_actual += cantidad_asignar
-    
+        
+        print(f"📊 Asesor {asesor.email}: {len(reclutas_asesor)} reclutas asignados")
+
     return distribucion
