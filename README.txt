@@ -1,519 +1,383 @@
-# 🚀 Sistema de Gestión de Reclutas - Versión 3.0
+# 🎯 SISTEMA DE GESTIÓN DE RECLUTAS - README
 
-![Python](https://img.shields.io/badge/python-v3.8+-blue.svg)
-![Flask](https://img.shields.io/badge/flask-v2.3+-green.svg)
-![JavaScript](https://img.shields.io/badge/javascript-ES6+-yellow.svg)
-![SQLite](https://img.shields.io/badge/sqlite-v3+-lightgrey.svg)
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-
-## 👥 Equipo de Desarrollo
-
-**Desarrolladores Principales:**
-- **Jair Molina AR5CE** - Arquitecto Principal & Backend Developer
-- **Alan Rosas Palcios** - Frontend Developer & UI/UX Designer
+> **Sistema integral de reclutamiento y gestión de candidatos con arquitectura fullstack moderna**
 
 ---
 
-## 📋 Descripción del Proyecto
+## 📖 **Descripción General**
 
-Sistema web completo y moderno para la gestión integral de candidatos y procesos de reclutamiento empresarial. Incluye portal público de seguimiento, sistema de roles avanzado, importación masiva, calendario interactivo y arquitectura escalable.
+El **Sistema de Gestión de Reclutas** es una aplicación web fullstack desarrollada en **Python/Flask** que permite gestionar de manera eficiente todo el proceso de reclutamiento empresarial, desde la captura de candidatos hasta el seguimiento completo de entrevistas y contrataciones.
 
-### 🎯 Características Principales
+### ✨ **Características Principales**
 
-#### 🔐 **Sistema de Autenticación y Roles Avanzado**
-- **Administradores**: Control total del sistema, gestión de usuarios, importación Excel masiva
-- **Asesores/Gerentes**: Gestión de reclutas asignados, programación de entrevistas personales
-- **Autenticación segura**: Sesiones con expiración automática, validación de IPs
-- **Control de acceso granular**: Permisos específicos por funcionalidad
+#### 🚀 **Sistema de Usuarios Multi-Rol**
+- 👨‍💼 **Administradores**: Control total del sistema, gestión de usuarios, importación masiva de datos
+- 🏢 **Asesores**: Gestión de candidatos asignados, seguimiento personalizado de procesos
+- 🔐 **Autenticación segura** con BCrypt y gestión de sesiones persistentes
+- 🛡️ **Sistema de permisos** granular por funcionalidad
 
-#### 👥 **Gestión Integral de Reclutas**
-- ✅ **CRUD completo** con validación robusta frontend y backend
-- 📸 **Gestión de fotos** con redimensionamiento y optimización automática
-- 🏷️ **Sistema de folios únicos** (REC-XXXXXXXX) para seguimiento público
-- 📊 **Estados personalizables** (Activo, En proceso, Rechazado) con timeline visual
-- 🔍 **Búsqueda avanzada** con filtros múltiples y ordenamiento dinámico
-- 📋 **Paginación optimizada** para manejo de grandes volúmenes de datos
-- 👨‍💼 **Asignación de asesores** con filtrado automático por permisos
+#### 👥 **Gestión Avanzada de Candidatos**
+- 📋 **CRUD completo** de candidatos con validación de datos robusta
+- 📂 **Folios únicos** auto-generados para seguimiento eficiente
+- 🔄 **Estados del proceso** con workflow personalizable (Interesado → Entrevista → Contratado/Descartado)
+- 🏷️ **Etiquetado y categorización** por puesto, experiencia, skills
+- 🔍 **Búsqueda y filtrado** avanzado multi-criterio
 
-#### 🌐 **Portal Público de Seguimiento**
-- 🔓 **Acceso sin autenticación** para candidatos externos
-- 🔍 **Consulta por folio** con validación de formato (REC-XXXXXXXX)
-- 📈 **Timeline visual** del proceso de selección con estados dinámicos
-- 🔐 **Información limitada** por seguridad y privacidad
-- 🆘 **Recuperación de folio** mediante email y teléfono registrados
-- 📱 **Diseño móvil-first** para acceso desde cualquier dispositivo
+#### 📅 **Calendario de Entrevistas Inteligente**
+- 📆 **Vista calendario** interactiva con drag & drop
+- ⏰ **Programación automática** con detección de conflictos
+- 🔔 **Notificaciones y recordatorios** automáticos
+- 📊 **Seguimiento de asistencia** y resultados de entrevistas
+- 📈 **Analytics** de productividad por asesor
 
-#### 📅 **Calendario Interactivo de Entrevistas**
-- 🗓️ **Vista mensual** con navegación fluida y eventos dinámicos
-- ⏰ **Tipos de entrevista**: Presencial, Virtual (videollamada), Telefónica
-- 🔔 **Detección automática** de conflictos de horarios con validación cruzada
-- 📧 **Sistema de notificaciones** y recordatorios automáticos
-- 📝 **Gestión completa** del ciclo de vida de entrevistas (pendiente → completada → cancelada)
-- 🎯 **Integración directa** con el perfil de cada candidato
+#### 📊 **Dashboard y Métricas en Tiempo Real**
+- 📈 **KPIs automáticos**: conversión, tiempo promedio por fase, eficiencia por asesor
+- 📉 **Gráficos dinámicos** con Chart.js: distribución por estado, tendencias temporales
+- 🎯 **Métricas personalizadas** según rol del usuario
+- 📋 **Reportes exportables** en Excel/PDF con filtros avanzados
 
-#### 📊 **Importación y Exportación Masiva**
-- 📥 **Importación Excel** (.xlsx, .xls) con validación exhaustiva
-- 📋 **Plantillas predefinidas** con ejemplos y validaciones integradas
-- ✅ **Procesamiento robusto** con manejo de errores detallado y reportes
-- 📈 **Reportes de importación** con estadísticas y detalles de errores
-- 🚫 **Prevención de duplicados** automática por email
+#### 📁 **Importación Masiva de Datos**
+- 📊 **Importación Excel/CSV** con validación automática de datos
+- 🔍 **Detección de duplicados** por email con opciones de merge
+- 🛠️ **Mapeo inteligente** de columnas con previsualización
+- ✅ **Validación en tiempo real** con reporte de errores detallado
 - 🔒 **Restricción por rol** (solo administradores pueden importar)
-
-#### 📊 **Dashboard y Analytics Avanzado**
-- 📈 **Métricas en tiempo real** de todo el proceso de reclutamiento
-- 📊 **Gráficos dinámicos** de distribución por estado y tendencias
-- 🔮 **Análisis temporal** con comparativas mensuales y proyecciones
-- 🎯 **KPIs personalizados** según rol de usuario (admin vs asesor)
-- 📋 **Exportación de reportes** en múltiples formatos
 
 #### 🎨 **Interfaz Moderna y Adaptativa**
 - 🌓 **Tema dual** (claro/oscuro) con persistencia de preferencias
-- 🎨 **Paleta de colores** personalizable con 5 esquemas predefinidos
-- 📱 **Diseño 100% responsivo** optimizado para móvil, tablet y desktop
-- ⚡ **Arquitectura modular** JavaScript ES6 con carga dinámica
-- 🔔 **Sistema de notificaciones** toast avanzado con tipos y persistencia
+- 🎨 **5 esquemas de color** predefinidos personalizables
+- 📱 **100% responsivo** optimizado para móvil, tablet y desktop
+- ⚡ **Arquitectura modular** JavaScript ES6 con lazy loading
+- 🔔 **Sistema de notificaciones** toast con tipos y persistencia
 
 ---
 
-## 🏗️ Arquitectura Técnica Detallada
+## 🏗️ **Arquitectura Técnica**
 
 ### 🐍 **Backend (Python/Flask)**
 
 ```
-proyecto/
-├── app.py                      # 🚀 Punto de entrada principal con configuración
-├── app_factory.py             # 🏭 Factory pattern para configuración multi-entorno
-├── config.py                  # ⚙️ Configuraciones por entorno (dev/prod)
-├── requirements.txt           # 📦 Dependencias del proyecto con versiones fijas
-├── create_test_user.py        # 👤 Script para crear usuarios de prueba
-├── database.db               # 💾 Base de datos SQLite (generada automáticamente)
-├── app.log                   # 📝 Logs de la aplicación con rotación automática
+sistema-reclutas/
+├── 🚀 app.py                      # Punto de entrada principal
+├── ⚙️ config.py                   # Configuraciones por entorno
+├── 📦 requirements.txt            # Dependencias con versiones fijas
+├── 💾 database.db                 # Base de datos SQLite
+├── 📝 app.log                     # Logs con rotación automática
 │
-├── models/                   # 📊 Modelos de datos con SQLAlchemy ORM
-│   ├── __init__.py          # 🔧 Configuración base y manejo de errores
-│   ├── usuario.py           # 👤 Modelo de usuarios con roles y permisos
-│   ├── recluta.py           # 👥 Modelo de candidatos con folios únicos
-│   ├── entrevista.py        # 📅 Modelo de entrevistas con validaciones
-│   └── user_session.py      # 🔐 Gestión de sesiones activas y tracking
+├── 📊 models/                     # Modelos SQLAlchemy ORM
+│   ├── usuario.py                 # Usuarios con roles y permisos
+│   ├── recluta.py                 # Candidatos con folios únicos
+│   ├── entrevista.py              # Entrevistas con validaciones
+│   └── user_session.py            # Gestión de sesiones activas
 │
-├── routes/                  # 🛣️ Controladores y rutas API
-│   ├── __init__.py         # 📍 Inicializador del módulo de rutas
-│   ├── main.py             # 🏠 Rutas principales y páginas públicas
-│   ├── api.py              # 🔌 API REST completa con documentación
-│   ├── auth.py             # 🔐 Autenticación, login/logout y sesiones
-│   └── admin.py            # 👑 Panel administrativo y gestión avanzada
+├── 🛣️ routes/                     # Controladores y API REST
+│   ├── main.py                    # Rutas principales
+│   ├── api.py                     # API REST con documentación
+│   ├── auth.py                    # Autenticación y autorización
+│   └── admin.py                   # Panel administrativo
 │
-└── utils/                   # 🛠️ Utilidades y funciones auxiliares
-    ├── __init__.py         # 📦 Inicializador del módulo de utilidades
-    ├── helpers.py          # 🔧 Funciones generales y manejo de archivos
-    ├── security.py         # 🛡️ Funciones de seguridad y encriptación
-    ├── validators.py       # ✅ Validación robusta de datos de entrada
-    └── decorators.py       # 🎭 Decoradores para control de acceso por roles
+├── 🛠️ utils/                      # Utilidades y helpers
+│   ├── decorators.py              # Decoradores de seguridad
+│   ├── validators.py              # Validadores personalizados
+│   ├── file_handlers.py           # Procesamiento de archivos
+│   └── email_utils.py             # Utilidades de email
+│
+└── 🔧 scripts/                    # Scripts de mantenimiento
+    ├── install_metrics_admin.py   # Instalador de métricas
+    ├── create_test_user.py        # Creación de usuarios de prueba
+    └── verify_roles.py            # Verificador de roles
 ```
 
-### 🌐 **Frontend (JavaScript ES6 Modular)**
+### 🎨 **Frontend (HTML5/CSS3/JavaScript ES6)**
 
 ```
 static/
-├── js/                     # 📜 Módulos JavaScript modernos y modulares
-│   ├── main.js            # 🎛️ Orquestador principal y gestor de estado
-│   ├── config.js          # ⚙️ Configuración global centralizada
-│   ├── auth.js            # 🔐 Gestión de autenticación y tokens
-│   ├── reclutas.js        # 👥 Gestión completa de candidatos con CRUD
-│   ├── calendar.js        # 📅 Calendario interactivo con eventos
-│   ├── client.js          # 🌐 Portal público de seguimiento sin auth
-│   ├── notifications.js   # 🔔 Sistema de notificaciones toast avanzado
-│   ├── permissions.js     # 🎭 Control de permisos frontend granular
-│   ├── timeline.js        # 📈 Componente timeline visual de procesos
-│   └── ui.js              # 🎨 Utilidades de interfaz y temas
+├── 🎨 css/
+│   ├── main.css                   # Estilos principales con CSS Grid/Flexbox
+│   ├── themes.css                 # Esquemas de color personalizables
+│   └── responsive.css             # Media queries para móviles
 │
-├── css/                   # 🎨 Estilos CSS organizados y modulares
-│   ├── styles.css         # 🎯 Estilos principales con variables CSS
-│   ├── fixes.css          # 🔧 Correcciones y ajustes específicos
-│   └── timeline.css       # 📊 Estilos específicos para componentes timeline
+├── ⚡ js/
+│   ├── main.js                    # Core de la aplicación
+│   ├── auth.js                    # Autenticación del cliente
+│   ├── reclutas.js                # Gestión de candidatos
+│   ├── calendar.js                # Calendario interactivo
+│   ├── stats.js                   # Dashboard y métricas
+│   ├── ui.js                      # Componentes de interfaz
+│   └── config.js                  # Configuraciones del cliente
 │
-└── uploads/               # 📁 Archivos subidos por usuarios (organizados)
-    ├── usuario/           # 👤 Fotos de perfil de administradores/asesores
-    └── recluta/           # 👥 Fotos de candidatos con validación de tipos
+├── 📁 uploads/                    # Archivos subidos
+│   ├── usuario/                   # Fotos de perfil
+│   └── recluta/                   # Documentos de candidatos
+│
+└── 📊 libs/                       # Librerías externas
+    ├── chart.js                   # Gráficos y visualizaciones
+    ├── flatpickr/                 # Selector de fechas
+    └── toastify/                  # Sistema de notificaciones
 ```
 
-### 📄 **Templates (Jinja2 Modular)**
+### 🗄️ **Base de Datos (SQLite/PostgreSQL)**
 
-```
-templates/
-├── base.html                     # 🏗️ Plantilla base con componentes comunes
-├── index.html                   # 🏠 Página principal con login y tracking
-├── seguimiento.html             # 🔍 Portal público de seguimiento detallado
-├── 404.html                     # ❌ Página de error personalizada con estilo
-│
-└── components/                  # 🧩 Componentes reutilizables modulares
-    ├── modals.html             # 🖼️ Todos los modales del sistema (CRUD)
-    ├── seccion_reclutas.html   # 👥 Gestión principal de candidatos
-    ├── seccion_calendario.html # 📅 Vista de calendario con eventos
-    ├── seccion_estadisticas.html # 📊 Dashboard de métricas y KPIs
-    ├── seccion_configuracion.html # ⚙️ Panel de configuración de usuario
-    └── seccion_timeline.html   # 📈 Componente de proceso visual
+```sql
+-- 👤 Tabla de usuarios con roles
+CREATE TABLE usuario (
+    id INTEGER PRIMARY KEY,
+    email VARCHAR(120) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    rol VARCHAR(20) DEFAULT 'asesor',
+    activo BOOLEAN DEFAULT TRUE,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    ultimo_acceso DATETIME,
+    tema_preferido VARCHAR(20) DEFAULT 'claro'
+);
+
+-- 👥 Tabla de candidatos
+CREATE TABLE recluta (
+    id INTEGER PRIMARY KEY,
+    folio VARCHAR(20) UNIQUE NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    email VARCHAR(120),
+    telefono VARCHAR(20),
+    puesto_interes VARCHAR(100),
+    estado VARCHAR(50) DEFAULT 'interesado',
+    asesor_id INTEGER,
+    fecha_registro DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_actualizacion DATETIME,
+    notas TEXT,
+    FOREIGN KEY (asesor_id) REFERENCES usuario (id)
+);
+
+-- 📅 Tabla de entrevistas
+CREATE TABLE entrevista (
+    id INTEGER PRIMARY KEY,
+    recluta_id INTEGER NOT NULL,
+    fecha_programada DATETIME NOT NULL,
+    tipo_entrevista VARCHAR(50),
+    estado VARCHAR(20) DEFAULT 'programada',
+    notas TEXT,
+    resultado VARCHAR(100),
+    entrevistador_id INTEGER,
+    fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (recluta_id) REFERENCES recluta (id),
+    FOREIGN KEY (entrevistador_id) REFERENCES usuario (id)
+);
 ```
 
 ---
 
-## ⚡ Instalación y Configuración
+## 🚀 **Instalación y Configuración**
 
 ### 📋 **Requisitos del Sistema**
-- **Python 3.8+** (recomendado 3.9+)
-- **pip** (gestor de paquetes Python)
-- **Navegador moderno** (Chrome 80+, Firefox 75+, Safari 13+, Edge 80+)
+- **Python 3.8+** (recomendado 3.10+)
 - **4GB RAM mínimo** (recomendado 8GB+)
-- **500MB espacio libre** para base de datos y uploads
+- **500MB espacio libre** para BD y uploads
+- **Navegador moderno** (Chrome 90+, Firefox 88+, Safari 14+)
 
-### 🚀 **Instalación Paso a Paso**
+### ⚡ **Instalación Rápida**
 
-#### 1️⃣ **Clonar Repositorio**
 ```bash
-git clone https://github.com/jair-molina-ar5ce/sistema-gestion-reclutas.git
-cd sistema-gestion-reclutas
-```
+# 1️⃣ Clonar repositorio
+git clone <repository-url>
+cd sistema-reclutas
 
-#### 2️⃣ **Configurar Entorno Virtual**
-```bash
-# Crear entorno virtual
+# 2️⃣ Crear entorno virtual
 python -m venv venv
+source venv/bin/activate  # Linux/macOS
+# venv\Scripts\activate   # Windows
 
-# Activar entorno virtual
-# Windows:
-venv\Scripts\activate
-# Linux/macOS:
-source venv/bin/activate
-```
-
-#### 3️⃣ **Instalar Dependencias**
-```bash
-# Actualizar pip
-python -m pip install --upgrade pip
-
-# Instalar dependencias del proyecto
+# 3️⃣ Instalar dependencias
+pip install --upgrade pip
 pip install -r requirements.txt
 
-# Verificar instalación
-pip list
-```
-
-#### 4️⃣ **Configurar Variables de Entorno**
-```bash
-# Copiar plantilla de configuración
+# 4️⃣ Configurar variables de entorno
 cp .env.example .env
+nano .env  # Editar configuraciones
 
-# Editar configuraciones (usar nano, vim, o cualquier editor)
-nano .env
+# 5️⃣ Inicializar base de datos
+python app.py --init-db
+
+# 6️⃣ Crear usuario administrador
+python create_test_user.py --admin
+
+# 7️⃣ Ejecutar aplicación
+python app.py
 ```
 
-**Ejemplo de archivo `.env`:**
+### 🔧 **Configuración Avanzada**
+
+#### **Variables de Entorno (.env)**
 ```env
-# 🌍 Entorno de ejecución
+# 🌍 Entorno
 FLASK_ENV=development
 FLASK_DEBUG=True
 
-# 🔐 Seguridad (CRÍTICO: Cambiar en producción)
-SECRET_KEY=tu_clave_secreta_muy_segura_de_32_caracteres_minimo
+# 🔐 Seguridad (¡CAMBIAR EN PRODUCCIÓN!)
+SECRET_KEY=clave_secreta_de_32_caracteres_minimo_para_seguridad
 
 # 💾 Base de datos
 DATABASE_URL=sqlite:///database.db
-DB_POOL_SIZE=10
-DB_POOL_TIMEOUT=30
+# DATABASE_URL=postgresql://user:pass@localhost:5432/reclutas_db
 
-# 🛡️ IPs permitidas para administración (separadas por comas)
-IPS_PERMITIDAS=127.0.0.1,192.168.1.0/24,10.0.0.0/8
+# 🛡️ Seguridad de red
+IPS_PERMITIDAS=127.0.0.1,192.168.1.0/24
+CORS_ORIGINS=http://localhost:3000,https://midominio.com
 
-# 🌐 CORS para producción (separadas por comas)
-CORS_ORIGINS=https://tudominio.com,https://admin.tudominio.com
-
-# 📧 Configuración de email (opcional)
+# 📧 Email (opcional)
 MAIL_SERVER=smtp.gmail.com
 MAIL_PORT=587
 MAIL_USE_TLS=True
 MAIL_USERNAME=tu_email@gmail.com
 MAIL_PASSWORD=tu_app_password
 
-# 📁 Configuración de archivos
-UPLOAD_FOLDER=static/uploads
-MAX_CONTENT_LENGTH=16777216  # 16MB
+# 📊 Redis (opcional, para caching)
+REDIS_URL=redis://localhost:6379/0
 
-# 📊 Logging
+# 📝 Logging
 LOG_LEVEL=INFO
 LOG_FILE=app.log
-LOG_MAX_BYTES=10485760  # 10MB
-LOG_BACKUP_COUNT=5
-```
-
-#### 5️⃣ **Inicializar Base de Datos**
-```bash
-# La aplicación crea automáticamente las tablas al primer inicio
-python app.py
-
-# Verificar que la base de datos se creó correctamente
-ls -la database.db
-```
-
-#### 6️⃣ **Crear Usuarios de Prueba (Opcional)**
-```bash
-# Ejecutar script de usuarios de prueba
-python create_test_user.py
-
-# El script creará usuarios con diferentes roles para testing
-```
-
-#### 7️⃣ **Iniciar la Aplicación**
-
-**🔧 Desarrollo:**
-```bash
-# Método 1: Directo con Python
-python app.py
-
-# Método 2: Con Flask CLI
-export FLASK_APP=app.py
-export FLASK_ENV=development
-flask run --host=0.0.0.0 --port=5000
-
-# Método 3: Con recarga automática
-flask run --reload --debugger
-```
-
-**🚀 Producción:**
-```bash
-# Con Gunicorn (recomendado)
-pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:8000 app:app
-
-# Con configuración avanzada
-gunicorn -c gunicorn.conf.py app:app
-
-# Con supervisor para auto-restart
-sudo apt install supervisor
-# Configurar archivo de supervisor
 ```
 
 ---
 
-## 🔑 **Credenciales y Acceso**
+## 🎯 **Guía de Uso**
 
-### 👑 **Usuarios Administradores por Defecto**
-```
-📧 Email: admin@example.com
-🔑 Contraseña: admin
-🎭 Rol: Administrador
+### 👨‍💼 **Para Administradores**
 
-📧 Email: admin2@example.com  
-🔑 Contraseña: admin2
-🎭 Rol: Administrador
-```
-
-### 👤 **Usuarios de Prueba (después de ejecutar script)**
-```
-📧 Email: admin@test.com
-🔑 Contraseña: admin123
-🎭 Rol: Administrador
-
-📧 Email: gerente@test.com
-🔑 Contraseña: gerente123  
-🎭 Rol: Asesor/Gerente
-```
-
-### ⚠️ **Importante de Seguridad**
-- 🔴 **CRÍTICO**: Cambiar TODAS las credenciales por defecto antes de producción
-- 🔐 Usar contraseñas fuertes (mínimo 12 caracteres, mayúsculas, números, símbolos)
-- 🛡️ Configurar IPs permitidas en `IPS_PERMITIDAS`
-- 🔑 Generar `SECRET_KEY` única y segura (32+ caracteres aleatorios)
-
----
-
-## 📚 **Guía de Uso Completa**
-
-### 👑 **Para Administradores**
-
-#### **📋 Gestión de Reclutas**
-1. **➕ Agregar Candidatos**:
-   - Clic en "Agregar Nuevo Recluta"
-   - Llenar formulario completo con validaciones
-   - Subir foto opcional (JPG, PNG, máx 5MB)
-   - Asignar asesor responsable
-   - Guardar y confirmar
-
-2. **📤 Importación Masiva**:
-   - Descargar "Plantilla Excel" con formato válido
-   - Llenar datos siguiendo el formato (nombre, email, teléfono requeridos)
-   - "Subir Excel" → Seleccionar archivo → Revisar resultados detallados
-   - Sistema previene duplicados automáticamente
-
-3. **👨‍💼 Asignar Asesores**:
-   - Editar recluta → Seleccionar asesor → Guardar cambios
-   - Vista filtrada automática para asesores (solo ven sus asignados)
-
-#### **🎛️ Panel Administrativo**
-- **👥 Gestión de Usuarios**: Crear, editar, eliminar cuentas de asesores
-- **🔐 Monitoreo de Sesiones**: Ver y cerrar sesiones activas de usuarios
-- **📋 Logs del Sistema**: Revisar actividad, errores y auditoría completa
-- **📊 Estadísticas Globales**: Métricas de rendimiento y reportes ejecutivos
-
-### 👨‍💼 **Para Asesores/Gerentes**
-
-#### **👥 Mis Reclutas Asignados**
-- Vista automáticamente filtrada (solo candidatos asignados)
-- Editar información y estados de mis reclutas
-- Acceso completo a historial y notas
-- Sin acceso a funciones administrativas (Excel, gestión usuarios)
-
-#### **📅 Calendario Personal**
-- Vista de mis entrevistas programadas únicamente
-- Programar nuevas citas con mis candidatos
-- Gestionar estados: pendiente → completada → cancelada
-- Recibir notificaciones de próximas entrevistas
-
-### 🌐 **Para Candidatos (Portal Público)**
-
-#### **🔍 Seguimiento de Proceso**
-1. **Acceso**: Ir a la pestaña "Seguimiento" en página principal (sin login)
-2. **Consulta**: Ingresar folio de seguimiento (formato: REC-XXXXXXXX)
-3. **Resultado**: Ver estado actual y timeline completo del proceso
-4. **Entrevistas**: Consultar información de próximas citas programadas
-
-#### **🆘 Recuperación de Folio**
-- Usar enlace "¿Olvidaste tu folio?"
-- Ingresar email y teléfono registrados exactamente como se proporcionaron
-- Sistema muestra folio si los datos coinciden
-- Contactar RRHH si persisten problemas
-
----
-
-## 🔌 **API REST Completa y Documentada**
-
-### 🔐 **Autenticación y Sesiones**
-```http
-POST   /auth/login                    # Iniciar sesión con email/contraseña
-POST   /auth/logout                   # Cerrar sesión activa
-GET    /auth/check-auth               # Verificar estado de autenticación
-POST   /auth/cambiar-password         # Cambiar contraseña (requiere auth)
-GET    /auth/sessions                 # Listar sesiones activas del usuario
-DELETE /auth/sessions/{id}            # Cerrar sesión específica
-```
-
-### 👥 **Gestión de Reclutas**
-```http
-GET    /api/reclutas                  # Listar con filtros, paginación, ordenamiento
-POST   /api/reclutas                  # Crear nuevo recluta (con foto opcional)
-GET    /api/reclutas/{id}             # Obtener recluta específico por ID
-PUT    /api/reclutas/{id}             # Actualizar recluta (validaciones incluidas)
-DELETE /api/reclutas/{id}             # Eliminar recluta (solo admin o propietario)
-
-# Funciones avanzadas
-POST   /api/reclutas/import-excel     # Importación masiva Excel (solo admin)
-GET    /api/reclutas/plantilla-excel  # Descargar plantilla Excel
-GET    /api/asesores                  # Listar asesores disponibles para asignación
-```
-
-### 📅 **Sistema de Entrevistas**
-```http
-GET    /api/entrevistas               # Listar entrevistas (filtradas por permisos)
-POST   /api/entrevistas               # Programar nueva entrevista
-GET    /api/entrevistas/{id}          # Obtener entrevista específica
-PUT    /api/entrevistas/{id}          # Actualizar entrevista (fecha, hora, tipo)
-DELETE /api/entrevistas/{id}          # Cancelar/eliminar entrevista
-```
-
-### 🌐 **Seguimiento Público (Sin Autenticación)**
-```http
-GET    /api/tracking/{folio}              # Consultar estado por folio único
-GET    /api/tracking/{folio}/timeline     # Timeline completa del proceso
-POST   /api/recuperar-folio               # Recuperar folio por email/teléfono
-GET    /api/verificar-folio/{folio}       # Verificar existencia sin datos sensibles
-```
-
-### 📊 **Estadísticas y Reportes**
-```http
-GET    /api/estadisticas                  # Métricas del sistema completas
-GET    /api/usuario/rol                   # Información de rol y permisos actuales
-```
-
-### 👤 **Gestión de Perfil**
-```http
-GET    /api/perfil                        # Obtener perfil del usuario actual
-PUT    /api/perfil                        # Actualizar perfil (nombre, teléfono, foto)
-```
-
----
-
-## 🔒 **Seguridad y Protecciones Implementadas**
-
-### 🛡️ **Características de Seguridad**
-
-#### **🔐 Autenticación y Autorización**
-- **Encriptación robusta**: bcrypt para contraseñas con salt único
-- **Control de acceso basado en roles** (RBAC) granular
-- **Sesiones seguras** con expiración automática y tokens únicos
-- **Validación de IPs** para funciones administrativas críticas
-
-#### **🌐 Protecciones Web**
-- **CORS configurable** por entorno con whitelist de dominios
-- **Validación exhaustiva** de datos en frontend y backend
-- **Sanitización** automática de inputs para prevenir XSS
-- **Rate limiting** para prevenir ataques de fuerza bruta
-
-#### **📁 Seguridad de Archivos**
-- **Validación estricta** de tipos de archivo permitidos
-- **Límites de tamaño** configurables (5MB por defecto)
-- **Nombres únicos** para prevenir colisiones y ataques
-- **Sandbox de uploads** separado del código fuente
-
-#### **🔍 Auditoría y Logging**
-- **Logging completo** de actividad con rotación automática
-- **Tracking de sesiones** activas por usuario
-- **Registro de cambios** críticos con timestamp
-- **Detección de intentos** de acceso no autorizado
-
-### 🚨 **Headers de Seguridad HTTP**
-```http
-X-Content-Type-Options: nosniff
-X-Frame-Options: SAMEORIGIN  
-X-XSS-Protection: 1; mode=block
-Content-Security-Policy: default-src 'self'
-Strict-Transport-Security: max-age=31536000
-```
-
----
-
-## ⚙️ **Configuración por Entornos**
-
-### 🔧 **Desarrollo**
+#### **1. Gestión de Usuarios**
 ```python
-# config.py - Configuración de desarrollo
-FLASK_ENV=development
-DEBUG=True
-DATABASE_URL=sqlite:///database.db
-SESSION_COOKIE_SECURE=False
-WTF_CSRF_ENABLED=True
-LOG_LEVEL=DEBUG
+# Crear nuevo asesor
+POST /api/usuarios
+{
+    "email": "nuevo.asesor@empresa.com",
+    "nombre": "Juan Pérez",
+    "rol": "asesor",
+    "password": "password_temporal"
+}
 ```
 
-### 🚀 **Producción**
+#### **2. Importación Masiva**
+- Acceder a **"Importar Excel"** en el menú principal
+- Subir archivo .xlsx/.csv con las columnas requeridas
+- Revisar previsualización y mapear campos
+- Confirmar importación con manejo de duplicados
+
+#### **3. Dashboard Global**
+- Ver métricas de todos los asesores
+- Exportar reportes consolidados
+- Configurar KPIs personalizados
+
+### 🏢 **Para Asesores**
+
+#### **1. Gestión de Candidatos**
+- **Agregar**: Botón "+" → Llenar formulario → Guardar
+- **Editar**: Click en candidato → Editar campos → Actualizar
+- **Filtrar**: Usar barra de búsqueda y filtros laterales
+- **Seguimiento**: Ver timeline de actividades
+
+#### **2. Programar Entrevistas**
+- Ir a **Calendario** → Hacer click en fecha
+- Seleccionar candidato y tipo de entrevista
+- Confirmar horario (detecta conflictos automáticamente)
+
+#### **3. Actualizar Estados**
+```javascript
+// Estados disponibles
+const estados = [
+    'interesado',     // Recién ingresado
+    'contactado',     // Primera comunicación
+    'entrevista',     // En proceso de entrevista
+    'segunda_entrevista', // Entrevista técnica/final
+    'contratado',     // Proceso exitoso
+    'descartado'      // No continúa en proceso
+];
+```
+
+---
+
+## 🛠️ **Desarrollo y Personalización**
+
+### 🔧 **Estructura Modular**
+
+#### **Agregar Nuevo Campo a Candidatos**
 ```python
-# config.py - Configuración de producción
-FLASK_ENV=production
-DEBUG=False
-DATABASE_URL=postgresql://user:pass@host:5432/prod_db
-SESSION_COOKIE_SECURE=True
-SESSION_COOKIE_HTTPONLY=True
-PERMANENT_SESSION_LIFETIME=timedelta(hours=8)
-WTF_CSRF_ENABLED=True
-CORS_ORIGINS=['https://tudominio.com']
-LOG_LEVEL=INFO
+# 1. Actualizar modelo (models/recluta.py)
+class Recluta(db.Model):
+    # ... campos existentes ...
+    nuevo_campo = db.Column(db.String(100))
+
+# 2. Crear migración
+flask db migrate -m "Agregar nuevo_campo a recluta"
+flask db upgrade
+
+# 3. Actualizar formularios (templates/)
+<input type="text" name="nuevo_campo" placeholder="Nuevo Campo">
+
+# 4. Actualizar API (routes/api.py)
+@api.route('/reclutas', methods=['POST'])
+def crear_recluta():
+    data = request.get_json()
+    nuevo_campo = data.get('nuevo_campo')
+    # ... lógica de creación ...
+```
+
+#### **Personalizar Dashboard**
+```javascript
+// static/js/stats.js
+const CONFIG_DASHBOARD = {
+    graficos: {
+        distribucion_estados: true,
+        tendencia_mensual: true,
+        ranking_asesores: true,
+        nuevo_grafico: true  // Agregar nuevo gráfico
+    },
+    colores: {
+        primario: '#3498db',
+        secundario: '#2ecc71',
+        personalizado: '#e74c3c'  // Color personalizado
+    }
+};
 ```
 
 ### 🧪 **Testing**
-```python
-# config.py - Configuración de testing
-TESTING=True
-DATABASE_URL=sqlite:///:memory:
-WTF_CSRF_ENABLED=False
-LOGIN_DISABLED=True
+
+```bash
+# Ejecutar tests completos
+pytest tests/ -v --cov=.
+
+# Tests específicos
+pytest tests/test_models.py -v
+pytest tests/test_api.py -v
+pytest tests/test_auth.py -v
+
+# Test de integración
+python scripts/verify_roles.py
+```
+
+### 📊 **APIs Disponibles**
+
+#### **Endpoints Principales**
+```http
+# 👥 Candidatos
+GET    /api/reclutas           # Listar todos
+POST   /api/reclutas           # Crear nuevo
+PUT    /api/reclutas/:id       # Actualizar
+DELETE /api/reclutas/:id       # Eliminar
+
+# 📅 Entrevistas  
+GET    /api/entrevistas        # Listar entrevistas
+POST   /api/entrevistas        # Programar nueva
+PUT    /api/entrevistas/:id    # Actualizar resultado
+
+# 📊 Estadísticas
+GET    /api/stats/dashboard    # Métricas generales
+GET    /api/stats/asesor/:id   # Métricas por asesor
+GET    /api/stats/exportar     # Exportar reportes
+
+# 👤 Usuarios (solo admin)
+GET    /api/usuarios           # Listar usuarios
+POST   /api/usuarios           # Crear usuario
+PUT    /api/usuarios/:id       # Actualizar usuario
 ```
 
 ---
@@ -521,29 +385,27 @@ LOGIN_DISABLED=True
 ## 🚀 **Despliegue en Producción**
 
 ### 🐳 **Docker (Recomendado)**
+
 ```dockerfile
 # Dockerfile
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
-# Instalar dependencias del sistema
+# Dependencias del sistema
 RUN apt-get update && apt-get install -y \
-    gcc \
+    gcc postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar e instalar dependencias Python
+# Dependencias Python
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar código de la aplicación
+# Código de aplicación
 COPY . .
 
-# Crear directorios necesarios
-RUN mkdir -p static/uploads/usuario static/uploads/recluta
-
 # Configurar permisos
-RUN chmod 755 static/uploads/
+RUN mkdir -p static/uploads && chmod 755 static/uploads/
 
 EXPOSE 8000
 
@@ -561,21 +423,27 @@ services:
       - "8000:8000"
     environment:
       - FLASK_ENV=production
-      - DATABASE_URL=postgresql://user:pass@db:5432/reclutas
-    volumes:
-      - ./uploads:/app/static/uploads
+      - DATABASE_URL=postgresql://postgres:password@db:5432/reclutas
     depends_on:
       - db
       - redis
+    volumes:
+      - ./static/uploads:/app/static/uploads
 
   db:
-    image: postgres:13
+    image: postgres:14
     environment:
       POSTGRES_DB: reclutas
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: secure_password
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
 
   nginx:
     image: nginx:alpine
@@ -590,157 +458,40 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
 ```
 
-### ⚡ **Gunicorn + Nginx**
-```python
-# gunicorn.conf.py
-bind = "0.0.0.0:8000"
-workers = 4
-worker_class = "sync"
-worker_connections = 1000
-max_requests = 1000
-max_requests_jitter = 100
-timeout = 30
-keepalive = 2
-preload_app = True
-reload = False
-daemon = False
-user = "www-data"
-group = "www-data"
-tmp_upload_dir = None
-secure_scheme_headers = {
-    'X-FORWARDED-PROTOCOL': 'ssl',
-    'X-FORWARDED-PROTO': 'https',
-    'X-FORWARDED-SSL': 'on'
-}
-```
+### ☁️ **Despliegue en Heroku**
 
-```nginx
-# nginx.conf
-upstream app_server {
-    server app:8000;
-}
+```bash
+# Preparar para Heroku
+pip install gunicorn
+echo "web: gunicorn app:app" > Procfile
 
-server {
-    listen 80;
-    server_name tudominio.com www.tudominio.com;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name tudominio.com www.tudominio.com;
-
-    ssl_certificate /etc/nginx/ssl/cert.pem;
-    ssl_certificate_key /etc/nginx/ssl/key.pem;
-    
-    client_max_body_size 16M;
-    
-    location / {
-        proxy_pass http://app_server;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_timeout 90s;
-    }
-    
-    location /static/ {
-        alias /app/static/;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-}
+# Desplegar
+heroku create mi-sistema-reclutas
+heroku addons:create heroku-postgresql:mini
+heroku config:set FLASK_ENV=production
+heroku config:set SECRET_KEY=clave_super_secreta
+git push heroku main
 ```
 
 ---
 
-## 🧪 **Testing y Calidad**
+## 🔧 **Solución de Problemas**
 
-### ⚡ **Ejecutar Tests**
-```bash
-# Tests unitarios
-python -m pytest tests/ -v
-
-# Tests de integración  
-python -m pytest tests/integration/ -v
-
-# Coverage completo
-python -m pytest --cov=. --cov-report=html tests/
-
-# Tests de carga
-python -m pytest tests/load/ -v
-```
-
-### 🔍 **Tests de API con cURL**
-```bash
-# Test de login
-curl -X POST http://localhost:5000/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@test.com","password":"admin123"}'
-
-# Test de consulta de reclutas
-curl -X GET http://localhost:5000/api/reclutas \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN"
-
-# Test de seguimiento público
-curl -X GET http://localhost:5000/api/tracking/REC-1A2B3C4D
-```
-
-### 🎯 **Métricas de Calidad**
-- **Cobertura de código**: 85%+ objetivo
-- **Tiempo de respuesta**: <200ms promedio
-- **Disponibilidad**: 99.9% uptime objetivo
-- **Seguridad**: Escaneo automatizado de vulnerabilidades
-
----
-
-## 📊 **Monitoreo y Observabilidad**
-
-### 📋 **Logs del Sistema**
-```bash
-# Ubicación de logs
-tail -f app.log
-
-# Logs por nivel
-grep ERROR app.log
-grep WARNING app.log
-
-# Rotación automática
-app.log.1, app.log.2, ... (hasta 5 archivos, 10MB cada uno)
-```
-
-### 📈 **Métricas Disponibles**
-- **Reclutas**: Total, por estado, crecimiento mensual
-- **Entrevistas**: Programadas, completadas, tasa de conversión
-- **Usuarios**: Activos, sesiones concurrentes
-- **Sistema**: Errores, tiempo de respuesta, uso de recursos
-
-### 🚨 **Alertas Recomendadas**
-- Errores críticos en logs
-- Uso de memoria >80%
-- Tiempo de respuesta >1s
-- Intentos de login fallidos >10/min
-
----
-
-## 🐛 **Solución de Problemas**
-
-### ❗ **Errores Comunes y Soluciones**
+### ❗ **Errores Comunes**
 
 #### **🔴 Error de Base de Datos**
 ```bash
-# Síntoma: "database is locked" o "permission denied"
+# Síntoma: "database is locked"
 # Solución:
-chmod 755 .
 chmod 664 database.db
 sudo chown $USER:$USER database.db
 
-# Si persiste, recrear base de datos:
+# Si persiste, recrear:
 rm database.db
-python app.py
+python app.py --init-db
 ```
 
 #### **🔴 Error de Dependencias**
@@ -749,7 +500,7 @@ python app.py
 # Solución:
 pip install --upgrade -r requirements.txt
 
-# Si falla, limpiar cache:
+# Limpiar cache si falla:
 pip cache purge
 pip install --no-cache-dir -r requirements.txt
 ```
@@ -764,9 +515,9 @@ chmod 755 static/uploads/usuario/
 chmod 755 static/uploads/recluta/
 ```
 
-#### **🔴 Error de Excel (pandas)**
+#### **🔴 Error de Importación Excel**
 ```bash
-# Síntoma: Error al importar Excel
+# Síntoma: Error al procesar Excel
 # Solución:
 pip install pandas openpyxl xlrd
 
@@ -774,29 +525,32 @@ pip install pandas openpyxl xlrd
 pip install xlrd==1.2.0
 ```
 
-### 🔧 **Debugging Avanzado**
+### 🔍 **Debugging Avanzado**
 
 #### **📝 Activar Logs Detallados**
 ```python
-# En config.py o .env
-LOG_LEVEL=DEBUG
-FLASK_DEBUG=True
+# En config.py
+LOG_LEVEL = 'DEBUG'
+FLASK_DEBUG = True
 
-# Ver todos los requests
+# En terminal
 export FLASK_DEBUG=1
 python app.py
 ```
 
 #### **🔍 Inspeccionar Base de Datos**
 ```bash
-# SQLite browser
+# SQLite
 sqlite3 database.db
 .tables
 .schema usuario
 SELECT * FROM usuario LIMIT 5;
 
-# Ver estructura completa
-.dump > backup.sql
+# PostgreSQL
+psql $DATABASE_URL
+\dt
+\d usuario
+SELECT email, rol FROM usuario;
 ```
 
 #### **🌐 Test de Conectividad**
@@ -804,24 +558,24 @@ SELECT * FROM usuario LIMIT 5;
 # Test básico
 curl -I http://localhost:5000/
 
-# Test con verbose
+# Test API con verbose
 curl -v http://localhost:5000/api/reclutas
 
-# Test de CORS
-curl -H "Origin: https://example.com" \
+# Test CORS
+curl -H "Origin: https://ejemplo.com" \
      -H "Access-Control-Request-Method: POST" \
      -X OPTIONS http://localhost:5000/api/reclutas
 ```
 
 ---
 
-## 🔄 **Actualizaciones y Mantenimiento**
+## 🔄 **Mantenimiento y Actualizaciones**
 
-### 📋 **Tareas de Mantenimiento Regulares**
+### 📋 **Tareas Regulares**
 
 #### **🗃️ Limpieza de Base de Datos (Semanal)**
 ```python
-# Script de limpieza (ejecutar manualmente)
+# Script automático
 python -c "
 from models.user_session import UserSession
 count = UserSession.cleanup_expired()
@@ -831,180 +585,91 @@ print(f'Sesiones limpiadas: {count}')
 
 #### **📁 Limpieza de Archivos (Mensual)**
 ```bash
-# Limpiar archivos temporales
+# Archivos temporales
 find static/uploads/ -name "*.tmp" -delete
 
-# Limpiar logs antiguos
-find . -name "*.log.*" -mtime +30 -delete
+# Logs antiguos (>30 días)
+find . -name "*.log" -type f -mtime +30 -delete
 
-# Verificar espacio en disco
-df -h
-du -sh static/uploads/
+# Backup de BD
+cp database.db "backups/database_$(date +%Y%m%d).db"
 ```
 
-#### **🔐 Rotación de Claves (Trimestral)**
+#### **🔄 Actualización de Dependencias**
 ```bash
-# Generar nueva SECRET_KEY
-python -c "import secrets; print(secrets.token_hex(32))"
+# Verificar actualizaciones disponibles
+pip list --outdated
 
-# Actualizar en .env y reiniciar
-systemctl restart gunicorn
+# Actualizar dependencias de seguridad
+pip install --upgrade Flask Werkzeug
+
+# Regenerar requirements.txt
+pip freeze > requirements.txt
 ```
 
-### 📈 **Roadmap de Desarrollo**
+### 📊 **Monitoreo de Rendimiento**
 
-#### **🔜 Próximas Funcionalidades (v3.1)**
-- [ ] 📧 **Sistema de email**: Notificaciones automáticas a candidatos
-- [ ] 📱 **App móvil**: React Native para iOS/Android
-- [ ] 🔗 **Integración ATS**: Conectores con sistemas externos
-- [ ] 📊 **BI Dashboard**: Reportes ejecutivos avanzados
-- [ ] 🤖 **IA Básica**: Recomendación automática de candidatos
+```python
+# utils/monitoring.py
+import psutil
+import time
+from datetime import datetime
 
-#### **🚀 Futuro (v4.0)**
-- [ ] 🌍 **Multi-idioma**: Soporte i18n completo
-- [ ] ☁️ **Multi-tenant**: Soporte para múltiples empresas
-- [ ] 🔄 **API GraphQL**: Alternativa a REST API
-- [ ] 📹 **Video entrevistas**: Integración con Zoom/Teams
-- [ ] 🔍 **Búsqueda semántica**: Motor de búsqueda avanzado
+def monitor_system():
+    """Monitoreo básico del sistema"""
+    stats = {
+        'timestamp': datetime.now(),
+        'cpu_percent': psutil.cpu_percent(interval=1),
+        'memory_percent': psutil.virtual_memory().percent,
+        'disk_usage': psutil.disk_usage('/').percent,
+        'active_connections': len(psutil.net_connections())
+    }
+    return stats
+```
 
 ---
 
-## 🤝 **Contribución y Colaboración**
+## 📞 **Soporte y Contribuciones**
 
-### 🛠️ **Workflow de Desarrollo**
+### 🐛 **Reporte de Bugs**
+1. **Revisar** issues existentes en el repositorio
+2. **Crear** nuevo issue con template proporcionado
+3. **Incluir** logs relevantes y pasos para reproducir
+4. **Etiquetar** con severity level (crítico/alto/medio/bajo)
 
-#### **1️⃣ Configuración del Entorno**
-```bash
-# Fork del repositorio
-git clone https://github.com/tu-usuario/sistema-gestion-reclutas.git
-cd sistema-gestion-reclutas
-
-# Configurar upstream
-git remote add upstream https://github.com/jair-molina-ar5ce/sistema-gestion-reclutas.git
-
-# Crear rama de desarrollo
-git checkout -b feature/nueva-funcionalidad
-```
-
-#### **2️⃣ Estándares de Código**
-- **Python**: PEP 8 con flake8 y black formatter
-- **JavaScript**: ES6+ con ESLint y Prettier
-- **CSS**: BEM methodology con variables CSS
-- **Commits**: Conventional Commits con emoji descriptivos
-
-```bash
-# Ejemplo de commits
-git commit -m "✨ feat: agregar sistema de notificaciones push"
-git commit -m "🐛 fix: corregir validación de email en formulario"
-git commit -m "📚 docs: actualizar README con nuevas funcionalidades"
-git commit -m "🔧 chore: actualizar dependencias de seguridad"
-```
-
-#### **3️⃣ Testing y Quality Gates**
-```bash
-# Ejecutar tests antes de commit
-python -m pytest tests/ --cov=80
-npm run lint
-npm run test
-
-# Pre-commit hooks recomendados
-pre-commit install
-```
-
-#### **4️⃣ Pull Request Process**
-1. **Fork** → **Branch** → **Develop** → **Test** → **PR**
-2. **Descripción detallada** con screenshots si hay cambios UI
-3. **Review** de al menos un desarrollador principal
-4. **Tests** pasando en CI/CD pipeline
-5. **Merge** solo después de aprobación
-
-### 📞 **Contacto del Equipo**
-
-#### **👨‍💻 Desarrolladores Principales**
-- **Jair Molina AR5CE**
-  - 🎯 Rol: Arquitecto Principal & Backend Developer
-  - 📧 Email: jair.molina.ar5ce@empresa.com
-  - 🔗 GitHub: @jair-molina-ar5ce
-  - 🛠️ Especialidades: Python/Flask, Arquitectura, DevOps
-
-- **Alan Rosas Palcios**  
-  - 🎯 Rol: Frontend Developer & UI/UX Designer
-  - 📧 Email: alan.rosas.palcios@empresa.com
-  - 🔗 GitHub: @alan-rosas-palcios
-  - 🛠️ Especialidades: JavaScript, React, Diseño UI/UX
-
-#### **📋 Canales de Comunicación**
-- **🐛 Issues**: [GitHub Issues] para bugs y feature requests
-- **💬 Discussions**: [GitHub Discussions] para preguntas generales
-- **📧 Email**: desarrollo@empresa.com para temas específicos
-- **📞 Reuniones**: Viernes 3:00 PM - Sprint Review semanal
-
----
-
-## 📄 **Licencia y Legal**
-
-### ⚖️ **Información Legal**
-- **Licencia**: MIT License - Ver [LICENSE](LICENSE) para detalles completos
-- **Copyright**: © 2025 Jair Molina AR5CE & Alan Rosas Palcios
-- **Uso Comercial**: Permitido bajo términos de la licencia MIT
-- **Contribuciones**: Bienvenidas bajo los mismos términos de licencia
-
-### 📋 **Compliance y Regulaciones**
-- **GDPR**: Implementación de protección de datos personales
-- **LOPD**: Cumplimiento con ley de protección de datos local
-- **Seguridad**: Estándares OWASP Top 10 implementados
-- **Auditoría**: Logs completos para compliance empresarial
-
----
-
-## 🆘 **Soporte y Recursos**
+### 🚀 **Contribuciones**
+1. **Fork** del repositorio
+2. **Crear** rama feature: `git checkout -b feature/nueva-funcionalidad`
+3. **Implementar** cambios con tests
+4. **Commit** con formato: `feat: descripción de la funcionalidad`
+5. **Push** y crear Pull Request
 
 ### 📚 **Documentación Adicional**
-- **📖 Wiki Técnica**: [GitHub Wiki] con guías detalladas
-- **🔌 API Docs**: `/api/docs` cuando esté disponible
-- **📝 Changelog**: [CHANGELOG.md] con historial de versiones
-- **🚀 Deployment Guide**: [DEPLOY.md] con guías específicas por plataforma
-
-### ❓ **FAQ Técnico**
-
-**P: ¿Puedo cambiar los estados de los reclutas?**
-R: Sí, modificar `CONFIG.ESTADOS_RECLUTA` en `static/js/config.js`
-
-**P: ¿Cómo agregar nuevos roles de usuario?**
-R: Editar el modelo `Usuario` y actualizar decoradores en `utils/decorators.py`
-
-**P: ¿El sistema soporta múltiples idiomas?**
-R: Actualmente solo español. La internacionalización está en el roadmap.
-
-**P: ¿Puedo usar otra base de datos además de SQLite?**
-R: Sí, PostgreSQL y MySQL son compatibles. Cambiar `DATABASE_URL` en configuración.
-
-### 🔔 **Reportar Issues**
-- **🐛 Bugs**: [GitHub Issues] con template específico
-- **💡 Feature Requests**: [GitHub Discussions] con propuesta detallada
-- **🔒 Vulnerabilidades**: Email privado a security@empresa.com
+- **Wiki del Proyecto**: Guías detalladas por funcionalidad
+- **API Documentation**: Especificación OpenAPI/Swagger
+- **Video Tutoriales**: Canal de YouTube con demos
+- **FAQ**: Preguntas frecuentes y soluciones rápidas
 
 ---
 
-## 🎯 **Conclusión**
+## 📄 **Licencia y Créditos**
 
-El **Sistema de Gestión de Reclutas v3.0** representa una solución integral y moderna para la gestión de procesos de reclutamiento empresarial. Desarrollado con arquitectura escalable, seguridad robusta y experiencia de usuario excepcional.
+**Licencia**: JMAR - Ver archivo `LICENSE` para detalles completos
 
-### ✨ **Logros Clave**
-- 🏗️ **Arquitectura sólida** con separación clara de responsabilidades
-- 🔐 **Seguridad enterprise-grade** con múltiples capas de protección  
-- 🌐 **Portal público** para seguimiento transparente de candidatos
-- 📊 **Sistema de roles** granular para diferentes tipos de usuarios
-- 📱 **Diseño responsivo** optimizado para todos los dispositivos
-- ⚡ **Rendimiento optimizado** para manejo de grandes volúmenes
+**Desarrollado por**: Equipo de Desarrollo Interno  
+**Versión Actual**: 2.1.0  
+**Última Actualización**: Junio 2025
 
-### 🚀 **Impacto del Proyecto**
-Este sistema transforma la gestión tradicional de RRHH, proporcionando herramientas modernas que mejoran la eficiencia, transparencia y experiencia tanto para reclutadores como para candidatos.
+**Tecnologías Utilizadas**:
+- 🐍 **Python 3.10** + Flask 2.3
+- 🗄️ **SQLAlchemy** + SQLite/PostgreSQL  
+- ⚡ **JavaScript ES6** + Chart.js
+- 🎨 **CSS3** + Flexbox/Grid
+- 🐳 **Docker** + Nginx
+- 🧪 **Pytest** + Coverage.py
 
 ---
 
-**🌟 ¡Gracias por usar nuestro Sistema de Gestión de Reclutas!**
-
-**Versión**: 1.2.14 
-**Última actualización**: Junio 2025  
-**Mantenido por**: Jair Molina Arce & Alan Rosas Palacios
+*📞 Para soporte técnico: soporte@empresa.com*  
+*🌐 Documentación online: https://docs.sistema-reclutas.com*  
+*💬 Chat de soporte: Slack #sistema-reclutas*
