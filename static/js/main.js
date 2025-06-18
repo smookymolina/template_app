@@ -787,24 +787,27 @@ function hideAdminFeatures() {
 async function loadEstadisticas() {
     try {
         const currentUser = getCurrentUser();
+        console.log('🔍 Cargando estadísticas para:', currentUser?.rol);
         
         if (currentUser?.rol === 'admin') {
             // 👑 ADMINISTRADORES: Cargar métricas avanzadas
-            console.log('📊 Cargando métricas administrativas avanzadas...');
+            console.log('📊 Cargando métricas administrativas...');
             
-            if (MetricasAdmin) {
+            // Primero cargar estadísticas básicas
+            await loadEstadisticasBasicas();
+            
+            // Luego verificar si MetricasAdmin está disponible
+            if (typeof MetricasAdmin !== 'undefined' && MetricasAdmin) {
                 await MetricasAdmin.loadMetricas(true);
             } else {
-                // Si el módulo no está cargado, cargar estadísticas básicas primero
-                await loadEstadisticasBasicas();
-                
-                // Intentar cargar módulo de métricas
+                console.log('⚠️ MetricasAdmin no disponible, cargando módulo...');
                 await loadMetricasAdminModule();
             }
         } else {
-            // 👥 ASESORES: Cargar solo estadísticas básicas de sus reclutas
+            // 👥 ASESORES: Solo estadísticas básicas
             console.log('📊 Cargando estadísticas básicas para asesor...');
             await loadEstadisticasBasicas();
+            hideAdminFeatures();
         }
         
     } catch (error) {
@@ -813,7 +816,7 @@ async function loadEstadisticas() {
     }
 }
 
-// 🆕 NUEVA FUNCIÓN: Cargar estadísticas básicas (para asesores)
+// Cargar estadísticas básicas (para asesores)
 async function loadEstadisticasBasicas() {
     try {
         const response = await fetch(`${CONFIG.API_URL}/estadisticas`, {
@@ -826,7 +829,9 @@ async function loadEstadisticasBasicas() {
         
         const data = await response.json();
         if (data.success) {
-            updateEstadisticasBasicasUI(data);
+            // CAMBIO: Verificar si data tiene estadisticas o usar data directamente
+            const estadisticas = data.estadisticas || data;
+            updateEstadisticasBasicasUI(estadisticas);
         }
     } catch (error) {
         console.error('Error al cargar estadísticas básicas:', error);
@@ -834,7 +839,7 @@ async function loadEstadisticasBasicas() {
     }
 }
 
-// 🆕 NUEVA FUNCIÓN: Actualizar UI con estadísticas básicas
+// Actualizar UI con estadísticas básicas
 function updateEstadisticasBasicasUI(data) {
     // Actualizar contadores básicos
     const statElements = {
@@ -920,6 +925,7 @@ function showSection(sectionId) {
 // Obtener usuario actual
 function getCurrentUser() {
     try {
+        // CAMBIO: Usar 'user_data' en lugar de CONFIG.STORAGE_KEYS.USER_DATA
         const userDataStr = localStorage.getItem('user_data');
         return userDataStr ? JSON.parse(userDataStr) : null;
     } catch (error) {

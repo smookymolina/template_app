@@ -1,9 +1,9 @@
 // ============================================================================
-// 📊 NUEVO MÓDULO: Métricas Administrativas por Asesor
+// Métricas Administrativas por Asesor
 // Archivo: static/js/metricas-admin.js
 // ============================================================================
 
-const MetricasAdmin = {
+const MetricasAdmin = { 
     // 🎛️ CONFIGURACIÓN DEL MÓDULO
     config: {
         refreshInterval: 300000, // 5 minutos
@@ -50,42 +50,47 @@ const MetricasAdmin = {
         }
     },
 
-    // 📊 CARGAR MÉTRICAS DESDE EL SERVIDOR
     async loadMetricas(showLoader = false) {
-        if (showLoader) {
-            this.showLoader();
+    if (showLoader) {
+        this.showLoader();
+    }
+
+    try {
+        // CAMBIO: Usar la ruta correcta sin duplicar '/admin'
+        const response = await fetch('/admin/metricas/asesores', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
 
-        try {
-            const response = await fetch(`${CONFIG.API_URL}/admin/metricas/asesores`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            this.renderMetricas(data);
+            this.updateLastRefresh();
+            // CAMBIO: Usar showNotification en lugar de Notifications.show
+            if (typeof showNotification !== 'undefined') {
+                showNotification('Métricas actualizadas correctamente', 'success');
             }
-
-            const data = await response.json();
-            
-            if (data.success) {
-                this.renderMetricas(data);
-                this.updateLastRefresh();
-                Notifications.show('Métricas actualizadas correctamente', 'success');
-            } else {
-                throw new Error(data.message || 'Error al cargar métricas');
-            }
-
-        } catch (error) {
-            console.error('❌ Error al cargar métricas:', error);
-            Notifications.show('Error al cargar métricas: ' + error.message, 'error');
-        } finally {
-            this.hideLoader();
+        } else {
+            throw new Error(data.message || 'Error al cargar métricas');
         }
-    },
+
+    } catch (error) {
+        console.error('❌ Error al cargar métricas:', error);
+        if (typeof showError !== 'undefined') {
+            showError('Error al cargar métricas: ' + error.message);
+        }
+    } finally {
+        this.hideLoader();
+    }
+},
 
     // 🎨 RENDERIZAR MÉTRICAS EN LA INTERFAZ
     renderMetricas(data) {
@@ -394,19 +399,22 @@ const MetricasAdmin = {
 
     // 🔍 VER DETALLE DE ASESOR
     async verDetalle(asesorId) {
-        try {
-            const response = await fetch(`${CONFIG.API_URL}/admin/metricas/asesor/${asesorId}/detalle`);
-            const data = await response.json();
+    try {
+        // CAMBIO: Usar ruta correcta directa
+        const response = await fetch(`/admin/metricas/asesor/${asesorId}/detalle`);
+        const data = await response.json();
 
-            if (data.success) {
-                this.mostrarModalDetalle(data);
-            } else {
-                throw new Error(data.message);
-            }
-        } catch (error) {
-            Notifications.show('Error al cargar detalle: ' + error.message, 'error');
+        if (data.success) {
+            this.mostrarModalDetalle(data);
+        } else {
+            throw new Error(data.message);
         }
-    },
+    } catch (error) {
+        if (typeof showError !== 'undefined') {
+            showError('Error al cargar detalle: ' + error.message);
+        }
+    }
+},
 
     // 📧 CONTACTAR ASESOR
     contactarAsesor(email) {
@@ -479,3 +487,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 🌐 EXPORTAR PARA USO GLOBAL
 window.MetricasAdmin = MetricasAdmin;
+
+window.debugMetricas = function() {
+    console.log('🔍 === DEBUG MÉTRICAS ===');
+    console.log('CONFIG.API_URL:', CONFIG?.API_URL);
+    console.log('CONFIG.ADMIN_URL:', CONFIG?.ADMIN_URL);
+    console.log('MetricasAdmin disponible:', typeof MetricasAdmin !== 'undefined');
+    console.log('Usuario actual:', getCurrentUser());
+    console.log('Sección estadísticas existe:', !!document.getElementById('estadisticas-section'));
+    
+    // Test de endpoints
+    fetch('/admin/metricas/asesores')
+        .then(response => {
+            console.log('Endpoint admin response status:', response.status);
+            return response.json();
+        })
+        .then(data => console.log('Admin data:', data))
+        .catch(error => console.error('Admin endpoint error:', error));
+};

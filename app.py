@@ -2,6 +2,8 @@ import os
 from flask import Flask
 from app_factory import create_app
 from dotenv import load_dotenv
+from routes.admin import admin_bp
+from routes.api import api_bp   
 
 # Cargar variables de entorno desde .env si existe
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')

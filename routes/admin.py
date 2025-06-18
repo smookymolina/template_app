@@ -1,3 +1,4 @@
+from flask_cors import cross_origin
 from flask import Blueprint, jsonify, request, current_app, render_template
 from sqlalchemy import func, case
 from flask_login import login_required, current_user
@@ -353,6 +354,7 @@ def admin_dashboard():
     return render_template('admin/dashboard.html')
 
 @admin_bp.route('/metricas/asesores', methods=['GET'])
+@cross_origin()
 @admin_required
 def get_metricas_asesores():
     """
