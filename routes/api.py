@@ -588,58 +588,121 @@ def delete_documento(id):
 @login_required
 def get_estadisticas():
     """
-    📊 RUTA MEJORADA: Estadísticas adaptativas según rol de usuario
-    
-    - Administradores: Estadísticas globales completas + resumen de asesores
-    - Asesores: Solo estadísticas de sus reclutas asignados
+    📊 ENDPOINT CORREGIDO para obtener estadísticas
     """
     try:
-        # Obtener filtros opcionales
-        periodo = request.args.get('periodo', '30')  # días
-        incluir_tendencias = request.args.get('tendencias', 'true').lower() == 'true'
-        incluir_comparativas = request.args.get('comparativas', 'true').lower() == 'true'
+        from flask_login import current_user
         
-        # Calcular rango de fechas
+        # ✅ VERIFICAR autenticación
+        if not current_user or not current_user.is_authenticated:
+            return jsonify({
+                "success": False,
+                "message": "Usuario no autenticado"
+            }), 401
+        
+        # ✅ ASEGURAR que current_user tenga rol
+        user_rol = getattr(current_user, 'rol', 'admin')
+        
+        # Parámetros de consulta
+        dias = request.args.get('dias', 30, type=int)
+        incluir_tendencias = request.args.get('tendencias', 'false').lower() == 'true'
+        incluir_comparativas = request.args.get('comparativas', 'false').lower() == 'true'
+        
+        # Calcular fechas
         fecha_fin = datetime.utcnow()
-        try:
-            dias = int(periodo)
-            fecha_inicio = fecha_fin - timedelta(days=dias)
-        except ValueError:
-            dias = 30
-            fecha_inicio = fecha_fin - timedelta(days=30)
+        fecha_inicio = fecha_fin - timedelta(days=dias)
         
-        if current_user.rol == 'admin':
-            # 👑 ESTADÍSTICAS PARA ADMINISTRADORES
-            estadisticas = get_estadisticas_admin(fecha_inicio, fecha_fin, incluir_tendencias, incluir_comparativas)
+        # ✅ GENERAR estadísticas según rol
+        if user_rol == 'admin':
+            estadisticas = get_estadisticas_admin(
+                fecha_inicio, fecha_fin, incluir_tendencias, incluir_comparativas
+            )
         else:
-            # 👥 ESTADÍSTICAS PARA ASESORES
-            estadisticas = get_estadisticas_asesor(current_user.id, fecha_inicio, fecha_fin, incluir_tendencias)
+            estadisticas = get_estadisticas_asesor(
+                current_user.id, fecha_inicio, fecha_fin
+            )
         
-        # Agregar metadatos
+        # ✅ AGREGAR metadatos
         estadisticas['metadata'] = {
             'periodo_dias': dias,
             'fecha_inicio': fecha_inicio.strftime('%Y-%m-%d'),
             'fecha_fin': fecha_fin.strftime('%Y-%m-%d'),
-            'usuario_rol': current_user.rol,
-            'generado_en': datetime.utcnow().isoformat(),
-            'incluye_tendencias': incluir_tendencias,
-            'incluye_comparativas': incluir_comparativas
+            'usuario_rol': user_rol,
+            'generado_en': datetime.utcnow().isoformat()
         }
         
-        current_app.logger.info(f"📊 Estadísticas generadas para {current_user.email} (rol: {current_user.rol})")
+        current_app.logger.info(f"📊 Estadísticas generadas para {current_user.email} (rol: {user_rol})")
         
-        return jsonify({
+        # ✅ RESPUESTA JSON asegurada
+        response = jsonify({
             "success": True,
             "estadisticas": estadisticas
         })
+        response.headers['Content-Type'] = 'application/json'
+        return response
         
     except Exception as e:
         current_app.logger.error(f"❌ Error al obtener estadísticas: {str(e)}")
-        return jsonify({
+        
+        # ✅ RESPUESTA de error también en JSON
+        response = jsonify({
             "success": False,
             "message": f"Error al generar estadísticas: {str(e)}"
-        }), 500
+        })
+        response.headers['Content-Type'] = 'application/json'
+        return response, 500
 
+@api_bp.route('/metricas/admin', methods=['GET'])
+@login_required
+def get_metricas_admin():
+    """
+    👑 ENDPOINT para métricas administrativas avanzadas
+    """
+    try:
+        from flask_login import current_user
+        
+        # ✅ VERIFICAR permisos de administrador
+        if not current_user or not current_user.is_authenticated:
+            return jsonify({
+                "success": False,
+                "message": "Usuario no autenticado"
+            }), 401
+        
+        if getattr(current_user, 'rol', 'asesor') != 'admin':
+            return jsonify({
+                "success": False,
+                "message": "Sin permisos para acceder a métricas administrativas"
+            }), 403
+        
+        # Generar métricas administrativas completas
+        fecha_fin = datetime.utcnow()
+        fecha_inicio = fecha_fin - timedelta(days=30)
+        
+        metricas = get_estadisticas_admin(fecha_inicio, fecha_fin, True, True)
+        
+        # ✅ RESPUESTA JSON asegurada
+        response = jsonify({
+            "success": True,
+            "metricas_asesores": metricas.get('asesores', []),
+            "metricas_globales": metricas.get('globales', {}),
+            "insights": metricas.get('insights', {}),
+            "metadata": {
+                'generado_en': datetime.utcnow().isoformat(),
+                'usuario': current_user.email
+            }
+        })
+        response.headers['Content-Type'] = 'application/json'
+        return response
+        
+    except Exception as e:
+        current_app.logger.error(f"❌ Error al obtener métricas admin: {str(e)}")
+        
+        response = jsonify({
+            "success": False,
+            "message": f"Error al generar métricas administrativas: {str(e)}"
+        })
+        response.headers['Content-Type'] = 'application/json'
+        return response, 500
 
 def get_estadisticas_admin(fecha_inicio, fecha_fin, incluir_tendencias=True, incluir_comparativas=True):
     """

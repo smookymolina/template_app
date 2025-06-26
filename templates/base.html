@@ -44,7 +44,11 @@
     {% block modals %}{% endblock %}
 
     {% block scripts %}
+    <script type="module" src="{{ url_for('static', filename='js/config.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/notifications.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/metricas-admin.css') }}">
     {% endblock %}
 </body>
 </html>

@@ -118,24 +118,51 @@ const Auth = {
      * @returns {Promise<Object|null>} - Datos del usuario o null si no hay sesión
      */
     checkAuth: async function() {
-        try {
-            const response = await fetch(`${CONFIG.AUTH_URL}/check-auth`);
-            const data = await response.json();
-            
-            if (data.authenticated) {
-                this.currentUser = data.usuario;
-                return data.usuario;
-            } else {
-                this.currentUser = null;
-                return null;
+    try {
+        const response = await fetch(`${CONFIG.AUTH_URL}/check-auth`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             }
-        } catch (err) {
-            console.error('Error al verificar autenticación:', err);
+        });
+        
+        // ✅ VERIFICAR que la respuesta sea JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error('❌ Respuesta no es JSON en checkAuth:', contentType);
             this.currentUser = null;
             return null;
         }
-    },
-    
+        
+        const data = await response.json();
+        
+        if (data.authenticated && data.usuario) {
+            this.currentUser = data.usuario;
+            
+            // ✅ ASEGURAR que el rol esté presente
+            if (!this.currentUser.rol) {
+                this.currentUser.rol = 'admin'; // Default seguro
+            }
+            
+            // ✅ SINCRONIZAR con localStorage
+            localStorage.setItem('user_data', JSON.stringify(this.currentUser));
+            
+            console.log('✅ Usuario autenticado:', this.currentUser.email, 'Rol:', this.currentUser.rol);
+            return this.currentUser;
+        } else {
+            this.currentUser = null;
+            localStorage.removeItem('user_data');
+            return null;
+        }
+    } catch (err) {
+        console.error('❌ Error al verificar autenticación:', err);
+        this.currentUser = null;
+        localStorage.removeItem('user_data');
+        return null;
+    }
+},
+
     /**
      * Cambia la contraseña del usuario actual
      * @param {string} currentPassword - Contraseña actual

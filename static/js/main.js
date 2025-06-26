@@ -479,116 +479,158 @@ async function login() {
  */
 async function loginSuccess(usuario) {
     try {
-        console.log('🎉 Procesando login exitoso para:', usuario.email);
+        console.log('🎉 Procesando login exitoso para:', usuario.email, 'Rol:', usuario.rol);
         
-        // ✅ NUEVO: Validar que el usuario tenga datos completos
+        // Validar datos del usuario
         if (!usuario || !usuario.email) {
             throw new Error('Datos de usuario incompletos');
         }
         
-        // Actualizar usuario actual con validación
-        Auth.updateUserData(usuario);
-        
-        // ✅ NUEVO: Ahora que Auth está disponible, inicializar UI con usuario
-        if (typeof UI.initializeForUser === 'function') {
-            UI.initializeForUser(usuario);
-        } else {
-            // Fallback si la función no existe
-            UI.loadSavedTheme();
+        // ✅ ACTUALIZAR todas las referencias de usuario
+        if (typeof Auth !== 'undefined' && Auth.updateUserData) {
+            Auth.updateUserData(usuario);
         }
         
-        // ✅ NUEVO: Validar limpieza previa antes de mostrar dashboard
-        const hasOldElements = document.querySelectorAll('.admin-welcome, .asesor-welcome').length > 0;
-        if (hasOldElements) {
-            console.warn('⚠️ Detectados elementos de rol anterior, limpiando...');
-            if (typeof Auth.cleanupDynamicElements === 'function') {
-                Auth.cleanupDynamicElements();
-            }
-        }
+        // Almacenar en localStorage
+        localStorage.setItem('user_data', JSON.stringify(usuario));
         
-        // Cambiar de pantalla con validación
-        const loginSection = document.getElementById('login-section');
-        const dashboardSection = document.getElementById('dashboard-section');
+        // Variable global para compatibilidad
+        window.currentGerente = usuario;
         
-        if (!loginSection || !dashboardSection) {
-            throw new Error('Elementos de UI no encontrados');
-        }
+        // ✅ CONFIGURAR UI SEGÚN ROL INMEDIATAMENTE
+        configureDashboardForRole(usuario.rol);
         
-        loginSection.style.display = 'none';
-        dashboardSection.style.display = 'block';
-        
-        // ✅ NUEVO: Configurar UI según rol con verificación
-        const userRole = usuario.rol || 'asesor';
-        console.log(`🎭 Configurando dashboard para rol: ${userRole}`);
-        
-        // Limpiar clases de rol anteriores
-        document.body.classList.remove('admin-view', 'asesor-view');
-        
-        // Configurar nueva clase de rol
-        configureDashboardForRole(userRole);
-        
-        // Actualizar información de usuario con validación
+        // Actualizar información de usuario en UI
         updateUserInfo(usuario);
         
-        // ✅ NUEVO: Inicializar módulos solo si no están inicializados
-        if (!appState.initialized) {
-            console.log('📦 Inicializando módulos del dashboard...');
+        // Mostrar dashboard
+        document.getElementById('login-section').style.display = 'none';
+        document.getElementById('dashboard-section').style.display = 'block';
+        
+        // ✅ CONFIGURAR MÉTRICAS DESPUÉS DE UI
+        if (usuario.rol === 'admin') {
+            console.log('👑 Preparando métricas administrativas...');
             
-            try {
-                if (typeof Reclutas !== 'undefined' && Reclutas.init) {
-                    Reclutas.userRole = userRole;
-                    await Reclutas.init();
-                    await Reclutas.loadAndDisplayReclutas();
+            setTimeout(() => {
+                // Verificar que los elementos admin estén visibles
+                const adminElements = document.querySelectorAll('.admin-only');
+                const visibleElements = Array.from(adminElements).filter(el => 
+                    getComputedStyle(el).display !== 'none'
+                );
+                
+                console.log(`📊 Elementos admin visibles: ${visibleElements.length}/${adminElements.length}`);
+                
+                // Inicializar métricas si estamos en estadísticas
+                const estadisticasSection = document.getElementById('estadisticas-section');
+                if (estadisticasSection && window.initializeMetricasAdmin) {
+                    console.log('📈 Inicializando métricas administrativas...');
+                    window.initializeMetricasAdmin();
                 }
-            } catch (e) {
-                console.error('❌ Error al inicializar reclutas:', e);
-                showError('Error al cargar reclutas: ' + e.message);
-            }
+            }, 800); // Dar tiempo para que se configuren los elementos
             
-            try {
-                if (typeof Calendar !== 'undefined' && Calendar.init) {
-                    await Calendar.init();
+        } else if (usuario.rol === 'asesor') {
+            console.log('👥 Configurando vista de asesor...');
+            
+            setTimeout(() => {
+                if (window.MetricasAdmin && window.MetricasAdmin.setupContainer) {
+                    window.MetricasAdmin.setupContainer();
                 }
-            } catch (e) {
-                console.error('❌ Error al inicializar calendario:', e);
-            }
-            
+            }, 500);
+        }
+        
+        // Cargar reclutas
+        if (typeof Reclutas !== 'undefined') {
             try {
-                await loadEstadisticas();
+                Reclutas.userRole = usuario.rol;
+                await Reclutas.loadAndDisplayReclutas();
             } catch (e) {
-                console.error('❌ Error al cargar estadísticas:', e);
-            }
-            
-            appState.initialized = true;
-        } else {
-            // Recargar datos si ya está inicializado
-            try {
-                if (typeof Reclutas !== 'undefined' && Reclutas.loadAndDisplayReclutas) {
-                    Reclutas.userRole = userRole;
-                    await Reclutas.loadAndDisplayReclutas();
-                }
-            } catch (e) {
-                console.error('❌ Error al recargar reclutas:', e);
+                console.error('❌ Error al cargar reclutas:', e);
             }
         }
         
-        // ✅ NUEVO: Mensaje de bienvenida mejorado
+        // Mensaje de bienvenida
         const welcomeMessage = getWelcomeMessage(usuario);
-        showSuccess(welcomeMessage);
+        if (typeof showSuccess !== 'undefined') {
+            showSuccess(welcomeMessage);
+        }
         
-        console.log('✅ Dashboard configurado correctamente para:', userRole);
+        console.log('✅ Login completado exitosamente para:', usuario.rol);
         
     } catch (error) {
         console.error('❌ Error en loginSuccess:', error);
-        showError('Error al cargar el dashboard: ' + error.message);
-        
-        // ✅ NUEVO: En caso de error, limpiar y volver a login
-        if (typeof Auth.clearUserState === 'function') {
-            Auth.clearUserState();
+        if (typeof showError !== 'undefined') {
+            showError('Error al cargar el dashboard: ' + error.message);
         }
         showLoginScreen(true);
     }
-}
+}   
+
+/**
+ * ✅ FUNCIÓN DE DEBUG: Verificar visibilidad de elementos admin
+ */
+window.checkAdminVisibility = function() {
+    console.log('🔍 === VERIFICACIÓN DE VISIBILIDAD ADMIN ===');
+    
+    const currentUser = getCurrentUser();
+    console.log('👤 Usuario actual:', currentUser?.email, '- Rol:', currentUser?.rol);
+    
+    const bodyClasses = document.body.className;
+    console.log('🎨 Clases del body:', bodyClasses);
+    
+    const adminElements = document.querySelectorAll('.admin-only');
+    console.log(`📦 Total elementos admin-only: ${adminElements.length}`);
+    
+    adminElements.forEach((element, index) => {
+        const computedStyle = getComputedStyle(element);
+        const isVisible = computedStyle.display !== 'none';
+        const hasInlineStyle = element.style.display;
+        
+        console.log(`📋 Elemento ${index + 1}:`, {
+            className: element.className,
+            id: element.id,
+            display: computedStyle.display,
+            inlineStyle: hasInlineStyle,
+            visible: isVisible
+        });
+    });
+    
+    // Test de reparación
+    if (currentUser && currentUser.rol === 'admin') {
+        console.log('🔧 Ejecutando reparación de visibilidad...');
+        configureDashboardForRole('admin');
+        
+        setTimeout(() => {
+            console.log('✅ Reparación completada, verificando de nuevo...');
+            window.checkAdminVisibility();
+        }, 200);
+    }
+};
+
+/**
+ * ✅ FUNCIÓN DE REPARACIÓN: Forzar mostrar elementos admin
+ */
+window.forceShowAdminElements = function() {
+    console.log('🚨 FORZANDO VISIBILIDAD DE ELEMENTOS ADMIN...');
+    
+    // Asegurar clase en body
+    document.body.classList.add('admin-view');
+    document.body.classList.remove('asesor-view');
+    
+    // Mostrar todos los elementos admin-only
+    const adminElements = document.querySelectorAll('.admin-only');
+    adminElements.forEach((element, index) => {
+        element.style.display = 'block';
+        element.style.setProperty('display', 'block', 'important');
+        console.log(`✅ Forzado elemento ${index + 1}: ${element.className}`);
+    });
+    
+    console.log(`✅ ${adminElements.length} elementos admin forzados a visible`);
+    
+    // Actualizar navegación
+    updateAdminNavigation();
+    
+    return adminElements.length;
+};
 
 /**
  * ✅ RESTO DE FUNCIONES (sin cambios, solo cleanup)
@@ -637,59 +679,193 @@ function getWelcomeMessage(usuario) {
     }
 }
 
+// ============================================================================
+// 🔧 CORRECCIÓN PARA MOSTRAR ELEMENTOS ADMIN
+// AGREGAR estas funciones a main.js (reemplazar las existentes)
+// ============================================================================
+
+/**
+ * ✅ FUNCIÓN CORREGIDA: configureDashboardForRole
+ * REEMPLAZAR la función existente en main.js
+ */
 function configureDashboardForRole(rol) {
+    console.log('⚙️ Configurando dashboard para rol:', rol);
+    
+    try {
+        // ✅ CRÍTICO: Limpiar clases anteriores PRIMERO
+        document.body.classList.remove('admin-view', 'asesor-view');
+        
+        // ✅ CRÍTICO: Esperar un ciclo antes de aplicar nuevas clases
+        setTimeout(() => {
+            if (rol === 'admin') {
+                // 👑 CONFIGURACIÓN PARA ADMINISTRADORES
+                console.log('👑 Configurando vista de administrador...');
+                
+                // Agregar clase al body
+                document.body.classList.add('admin-view');
+                
+                // ✅ MOSTRAR elementos admin EXPLÍCITAMENTE
+                const adminElements = document.querySelectorAll('.admin-only');
+                console.log(`📦 Encontrados ${adminElements.length} elementos admin-only`);
+                
+                adminElements.forEach((element, index) => {
+                    if (element) {
+                        element.style.display = 'block';
+                        console.log(`✅ Elemento admin ${index + 1} mostrado:`, element.className);
+                    }
+                });
+                
+                // Ocultar mensajes específicos para asesores
+                const asesorMessages = document.querySelectorAll('.asesor-only-message');
+                asesorMessages.forEach(element => {
+                    if (element) element.style.display = 'none';
+                });
+                
+                // ✅ ACTUALIZAR NAVEGACIÓN
+                updateAdminNavigation();
+                
+                console.log('✅ Vista de administrador configurada correctamente');
+                
+            } else if (rol === 'asesor') {
+                // 👥 CONFIGURACIÓN PARA ASESORES
+                console.log('👥 Configurando vista de asesor...');
+                
+                // Agregar clase al body
+                document.body.classList.add('asesor-view');
+                
+                // ✅ OCULTAR elementos admin EXPLÍCITAMENTE
+                const adminElements = document.querySelectorAll('.admin-only');
+                console.log(`📦 Ocultando ${adminElements.length} elementos admin-only`);
+                
+                adminElements.forEach((element, index) => {
+                    if (element) {
+                        element.style.display = 'none';
+                        console.log(`❌ Elemento admin ${index + 1} oculto:`, element.className);
+                    }
+                });
+                
+                // Mostrar mensajes específicos para asesores
+                const asesorMessages = document.querySelectorAll('.asesor-only-message');
+                asesorMessages.forEach(element => {
+                    if (element) element.style.display = 'block';
+                });
+                
+                // ✅ ACTUALIZAR NAVEGACIÓN
+                updateAsesorNavigation();
+                
+                console.log('✅ Vista de asesor configurada correctamente');
+                
+            } else {
+                console.warn('⚠️ Rol no reconocido:', rol);
+            }
+            
+            // ✅ ACTUALIZAR ROL EN PERFIL
+            updateProfileRole(rol);
+            
+        }, 100); // Pequeño delay para asegurar limpieza
+        
+    } catch (error) {
+        console.error('❌ Error configurando dashboard:', error);
+    }
+}
+
+/**
+ * ✅ NUEVA FUNCIÓN: Actualizar navegación para admin
+ */
+function updateAdminNavigation() {
     const dashboardNav = document.querySelector('.dashboard-nav ul');
+    
+    if (dashboardNav) {
+        console.log('📋 Configurando navegación de administrador...');
+        
+        dashboardNav.innerHTML = `
+            <li class="active">
+                <a href="#" data-section="reclutas-section">
+                    <i class="fas fa-users"></i> Gestión de Reclutas
+                </a>
+            </li>
+            <li>
+                <a href="#" data-section="calendario-section">
+                    <i class="fas fa-calendar-alt"></i> Calendario
+                </a>
+            </li>
+            <li>
+                <a href="#" data-section="estadisticas-section">
+                    <i class="fas fa-chart-bar"></i> Métricas Avanzadas
+                </a>
+            </li>
+            <li>
+                <a href="#" data-section="configuracion-section">
+                    <i class="fas fa-cog"></i> Configuración
+                </a>
+            </li>
+        `;
+        
+        // Re-inicializar navegación
+        if (typeof UI !== 'undefined' && UI.initNavigation) {
+            UI.initNavigation();
+        }
+        
+        console.log('✅ Navegación de administrador configurada');
+    }
+}
+
+/**
+ * ✅ NUEVA FUNCIÓN: Actualizar navegación para asesor
+ */
+function updateAsesorNavigation() {
+    const dashboardNav = document.querySelector('.dashboard-nav ul');
+    
+    if (dashboardNav) {
+        console.log('📋 Configurando navegación de asesor...');
+        
+        dashboardNav.innerHTML = `
+            <li class="active">
+                <a href="#" data-section="reclutas-section">
+                    <i class="fas fa-users"></i> Mis Reclutas
+                </a>
+            </li>
+            <li>
+                <a href="#" data-section="calendario-section">
+                    <i class="fas fa-calendar-alt"></i> Mis Entrevistas
+                </a>
+            </li>
+            <li>
+                <a href="#" data-section="estadisticas-section">
+                    <i class="fas fa-chart-bar"></i> Mis Estadísticas
+                </a>
+            </li>
+            <li>
+                <a href="#" data-section="configuracion-section">
+                    <i class="fas fa-cog"></i> Mi Perfil
+                </a>
+            </li>
+        `;
+        
+        // Re-inicializar navegación
+        if (typeof UI !== 'undefined' && UI.initNavigation) {
+            UI.initNavigation();
+        }
+        
+        console.log('✅ Navegación de asesor configurada');
+    }
+}
+
+/**
+ * ✅ NUEVA FUNCIÓN: Actualizar rol en perfil
+ */
+function updateProfileRole(rol) {
     const profileRole = document.querySelector('.profile-role');
     
-    if (!dashboardNav) return;
-    
-    // Limpiar clases existentes
-    document.body.classList.remove('admin-view', 'asesor-view');
-    document.body.classList.add(rol === 'admin' ? 'admin-view' : 'asesor-view');
-    
-    // Actualizar rol en perfil
     if (profileRole) {
         const roleNames = {
             'admin': 'Administrador',
             'asesor': 'Asesor de Reclutamiento',
             'gerente': 'Gerente de Reclutamiento'
         };
+        
         profileRole.textContent = roleNames[rol] || 'Usuario';
-    }
-    
-    // 🆕 CONFIGURAR NAVEGACIÓN SEGÚN ROL
-    if (rol === 'admin') {
-        // ✅ NAVEGACIÓN PARA ADMINISTRADORES (con métricas avanzadas)
-        dashboardNav.innerHTML = `
-            <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Gestión de Reclutas</a></li>
-            <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
-            <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Métricas Avanzadas</a></li>
-            <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Configuración</a></li>
-        `;
-        
-        // 🔧 CARGAR MÓDULO DE MÉTRICAS ADMINISTRATIVAS
-        loadMetricasAdminModule();
-        
-    } else {
-        // 👥 NAVEGACIÓN PARA ASESORES (simplificada)
-        dashboardNav.innerHTML = `
-            <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Mis Reclutas</a></li>
-            <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Mis Entrevistas</a></li>
-            <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Mis Estadísticas</a></li>
-            <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Mi Perfil</a></li>
-        `;
-        
-        // 🚫 OCULTAR FUNCIONALIDADES ADMIN
-        hideAdminFeatures();
-    }
-    
-    // Re-inicializar navegación
-    UI.initNavigation();
-    
-    // Configurar UI específica para reclutas
-    if (typeof Reclutas !== 'undefined' && Reclutas.configureUIForRole) {
-        Reclutas.userRole = rol;
-        setTimeout(() => Reclutas.configureUIForRole(), 100);
+        console.log('👤 Rol actualizado en perfil:', roleNames[rol]);
     }
 }
 
@@ -789,7 +965,13 @@ async function loadEstadisticas() {
         const currentUser = getCurrentUser();
         console.log('🔍 Cargando estadísticas para:', currentUser?.rol);
         
-        if (currentUser?.rol === 'admin') {
+        if (!currentUser) {
+            console.warn('⚠️ No hay usuario autenticado para cargar estadísticas');
+            showLoginScreen();
+            return;
+        }
+        
+        if (currentUser.rol === 'admin') {
             // 👑 ADMINISTRADORES: Cargar métricas avanzadas
             console.log('📊 Cargando métricas administrativas...');
             
@@ -805,37 +987,62 @@ async function loadEstadisticas() {
             }
         } else {
             // 👥 ASESORES: Solo estadísticas básicas
-            console.log('📊 Cargando estadísticas básicas para asesor...');
+            console.log('📊 Cargando estadísticas básicas para asesor');
             await loadEstadisticasBasicas();
-            hideAdminFeatures();
         }
         
     } catch (error) {
-        console.error('❌ Error al cargar estadísticas:', error);
-        Notifications.show('Error al cargar estadísticas: ' + error.message, 'error');
+        console.error('❌ Error en loadEstadisticas:', error);
+        showNotification('Error al cargar estadísticas del sistema', 'error');
     }
 }
 
 // Cargar estadísticas básicas (para asesores)
 async function loadEstadisticasBasicas() {
     try {
-        const response = await fetch(`${CONFIG.API_URL}/estadisticas`, {
+        console.log('📊 Cargando estadísticas básicas...');
+        
+        const response = await fetch('/api/estadisticas', {
+            method: 'GET',
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             }
         });
         
-        if (!response.ok) throw new Error(`Error ${response.status}`);
+        // ✅ VERIFICAR que la respuesta sea JSON, no HTML
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error(`Respuesta no es JSON. Content-Type: ${contentType}`);
+        }
+        
+        if (!response.ok) {
+            if (response.status === 401) {
+                console.warn('🔐 Usuario no autenticado, redirigiendo a login');
+                showLoginScreen();
+                return;
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         
         const data = await response.json();
-        if (data.success) {
-            // CAMBIO: Verificar si data tiene estadisticas o usar data directamente
-            const estadisticas = data.estadisticas || data;
-            updateEstadisticasBasicasUI(estadisticas);
+        
+        if (data.success && data.estadisticas) {
+            console.log('✅ Estadísticas básicas cargadas:', data.estadisticas);
+            updateEstadisticasUI(data.estadisticas);
+        } else {
+            throw new Error(data.message || 'Datos de estadísticas inválidos');
         }
+        
     } catch (error) {
-        console.error('Error al cargar estadísticas básicas:', error);
-        throw error;
+        console.error('❌ Error al cargar estadísticas básicas:', error);
+        showNotification(`Error al cargar estadísticas: ${error.message}`, 'error');
+        
+        // Mostrar datos por defecto
+        updateEstadisticasUI({
+            reclutas: { total: 0, activos: 0, en_proceso: 0 },
+            entrevistas: { pendientes: 0, completadas: 0 }
+        });
     }
 }
 
@@ -899,40 +1106,181 @@ function updateBasicCharts(distribucion) {
 const originalShowSection = showSection; // Guardar referencia original
 
 function showSection(sectionId) {
-    // Llamar a la función original
-    if (originalShowSection) {
-        originalShowSection(sectionId);
-    }
+    console.log('📄 Mostrando sección:', sectionId);
     
-    // 🆕 LÓGICA ESPECÍFICA PARA ESTADÍSTICAS
-    if (sectionId === 'estadisticas-section') {
-        const currentUser = getCurrentUser();
+    try {
+        // Ocultar todas las secciones
+        const sections = document.querySelectorAll('.dashboard-content-section');
+        sections.forEach(section => {
+            if (section) section.style.display = 'none';
+        });
         
-        // Cargar estadísticas apropiadas según el rol
-        setTimeout(() => {
-            loadEstadisticas();
-        }, 100);
-        
-        // Si es admin y el módulo está cargado, inicializar
-        if (currentUser?.rol === 'admin' && MetricasAdmin) {
-            setTimeout(() => {
-                initializeMetricasAdmin();
-            }, 200);
+        // Mostrar la sección solicitada
+        const targetSection = document.getElementById(sectionId);
+        if (targetSection) {
+            targetSection.style.display = 'block';
+            
+            // ✅ LÓGICA ESPECÍFICA PARA ESTADÍSTICAS
+            if (sectionId === 'estadisticas-section') {
+                const currentUser = getCurrentUser();
+                console.log('📊 Accediendo a estadísticas, usuario:', currentUser?.rol);
+                
+                if (currentUser && currentUser.rol === 'admin') {
+                    // Esperar un momento para que se muestre la sección
+                    setTimeout(() => {
+                        if (window.initializeMetricasAdmin) {
+                            console.log('📈 Inicializando métricas admin para la sección');
+                            window.initializeMetricasAdmin();
+                        }
+                    }, 200);
+                } else if (currentUser && currentUser.rol === 'asesor') {
+                    // Configurar vista de asesor
+                    setTimeout(() => {
+                        if (window.MetricasAdmin && window.MetricasAdmin.setupContainer) {
+                            window.MetricasAdmin.setupContainer();
+                        }
+                    }, 200);
+                }
+            }
+            
+        } else {
+            console.warn('⚠️ Sección no encontrada:', sectionId);
         }
+        
+        // Actualizar navegación activa
+        const navLinks = document.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+        });
+        
+        const activeLink = document.querySelector(`[onclick*="${sectionId}"]`);
+        if (activeLink) {
+            activeLink.classList.add('active');
+        }
+        
+    } catch (error) {
+        console.error('❌ Error al mostrar sección:', error);
     }
 }
 
 // Obtener usuario actual
 function getCurrentUser() {
     try {
-        // CAMBIO: Usar 'user_data' en lugar de CONFIG.STORAGE_KEYS.USER_DATA
+        // 1. Intentar desde Auth.currentUser
+        if (typeof Auth !== 'undefined' && Auth.currentUser) {
+            return Auth.currentUser;
+        }
+        
+        // 2. Intentar desde variable global
+        if (typeof currentGerente !== 'undefined' && currentGerente) {
+            return currentGerente;
+        }
+        
+        // 3. Intentar desde localStorage
         const userDataStr = localStorage.getItem('user_data');
-        return userDataStr ? JSON.parse(userDataStr) : null;
+        if (userDataStr) {
+            const userData = JSON.parse(userDataStr);
+            return userData;
+        }
+        
+        // 4. No hay usuario
+        return null;
+        
     } catch (error) {
-        console.error('Error al obtener datos del usuario:', error);
+        console.error('🚨 Error al obtener usuario actual:', error);
+        // Limpiar localStorage corrupto
+        localStorage.removeItem('user_data');
         return null;
     }
 }
+
+// ✅ FUNCIÓN DE VALIDACIÓN - AGREGAR para verificar que todo funciona
+window.validateMetricsIntegration = function() {
+    console.log('🧪 === VALIDACIÓN DE INTEGRACIÓN DE MÉTRICAS ===');
+    
+    const results = {
+        currentUser: false,
+        metricasModule: false,
+        initFunction: false,
+        cleanupFunction: false,
+        containers: false,
+        overall: false
+    };
+    
+    // 1. Verificar usuario actual
+    const user = getCurrentUser();
+    if (user) {
+        results.currentUser = true;
+        console.log('✅ Usuario actual:', user.email, '- Rol:', user.rol);
+    } else {
+        console.log('❌ No hay usuario autenticado');
+    }
+    
+    // 2. Verificar módulo de métricas
+    if (typeof MetricasAdmin === 'object') {
+        results.metricasModule = true;
+        console.log('✅ Módulo MetricasAdmin disponible');
+        console.log('📊 Estado inicializado:', MetricasAdmin.config?.initialized || false);
+    } else {
+        console.log('❌ Módulo MetricasAdmin no disponible');
+    }
+    
+    // 3. Verificar funciones de inicialización
+    if (typeof window.initializeMetricasAdmin === 'function') {
+        results.initFunction = true;
+        console.log('✅ Función initializeMetricasAdmin disponible');
+    } else {
+        console.log('❌ Función initializeMetricasAdmin no disponible');
+    }
+    
+    if (typeof window.cleanupMetricasAdmin === 'function') {
+        results.cleanupFunction = true;
+        console.log('✅ Función cleanupMetricasAdmin disponible');
+    } else {
+        console.log('❌ Función cleanupMetricasAdmin no disponible');
+    }
+    
+    // 4. Verificar contenedores HTML
+    const containers = [
+        'estadisticas-section',
+        'resumen-global', 
+        'asesores-metricas',
+        'top-performers',
+        'needs-improvement'
+    ];
+    
+    const foundContainers = containers.filter(id => !!document.getElementById(id));
+    if (foundContainers.length === containers.length) {
+        results.containers = true;
+        console.log('✅ Todos los contenedores HTML encontrados');
+    } else {
+        console.log('❌ Contenedores faltantes:', containers.filter(id => !document.getElementById(id)));
+    }
+    
+    // 5. Resultado general
+    results.overall = Object.values(results).every(Boolean);
+    
+    console.log('📊 Resultado de validación:', results);
+    
+    if (results.overall) {
+        console.log('🎉 ¡Integración de métricas funcionando correctamente!');
+        
+        // Test de inicialización si el usuario es admin
+        if (user && user.rol === 'admin') {
+            console.log('🧪 Probando inicialización...');
+            try {
+                const initResult = window.initializeMetricasAdmin();
+                console.log('✅ Test de inicialización:', initResult ? 'ÉXITO' : 'FALLÓ');
+            } catch (error) {
+                console.log('❌ Error en test de inicialización:', error);
+            }
+        }
+    } else {
+        console.log('⚠️ Hay problemas en la integración de métricas');
+    }
+    
+    return results;
+};
 
 function updateEstadisticasUI(data) {
     const stats = {
@@ -955,39 +1303,62 @@ async function logout() {
     try {
         console.log('🚪 Iniciando logout desde main.js...');
         
-        // ✅ NUEVO: Auth.logout ahora incluye limpieza completa
-        await Auth.logout();
+        // ✅ NUEVO: Limpiar métricas admin si está inicializado
+        if (window.cleanupMetricasAdmin) {
+            window.cleanupMetricasAdmin();
+        }
         
-        // ✅ NUEVO: Limpieza adicional del DOM específica de main.js
-        cleanupMainDOMElements();
+        // Logout a través de Auth si está disponible
+        if (typeof Auth !== 'undefined' && Auth.logout) {
+            await Auth.logout();
+        }
         
-        // ✅ NUEVO: Mostrar pantalla de login asegurando estado limpio
-        showLoginScreen(true); // Parámetro true para forzar limpieza
+        // ✅ NUEVO: Limpiar todas las variables globales
+        window.currentGerente = null;
+        localStorage.removeItem('user_data');
         
-        // ✅ NUEVO: Limpiar campos de formulario
+        // ✅ NUEVO: Limpiar clases del body
+        document.body.classList.remove('admin-view', 'asesor-view');
+        
+        // ✅ NUEVO: Resetear visibilidad de elementos
+        const adminElements = document.querySelectorAll('.admin-only');
+        adminElements.forEach(element => {
+            if (element) element.style.display = 'none';
+        });
+        
+        const asesorMessages = document.querySelectorAll('.asesor-only-message');
+        asesorMessages.forEach(element => {
+            if (element) element.style.display = 'none';
+        });
+        
+        // Mostrar pantalla de login
+        showLoginScreen(true);
+        
+        // Limpiar campos de formulario
         const emailField = document.getElementById('email');
         const passwordField = document.getElementById('password');
         
         if (emailField) emailField.value = '';
         if (passwordField) passwordField.value = '';
         
-        // ✅ NUEVO: Resetear a pestaña de admin por defecto
-        switchToAdminTab();
+        if (typeof showSuccess !== 'undefined') {
+            showSuccess('Sesión cerrada correctamente');
+        }
         
-        showSuccess('Sesión cerrada correctamente');
         console.log('✅ Logout completado exitosamente');
         
     } catch (error) {
-        console.error('❌ Error al cerrar sesión:', error);
-        showError('Error al cerrar sesión');
+        console.error('❌ Error durante logout:', error);
         
-        // ✅ NUEVO: Aún así forzar limpieza local
-        forceCleanupAndShowLogin();
+        // Forzar limpieza en caso de error
+        localStorage.clear();
+        window.currentGerente = null;
+        showLoginScreen(true);
     }
 }
 
 /**
- * ✅ NUEVA FUNCIÓN: Limpieza específica del DOM de main.js
+ * Limpieza específica del DOM de main.js
  */
 function cleanupMainDOMElements() {
     console.log('🧽 Limpiando elementos específicos de main.js...');

@@ -124,34 +124,46 @@ def logout_usuario():
 @auth_bp.route('/check-auth', methods=['GET'])
 def check_auth():
     """
-    Verifica el estado de autenticación del usuario actual.
+    🔐 ENDPOINT CORREGIDO para verificar autenticación
     """
     try:
-        # Importar current_user aquí para evitar problemas de importación circular
         from flask_login import current_user
         
         if current_user and current_user.is_authenticated:
-            # Asegurar que el usuario tenga un rol
+            # ✅ ASEGURAR que el usuario tenga un rol
             user_data = current_user.serialize()
             if not user_data.get('rol'):
                 user_data['rol'] = 'admin'  # Valor por defecto seguro
             
-            return jsonify({
+            current_app.logger.info(f"✅ Usuario autenticado: {user_data.get('email')} (rol: {user_data.get('rol')})")
+            
+            # ✅ RESPUESTA JSON asegurada
+            response = jsonify({
                 "authenticated": True, 
                 "usuario": user_data
-            }), 200
+            })
+            response.headers['Content-Type'] = 'application/json'
+            return response, 200
         else:
-            return jsonify({
+            # ✅ RESPUESTA JSON para no autenticado
+            response = jsonify({
                 "authenticated": False,
                 "message": "No hay usuario autenticado"
-            }), 200  # Cambiar a 200 en lugar de 401 para evitar errores en frontend
+            })
+            response.headers['Content-Type'] = 'application/json'
+            return response, 200
             
     except Exception as e:
-        current_app.logger.error(f"Error al verificar autenticación: {str(e)}")
-        return jsonify({
+        current_app.logger.error(f"❌ Error al verificar autenticación: {str(e)}")
+        
+        # ✅ RESPUESTA de error en JSON
+        response = jsonify({
             "authenticated": False,
-            "error": "Error interno del servidor"
-        }), 200
+            "error": "Error interno del servidor",
+            "message": str(e)
+        })
+        response.headers['Content-Type'] = 'application/json'
+        return response, 200
 
 @auth_bp.route('/cambiar-password', methods=['POST'])
 @login_required
