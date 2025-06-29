@@ -38,7 +38,22 @@
             <button id="notification-close"><i class="fas fa-times"></i></button>
         </div>
 
-        {% block content %}{% endblock %}
+        {% block content %}
+        <div id="metricas-admin-container" class="admin-only" style="display: none;">
+            <h2>📊 Métricas Avanzadas por Asesor</h2>
+            <button id="refresh-metricas-btn" class="btn btn-primary mb-3">
+                <i class="fas fa-sync-alt"></i> Actualizar Métricas
+            </button>
+            <div id="resumen-global">
+                <!-- Resumen global de métricas se renderizará aquí -->
+            </div>
+            <h3>Desempeño Individual de Asesores</h3>
+            <div id="asesores-metricas" class="asesores-grid">
+                <!-- Tarjetas de asesores se renderizarán aquí -->
+            </div>
+            <div id="metricas-loader" class="loader">Cargando métricas...</div>
+        </div>
+        {% endblock %}
     </div>
 
     {% block modals %}{% endblock %}

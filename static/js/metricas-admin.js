@@ -706,9 +706,7 @@ const MetricasAdmin = {
             }, 2000);
         } catch (error) {
             console.error('Error en exportación:', error);
-            if (typeof showNotification !== 'undefined') {
-                showNotification('Error en exportación: ' + error.message, 'error');
-            }
+            Notifications.error('Error en exportación: ' + error.message);
         }
     },
 

@@ -511,15 +511,13 @@ async function loginSuccess(usuario) {
         if (usuario.rol === 'admin') {
             console.log('👑 Preparando métricas administrativas...');
             
+            // Asegurar que los elementos admin-only sean visibles
+            const adminElements = document.querySelectorAll('.admin-only');
+            adminElements.forEach(element => {
+                element.style.display = 'block';
+            });
+
             setTimeout(() => {
-                // Verificar que los elementos admin estén visibles
-                const adminElements = document.querySelectorAll('.admin-only');
-                const visibleElements = Array.from(adminElements).filter(el => 
-                    getComputedStyle(el).display !== 'none'
-                );
-                
-                console.log(`📊 Elementos admin visibles: ${visibleElements.length}/${adminElements.length}`);
-                
                 // Inicializar métricas si estamos en estadísticas
                 const estadisticasSection = document.getElementById('estadisticas-section');
                 if (estadisticasSection && window.initializeMetricasAdmin) {
@@ -1568,7 +1566,7 @@ function handleProfileImageChange(event) {
     if (!profilePic) return;
     
     if (file.size > CONFIG.MAX_UPLOAD_SIZE) {
-        showError(`La imagen es demasiado grande. Máximo ${CONFIG.MAX_UPLOAD_SIZE / (1024 * 1024)}MB.`);
+        Notifications.error(`La imagen es demasiado grande. Máximo ${CONFIG.MAX_UPLOAD_SIZE / (1024 * 1024)}MB.`);
         event.target.value = '';
         return;
     }
