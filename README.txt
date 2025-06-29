@@ -37,10 +37,10 @@ El **Sistema de Gestión de Reclutas v3.2** es una aplicación web fullstack des
 - 🔔 **Integración con timeline** de candidatos para seguimiento completo
 - 📈 **Analytics de entrevistas** por asesor y fechas
 
-#### 📊 **Dashboard Ejecutivo con Métricas en Tiempo Real**
+#### 📊 **Métricas Administrativas Avanzadas**
 - 📈 **KPIs automáticos**: conversión por estado, productividad por asesor, tendencias temporales
 - 📉 **Gráficos dinámicos** Chart.js: distribución de estados, ranking de asesores, métricas comparativas
-- 🎯 **Métricas administrativas** avanzadas con módulo especializado para administradores
+- 🎯 **Módulo especializado** para administradores con métricas avanzadas
 - 📋 **Reportes exportables** con filtros avanzados y datos consolidados
 - 🔄 **Actualización en tiempo real** con botones de refresh inteligente
 
@@ -96,7 +96,7 @@ sistema-reclutas/
 │   ├── security.py                # Funciones de seguridad y encriptación
 │   └── pagination.py              # Sistema de paginación optimizado
 │
-├── 🔧 scripts/                    # Scripts de mantenimiento y administración
+├── 🔧 scripts/                    # Scripts de mantenimiento y administración (ubicados en la raíz del proyecto)
 │   ├── admin_tools.py             # Herramienta CLI completa de administración
 │   ├── create_test_user.py        # Creación de usuarios con validación
 │   ├── test_distribucion.py       # Verificador de distribución Excel
@@ -106,7 +106,8 @@ sistema-reclutas/
     ├── test_models.py             # Tests de modelos con coverage
     ├── test_api.py                # Tests de API REST
     ├── test_auth.py               # Tests de autenticación
-    └── test_integration.py        # Tests de integración completos
+    ├── test_integration.py        # Tests de integración completos
+    └── test_metricas_admin.py     # Tests de métricas administrativas
 ```
 
 ### 🎨 **Frontend (ES6 + CSS3 + Componentes Modulares)**
@@ -1063,7 +1064,7 @@ git push origin feature/nueva-funcionalidad
 - **DevOps**: Docker + Gunicorn + Nginx + SSL + Automated Backups
 - **Testing**: Pytest + Coverage.py + Integration Tests + Performance Tests
 
-**👥 Desarrollado por**: Equipo de Desarrollo Interno  
+**👥 Desarrollado por**: Jair Molina Arce y Alan Rosas Palacios  
 **🏢 Para**: Gestión Empresarial de Recursos Humanos  
 **🎯 Objetivo**: Optimizar procesos de reclutamiento con tecnología moderna
 
