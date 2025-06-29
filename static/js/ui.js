@@ -649,50 +649,7 @@ clearStoredConfigurations: function() {
     }
     
     // Cerrar dropdowns al hacer clic fuera
-    document.addEventListener('DOMContentLoaded', async function() {
-    try {
-        console.log('🚀 Iniciando sistema de gestión de reclutas...');
-        
-        // ✅ 1. INICIALIZAR COMPONENTES BÁSICOS (INCLUYENDO DARK MODE)
-        console.log('📦 Inicializando UI básica...');
-        UI.initCommonEvents();  // ✅ ESTO CONFIGURA EL DARK MODE TOGGLE
-        UI.initNavigation();
-        UI.initColorSelectors();
-        
-        // ✅ 2. CARGAR TEMA POR DEFECTO SIEMPRE
-        UI.loadSavedTheme();  // ✅ AHORA ES SEGURO LLAMARLO
-        
-        // ✅ 3. INICIALIZAR SISTEMA DE TRACKING PÚBLICO
-        console.log('📋 Inicializando sistema de tracking...');
-        Client.init();
-        Timeline.init();
-        initPublicTracking();
-        
-        // ✅ 4. VERIFICAR AUTENTICACIÓN PARA PANEL ADMIN
-        try {
-            const user = await Auth.checkAuth();
-            if (user) {
-                console.log('👤 Usuario autenticado, mostrando dashboard...');
-                loginSuccess(user);
-            } else {
-                console.log('🔐 No hay sesión activa, mostrando pantalla pública...');
-                showLoginScreen();
-            }
-        } catch (error) {
-            console.warn('⚠️ Error verificando auth, mostrando pantalla pública:', error);
-            showLoginScreen();
-        }
-        
-        // ✅ 5. CONFIGURAR EVENTOS DE FORMULARIOS
-        setupFormEvents();
-        
-        console.log('✅ Sistema inicializado correctamente');
-        
-    } catch (error) {
-        console.error('❌ Error crítico en la inicialización:', error);
-        showError('Error al cargar el sistema. Por favor, recarga la página.');
-    }
-});
+    
     
     // Toggle visibilidad de contraseña
     const togglePasswordBtns = document.querySelectorAll('.toggle-password');

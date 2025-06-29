@@ -56,62 +56,7 @@ const Auth = {
      * @returns {Promise<Object>} - Datos del usuario autenticado
      * @throws {Error} Si las credenciales son inválidas o hay error de conexión
      */
-    login: async function(email, password) {
-        try {
-            const response = await fetch(`${CONFIG.AUTH_URL}/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            });
-            
-            if (!response.ok) {
-                if (response.status === 401) {
-                    throw new Error('Credenciales inválidas');
-                }
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            if (data.success) {
-                this.currentUser = data.usuario;
-                return data.usuario;
-            } else {
-                throw new Error(data.message || 'Error de autenticación');
-            }
-        } catch (err) {
-            console.error('Error de login:', err);
-            throw err;
-        }
-    },
     
-    /**
-     * Cierra la sesión del usuario actual
-     * @returns {Promise<boolean>} - True si se cerró sesión correctamente
-     * @throws {Error} Si hay error al cerrar la sesión
-     */
-    logout: async function() {
-        try {
-            const response = await fetch(`${CONFIG.AUTH_URL}/logout`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
-            });
-            
-            if (!response.ok) {
-                throw new Error(`Error ${response.status}: ${response.statusText}`);
-            }
-            
-            const data = await response.json();
-            if (data.success) {
-                this.currentUser = null;
-                return true;
-            } else {
-                throw new Error(data.message || 'Error al cerrar sesión');
-            }
-        } catch (err) {
-            console.error('Error de logout:', err);
-            throw err;
-        }
-    },
     
     /**
      * Verifica si hay una sesión activa
@@ -206,7 +151,7 @@ const Auth = {
             const data = await response.json();
             return data.sessions || [];
         } catch (err) {
-            console.error('Error al obtener sesiones:', err);
+            Notifications.error(`Error al obtener sesiones: ${err.message}`);
             throw err;
         }
     },
@@ -229,7 +174,7 @@ const Auth = {
             const data = await response.json();
             return data.success;
         } catch (err) {
-            console.error(`Error al cerrar sesión ${sessionId}:`, err);
+                    Notifications.error(`Error al cerrar sesión ${sessionId}: ${err.message}`);
             throw err;
         }
     },
@@ -522,7 +467,7 @@ setupUserSpecificUI: function(usuario) {
             }
             return data;
         } else {
-            throw new Error(data.message || 'Error al obtener rol');
+            Notifications.show(data.message || 'Error al obtener rol', 'error');
         }
     } catch (error) {
         console.error('Error al obtener rol del usuario:', error);
