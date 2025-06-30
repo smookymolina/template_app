@@ -573,57 +573,156 @@ hideDistribucionProgress: function() {
 },
 
 /**
- * ✅ NUEVA FUNCIÓN: Muestra resultados de distribución
+ * 📊 FUNCIÓN MODIFICADA: Muestra resultados de distribución con capacidades de edición
+ * REEMPLAZA la función existente showDistribucionResults
  */
 showDistribucionResults: function(data) {
-    this.hideDistribucionProgress();
+    console.log('📊 Mostrando resultados de distribución EDITABLE', data);
     
     const resultsContainer = document.getElementById('distribucion-results');
-    if (!resultsContainer) return;
+    if (!resultsContainer) {
+        console.error('❌ No se encontró contenedor de resultados');
+        return;
+    }
     
-    // Preparar HTML de resultados
-    const distributionRows = Object.entries(data.distribucion || {})
-        .map(([email, count]) => 
-            `<tr><td>${email}</td><td><strong>${count}</strong> reclutas</td></tr>`
-        ).join('');
+    // 💾 Guardar datos originales para referencia y rollback
+    this.distribucionOriginal = JSON.parse(JSON.stringify(data)); // Deep copy
     
-    const errorsHtml = data.errores_detalle && data.errores_detalle.length > 0 ? 
+    // 📧 Obtener información adicional de asesores si está disponible
+    this.obtenerInfoAsesores().then(asesorInfo => {
+        this.asesorInfoCache = asesorInfo;
+        this.renderDistributionTable(data);
+    });
+},
+
+/**
+ * 🎨 NUEVA FUNCIÓN: Renderiza la tabla de distribución completa
+ */
+renderDistributionTable: function(data) {
+    const resultsContainer = document.getElementById('distribucion-results');
+    
+    // 📊 Construir filas de distribución con información de asesor
+    const distributionRows = Object.entries(data.distribucion || {}).map(([asesor, cantidad]) => {
+        const asesorInfo = this.asesorInfoCache?.[asesor] || {};
+        const rolBadge = asesorInfo.rol ? `<span class="asesor-badge ${asesorInfo.rol}">${asesorInfo.rol}</span>` : '';
+        
+        return `
+            <tr data-asesor="${asesor}" class="distribution-row">
+                <td class="asesor-cell">
+                    <div class="asesor-info">
+                        <span class="asesor-email">${asesor}</span>
+                        ${rolBadge}
+                        ${asesorInfo.nombre_completo ? `<br><small class="asesor-nombre">${asesorInfo.nombre_completo}</small>` : ''}
+                    </div>
+                </td>
+                <td class="cantidad-cell">
+                    <div class="editable-quantity-container">
+                        <input 
+                            type="number" 
+                            class="editable-quantity" 
+                            value="${cantidad}" 
+                            min="0" 
+                            max="${data.exitosos || 100}"
+                            data-asesor="${asesor}"
+                            data-original="${cantidad}"
+                            title="Número de reclutas asignados a ${asesor}"
+                        />
+                        <div class="quantity-controls">
+                            <button class="btn-micro btn-increment" onclick="Reclutas.adjustQuantity('${asesor}', 1)" title="Incrementar">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button class="btn-micro btn-decrement" onclick="Reclutas.adjustQuantity('${asesor}', -1)" title="Decrementar">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <small class="quantity-status" id="status-${asesor.replace('@', '_').replace('.', '_')}">
+                        Original: ${cantidad}
+                    </small>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    // 🚨 Sección de errores si existen
+    const errorsHtml = data.errores > 0 ? 
         `<div class="errors-section">
             <h5><i class="fas fa-exclamation-triangle"></i> Errores Encontrados (${data.errores})</h5>
-            <ul>
-                ${data.errores_detalle.map(err => `<li>Fila ${err.fila}: ${err.error}</li>`).join('')}
-            </ul>
+            <div class="error-list">
+                ${data.errores_detalle.map(err => `
+                    <div class="error-item">
+                        <strong>Fila ${err.fila}:</strong> ${err.error}
+                        ${err.datos ? `<br><small>Datos: ${JSON.stringify(err.datos)}</small>` : ''}
+                    </div>
+                `).join('')}
+            </div>
         </div>` : '';
     
+    // 🎯 Template principal mejorado
     resultsContainer.innerHTML = `
         <div class="results-summary">
-            <h4><i class="fas fa-check-circle"></i> Distribución Completada</h4>
+            <h4><i class="fas fa-check-circle"></i> Distribución Excel Completada</h4>
             <div class="summary-stats">
                 <div class="stat-item">
-                    <span class="stat-label">Total Procesados:</span>
-                    <span class="stat-value">${data.total_procesados}</span>
+                    <span class="stat-label">Total Procesados</span>
+                    <span class="stat-value" id="total-procesados">${data.total_procesados}</span>
                 </div>
                 <div class="stat-item success">
-                    <span class="stat-label">Exitosos:</span>
-                    <span class="stat-value">${data.exitosos}</span>
+                    <span class="stat-label">Creados Exitosamente</span>
+                    <span class="stat-value" id="total-exitosos">${data.exitosos}</span>
+                </div>
+                <div class="stat-item info">
+                    <span class="stat-label">Total Asignado</span>
+                    <span class="stat-value" id="total-asignado">${Object.values(data.distribucion || {}).reduce((a, b) => a + b, 0)}</span>
                 </div>
                 ${data.errores > 0 ? `
                 <div class="stat-item error">
-                    <span class="stat-label">Errores:</span>
+                    <span class="stat-label">Errores</span>
                     <span class="stat-value">${data.errores}</span>
                 </div>` : ''}
             </div>
         </div>
         
-        <div class="distribution-table">
-            <h5><i class="fas fa-users"></i> Distribución por Asesor</h5>
-            <table>
+        <div class="distribution-table-container">
+            <div class="distribution-header">
+                <h5><i class="fas fa-users"></i> Distribución por Asesor - Editable</h5>
+                <div class="redistribution-controls">
+                    <button class="btn-secondary btn-small" onclick="Reclutas.resetDistribucion()" title="Volver a distribución original">
+                        <i class="fas fa-undo"></i> Restaurar
+                    </button>
+                    <button class="btn-warning btn-small" onclick="Reclutas.distribuirEquitativamente()" title="Redistribuir de manera equitativa">
+                        <i class="fas fa-balance-scale"></i> Equitativo
+                    </button>
+                    <button class="btn-info btn-small" onclick="Reclutas.mostrarAyudaDistribucion()" title="Ver ayuda sobre redistribución">
+                        <i class="fas fa-question-circle"></i> Ayuda
+                    </button>
+                    <button class="btn-success" id="aplicar-redistribucion" onclick="Reclutas.aplicarRedistribucion()" disabled>
+                        <i class="fas fa-check-double"></i> Aplicar Cambios
+                    </button>
+                </div>
+            </div>
+            
+            <div class="redistribution-status" id="redistribution-status" style="display: none;">
+                <i class="fas fa-info-circle"></i>
+                <span id="redistribution-message">Estado de redistribución...</span>
+            </div>
+            
+            <table class="distribution-table">
                 <thead>
-                    <tr><th>Asesor</th><th>Reclutas Asignados</th></tr>
+                    <tr>
+                        <th><i class="fas fa-user"></i> Asesor</th>
+                        <th><i class="fas fa-chart-bar"></i> Reclutas Asignados</th>
+                    </tr>
                 </thead>
-                <tbody>
+                <tbody id="distribution-tbody">
                     ${distributionRows}
                 </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td><strong>Total Distribuido:</strong></td>
+                        <td><strong id="total-footer">${Object.values(data.distribucion || {}).reduce((a, b) => a + b, 0)} reclutas</strong></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
         
@@ -631,22 +730,538 @@ showDistribucionResults: function(data) {
         
         <div class="results-actions">
             <button class="btn-primary" onclick="Reclutas.loadAndDisplayReclutas()">
-                <i class="fas fa-sync"></i> Actualizar Lista
+                <i class="fas fa-sync"></i> Actualizar Lista Principal
+            </button>
+            <button class="btn-secondary" onclick="Reclutas.exportarResultadosDistribucion()">
+                <i class="fas fa-download"></i> Exportar Resultados
             </button>
         </div>
     `;
     
     resultsContainer.style.display = 'block';
     
-    // Completar progress bar
+    // 🔧 Configurar funcionalidad editable
+    this.setupEditableDistribution();
+    
+    // ⚡ Finalizar progress bar
+    this.finalizarProgressBar();
+    
+    // 📢 Mostrar notificación de éxito
+    Utils.showToast(`Distribución completada: ${data.exitosos} reclutas asignados`, 'success');
+},
+
+/**
+ * 📧 NUEVA FUNCIÓN: Obtiene información adicional de asesores
+ */
+obtenerInfoAsesores: function() {
+    return fetch('/api/usuarios/asesores-info')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Convertir array a objeto indexado por email
+                const asesorInfo = {};
+                data.asesores.forEach(asesor => {
+                    asesorInfo[asesor.email] = asesor;
+                });
+                return asesorInfo;
+            }
+            return {};
+        })
+        .catch(error => {
+            console.warn('No se pudo obtener info de asesores:', error);
+            return {};
+        });
+},
+
+/**
+ * ❓ NUEVA FUNCIÓN: Muestra ayuda sobre redistribución
+ */
+mostrarAyudaDistribucion: function() {
+    const helpModal = `
+        <div class="modal" id="help-redistribucion-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-question-circle"></i> Ayuda - Redistribución de Reclutas</h3>
+                    <span class="close-modal" onclick="document.getElementById('help-redistribucion-modal').remove()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="help-content">
+                        <h4>🎯 ¿Cómo funciona?</h4>
+                        <p>Después de importar un archivo Excel, puedes ajustar manualmente cuántos reclutas se asignan a cada asesor.</p>
+                        
+                        <h4>🔧 Controles disponibles:</h4>
+                        <ul>
+                            <li><strong>Campos numéricos:</strong> Edita directamente el número de reclutas</li>
+                            <li><strong>Botones +/-:</strong> Incrementa o decrementa de uno en uno</li>
+                            <li><strong>Restaurar:</strong> Vuelve a la distribución automática original</li>
+                            <li><strong>Equitativo:</strong> Redistribuye de manera equilibrada entre todos</li>
+                        </ul>
+                        
+                        <h4>⚠️ Reglas importantes:</h4>
+                        <ul>
+                            <li>El total asignado debe coincidir exactamente con los reclutas exitosos</li>
+                            <li>No puedes asignar números negativos</li>
+                            <li>Los cambios no se aplican hasta presionar "Aplicar Cambios"</li>
+                            <li>Solo se redistribuyen reclutas importados recientemente</li>
+                        </ul>
+                        
+                        <h4>🚀 Casos de uso:</h4>
+                        <ul>
+                            <li><strong>Balanceo de carga:</strong> Si un asesor está muy ocupado</li>
+                            <li><strong>Capacitación:</strong> Asignar menos reclutas a asesores nuevos</li>
+                            <li><strong>Especialización:</strong> Concentrar ciertos tipos de candidatos</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-primary" onclick="document.getElementById('help-redistribucion-modal').remove()">
+                        <i class="fas fa-check"></i> Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', helpModal);
+    document.getElementById('help-redistribucion-modal').style.display = 'block';
+},
+
+/**
+ * 📁 NUEVA FUNCIÓN: Exporta resultados de distribución
+ */
+exportarResultadosDistribucion: function() {
+    if (!this.distribucionOriginal) {
+        Utils.showToast('No hay datos de distribución para exportar', 'warning');
+        return;
+    }
+    
+    const data = this.distribucionOriginal;
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+    
+    // Crear contenido CSV
+    let csvContent = "Email Asesor,Reclutas Asignados,Fecha Importacion\n";
+    
+    Object.entries(data.distribucion || {}).forEach(([asesor, cantidad]) => {
+        csvContent += `"${asesor}",${cantidad},"${timestamp}"\n`;
+    });
+    
+    // Agregar resumen
+    csvContent += "\n-- RESUMEN --\n";
+    csvContent += `Total Procesados,${data.total_procesados}\n`;
+    csvContent += `Exitosos,${data.exitosos}\n`;
+    csvContent += `Errores,${data.errores}\n`;
+    
+    // Descargar archivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `distribucion_reclutas_${timestamp}.csv`;
+    link.click();
+    
+    Utils.showToast('Resultados exportados exitosamente', 'success');
+},
+
+/**
+ * ⚡ NUEVA FUNCIÓN: Finaliza barra de progreso con animación
+ */
+finalizarProgressBar: function() {
     const progressFill = document.getElementById('distribucion-progress-fill');
     if (progressFill) {
         progressFill.style.width = '100%';
+        progressFill.style.background = 'linear-gradient(90deg, #27ae60, #2ecc71)';
     }
     
     setTimeout(() => {
         this.hideDistribucionProgress();
-    }, 1000);
+    }, 1500);
+},
+
+/**
+ * 🎯 NUEVA FUNCIÓN: Configura eventos para distribución editable
+ */
+setupEditableDistribution: function() {
+    console.log('🔧 Configurando distribución editable');
+    
+    // Eventos para inputs de cantidad
+    const quantityInputs = document.querySelectorAll('.editable-quantity');
+    quantityInputs.forEach(input => {
+        // Evento de cambio directo
+        input.addEventListener('input', (e) => {
+            this.handleQuantityChange(e.target);
+        });
+        
+        // Evento para Enter key
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.target.blur();
+                this.validateAndUpdateDistribution();
+            }
+        });
+        
+        // Evento cuando pierde el foco
+        input.addEventListener('blur', () => {
+            this.validateAndUpdateDistribution();
+        });
+    });
+    
+    console.log('✅ Distribución editable configurada');
+},
+
+/**
+ * 🔢 NUEVA FUNCIÓN: Ajusta cantidad con botones +/-
+ */
+adjustQuantity: function(asesor, delta) {
+    const input = document.querySelector(`input[data-asesor="${asesor}"]`);
+    if (!input) return;
+    
+    const currentValue = parseInt(input.value) || 0;
+    const newValue = Math.max(0, currentValue + delta);
+    const maxValue = parseInt(input.getAttribute('max')) || 100;
+    
+    input.value = Math.min(newValue, maxValue);
+    this.handleQuantityChange(input);
+},
+
+/**
+ * 🔄 NUEVA FUNCIÓN: Maneja cambios en cantidades individuales
+ */
+handleQuantityChange: function(input) {
+    const asesor = input.dataset.asesor;
+    const originalValue = parseInt(input.dataset.original) || 0;
+    const currentValue = parseInt(input.value) || 0;
+    
+    // Actualizar status visual
+    const statusElement = document.getElementById(`status-${asesor.replace('@', '_').replace('.', '_')}`);
+    if (statusElement) {
+        if (currentValue !== originalValue) {
+            statusElement.innerHTML = `Original: ${originalValue} → <strong style="color: #e74c3c;">Nuevo: ${currentValue}</strong>`;
+            statusElement.className = 'quantity-status changed';
+        } else {
+            statusElement.innerHTML = `Original: ${originalValue}`;
+            statusElement.className = 'quantity-status';
+        }
+    }
+    
+    // Debounce para validación
+    clearTimeout(this.quantityChangeTimeout);
+    this.quantityChangeTimeout = setTimeout(() => {
+        this.validateAndUpdateDistribution();
+    }, 500);
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Valida y actualiza totales de distribución
+ */
+validateAndUpdateDistribution: function() {
+    const quantityInputs = document.querySelectorAll('.editable-quantity');
+    let totalAsignado = 0;
+    let hayModificaciones = false;
+    
+    quantityInputs.forEach(input => {
+        const currentValue = parseInt(input.value) || 0;
+        const originalValue = parseInt(input.dataset.original) || 0;
+        
+        totalAsignado += currentValue;
+        
+        if (currentValue !== originalValue) {
+            hayModificaciones = true;
+        }
+    });
+    
+    // Actualizar total visual
+    const totalElement = document.getElementById('total-asignado');
+    if (totalElement) {
+        totalElement.textContent = totalAsignado;
+    }
+    
+    // Validar contra total exitoso
+    const totalExitosos = this.distribucionOriginal?.exitosos || 0;
+    const statusContainer = document.getElementById('redistribution-status');
+    const applyButton = document.getElementById('aplicar-redistribucion');
+    
+    if (totalAsignado !== totalExitosos) {
+        statusContainer.style.display = 'block';
+        statusContainer.className = 'redistribution-status error';
+        statusContainer.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>⚠️ Total asignado (${totalAsignado}) no coincide con reclutas exitosos (${totalExitosos})</span>
+        `;
+        applyButton.disabled = true;
+    } else if (hayModificaciones) {
+        statusContainer.style.display = 'block';
+        statusContainer.className = 'redistribution-status success';
+        statusContainer.innerHTML = `
+            <i class="fas fa-check-circle"></i>
+            <span>✅ Distribución válida - Lista para aplicar</span>
+        `;
+        applyButton.disabled = false;
+    } else {
+        statusContainer.style.display = 'none';
+        applyButton.disabled = true;
+    }
+},
+
+/**
+ * 🔄 NUEVA FUNCIÓN: Restaura distribución original
+ */
+resetDistribucion: function() {
+    if (!this.distribucionOriginal) return;
+    
+    Object.entries(this.distribucionOriginal.distribucion || {}).forEach(([asesor, cantidad]) => {
+        const input = document.querySelector(`input[data-asesor="${asesor}"]`);
+        if (input) {
+            input.value = cantidad;
+            this.handleQuantityChange(input);
+        }
+    });
+    
+    Utils.showToast('Distribución restaurada a valores originales', 'info');
+},
+
+/**
+ * ⚖️ NUEVA FUNCIÓN: Redistribuye equitativamente
+ */
+distribuirEquitativamente: function() {
+    const quantityInputs = document.querySelectorAll('.editable-quantity');
+    const totalExitosos = this.distribucionOriginal?.exitosos || 0;
+    const numAsesores = quantityInputs.length;
+    
+    if (numAsesores === 0) return;
+    
+    // Calcular distribución equitativa
+    const baseAmount = Math.floor(totalExitosos / numAsesores);
+    const remainder = totalExitosos % numAsesores;
+    
+    quantityInputs.forEach((input, index) => {
+        // Los primeros 'remainder' asesores reciben +1
+        const amount = baseAmount + (index < remainder ? 1 : 0);
+        input.value = amount;
+        this.handleQuantityChange(input);
+    });
+    
+    Utils.showToast(`Distribución equitativa aplicada: ${baseAmount}±1 por asesor`, 'success');
+},
+
+/**
+ * 🚀 NUEVA FUNCIÓN: Aplica redistribución al backend
+ */
+aplicarRedistribucion: function() {
+    const quantityInputs = document.querySelectorAll('.editable-quantity');
+    const nuevaDistribucion = {};
+    
+    // Recopilar nueva distribución
+    quantityInputs.forEach(input => {
+        const asesor = input.dataset.asesor;
+        const cantidad = parseInt(input.value) || 0;
+        nuevaDistribucion[asesor] = cantidad;
+    });
+    
+    // Confirmar acción
+    const totalNuevo = Object.values(nuevaDistribucion).reduce((a, b) => a + b, 0);
+    if (!confirm(`¿Confirmar redistribución?\n\nTotal: ${totalNuevo} reclutas\nEsta acción modificará las asignaciones existentes.`)) {
+        return;
+    }
+    
+    // Deshabilitar botón y mostrar loading
+    const applyButton = document.getElementById('aplicar-redistribucion');
+    const originalText = applyButton.innerHTML;
+    applyButton.disabled = true;
+    applyButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redistribuyendo...';
+    
+    // Llamar al backend
+    fetch('/api/reclutas/redistribuir-manual', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': Utils.getCSRFToken()
+        },
+        body: JSON.stringify({
+            redistribucion: nuevaDistribucion,
+            filtros: {
+                solo_importados_hoy: true,
+                estado: 'En proceso'
+            }
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Utils.showToast(`Redistribución exitosa: ${data.total_redistribuidos} reclutas reasignados`, 'success');
+            
+            // Actualizar datos originales con nueva distribución
+            this.distribucionOriginal.distribucion = data.redistribucion_final;
+            
+            // Actualizar inputs como "original"
+            quantityInputs.forEach(input => {
+                input.dataset.original = input.value;
+                this.handleQuantityChange(input);
+            });
+            
+            // Refrescar lista principal después de 2 segundos
+            setTimeout(() => {
+                this.loadAndDisplayReclutas();
+            }, 2000);
+            
+        } else {
+            Utils.showToast(`Error en redistribución: ${data.message}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error en redistribución:', error);
+        Utils.showToast('Error de conexión durante redistribución', 'error');
+    })
+    .finally(() => {
+        // Restaurar botón
+        applyButton.innerHTML = originalText;
+        setTimeout(() => {
+            this.validateAndUpdateDistribution();
+        }, 1000);
+    });
+},
+
+/**
+ * 🔍 NUEVA FUNCIÓN: Obtiene información del lote reciente para validación
+ */
+obtenerLoteReciente: function() {
+    return fetch('/api/reclutas/lote-reciente?horas=2')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('📊 Lote reciente obtenido:', data);
+                return data;
+            }
+            throw new Error(data.message);
+        })
+        .catch(error => {
+            console.error('Error obteniendo lote reciente:', error);
+            return null;
+        });
+},
+
+/**
+ * 📧 NUEVA FUNCIÓN: Obtiene información adicional de asesores
+ */
+obtenerInfoAsesores: function() {
+    return fetch('/api/usuarios/asesores-info')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Convertir array a objeto indexado por email
+                const asesorInfo = {};
+                data.asesores.forEach(asesor => {
+                    asesorInfo[asesor.email] = asesor;
+                });
+                return asesorInfo;
+            }
+            return {};
+        })
+        .catch(error => {
+            console.warn('No se pudo obtener info de asesores:', error);
+            return {};
+        });
+},
+
+/**
+ * ❓ NUEVA FUNCIÓN: Muestra ayuda sobre redistribución
+ */
+mostrarAyudaDistribucion: function() {
+    const helpModal = `
+        <div class="modal" id="help-redistribucion-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-question-circle"></i> Ayuda - Redistribución de Reclutas</h3>
+                    <span class="close-modal" onclick="document.getElementById('help-redistribucion-modal').remove()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="help-content">
+                        <h4>🎯 ¿Cómo funciona?</h4>
+                        <p>Después de importar un archivo Excel, puedes ajustar manualmente cuántos reclutas se asignan a cada asesor.</p>
+                        
+                        <h4>🔧 Controles disponibles:</h4>
+                        <ul>
+                            <li><strong>Campos numéricos:</strong> Edita directamente el número de reclutas</li>
+                            <li><strong>Botones +/-:</strong> Incrementa o decrementa de uno en uno</li>
+                            <li><strong>Restaurar:</strong> Vuelve a la distribución automática original</li>
+                            <li><strong>Equitativo:</strong> Redistribuye de manera equilibrada entre todos</li>
+                        </ul>
+                        
+                        <h4>⚠️ Reglas importantes:</h4>
+                        <ul>
+                            <li>El total asignado debe coincidir exactamente con los reclutas exitosos</li>
+                            <li>No puedes asignar números negativos</li>
+                            <li>Los cambios no se aplican hasta presionar "Aplicar Cambios"</li>
+                            <li>Solo se redistribuyen reclutas importados recientemente</li>
+                        </ul>
+                        
+                        <h4>🚀 Casos de uso:</h4>
+                        <ul>
+                            <li><strong>Balanceo de carga:</strong> Si un asesor está muy ocupado</li>
+                            <li><strong>Capacitación:</strong> Asignar menos reclutas a asesores nuevos</li>
+                            <li><strong>Especialización:</strong> Concentrar ciertos tipos de candidatos</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-primary" onclick="document.getElementById('help-redistribucion-modal').remove()">
+                        <i class="fas fa-check"></i> Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', helpModal);
+    document.getElementById('help-redistribucion-modal').style.display = 'block';
+},
+
+/**
+ * 📁 NUEVA FUNCIÓN: Exporta resultados de distribución
+ */
+exportarResultsDistribucion: function() {
+    if (!this.distribucionOriginal) {
+        Utils.showToast('No hay datos de distribución para exportar', 'warning');
+        return;
+    }
+    
+    const data = this.distribucionOriginal;
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+    
+    // Crear contenido CSV
+    let csvContent = "Email Asesor,Reclutas Asignados,Fecha Importacion\n";
+    
+    Object.entries(data.distribucion || {}).forEach(([asesor, cantidad]) => {
+        csvContent += `"${asesor}",${cantidad},"${timestamp}"\n`;
+    });
+    
+    // Agregar resumen
+    csvContent += "\n--- RESUMEN ---\n";
+    csvContent += `Total Procesados,${data.total_procesados}\n`;
+    csvContent += `Exitosos,${data.exitosos}\n`;
+    csvContent += `Errores,${data.errores}\n`;
+    
+    // Descargar archivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `distribucion_reclutas_${timestamp}.csv`;
+    link.click();
+    
+    Utils.showToast('Resultados exportados exitosamente', 'success');
+},
+
+/**
+ * ⚡ NUEVA FUNCIÓN: Finaliza barra de progreso con animación
+ */
+finalizarProgressBar: function() {
+    const progressFill = document.getElementById('distribucion-progress-fill');
+    if (progressFill) {
+        progressFill.style.width = '100%';
+        progressFill.style.background = 'linear-gradient(90deg, #27ae60, #2ecc71)';
+    }
+    
+    setTimeout(() => {
+        this.hideDistribucionProgress();
+    }, 1500);
 },
 
 /**

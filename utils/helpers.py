@@ -680,3 +680,331 @@ def distribuir_equitativamente(datos_excel, asesores):
         print(f"📊 Asesor {asesor.email}: {len(reclutas_asesor)} reclutas asignados")
 
     return distribucion
+
+
+def redistribuir_reclutas_existentes(reclutas_ids, nueva_distribucion, asesores):
+    """
+    🔄 NUEVA FUNCIÓN: Redistribuye reclutas existentes según nueva asignación manual.
+    
+    Args:
+        reclutas_ids: Lista de IDs de reclutas a redistribuir
+        nueva_distribucion: Dict {email_asesor: cantidad_asignada}
+        asesores: Lista de objetos Usuario asesor activos
+        
+    Returns:
+        Dict con resultado de la redistribución
+    """
+    try:
+        from models.recluta import Recluta
+        from models import db
+        
+        # Obtener reclutas ordenados (más recientes primero)
+        reclutas = Recluta.query.filter(
+            Recluta.id.in_(reclutas_ids),
+            Recluta.activo == True
+        ).order_by(Recluta.fecha_registro.desc()).all()
+        
+        if not reclutas:
+            return {
+                "success": False,
+                "message": "No se encontraron reclutas válidos para redistribuir"
+            }
+        
+        # Crear mapa de email -> Usuario para eficiencia
+        asesor_map = {a.email: a for a in asesores}
+        
+        # Validar que todos los emails existen
+        emails_faltantes = [email for email in nueva_distribucion.keys() if email not in asesor_map]
+        if emails_faltantes:
+            return {
+                "success": False,
+                "message": f"Asesores no encontrados: {emails_faltantes}"
+            }
+        
+        # Validar total
+        total_solicitado = sum(nueva_distribucion.values())
+        total_disponible = len(reclutas)
+        
+        if total_solicitado > total_disponible:
+            return {
+                "success": False,
+                "message": f"Total solicitado ({total_solicitado}) excede disponibles ({total_disponible})"
+            }
+        
+        # Ejecutar redistribución
+        cambios_realizados = []
+        indice_actual = 0
+        
+        with db.session.begin():
+            for email_asesor, cantidad in nueva_distribucion.items():
+                asesor = asesor_map[email_asesor]
+                
+                # Tomar siguiente grupo de reclutas
+                grupo_reclutas = reclutas[indice_actual:indice_actual + cantidad]
+                
+                for recluta in grupo_reclutas:
+                    asesor_anterior_id = recluta.asesor_id
+                    recluta.asesor_id = asesor.id
+                    
+                    cambios_realizados.append({
+                        "recluta_id": recluta.id,
+                        "folio": recluta.folio,
+                        "nombre": recluta.nombre,
+                        "asesor_anterior_id": asesor_anterior_id,
+                        "asesor_nuevo_id": asesor.id,
+                        "asesor_nuevo_email": email_asesor
+                    })
+                
+                indice_actual += cantidad
+        
+        # Generar reporte
+        reporte_final = {}
+        for asesor in asesores:
+            count = len([c for c in cambios_realizados if c['asesor_nuevo_id'] == asesor.id])
+            if count > 0:
+                reporte_final[asesor.email] = count
+        
+        return {
+            "success": True,
+            "total_redistribuidos": len(cambios_realizados),
+            "redistribucion_final": reporte_final,
+            "cambios_detalle": cambios_realizados,
+            "message": f"Redistribución exitosa: {len(cambios_realizados)} reclutas reasignados"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error en redistribución: {str(e)}"
+        }
+
+
+def obtener_reclutas_recientes(horas_atras=2, filtros_adicionales=None):
+    """
+    🔍 NUEVA FUNCIÓN: Obtiene reclutas importados recientemente para redistribución.
+    
+    Args:
+        horas_atras: Número de horas hacia atrás para buscar (default: 2)
+        filtros_adicionales: Dict con filtros extra (estado, asesor_id, etc.)
+        
+    Returns:
+        Dict con información de reclutas recientes
+    """
+    try:
+        from models.recluta import Recluta
+        from models.usuario import Usuario
+        from datetime import datetime, timedelta
+        from collections import defaultdict
+        
+        # Calcular fecha límite
+        fecha_limite = datetime.now() - timedelta(hours=horas_atras)
+        
+        # Query base
+        query = Recluta.query.filter(
+            Recluta.fecha_registro >= fecha_limite,
+            Recluta.activo == True
+        )
+        
+        # Aplicar filtros adicionales si existen
+        if filtros_adicionales:
+            if 'estado' in filtros_adicionales:
+                query = query.filter(Recluta.estado == filtros_adicionales['estado'])
+            
+            if 'asesor_id' in filtros_adicionales:
+                query = query.filter(Recluta.asesor_id == filtros_adicionales['asesor_id'])
+            
+            if 'solo_con_asesor' in filtros_adicionales and filtros_adicionales['solo_con_asesor']:
+                query = query.filter(Recluta.asesor_id.isnot(None))
+        
+        # Obtener reclutas ordenados
+        reclutas_recientes = query.order_by(Recluta.fecha_registro.desc()).all()
+        
+        if not reclutas_recientes:
+            return {
+                "success": True,
+                "total_recientes": 0,
+                "distribucion_actual": {},
+                "reclutas_ids": [],
+                "mensaje": f"No hay reclutas en las últimas {horas_atras} horas"
+            }
+        
+        # Agrupar por asesor
+        distribucion_actual = defaultdict(int)
+        asesor_info = {}
+        reclutas_ids = []
+        
+        for recluta in reclutas_recientes:
+            reclutas_ids.append(recluta.id)
+            
+            if recluta.asesor:
+                email = recluta.asesor.email
+                distribucion_actual[email] += 1
+                
+                if email not in asesor_info:
+                    asesor_info[email] = {
+                        "id": recluta.asesor.id,
+                        "nombre_completo": recluta.asesor.nombre_completo,
+                        "rol": recluta.asesor.rol,
+                        "is_active": recluta.asesor.is_active
+                    }
+        
+        return {
+            "success": True,
+            "total_recientes": len(reclutas_recientes),
+            "distribucion_actual": dict(distribucion_actual),
+            "asesor_info": asesor_info,
+            "reclutas_ids": reclutas_ids,
+            "periodo_consulta": f"Últimas {horas_atras} horas",
+            "fecha_limite": fecha_limite.isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error consultando reclutas recientes: {str(e)}"
+        }
+
+
+def validar_distribucion_factible(nueva_distribucion, total_disponible):
+    """
+    ✅ NUEVA FUNCIÓN: Valida que una distribución sea matemáticamente factible.
+    
+    Args:
+        nueva_distribucion: Dict {email_asesor: cantidad}
+        total_disponible: Número total de reclutas disponibles
+        
+    Returns:
+        Dict con resultado de validación
+    """
+    try:
+        # Validaciones básicas
+        if not isinstance(nueva_distribucion, dict):
+            return {
+                "valida": False,
+                "errores": ["Distribución debe ser un diccionario"]
+            }
+        
+        if not nueva_distribucion:
+            return {
+                "valida": False,
+                "errores": ["Distribución no puede estar vacía"]
+            }
+        
+        errores = []
+        total_solicitado = 0
+        
+        # Validar cada asignación
+        for email, cantidad in nueva_distribucion.items():
+            if not isinstance(cantidad, int) or cantidad < 0:
+                errores.append(f"Cantidad para {email} debe ser entero positivo")
+                continue
+            
+            total_solicitado += cantidad
+        
+        # Validar total
+        if total_solicitado != total_disponible:
+            errores.append(f"Total solicitado ({total_solicitado}) no coincide con disponible ({total_disponible})")
+        
+        # Validar distribución balanceada (opcional - advertencia)
+        advertencias = []
+        if nueva_distribucion:
+            cantidades = list(nueva_distribucion.values())
+            min_cantidad = min(cantidades)
+            max_cantidad = max(cantidades)
+            diferencia = max_cantidad - min_cantidad
+            
+            if diferencia > 2:  # Permitir diferencia máxima de 2
+                advertencias.append(f"Distribución muy desbalanceada (diferencia: {diferencia})")
+        
+        return {
+            "valida": len(errores) == 0,
+            "errores": errores,
+            "advertencias": advertencias,
+            "total_solicitado": total_solicitado,
+            "total_disponible": total_disponible,
+            "diferencia": abs(total_solicitado - total_disponible)
+        }
+        
+    except Exception as e:
+        return {
+            "valida": False,
+            "errores": [f"Error validando distribución: {str(e)}"]
+        }
+
+
+def generar_distribucion_optimizada(total_reclutas, asesores, preferencias=None):
+    """
+    🎯 NUEVA FUNCIÓN: Genera distribución optimizada considerando preferencias.
+    
+    Args:
+        total_reclutas: Número total de reclutas a distribuir
+        asesores: Lista de objetos Usuario asesor
+        preferencias: Dict opcional con preferencias {email: peso_preferencia}
+        
+    Returns:
+        Dict con distribución optimizada
+    """
+    try:
+        if not asesores or total_reclutas <= 0:
+            return {}
+        
+        num_asesores = len(asesores)
+        distribucion = {}
+        
+        # Si no hay preferencias, distribución equitativa estándar
+        if not preferencias:
+            base_amount = total_reclutas // num_asesores
+            remainder = total_reclutas % num_asesores
+            
+            for i, asesor in enumerate(asesores):
+                cantidad = base_amount + (1 if i < remainder else 0)
+                distribucion[asesor.email] = cantidad
+        
+        else:
+            # Distribución con pesos por preferencias
+            total_peso = sum(preferencias.get(a.email, 1.0) for a in asesores)
+            asignado = 0
+            
+            for i, asesor in enumerate(asesores):
+                peso = preferencias.get(asesor.email, 1.0)
+                
+                if i == len(asesores) - 1:  # Último asesor recibe el resto
+                    cantidad = total_reclutas - asignado
+                else:
+                    cantidad = round((peso / total_peso) * total_reclutas)
+                
+                distribucion[asesor.email] = max(0, cantidad)  # No negativos
+                asignado += cantidad
+        
+        # Validar que suma sea correcta
+        total_distribuido = sum(distribucion.values())
+        if total_distribuido != total_reclutas:
+            # Ajuste fino para corregir errores de redondeo
+            diferencia = total_reclutas - total_distribuido
+            primer_asesor = asesores[0].email
+            distribucion[primer_asesor] += diferencia
+        
+        return distribucion
+        
+    except Exception as e:
+        print(f"Error generando distribución optimizada: {str(e)}")
+        return distribuir_equitativamente_simple(total_reclutas, asesores)
+
+
+def distribuir_equitativamente_simple(total_reclutas, asesores):
+    """
+    ⚖️ FUNCIÓN AUXILIAR: Distribución equitativa simple como fallback.
+    """
+    if not asesores or total_reclutas <= 0:
+        return {}
+    
+    num_asesores = len(asesores)
+    base_amount = total_reclutas // num_asesores
+    remainder = total_reclutas % num_asesores
+    
+    distribucion = {}
+    for i, asesor in enumerate(asesores):
+        cantidad = base_amount + (1 if i < remainder else 0)
+        distribucion[asesor.email] = cantidad
+    
+    return distribucion

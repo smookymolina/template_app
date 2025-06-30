@@ -1998,6 +1998,507 @@ body::after {
 }
 
 /* Animación para mostrar/ocultar filtro */
+
+/* 🔄 DISTRIBUCIÓN EDITABLE - Estilos para tabla interactiva */
+.distribution-table-container {
+    background: var(--card-background);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: var(--shadow-light);
+    margin: 20px 0;
+    border: 1px solid var(--border-color);
+}
+
+.distribution-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.distribution-header h5 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.redistribution-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.redistribution-controls .btn-small {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    min-width: auto;
+}
+
+/* 📊 TABLA DE DISTRIBUCIÓN MEJORADA */
+.distribution-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background: var(--background-color);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow-light);
+}
+
+.distribution-table thead th {
+    background: var(--primary-color);
+    color: white;
+    padding: 15px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.distribution-table tbody tr {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.distribution-table tbody tr:hover {
+    background: var(--hover-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.distribution-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.distribution-table td {
+    padding: 15px 12px;
+    vertical-align: middle;
+}
+
+/* 📧 CELDA DE ASESOR */
+.asesor-cell {
+    min-width: 200px;
+}
+
+.asesor-email {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+/* 🔢 CELDA DE CANTIDAD EDITABLE */
+.cantidad-cell {
+    min-width: 180px;
+    position: relative;
+}
+
+.editable-quantity-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+
+.editable-quantity {
+    width: 80px;
+    padding: 8px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    background: var(--input-background);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.editable-quantity:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    background: white;
+}
+
+.editable-quantity:hover {
+    border-color: var(--primary-color);
+}
+
+/* ⬆️⬇️ CONTROLES DE CANTIDAD */
+.quantity-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.btn-micro {
+    width: 24px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    background: var(--card-background);
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+}
+
+.btn-micro:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+.btn-increment:hover {
+    background: #27ae60;
+    border-color: #27ae60;
+}
+
+.btn-decrement:hover {
+    background: #e74c3c;
+    border-color: #e74c3c;
+}
+
+/* 📊 STATUS DE CANTIDAD */
+.quantity-status {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+    transition: all 0.2s ease;
+}
+
+.quantity-status.changed {
+    color: #e74c3c;
+    font-weight: 600;
+    font-style: normal;
+}
+
+/* 🚨 STATUS DE REDISTRIBUCIÓN */
+.redistribution-status {
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    animation: slideIn 0.3s ease;
+}
+
+.redistribution-status.error {
+    background: #ffeaea;
+    border: 1px solid #ffcccb;
+    color: #c0392b;
+}
+
+.redistribution-status.success {
+    background: #eafaf1;
+    border: 1px solid #a9dfbf;
+    color: #27ae60;
+}
+
+.redistribution-status.info {
+    background: #ebf3fd;
+    border: 1px solid #aed6f1;
+    color: #2980b9;
+}
+
+/* 🔢 ESTADÍSTICAS MEJORADAS */
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin: 15px 0;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+    background: var(--card-background);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+}
+
+.stat-item.success {
+    border-color: #27ae60;
+    background: linear-gradient(135deg, #eafaf1 0%, #f8fff9 100%);
+}
+
+.stat-item.error {
+    border-color: #e74c3c;
+    background: linear-gradient(135deg, #ffeaea 0%, #fff5f5 100%);
+}
+
+.stat-item.info {
+    border-color: #3498db;
+    background: linear-gradient(135deg, #ebf3fd 0%, #f8fbff 100%);
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+/* 🎨 ANIMACIONES */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(52, 152, 219, 0.6);
+    }
+}
+
+.editable-quantity:focus {
+    animation: pulseGlow 2s infinite;
+}
+
+/* 📱 RESPONSIVE PARA MÓVILES */
+@media (max-width: 768px) {
+    .distribution-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .redistribution-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .editable-quantity-container {
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .quantity-controls {
+        flex-direction: row;
+        gap: 5px;
+    }
+    
+    .btn-micro {
+        width: 30px;
+        height: 25px;
+    }
+    
+    .distribution-table {
+        font-size: 0.85rem;
+    }
+    
+    .distribution-table td,
+    .distribution-table th {
+        padding: 10px 8px;
+    }
+}
+
+/* 🌙 MODO OSCURO */
+.theme-dark .distribution-table-container {
+    background: var(--dark-card-bg);
+    border-color: var(--dark-border);
+}
+
+.theme-dark .distribution-table {
+    background: var(--dark-bg);
+}
+
+.theme-dark .distribution-table tbody tr:hover {
+    background: var(--dark-hover);
+}
+
+.theme-dark .editable-quantity {
+    background: var(--dark-input-bg);
+    border-color: var(--dark-border);
+    color: var(--dark-text-primary);
+}
+
+.theme-dark .editable-quantity:focus {
+    background: var(--dark-card-bg);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+}
+
+.theme-dark .btn-micro {
+    background: var(--dark-card-bg);
+    border-color: var(--dark-border);
+    color: var(--dark-text-secondary);
+}
+
+.theme-dark .quantity-status {
+    color: var(--dark-text-muted);
+}
+
+.theme-dark .stat-item {
+    background: var(--dark-card-bg);
+    border-color: var(--dark-border);
+}
+
+/* 🔧 ESTADOS ESPECÍFICOS */
+.btn-success:disabled {
+    background: #95a5a6;
+    border-color: #95a5a6;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-success:not(:disabled):hover {
+    background: #27ae60;
+    border-color: #27ae60;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+/* 🏷️ BADGES PARA INFORMACIÓN EXTRA */
+.asesor-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-left: 8px;
+    text-transform: uppercase;
+}
+
+.asesor-badge.gerente {
+    background: #f39c12;
+}
+
+.asesor-badge.asesor {
+    background: #9b59b6;
+}
+
+/* ===== FILTRO POR ASESOR PARA ADMIN ===== */
+
+/* Contenedor del filtro por asesor */
+.admin-only-filter {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 15px;
+    margin-left: 15px;
+    background-color: rgba(0, 123, 255, 0.05);
+    border-radius: 4px;
+    padding: 10px 15px;
+}
+
+.dark-mode .admin-only-filter {
+    background-color: rgba(0, 123, 255, 0.03);
+    border-left-color: var(--primary-color);
+}
+
+/* Selector de asesor mejorado */
+#filter-asesor {
+    min-width: 180px;
+    font-weight: 500;
+    border: 2px solid var(--border-color);
+    background-color: white;
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23007bff"><path d="M7 10l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 35px;
+    transition: all 0.3s ease;
+}
+
+#filter-asesor:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    background-color: #f8f9ff;
+}
+
+.dark-mode #filter-asesor {
+    background-color: #2a2b3d;
+    border-color: #3f3f3f;
+    color: var(--text-color);
+}
+
+/* Label del filtro por asesor */
+.admin-only-filter label {
+    color: var(--primary-color);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+.admin-only-filter label::before {
+    content: "👥";
+    margin-right: 5px;
+    font-size: 14px;
+}
+
+/* Indicador de filtro activo */
+#filter-asesor:not([value="todos"]) {
+    border-color: var(--success-color);
+    background-color: rgba(40, 167, 69, 0.05);
+}
+
+.dark-mode #filter-asesor:not([value="todos"]) {
+    background-color: rgba(40, 167, 69, 0.03);
+}
+
+/* Responsive para filtros */
+@media (max-width: 768px) {
+    .filter-controls {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .admin-only-filter {
+        margin-left: 0;
+        border-left: none;
+        border-top: 3px solid var(--primary-color);
+        padding-left: 10px;
+        padding-top: 15px;
+    }
+    
+    #filter-asesor {
+        width: 100%;
+        min-width: auto;
+    }
+}
+
+/* Animación para mostrar/ocultar filtro */
 .admin-only-filter {
     opacity: 0;
     transform: translateY(-10px);
