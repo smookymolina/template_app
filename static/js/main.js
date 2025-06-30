@@ -507,9 +507,8 @@ async function loginSuccess(usuario) {
         document.getElementById('login-section').style.display = 'none';
         document.getElementById('dashboard-section').style.display = 'block';
         
-        // ✅ CONFIGURAR MÉTRICAS DESPUÉS DE UI
+        // ✅ CONFIGURAR MÉTRICAS DESPUÉS DE UI - BLOQUE CORREGIDO
         if (usuario.rol === 'admin') {
-            if (usuario.rol === 'admin') {
             console.log('👑 Preparando métricas administrativas...');
             
             // Asegurar que los elementos admin-only sean visibles
@@ -1003,7 +1002,7 @@ async function loadEstadisticas() {
 }
 
 // Cargar estadísticas básicas (para asesores)
-async async function loadEstadisticasBasicas() {
+async function loadEstadisticasBasicas() {
     try {
         console.log('📊 Cargando estadísticas básicas...');
         
@@ -1395,18 +1394,21 @@ function cleanupMainDOMElements() {
 }
 
 /**
- * ✅ NUEVA FUNCIÓN: Forzar limpieza y mostrar login en caso de error
+ * Forzar limpieza y mostrar login en caso de error
  */
 function forceCleanupAndShowLogin() {
     console.log('🔧 Forzando limpieza de emergencia...');
     
     // Forzar limpieza básica
-    Auth.currentUser = null;
+    if (typeof Auth !== 'undefined') {
+        Auth.currentUser = null;
+    }
     
     // Limpiar localStorage básico
     try {
         localStorage.removeItem(CONFIG.STORAGE_KEYS.THEME);
         localStorage.removeItem(CONFIG.STORAGE_KEYS.PRIMARY_COLOR);
+        localStorage.removeItem('user_data');
     } catch (e) {
         console.warn('⚠️ Error en limpieza de emergencia:', e);
     }
