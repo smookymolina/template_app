@@ -1684,27 +1684,15 @@ def distribuir_reclutas_excel():
 @admin_required
 def redistribuir_reclutas_manual():
     """
-    🔄 NUEVA FUNCIONALIDAD: Redistribuye reclutas existentes según cantidades manuales por asesor.
-    
-    Permite al admin ajustar la distribución automática modificando 
-    el número de reclutas asignados a cada asesor.
-    
-    Expected JSON:
-    {
-        "lote_id": "opcional_para_identificar_lote",
-        "redistribucion": {
-            "asesor1@empresa.com": 5,
-            "asesor2@empresa.com": 8,
-            "asesor3@empresa.com": 3
-        },
-        "filtros": {
-            "fecha_desde": "2024-01-01T00:00:00Z",
-            "estado": "En proceso",
-            "solo_importados_hoy": true
-        }
-    }
+    🔄 NUEVA RUTA: Redistribuye reclutas existentes según cantidades manuales.
+    Implementación completa y funcional.
     """
     try:
+        # Importar dependencias necesarias
+        from models import Recluta, Usuario, db
+        from datetime import datetime, date
+        import random
+        
         data = request.get_json()
         
         if not data or 'redistribucion' not in data:
@@ -1716,35 +1704,43 @@ def redistribuir_reclutas_manual():
         redistribucion_nueva = data['redistribucion']
         filtros = data.get('filtros', {})
         
-        # 🔍 Obtener reclutas a redistribuir según filtros
+        current_app.logger.info(f"Iniciando redistribución manual: {redistribucion_nueva}")
+        
+        # 🔍 Construir query base de reclutas
         query_reclutas = Recluta.query.filter(Recluta.activo == True)
         
         # Aplicar filtros opcionales
         if filtros.get('fecha_desde'):
-            from datetime import datetime
-            fecha_desde = datetime.fromisoformat(filtros['fecha_desde'].replace('Z', '+00:00'))
-            query_reclutas = query_reclutas.filter(Recluta.fecha_registro >= fecha_desde)
+            try:
+                fecha_desde = datetime.fromisoformat(filtros['fecha_desde'].replace('Z', '+00:00'))
+                query_reclutas = query_reclutas.filter(Recluta.fecha_registro >= fecha_desde)
+            except ValueError:
+                current_app.logger.warning(f"Formato de fecha inválido: {filtros['fecha_desde']}")
         
         if filtros.get('estado'):
             query_reclutas = query_reclutas.filter(Recluta.estado == filtros['estado'])
         
         if filtros.get('solo_importados_hoy'):
-            from datetime import datetime, date
             hoy = date.today()
             query_reclutas = query_reclutas.filter(
                 db.func.date(Recluta.fecha_registro) == hoy
             )
         
-        # Obtener reclutas ordenados por fecha de registro (más recientes primero)
-        reclutas_disponibles = query_reclutas.order_by(Recluta.fecha_registro.desc()).all()
+        # Obtener reclutas disponibles
+        reclutas_disponibles = query_reclutas.all()
+        total_disponible = len(reclutas_disponibles)
+        total_solicitado = sum(redistribucion_nueva.values())
         
-        if not reclutas_disponibles:
+        current_app.logger.info(f"Reclutas disponibles: {total_disponible}, solicitados: {total_solicitado}")
+        
+        # ✅ Validación de totales
+        if total_solicitado != total_disponible:
             return jsonify({
                 "success": False,
-                "message": "No se encontraron reclutas para redistribuir con los filtros aplicados"
+                "message": f"Error: Total solicitado ({total_solicitado}) no coincide con disponible ({total_disponible})"
             }), 400
         
-        # 🔍 Validar asesores en la redistribución
+        # 🔍 Validar asesores
         emails_asesores = list(redistribucion_nueva.keys())
         asesores_validos = Usuario.query.filter(
             Usuario.email.in_(emails_asesores),
@@ -1753,85 +1749,75 @@ def redistribuir_reclutas_manual():
         ).all()
         
         if len(asesores_validos) != len(emails_asesores):
-            emails_encontrados = [a.email for a in asesores_validos]
-            emails_faltantes = [e for e in emails_asesores if e not in emails_encontrados]
+            emails_validos = [a.email for a in asesores_validos]
+            emails_invalidos = [e for e in emails_asesores if e not in emails_validos]
             return jsonify({
                 "success": False,
-                "message": f"Asesores no válidos o inactivos: {emails_faltantes}"
+                "message": f"Asesores inválidos o inactivos: {emails_invalidos}"
             }), 400
         
-        # 📊 Validar que el total coincida
-        total_solicitado = sum(redistribucion_nueva.values())
-        total_disponible = len(reclutas_disponibles)
+        # 📊 Crear mapeo email -> asesor
+        asesor_map = {asesor.email: asesor for asesor in asesores_validos}
         
-        if total_solicitado > total_disponible:
-            return jsonify({
-                "success": False,
-                "message": f"Total solicitado ({total_solicitado}) excede reclutas disponibles ({total_disponible})"
-            }), 400
+        # 🔄 Preparar lista de asignaciones
+        nuevas_asignaciones = []
+        for email, cantidad in redistribucion_nueva.items():
+            if email in asesor_map and cantidad > 0:
+                asesor = asesor_map[email]
+                nuevas_asignaciones.extend([asesor.id] * cantidad)
         
-        # 🔄 Ejecutar redistribución con transacción
-        try:
-            # Crear mapa de email -> Usuario para eficiencia
-            asesor_map = {a.email: a for a in asesores_validos}
+        # 🎲 Barajar para distribución aleatoria
+        random.shuffle(nuevas_asignaciones)
+        
+        # 🔄 Aplicar redistribución
+        cambios_realizados = []
+        for i, recluta in enumerate(reclutas_disponibles):
+            nuevo_asesor_id = nuevas_asignaciones[i]
             
-            # Lista para trackear cambios
-            cambios_realizados = []
-            indice_recluta = 0
-            
-            # Distribuir según cantidades solicitadas
-            for email_asesor, cantidad_solicitada in redistribucion_nueva.items():
-                asesor = asesor_map[email_asesor]
+            if recluta.asesor_id != nuevo_asesor_id:
+                asesor_anterior = recluta.asesor.email if recluta.asesor else "Sin asignar"
+                nuevo_asesor = next((a for a in asesores_validos if a.id == nuevo_asesor_id), None)
                 
-                # Tomar los siguientes N reclutas
-                reclutas_para_asesor = reclutas_disponibles[indice_recluta:indice_recluta + cantidad_solicitada]
-                
-                for recluta in reclutas_para_asesor:
-                    asesor_anterior = recluta.asesor_id
-                    recluta.asesor_id = asesor.id
-                    
-                    # Log del cambio
+                if nuevo_asesor:
                     cambios_realizados.append({
                         "recluta_id": recluta.id,
                         "folio": recluta.folio,
                         "nombre": recluta.nombre,
                         "asesor_anterior": asesor_anterior,
-                        "asesor_nuevo": asesor.id,
-                        "email_asesor_nuevo": email_asesor
+                        "asesor_nuevo": nuevo_asesor.email
                     })
-                
-                indice_recluta += cantidad_solicitada
-            
-            # 💾 Confirmar cambios en BD
+                    
+                    recluta.asesor_id = nuevo_asesor_id
+        
+        # 💾 Confirmar cambios en base de datos
+        try:
             db.session.commit()
-            
-            # 📈 Generar reporte de redistribución
-            reporte_final = {}
-            for asesor in asesores_validos:
-                count_asignados = len([c for c in cambios_realizados if c['asesor_nuevo'] == asesor.id])
-                reporte_final[asesor.email] = count_asignados
-            
-            current_app.logger.info(f"Redistribución manual exitosa: {len(cambios_realizados)} reclutas redistribuidos")
-            
-            return jsonify({
-                "success": True,
-                "message": f"Redistribución completada exitosamente",
-                "total_redistribuidos": len(cambios_realizados),
-                "total_disponible": total_disponible,
-                "redistribucion_final": reporte_final,
-                "cambios_detalle": cambios_realizados[:20],  # Primeros 20 para UI
-                "resumen": {
-                    "reclutas_afectados": len(cambios_realizados),
-                    "asesores_involucrados": len(asesores_validos),
-                    "filtros_aplicados": filtros
-                }
-            }), 200
-            
+            current_app.logger.info(f"Redistribución exitosa: {len(cambios_realizados)} cambios aplicados")
         except Exception as e:
             db.session.rollback()
             raise e
-            
+        
+        # 📊 Generar reporte final
+        reporte_final = {}
+        for asesor in asesores_validos:
+            reporte_final[asesor.email] = redistribucion_nueva.get(asesor.email, 0)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Redistribución completada exitosamente",
+            "total_redistribuidos": len(cambios_realizados),
+            "total_disponibles": total_disponible,
+            "redistribucion_final": reporte_final,
+            "cambios_detalle": cambios_realizados[:10],  # Primeros 10 para UI
+            "resumen": {
+                "reclutas_afectados": len(cambios_realizados),
+                "asesores_involucrados": len(asesores_validos),
+                "filtros_aplicados": filtros
+            }
+        }), 200
+        
     except Exception as e:
+        db.session.rollback()
         current_app.logger.error(f"Error en redistribución manual: {str(e)}")
         return jsonify({
             "success": False,
@@ -1903,33 +1889,247 @@ def obtener_lote_reciente():
 @api_bp.route('/usuarios/asesores-info', methods=['GET'])
 @admin_required  
 def obtener_asesores_info():
-    """Obtiene información básica de todos los asesores activos."""
+    """
+    🔍 NUEVA RUTA: Obtiene información básica de todos los asesores activos.
+    Corrige el error 500 en /api/usuarios/asesores-info
+    """
     try:
+        # Importar modelos necesarios
+        from models import Usuario
+        
+        # Obtener asesores activos
         asesores = Usuario.query.filter(
             Usuario.is_active == True,
             Usuario.rol.in_(['asesor', 'gerente'])
         ).all()
         
-        asesores_info = []
+        # Construir diccionario de información
+        info_asesores = {}
         for asesor in asesores:
-            asesores_info.append({
+            info_asesores[asesor.email] = {
                 "id": asesor.id,
-                "email": asesor.email,
                 "nombre_completo": asesor.nombre_completo,
                 "rol": asesor.rol,
-                "is_active": asesor.is_active
-            })
+                "activo": asesor.is_active,
+                "email": asesor.email
+            }
+        
+        current_app.logger.info(f"Información de asesores solicitada: {len(asesores)} encontrados")
         
         return jsonify({
             "success": True,
-            "asesores": asesores_info,
-            "total": len(asesores_info)
-        })
+            "asesores": info_asesores,
+            "total": len(asesores)
+        }), 200
         
     except Exception as e:
+        current_app.logger.error(f"Error en obtener_asesores_info: {str(e)}")
         return jsonify({
             "success": False,
-            "message": f"Error obteniendo asesores: {str(e)}"
+            "message": f"Error al obtener información de asesores: {str(e)}"
+        }), 500
+
+
+@api_bp.route('/reclutas/redistribuir-manual', methods=['POST'])
+@admin_required
+def redistribuir_reclutas_manual():
+    """
+    🔄 NUEVA RUTA: Redistribuye reclutas existentes según cantidades manuales.
+    Implementación completa y funcional.
+    """
+    try:
+        # Importar dependencias necesarias
+        from models import Recluta, Usuario, db
+        from datetime import datetime, date
+        import random
+        
+        data = request.get_json()
+        
+        if not data or 'redistribucion' not in data:
+            return jsonify({
+                "success": False,
+                "message": "Datos de redistribución requeridos"
+            }), 400
+        
+        redistribucion_nueva = data['redistribucion']
+        filtros = data.get('filtros', {})
+        
+        current_app.logger.info(f"Iniciando redistribución manual: {redistribucion_nueva}")
+        
+        # 🔍 Construir query base de reclutas
+        query_reclutas = Recluta.query.filter(Recluta.activo == True)
+        
+        # Aplicar filtros opcionales
+        if filtros.get('fecha_desde'):
+            try:
+                fecha_desde = datetime.fromisoformat(filtros['fecha_desde'].replace('Z', '+00:00'))
+                query_reclutas = query_reclutas.filter(Recluta.fecha_registro >= fecha_desde)
+            except ValueError:
+                current_app.logger.warning(f"Formato de fecha inválido: {filtros['fecha_desde']}")
+        
+        if filtros.get('estado'):
+            query_reclutas = query_reclutas.filter(Recluta.estado == filtros['estado'])
+        
+        if filtros.get('solo_importados_hoy'):
+            hoy = date.today()
+            query_reclutas = query_reclutas.filter(
+                db.func.date(Recluta.fecha_registro) == hoy
+            )
+        
+        # Obtener reclutas disponibles
+        reclutas_disponibles = query_reclutas.all()
+        total_disponible = len(reclutas_disponibles)
+        total_solicitado = sum(redistribucion_nueva.values())
+        
+        current_app.logger.info(f"Reclutas disponibles: {total_disponible}, solicitados: {total_solicitado}")
+        
+        # ✅ Validación de totales
+        if total_solicitado != total_disponible:
+            return jsonify({
+                "success": False,
+                "message": f"Error: Total solicitado ({total_solicitado}) no coincide con disponible ({total_disponible})"
+            }), 400
+        
+        # 🔍 Validar asesores
+        emails_asesores = list(redistribucion_nueva.keys())
+        asesores_validos = Usuario.query.filter(
+            Usuario.email.in_(emails_asesores),
+            Usuario.is_active == True,
+            Usuario.rol.in_(['asesor', 'gerente'])
+        ).all()
+        
+        if len(asesores_validos) != len(emails_asesores):
+            emails_validos = [a.email for a in asesores_validos]
+            emails_invalidos = [e for e in emails_asesores if e not in emails_validos]
+            return jsonify({
+                "success": False,
+                "message": f"Asesores inválidos o inactivos: {emails_invalidos}"
+            }), 400
+        
+        # 📊 Crear mapeo email -> asesor
+        asesor_map = {asesor.email: asesor for asesor in asesores_validos}
+        
+        # 🔄 Preparar lista de asignaciones
+        nuevas_asignaciones = []
+        for email, cantidad in redistribucion_nueva.items():
+            if email in asesor_map and cantidad > 0:
+                asesor = asesor_map[email]
+                nuevas_asignaciones.extend([asesor.id] * cantidad)
+        
+        # 🎲 Barajar para distribución aleatoria
+        random.shuffle(nuevas_asignaciones)
+        
+        # 🔄 Aplicar redistribución
+        cambios_realizados = []
+        for i, recluta in enumerate(reclutas_disponibles):
+            nuevo_asesor_id = nuevas_asignaciones[i]
+            
+            if recluta.asesor_id != nuevo_asesor_id:
+                asesor_anterior = recluta.asesor.email if recluta.asesor else "Sin asignar"
+                nuevo_asesor = next((a for a in asesores_validos if a.id == nuevo_asesor_id), None)
+                
+                if nuevo_asesor:
+                    cambios_realizados.append({
+                        "recluta_id": recluta.id,
+                        "folio": recluta.folio,
+                        "nombre": recluta.nombre,
+                        "asesor_anterior": asesor_anterior,
+                        "asesor_nuevo": nuevo_asesor.email
+                    })
+                    
+                    recluta.asesor_id = nuevo_asesor_id
+        
+        # 💾 Confirmar cambios en base de datos
+        try:
+            db.session.commit()
+            current_app.logger.info(f"Redistribución exitosa: {len(cambios_realizados)} cambios aplicados")
+        except Exception as e:
+            db.session.rollback()
+            raise e
+        
+        # 📊 Generar reporte final
+        reporte_final = {}
+        for asesor in asesores_validos:
+            reporte_final[asesor.email] = redistribucion_nueva.get(asesor.email, 0)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Redistribución completada exitosamente",
+            "total_redistribuidos": len(cambios_realizados),
+            "total_disponibles": total_disponible,
+            "redistribucion_final": reporte_final,
+            "cambios_detalle": cambios_realizados[:10],  # Primeros 10 para UI
+            "resumen": {
+                "reclutas_afectados": len(cambios_realizados),
+                "asesores_involucrados": len(asesores_validos),
+                "filtros_aplicados": filtros
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error en redistribución manual: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al redistribuir: {str(e)}"
+        }), 500
+
+
+@api_bp.route('/reclutas/lote-reciente', methods=['GET'])
+@admin_required
+def obtener_lote_reciente():
+    """
+    🔍 NUEVA RUTA: Obtiene información del lote más reciente de reclutas.
+    """
+    try:
+        from models import Recluta
+        from datetime import datetime, timedelta
+        from collections import defaultdict
+        
+        # Obtener parámetros
+        horas_atras = request.args.get('horas', 2, type=int)
+        fecha_limite = datetime.now() - timedelta(hours=horas_atras)
+        
+        # Consultar reclutas recientes
+        reclutas_recientes = Recluta.query.filter(
+            Recluta.fecha_registro >= fecha_limite,
+            Recluta.activo == True
+        ).order_by(Recluta.fecha_registro.desc()).all()
+        
+        if not reclutas_recientes:
+            return jsonify({
+                "success": True,
+                "total_recientes": 0,
+                "distribucion_actual": {},
+                "message": f"No hay reclutas importados en las últimas {horas_atras} horas"
+            }), 200
+        
+        # Agrupar por asesor actual
+        distribucion_actual = defaultdict(int)
+        asesor_info = {}
+        
+        for recluta in reclutas_recientes:
+            if recluta.asesor:
+                email = recluta.asesor.email
+                distribucion_actual[email] += 1
+                asesor_info[email] = {
+                    "nombre_completo": recluta.asesor.nombre_completo,
+                    "rol": recluta.asesor.rol
+                }
+        
+        return jsonify({
+            "success": True,
+            "total_recientes": len(reclutas_recientes),
+            "distribucion_actual": dict(distribucion_actual),
+            "asesor_info": asesor_info,
+            "filtros_aplicados": {"horas_atras": horas_atras}
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo lote reciente: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error: {str(e)}"
         }), 500
 
 

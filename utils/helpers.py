@@ -684,185 +684,107 @@ def distribuir_equitativamente(datos_excel, asesores):
 
 def redistribuir_reclutas_existentes(reclutas_ids, nueva_distribucion, asesores):
     """
-    🔄 NUEVA FUNCIÓN: Redistribuye reclutas existentes según nueva asignación manual.
+    🔄 FUNCIÓN HELPER: Redistribuye reclutas según nueva distribución.
+    Implementación simplificada y funcional.
     
     Args:
-        reclutas_ids: Lista de IDs de reclutas a redistribuir
-        nueva_distribucion: Dict {email_asesor: cantidad_asignada}
-        asesores: Lista de objetos Usuario asesor activos
-        
+        reclutas_ids: Lista de IDs de reclutas
+        nueva_distribucion: Dict {email: cantidad}
+        asesores: Lista de objetos Usuario
+    
     Returns:
-        Dict con resultado de la redistribución
+        Dict con resultado de la operación
     """
     try:
-        from models.recluta import Recluta
-        from models import db
+        from models import Recluta, db
+        import random
         
-        # Obtener reclutas ordenados (más recientes primero)
+        # Obtener reclutas
         reclutas = Recluta.query.filter(
             Recluta.id.in_(reclutas_ids),
             Recluta.activo == True
-        ).order_by(Recluta.fecha_registro.desc()).all()
+        ).all()
         
         if not reclutas:
+            return {"success": False, "message": "No se encontraron reclutas"}
+        
+        # Mapeo email -> asesor
+        asesor_map = {asesor.email: asesor for asesor in asesores}
+        
+        # Crear lista de asignaciones
+        nuevas_asignaciones = []
+        for email, cantidad in nueva_distribucion.items():
+            if email in asesor_map and cantidad > 0:
+                asesor = asesor_map[email]
+                nuevas_asignaciones.extend([asesor.id] * cantidad)
+        
+        # Validar cantidades
+        if len(nuevas_asignaciones) != len(reclutas):
             return {
                 "success": False,
-                "message": "No se encontraron reclutas válidos para redistribuir"
+                "message": f"Error: {len(nuevas_asignaciones)} asignaciones vs {len(reclutas)} reclutas"
             }
         
-        # Crear mapa de email -> Usuario para eficiencia
-        asesor_map = {a.email: a for a in asesores}
+        # Barajar y aplicar
+        random.shuffle(nuevas_asignaciones)
+        cambios = []
         
-        # Validar que todos los emails existen
-        emails_faltantes = [email for email in nueva_distribucion.keys() if email not in asesor_map]
-        if emails_faltantes:
-            return {
-                "success": False,
-                "message": f"Asesores no encontrados: {emails_faltantes}"
-            }
-        
-        # Validar total
-        total_solicitado = sum(nueva_distribucion.values())
-        total_disponible = len(reclutas)
-        
-        if total_solicitado > total_disponible:
-            return {
-                "success": False,
-                "message": f"Total solicitado ({total_solicitado}) excede disponibles ({total_disponible})"
-            }
-        
-        # Ejecutar redistribución
-        cambios_realizados = []
-        indice_actual = 0
-        
-        with db.session.begin():
-            for email_asesor, cantidad in nueva_distribucion.items():
-                asesor = asesor_map[email_asesor]
+        for i, recluta in enumerate(reclutas):
+            nuevo_asesor_id = nuevas_asignaciones[i]
+            if recluta.asesor_id != nuevo_asesor_id:
+                asesor_anterior = recluta.asesor.email if recluta.asesor else "Sin asignar"
+                nuevo_asesor = next((a for a in asesores if a.id == nuevo_asesor_id), None)
                 
-                # Tomar siguiente grupo de reclutas
-                grupo_reclutas = reclutas[indice_actual:indice_actual + cantidad]
+                cambios.append({
+                    "recluta_id": recluta.id,
+                    "folio": recluta.folio,
+                    "asesor_anterior": asesor_anterior,
+                    "asesor_nuevo": nuevo_asesor.email if nuevo_asesor else "Error"
+                })
                 
-                for recluta in grupo_reclutas:
-                    asesor_anterior_id = recluta.asesor_id
-                    recluta.asesor_id = asesor.id
-                    
-                    cambios_realizados.append({
-                        "recluta_id": recluta.id,
-                        "folio": recluta.folio,
-                        "nombre": recluta.nombre,
-                        "asesor_anterior_id": asesor_anterior_id,
-                        "asesor_nuevo_id": asesor.id,
-                        "asesor_nuevo_email": email_asesor
-                    })
-                
-                indice_actual += cantidad
+                recluta.asesor_id = nuevo_asesor_id
         
-        # Generar reporte
-        reporte_final = {}
-        for asesor in asesores:
-            count = len([c for c in cambios_realizados if c['asesor_nuevo_id'] == asesor.id])
-            if count > 0:
-                reporte_final[asesor.email] = count
+        # Guardar cambios
+        db.session.commit()
         
         return {
             "success": True,
-            "total_redistribuidos": len(cambios_realizados),
-            "redistribucion_final": reporte_final,
-            "cambios_detalle": cambios_realizados,
-            "message": f"Redistribución exitosa: {len(cambios_realizados)} reclutas reasignados"
+            "total_redistribuidos": len(cambios),
+            "cambios_realizados": cambios
         }
         
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error en redistribución: {str(e)}"
-        }
+        db.session.rollback()
+        return {"success": False, "message": f"Error: {str(e)}"}
 
 
 def obtener_reclutas_recientes(horas_atras=2, filtros_adicionales=None):
     """
-    🔍 NUEVA FUNCIÓN: Obtiene reclutas importados recientemente para redistribución.
-    
-    Args:
-        horas_atras: Número de horas hacia atrás para buscar (default: 2)
-        filtros_adicionales: Dict con filtros extra (estado, asesor_id, etc.)
-        
-    Returns:
-        Dict con información de reclutas recientes
+    🔍 FUNCIÓN HELPER: Obtiene reclutas recientes con filtros.
     """
     try:
-        from models.recluta import Recluta
-        from models.usuario import Usuario
+        from models import Recluta
         from datetime import datetime, timedelta
-        from collections import defaultdict
         
-        # Calcular fecha límite
         fecha_limite = datetime.now() - timedelta(hours=horas_atras)
         
-        # Query base
         query = Recluta.query.filter(
             Recluta.fecha_registro >= fecha_limite,
             Recluta.activo == True
         )
         
-        # Aplicar filtros adicionales si existen
         if filtros_adicionales:
-            if 'estado' in filtros_adicionales:
+            if filtros_adicionales.get('estado'):
                 query = query.filter(Recluta.estado == filtros_adicionales['estado'])
             
-            if 'asesor_id' in filtros_adicionales:
+            if filtros_adicionales.get('asesor_id'):
                 query = query.filter(Recluta.asesor_id == filtros_adicionales['asesor_id'])
-            
-            if 'solo_con_asesor' in filtros_adicionales and filtros_adicionales['solo_con_asesor']:
-                query = query.filter(Recluta.asesor_id.isnot(None))
         
-        # Obtener reclutas ordenados
-        reclutas_recientes = query.order_by(Recluta.fecha_registro.desc()).all()
-        
-        if not reclutas_recientes:
-            return {
-                "success": True,
-                "total_recientes": 0,
-                "distribucion_actual": {},
-                "reclutas_ids": [],
-                "mensaje": f"No hay reclutas en las últimas {horas_atras} horas"
-            }
-        
-        # Agrupar por asesor
-        distribucion_actual = defaultdict(int)
-        asesor_info = {}
-        reclutas_ids = []
-        
-        for recluta in reclutas_recientes:
-            reclutas_ids.append(recluta.id)
-            
-            if recluta.asesor:
-                email = recluta.asesor.email
-                distribucion_actual[email] += 1
-                
-                if email not in asesor_info:
-                    asesor_info[email] = {
-                        "id": recluta.asesor.id,
-                        "nombre_completo": recluta.asesor.nombre_completo,
-                        "rol": recluta.asesor.rol,
-                        "is_active": recluta.asesor.is_active
-                    }
-        
-        return {
-            "success": True,
-            "total_recientes": len(reclutas_recientes),
-            "distribucion_actual": dict(distribucion_actual),
-            "asesor_info": asesor_info,
-            "reclutas_ids": reclutas_ids,
-            "periodo_consulta": f"Últimas {horas_atras} horas",
-            "fecha_limite": fecha_limite.isoformat()
-        }
+        return query.order_by(Recluta.fecha_registro.desc()).all()
         
     except Exception as e:
-        return {
-            "success": False,
-            "message": f"Error consultando reclutas recientes: {str(e)}"
-        }
+        print(f"Error obteniendo reclutas recientes: {e}")
+        return []
 
 
 def validar_distribucion_factible(nueva_distribucion, total_disponible):
