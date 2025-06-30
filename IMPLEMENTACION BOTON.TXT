@@ -1,0 +1,1984 @@
+# 🚀 Implementación Completa - Redistribución Editable de Reclutas
+
+## 📖 Resumen de la Funcionalidad
+
+Permite **editar en tiempo real** el número de reclutas asignados a cada asesor después de subir un archivo Excel, con redistribución automática y validación completa.
+
+---
+
+## 🔧 Pasos de Implementación
+
+### 1️⃣ **Backend - Nuevas Rutas API**
+
+**📁 Archivo:** `routes/api.py`
+
+Agregar al final del archivo, **después de la función `distribuir_reclutas_excel` existente**:
+
+```python
+# ✅ CÓDIGO A AGREGAR - Copiar desde el artifact "redistribucion_backend"
+@api_bp.route('/reclutas/redistribuir-manual', methods=['POST'])
+@admin_required
+def redistribuir_reclutas_manual():
+    # ... (código completo en artifact)
+
+@api_bp.route('/reclutas/lote-reciente', methods=['GET'])  
+@admin_required
+def obtener_lote_reciente():
+    # ... (código completo en artifact)
+```
+
+### 2️⃣ **Backend - Funciones Helper**
+
+**📁 Archivo:** `utils/helpers.py`
+
+Agregar al **final del archivo**:
+
+```python
+# ✅ CÓDIGO A AGREGAR - Copiar desde el artifact "redistribucion_helpers"
+def redistribuir_reclutas_existentes(reclutas_ids, nueva_distribucion, asesores):
+    # ... (código completo en artifact)
+
+def obtener_reclutas_recientes(horas_atras=2, filtros_adicionales=None):
+    # ... (código completo en artifact)
+
+# ... resto de funciones helper
+```
+
+### 3️⃣ **Frontend - JavaScript Funcionalidad**
+
+**📁 Archivo:** `static/js/reclutas.js`
+
+**A) Reemplazar función existente:**
+```javascript
+// ❌ BUSCAR Y REEMPLAZAR esta función existente:
+showDistribucionResults: function(data) {
+    // ... código anterior ...
+}
+
+// ✅ POR esta nueva versión completa:
+// (código completo en artifact "integracion_completa")
+```
+
+**B) Agregar nuevas funciones:**
+```javascript
+// ✅ AGREGAR todas estas funciones nuevas al objeto Reclutas:
+// (código completo en artifact "redistribucion_frontend")
+
+setupEditableDistribution: function() { ... },
+adjustQuantity: function(asesor, delta) { ... },
+handleQuantityChange: function(input) { ... },
+validateAndUpdateDistribution: function() { ... },
+resetDistribucion: function() { ... },
+distribuirEquitativamente: function() { ... },
+aplicarRedistribucion: function() { ... },
+obtenerLoteReciente: function() { ... }
+```
+
+### 4️⃣ **Frontend - Estilos CSS**
+
+**📁 Archivo:** `static/css/dashboard.css`
+
+Agregar al **final del archivo**:
+
+```css
+/* ✅ CÓDIGO A AGREGAR - Copiar desde el artifact "redistribucion_styles" */
+
+/* 🔄 DISTRIBUCIÓN EDITABLE - Estilos para tabla interactiva */
+.distribution-table-container {
+    /* ... todos los estilos del artifact ... */
+}
+
+/* ... resto de estilos CSS ... */
+```
+
+### 5️⃣ **Backend - Ruta Adicional de Información (Opcional)**
+
+**📁 Archivo:** `routes/api.py`
+
+Para obtener información de asesores:
+
+```python
+@api_bp.route('/usuarios/asesores-info', methods=['GET'])
+@admin_required  
+def obtener_asesores_info():
+    """Obtiene información básica de todos los asesores activos."""
+    try:
+        asesores = Usuario.query.filter(
+            Usuario.is_active == True,
+            Usuario.rol.in_(['asesor', 'gerente'])
+        ).all()
+        
+        asesores_info = []
+        for asesor in asesores:
+            asesores_info.append({
+                "id": asesor.id,
+                "email": asesor.email,
+                "nombre_completo": asesor.nombre_completo,
+                "rol": asesor.rol,
+                "is_active": asesor.is_active
+            })
+        
+        return jsonify({
+            "success": True,
+            "asesores": asesores_info,
+            "total": len(asesores_info)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            "success": False,
+            "message": f"Error obteniendo asesores: {str(e)}"
+        }), 500
+```
+
+---
+
+## 🧪 Testing de la Funcionalidad
+
+### 1️⃣ **Preparación del Entorno**
+
+```bash
+# Reiniciar servidor Flask
+python app.py
+
+# O con gunicorn
+gunicorn --bind 0.0.0.0:5000 app:app
+```
+
+### 2️⃣ **Flujo de Prueba Completo**
+
+1. **Login como administrador**
+2. **Ir a sección Reclutas**
+3. **Hacer clic en "Distribuir Reclutas Excel"**
+4. **Subir archivo Excel con columnas:**
+   - Fecha de creación
+   - Nombre  
+   - Teléfono
+5. **En el modal de resultados, debería aparecer:**
+   - ✅ Tabla con inputs editables
+   - ✅ Botones +/- para ajustar cantidades
+   - ✅ Controles "Restaurar" y "Equitativo"
+   - ✅ Botón "Aplicar Cambios" (inicialmente deshabilitado)
+
+### 3️⃣ **Casos de Prueba**
+
+#### **Test 1: Edición Básica**
+- Cambiar número en un input
+- Verificar que se actualice el total
+- Confirmar que se habilite "Aplicar Cambios"
+
+#### **Test 2: Validación de Total**
+- Modificar cantidades para que NO sumen el total correcto
+- Verificar mensaje de error en rojo
+- Confirmar que "Aplicar Cambios" permanezca deshabilitado
+
+#### **Test 3: Redistribución Equitativa**
+- Hacer clic en "Equitativo"
+- Verificar distribución balanceada automática
+
+#### **Test 4: Aplicar Cambios**
+- Hacer redistribución válida
+- Hacer clic en "Aplicar Cambios"
+- Verificar que se actualicen las asignaciones en la BD
+
+---
+
+## 🛠️ Características Implementadas
+
+### ✅ **Funcionalidades Core**
+
+- ✅ **Tabla editable** con inputs numéricos
+- ✅ **Botones +/-** para ajuste fino
+- ✅ **Validación en tiempo real** del total
+- ✅ **Redistribución automática** al backend
+- ✅ **Estado visual** de cambios (original vs. nuevo)
+- ✅ **Botón "Restaurar"** a valores originales
+- ✅ **Botón "Equitativo"** para redistribución balanceada
+
+### ✅ **Validaciones y Seguridad**
+
+- ✅ **Solo administradores** pueden usar la función
+- ✅ **Validación matemática** (total debe coincidir)
+- ✅ **Transacciones de BD** para consistencia
+- ✅ **Rollback automático** en caso de error
+- ✅ **Logging detallado** de cambios realizados
+
+### ✅ **UX/UI Mejorada**
+
+- ✅ **Estilos responsive** para móvil y desktop
+- ✅ **Notificaciones toast** de confirmación
+- ✅ **Estados visuales** claros (habilitado/deshabilitado)
+- ✅ **Animaciones suaves** para transiciones
+- ✅ **Ayuda contextual** con modal explicativo
+
+---
+
+## 🎯 Casos de Uso Principales
+
+### 🎓 **Caso 1: Entrenamiento de Nuevos Asesores**
+```
+Situación: Nuevo asesor se integra al equipo
+Solución: Asignarle menos reclutas (ej: 3 en lugar de 8)
+Uso: Editar campo del nuevo asesor, redistribuir exceso
+```
+
+### ⚖️ **Caso 2: Balanceo de Carga de Trabajo**
+```
+Situación: Un asesor tiene muchos reclutas activos
+Solución: Redistribuir parte de su carga a otros
+Uso: Reducir su número, aumentar otros asesores
+```
+
+### 🎯 **Caso 3: Especialización por Perfil**
+```
+Situación: Ciertos asesores especializados en perfiles técnicos
+Solución: Concentrar esos candidatos en especialistas
+Uso: Asignar más reclutas técnicos a asesor especializado
+```
+
+---
+
+## 🚀 Próximas Mejoras Sugeridas
+
+### 🔮 **Funcionalidades Futuras**
+
+1. **Filtros avanzados** (por región, experiencia, etc.)
+2. **Historial de redistribuciones** con auditoría
+3. **Preferencias por asesor** (pesos automáticos)
+4. **Redistribución por drag & drop** visual
+5. **Notificaciones automáticas** a asesores afectados
+
+### 📈 **Optimizaciones de Performance**
+
+1. **Cache de distribuciones** frecuentes
+2. **Paginación** para lotes muy grandes
+3. **Web Workers** para cálculos complejos
+4. **WebSocket** para actualizaciones en tiempo real
+
+---
+
+## 📞 **Soporte y Troubleshooting**
+
+### ❌ **Problemas Comunes**
+
+**1. Botón "Aplicar Cambios" no se habilita:**
+- Verificar que el total coincida exactamente
+- Confirmar que hay al menos un cambio vs. original
+
+**2. Error 500 al aplicar redistribución:**
+- Revisar logs del servidor para detalles
+- Verificar que todos los asesores estén activos
+- Confirmar permisos de administrador
+
+**3. Cambios no se reflejan en lista principal:**
+- Hacer clic en "Actualizar Lista Principal"
+- Refrescar página completa si persiste
+
+### 🔍 **Debug y Logs**
+
+```bash
+# Ver logs del servidor
+tail -f app.log
+
+# Logs específicos de redistribución
+grep "redistribución" app.log
+
+# Verificar estructura de BD
+python -c "from models import *; print(Recluta.query.count())"
+```
+
+---
+
+## ✅ **Checklist Final de Implementación**
+
+- [ ] ✅ Rutas backend agregadas en `routes/api.py`
+- [ ] ✅ Helpers agregados en `utils/helpers.py`  
+- [ ] ✅ Funciones JS modificadas en `static/js/reclutas.js`
+- [ ] ✅ Estilos CSS agregados en `static/css/dashboard.css`
+- [ ] ✅ Servidor reiniciado
+- [ ] ✅ Pruebas de funcionalidad realizadas
+- [ ] ✅ Validaciones confirmadas
+- [ ] ✅ UX/UI revisada
+
+**🎉 Una vez completado este checklist, la funcionalidad estará 100% operativa!**
+
+
+# ✅ NUEVA RUTA: Redistribución editable de reclutas ya importados
+# Agregar en routes/api.py después de la ruta existente distribuir_reclutas_excel
+
+@api_bp.route('/reclutas/redistribuir-manual', methods=['POST'])
+@admin_required
+def redistribuir_reclutas_manual():
+    """
+    🔄 NUEVA FUNCIONALIDAD: Redistribuye reclutas existentes según cantidades manuales por asesor.
+    
+    Permite al admin ajustar la distribución automática modificando 
+    el número de reclutas asignados a cada asesor.
+    
+    Expected JSON:
+    {
+        "lote_id": "opcional_para_identificar_lote",
+        "redistribucion": {
+            "asesor1@empresa.com": 5,
+            "asesor2@empresa.com": 8,
+            "asesor3@empresa.com": 3
+        },
+        "filtros": {
+            "fecha_desde": "2024-01-01T00:00:00Z",
+            "estado": "En proceso",
+            "solo_importados_hoy": true
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'redistribucion' not in data:
+            return jsonify({
+                "success": False,
+                "message": "Datos de redistribución requeridos"
+            }), 400
+        
+        redistribucion_nueva = data['redistribucion']
+        filtros = data.get('filtros', {})
+        
+        # 🔍 Obtener reclutas a redistribuir según filtros
+        query_reclutas = Recluta.query.filter(Recluta.activo == True)
+        
+        # Aplicar filtros opcionales
+        if filtros.get('fecha_desde'):
+            from datetime import datetime
+            fecha_desde = datetime.fromisoformat(filtros['fecha_desde'].replace('Z', '+00:00'))
+            query_reclutas = query_reclutas.filter(Recluta.fecha_registro >= fecha_desde)
+        
+        if filtros.get('estado'):
+            query_reclutas = query_reclutas.filter(Recluta.estado == filtros['estado'])
+        
+        if filtros.get('solo_importados_hoy'):
+            from datetime import datetime, date
+            hoy = date.today()
+            query_reclutas = query_reclutas.filter(
+                db.func.date(Recluta.fecha_registro) == hoy
+            )
+        
+        # Obtener reclutas ordenados por fecha de registro (más recientes primero)
+        reclutas_disponibles = query_reclutas.order_by(Recluta.fecha_registro.desc()).all()
+        
+        if not reclutas_disponibles:
+            return jsonify({
+                "success": False,
+                "message": "No se encontraron reclutas para redistribuir con los filtros aplicados"
+            }), 400
+        
+        # 🔍 Validar asesores en la redistribución
+        emails_asesores = list(redistribucion_nueva.keys())
+        asesores_validos = Usuario.query.filter(
+            Usuario.email.in_(emails_asesores),
+            Usuario.is_active == True,
+            Usuario.rol.in_(['asesor', 'gerente'])
+        ).all()
+        
+        if len(asesores_validos) != len(emails_asesores):
+            emails_encontrados = [a.email for a in asesores_validos]
+            emails_faltantes = [e for e in emails_asesores if e not in emails_encontrados]
+            return jsonify({
+                "success": False,
+                "message": f"Asesores no válidos o inactivos: {emails_faltantes}"
+            }), 400
+        
+        # 📊 Validar que el total coincida
+        total_solicitado = sum(redistribucion_nueva.values())
+        total_disponible = len(reclutas_disponibles)
+        
+        if total_solicitado > total_disponible:
+            return jsonify({
+                "success": False,
+                "message": f"Total solicitado ({total_solicitado}) excede reclutas disponibles ({total_disponible})"
+            }), 400
+        
+        # 🔄 Ejecutar redistribución con transacción
+        try:
+            # Crear mapa de email -> Usuario para eficiencia
+            asesor_map = {a.email: a for a in asesores_validos}
+            
+            # Lista para trackear cambios
+            cambios_realizados = []
+            indice_recluta = 0
+            
+            # Distribuir según cantidades solicitadas
+            for email_asesor, cantidad_solicitada in redistribucion_nueva.items():
+                asesor = asesor_map[email_asesor]
+                
+                # Tomar los siguientes N reclutas
+                reclutas_para_asesor = reclutas_disponibles[indice_recluta:indice_recluta + cantidad_solicitada]
+                
+                for recluta in reclutas_para_asesor:
+                    asesor_anterior = recluta.asesor_id
+                    recluta.asesor_id = asesor.id
+                    
+                    # Log del cambio
+                    cambios_realizados.append({
+                        "recluta_id": recluta.id,
+                        "folio": recluta.folio,
+                        "nombre": recluta.nombre,
+                        "asesor_anterior": asesor_anterior,
+                        "asesor_nuevo": asesor.id,
+                        "email_asesor_nuevo": email_asesor
+                    })
+                
+                indice_recluta += cantidad_solicitada
+            
+            # 💾 Confirmar cambios en BD
+            db.session.commit()
+            
+            # 📈 Generar reporte de redistribución
+            reporte_final = {}
+            for asesor in asesores_validos:
+                count_asignados = len([c for c in cambios_realizados if c['asesor_nuevo'] == asesor.id])
+                reporte_final[asesor.email] = count_asignados
+            
+            current_app.logger.info(f"Redistribución manual exitosa: {len(cambios_realizados)} reclutas redistribuidos")
+            
+            return jsonify({
+                "success": True,
+                "message": f"Redistribución completada exitosamente",
+                "total_redistribuidos": len(cambios_realizados),
+                "total_disponibles": total_disponible,
+                "redistribucion_final": reporte_final,
+                "cambios_detalle": cambios_realizados[:20],  # Primeros 20 para UI
+                "resumen": {
+                    "reclutas_afectados": len(cambios_realizados),
+                    "asesores_involucrados": len(asesores_validos),
+                    "filtros_aplicados": filtros
+                }
+            }), 200
+            
+        except Exception as e:
+            db.session.rollback()
+            raise e
+            
+    except Exception as e:
+        current_app.logger.error(f"Error en redistribución manual: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al redistribuir: {str(e)}"
+        }), 500
+
+
+@api_bp.route('/reclutas/lote-reciente', methods=['GET'])
+@admin_required
+def obtener_lote_reciente():
+    """
+    🔍 NUEVA RUTA: Obtiene información del lote más reciente de reclutas importados.
+    
+    Útil para mostrar en la interfaz qué reclutas están disponibles 
+    para redistribución después de una importación Excel.
+    """
+    try:
+        # Obtener parámetros de consulta
+        horas_atras = request.args.get('horas', 2, type=int)  # Últimas 2 horas por defecto
+        
+        from datetime import datetime, timedelta
+        fecha_limite = datetime.now() - timedelta(hours=horas_atras)
+        
+        # Consultar reclutas recientes
+        reclutas_recientes = Recluta.query.filter(
+            Recluta.fecha_registro >= fecha_limite,
+            Recluta.activo == True
+        ).order_by(Recluta.fecha_registro.desc()).all()
+        
+        if not reclutas_recientes:
+            return jsonify({
+                "success": True,
+                "total_recientes": 0,
+                "distribucion_actual": {},
+                "message": f"No hay reclutas importados en las últimas {horas_atras} horas"
+            })
+        
+        # Agrupar por asesor actual
+        from collections import defaultdict
+        distribucion_actual = defaultdict(int)
+        asesor_info = {}
+        
+        for recluta in reclutas_recientes:
+            if recluta.asesor:
+                email = recluta.asesor.email
+                distribucion_actual[email] += 1
+                asesor_info[email] = {
+                    "nombre_completo": recluta.asesor.nombre_completo,
+                    "rol": recluta.asesor.rol
+                }
+        
+        return jsonify({
+            "success": True,
+            "total_recientes": len(reclutas_recientes),
+            "distribucion_actual": dict(distribucion_actual),
+            "asesor_info": asesor_info,
+            "periodo_consulta": f"Últimas {horas_atras} horas",
+            "fecha_limite": fecha_limite.isoformat()
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo lote reciente: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al consultar lote reciente: {str(e)}"
+        }), 500
+
+
+        // ✅ FUNCIONES NUEVAS: Agregar al objeto Reclutas en static/js/reclutas.js
+
+/**
+ * 🔄 NUEVA FUNCIÓN: Muestra resultados de distribución con tabla EDITABLE
+ */
+showDistribucionResults: function(data) {
+    console.log('📊 Mostrando resultados de distribución con edición habilitada', data);
+    
+    const resultsContainer = document.getElementById('distribucion-results');
+    if (!resultsContainer) {
+        console.error('❌ No se encontró contenedor de resultados');
+        return;
+    }
+    
+    // Guardar datos originales para referencia
+    this.distribucionOriginal = data;
+    
+    // Construir filas de distribución EDITABLES
+    const distributionRows = Object.entries(data.distribucion || {}).map(([asesor, cantidad]) => `
+        <tr>
+            <td class="asesor-cell">
+                <span class="asesor-email">${asesor}</span>
+            </td>
+            <td class="cantidad-cell">
+                <div class="editable-quantity-container">
+                    <input 
+                        type="number" 
+                        class="editable-quantity" 
+                        value="${cantidad}" 
+                        min="0" 
+                        max="${data.exitosos || 100}"
+                        data-asesor="${asesor}"
+                        data-original="${cantidad}"
+                    />
+                    <div class="quantity-controls">
+                        <button class="btn-micro btn-increment" onclick="Reclutas.adjustQuantity('${asesor}', 1)">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="btn-micro btn-decrement" onclick="Reclutas.adjustQuantity('${asesor}', -1)">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <small class="quantity-status" id="status-${asesor.replace('@', '_').replace('.', '_')}">
+                    Original: ${cantidad}
+                </small>
+            </td>
+        </tr>
+    `).join('');
+    
+    // Sección de errores (si existen)
+    const errorsHtml = data.errores > 0 ? 
+        `<div class="errors-section">
+            <h5><i class="fas fa-exclamation-triangle"></i> Errores Encontrados (${data.errores})</h5>
+            <ul>
+                ${data.errores_detalle.map(err => `<li>Fila ${err.fila}: ${err.error}</li>`).join('')}
+            </ul>
+        </div>` : '';
+    
+    resultsContainer.innerHTML = `
+        <div class="results-summary">
+            <h4><i class="fas fa-check-circle"></i> Distribución Completada</h4>
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Total Procesados:</span>
+                    <span class="stat-value" id="total-procesados">${data.total_procesados}</span>
+                </div>
+                <div class="stat-item success">
+                    <span class="stat-label">Exitosos:</span>
+                    <span class="stat-value" id="total-exitosos">${data.exitosos}</span>
+                </div>
+                <div class="stat-item info">
+                    <span class="stat-label">Total Asignado:</span>
+                    <span class="stat-value" id="total-asignado">${Object.values(data.distribucion || {}).reduce((a, b) => a + b, 0)}</span>
+                </div>
+                ${data.errores > 0 ? `
+                <div class="stat-item error">
+                    <span class="stat-label">Errores:</span>
+                    <span class="stat-value">${data.errores}</span>
+                </div>` : ''}
+            </div>
+        </div>
+        
+        <div class="distribution-table-container">
+            <div class="distribution-header">
+                <h5><i class="fas fa-users"></i> Distribución por Asesor (Editable)</h5>
+                <div class="redistribution-controls">
+                    <button class="btn-secondary btn-small" onclick="Reclutas.resetDistribucion()">
+                        <i class="fas fa-undo"></i> Restaurar Original
+                    </button>
+                    <button class="btn-warning btn-small" onclick="Reclutas.distribuirEquitativamente()">
+                        <i class="fas fa-balance-scale"></i> Distribuir Equitativamente
+                    </button>
+                    <button class="btn-success" id="aplicar-redistribucion" onclick="Reclutas.aplicarRedistribucion()" disabled>
+                        <i class="fas fa-check-double"></i> Aplicar Redistribución
+                    </button>
+                </div>
+            </div>
+            
+            <div class="redistribution-status" id="redistribution-status" style="display: none;">
+                <i class="fas fa-info-circle"></i>
+                <span id="redistribution-message">Redistribución automática en progreso...</span>
+            </div>
+            
+            <table class="distribution-table">
+                <thead>
+                    <tr>
+                        <th>Asesor</th>
+                        <th>Reclutas Asignados</th>
+                    </tr>
+                </thead>
+                <tbody id="distribution-tbody">
+                    ${distributionRows}
+                </tbody>
+            </table>
+        </div>
+        
+        ${errorsHtml}
+        
+        <div class="results-actions">
+            <button class="btn-primary" onclick="Reclutas.loadAndDisplayReclutas()">
+                <i class="fas fa-sync"></i> Actualizar Lista Principal
+            </button>
+        </div>
+    `;
+    
+    resultsContainer.style.display = 'block';
+    
+    // 🎯 Configurar eventos de edición en tiempo real
+    this.setupEditableDistribution();
+    
+    // Completar progress bar
+    const progressFill = document.getElementById('distribucion-progress-fill');
+    if (progressFill) {
+        progressFill.style.width = '100%';
+    }
+    
+    setTimeout(() => {
+        this.hideDistribucionProgress();
+    }, 1000);
+},
+
+/**
+ * 🎯 NUEVA FUNCIÓN: Configura eventos para distribución editable
+ */
+setupEditableDistribution: function() {
+    console.log('🔧 Configurando distribución editable');
+    
+    // Eventos para inputs de cantidad
+    const quantityInputs = document.querySelectorAll('.editable-quantity');
+    quantityInputs.forEach(input => {
+        // Evento de cambio directo
+        input.addEventListener('input', (e) => {
+            this.handleQuantityChange(e.target);
+        });
+        
+        // Evento para Enter key
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.target.blur();
+                this.validateAndUpdateDistribution();
+            }
+        });
+        
+        // Evento cuando pierde el foco
+        input.addEventListener('blur', () => {
+            this.validateAndUpdateDistribution();
+        });
+    });
+    
+    console.log('✅ Distribución editable configurada');
+},
+
+/**
+ * 🔢 NUEVA FUNCIÓN: Ajusta cantidad con botones +/-
+ */
+adjustQuantity: function(asesor, delta) {
+    const input = document.querySelector(`input[data-asesor="${asesor}"]`);
+    if (!input) return;
+    
+    const currentValue = parseInt(input.value) || 0;
+    const newValue = Math.max(0, currentValue + delta);
+    const maxValue = parseInt(input.getAttribute('max')) || 100;
+    
+    input.value = Math.min(newValue, maxValue);
+    this.handleQuantityChange(input);
+},
+
+/**
+ * 🔄 NUEVA FUNCIÓN: Maneja cambios en cantidades individuales
+ */
+handleQuantityChange: function(input) {
+    const asesor = input.dataset.asesor;
+    const originalValue = parseInt(input.dataset.original) || 0;
+    const currentValue = parseInt(input.value) || 0;
+    
+    // Actualizar status visual
+    const statusElement = document.getElementById(`status-${asesor.replace('@', '_').replace('.', '_')}`);
+    if (statusElement) {
+        if (currentValue !== originalValue) {
+            statusElement.innerHTML = `Original: ${originalValue} → <strong style="color: #e74c3c;">Nuevo: ${currentValue}</strong>`;
+            statusElement.className = 'quantity-status changed';
+        } else {
+            statusElement.innerHTML = `Original: ${originalValue}`;
+            statusElement.className = 'quantity-status';
+        }
+    }
+    
+    // Debounce para validación
+    clearTimeout(this.quantityChangeTimeout);
+    this.quantityChangeTimeout = setTimeout(() => {
+        this.validateAndUpdateDistribution();
+    }, 500);
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Valida y actualiza totales de distribución
+ */
+validateAndUpdateDistribution: function() {
+    const quantityInputs = document.querySelectorAll('.editable-quantity');
+    let totalAsignado = 0;
+    let hayModificaciones = false;
+    
+    quantityInputs.forEach(input => {
+        const currentValue = parseInt(input.value) || 0;
+        const originalValue = parseInt(input.dataset.original) || 0;
+        
+        totalAsignado += currentValue;
+        
+        if (currentValue !== originalValue) {
+            hayModificaciones = true;
+        }
+    });
+    
+    // Actualizar total visual
+    const totalElement = document.getElementById('total-asignado');
+    if (totalElement) {
+        totalElement.textContent = totalAsignado;
+    }
+    
+    // Validar contra total exitoso
+    const totalExitosos = this.distribucionOriginal?.exitosos || 0;
+    const statusContainer = document.getElementById('redistribution-status');
+    const applyButton = document.getElementById('aplicar-redistribucion');
+    
+    if (totalAsignado !== totalExitosos) {
+        statusContainer.style.display = 'block';
+        statusContainer.className = 'redistribution-status error';
+        statusContainer.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>⚠️ Total asignado (${totalAsignado}) no coincide con reclutas exitosos (${totalExitosos})</span>
+        `;
+        applyButton.disabled = true;
+    } else if (hayModificaciones) {
+        statusContainer.style.display = 'block';
+        statusContainer.className = 'redistribution-status success';
+        statusContainer.innerHTML = `
+            <i class="fas fa-check-circle"></i>
+            <span>✅ Distribución válida - Lista para aplicar</span>
+        `;
+        applyButton.disabled = false;
+    } else {
+        statusContainer.style.display = 'none';
+        applyButton.disabled = true;
+    }
+},
+
+/**
+ * 🔄 NUEVA FUNCIÓN: Restaura distribución original
+ */
+resetDistribucion: function() {
+    if (!this.distribucionOriginal) return;
+    
+    Object.entries(this.distribucionOriginal.distribucion || {}).forEach(([asesor, cantidad]) => {
+        const input = document.querySelector(`input[data-asesor="${asesor}"]`);
+        if (input) {
+            input.value = cantidad;
+            this.handleQuantityChange(input);
+        }
+    });
+    
+    Utils.showToast('Distribución restaurada a valores originales', 'info');
+},
+
+/**
+ * ⚖️ NUEVA FUNCIÓN: Redistribuye equitativamente
+ */
+distribuirEquitativamente: function() {
+    const quantityInputs = document.querySelectorAll('.editable-quantity');
+    const totalExitosos = this.distribucionOriginal?.exitosos || 0;
+    const numAsesores = quantityInputs.length;
+    
+    if (numAsesores === 0) return;
+    
+    // Calcular distribución equitativa
+    const baseAmount = Math.floor(totalExitosos / numAsesores);
+    const remainder = totalExitosos % numAsesores;
+    
+    quantityInputs.forEach((input, index) => {
+        // Los primeros 'remainder' asesores reciben +1
+        const amount = baseAmount + (index < remainder ? 1 : 0);
+        input.value = amount;
+        this.handleQuantityChange(input);
+    });
+    
+    Utils.showToast(`Distribución equitativa aplicada: ${baseAmount}±1 por asesor`, 'success');
+},
+
+/**
+ * 🚀 NUEVA FUNCIÓN: Aplica redistribución al backend
+ */
+aplicarRedistribucion: function() {
+    const quantityInputs = document.querySelectorAll('.editable-quantity');
+    const nuevaDistribucion = {};
+    
+    // Recopilar nueva distribución
+    quantityInputs.forEach(input => {
+        const asesor = input.dataset.asesor;
+        const cantidad = parseInt(input.value) || 0;
+        nuevaDistribucion[asesor] = cantidad;
+    });
+    
+    // Confirmar acción
+    const totalNuevo = Object.values(nuevaDistribucion).reduce((a, b) => a + b, 0);
+    if (!confirm(`¿Confirmar redistribución?\n\nTotal: ${totalNuevo} reclutas\nEsta acción modificará las asignaciones existentes.`)) {
+        return;
+    }
+    
+    // Deshabilitar botón y mostrar loading
+    const applyButton = document.getElementById('aplicar-redistribucion');
+    const originalText = applyButton.innerHTML;
+    applyButton.disabled = true;
+    applyButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redistribuyendo...';
+    
+    // Llamar al backend
+    fetch('/api/reclutas/redistribuir-manual', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': Utils.getCSRFToken()
+        },
+        body: JSON.stringify({
+            redistribucion: nuevaDistribucion,
+            filtros: {
+                solo_importados_hoy: true,
+                estado: 'En proceso'
+            }
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Utils.showToast(`Redistribución exitosa: ${data.total_redistribuidos} reclutas reasignados`, 'success');
+            
+            // Actualizar datos originales con nueva distribución
+            this.distribucionOriginal.distribucion = data.redistribucion_final;
+            
+            // Actualizar inputs como "original"
+            quantityInputs.forEach(input => {
+                input.dataset.original = input.value;
+                this.handleQuantityChange(input);
+            });
+            
+            // Refrescar lista principal después de 2 segundos
+            setTimeout(() => {
+                this.loadAndDisplayReclutas();
+            }, 2000);
+            
+        } else {
+            Utils.showToast(`Error en redistribución: ${data.message}`, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error en redistribución:', error);
+        Utils.showToast('Error de conexión durante redistribución', 'error');
+    })
+    .finally(() => {
+        // Restaurar botón
+        applyButton.innerHTML = originalText;
+        setTimeout(() => {
+            this.validateAndUpdateDistribution();
+        }, 1000);
+    });
+},
+
+/**
+ * 🔍 NUEVA FUNCIÓN: Obtiene información del lote reciente para validación
+ */
+obtenerLoteReciente: function() {
+    return fetch('/api/reclutas/lote-reciente?horas=2')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('📊 Lote reciente obtenido:', data);
+                return data;
+            }
+            throw new Error(data.message);
+        })
+        .catch(error => {
+            console.error('Error obteniendo lote reciente:', error);
+            return null;
+        });
+}
+
+/* ✅ ESTILOS NUEVOS: Agregar al final de static/css/dashboard.css */
+
+/* 🔄 DISTRIBUCIÓN EDITABLE - Estilos para tabla interactiva */
+.distribution-table-container {
+    background: var(--card-background);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: var(--shadow-light);
+    margin: 20px 0;
+    border: 1px solid var(--border-color);
+}
+
+.distribution-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.distribution-header h5 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.redistribution-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.redistribution-controls .btn-small {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    min-width: auto;
+}
+
+/* 📊 TABLA DE DISTRIBUCIÓN MEJORADA */
+.distribution-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    background: var(--background-color);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow-light);
+}
+
+.distribution-table thead th {
+    background: var(--primary-color);
+    color: white;
+    padding: 15px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.distribution-table tbody tr {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.distribution-table tbody tr:hover {
+    background: var(--hover-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.distribution-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.distribution-table td {
+    padding: 15px 12px;
+    vertical-align: middle;
+}
+
+/* 📧 CELDA DE ASESOR */
+.asesor-cell {
+    min-width: 200px;
+}
+
+.asesor-email {
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+/* 🔢 CELDA DE CANTIDAD EDITABLE */
+.cantidad-cell {
+    min-width: 180px;
+    position: relative;
+}
+
+.editable-quantity-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+}
+
+.editable-quantity {
+    width: 80px;
+    padding: 8px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: center;
+    background: var(--input-background);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.editable-quantity:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    background: white;
+}
+
+.editable-quantity:hover {
+    border-color: var(--primary-color);
+}
+
+/* ⬆️⬇️ CONTROLES DE CANTIDAD */
+.quantity-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.btn-micro {
+    width: 24px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    background: var(--card-background);
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+}
+
+.btn-micro:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+.btn-increment:hover {
+    background: #27ae60;
+    border-color: #27ae60;
+}
+
+.btn-decrement:hover {
+    background: #e74c3c;
+    border-color: #e74c3c;
+}
+
+/* 📊 STATUS DE CANTIDAD */
+.quantity-status {
+    display: block;
+    margin-top: 8px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+    transition: all 0.2s ease;
+}
+
+.quantity-status.changed {
+    color: #e74c3c;
+    font-weight: 600;
+    font-style: normal;
+}
+
+/* 🚨 STATUS DE REDISTRIBUCIÓN */
+.redistribution-status {
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin: 15px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    font-size: 0.9rem;
+    animation: slideIn 0.3s ease;
+}
+
+.redistribution-status.error {
+    background: #ffeaea;
+    border: 1px solid #ffcccb;
+    color: #c0392b;
+}
+
+.redistribution-status.success {
+    background: #eafaf1;
+    border: 1px solid #a9dfbf;
+    color: #27ae60;
+}
+
+.redistribution-status.info {
+    background: #ebf3fd;
+    border: 1px solid #aed6f1;
+    color: #2980b9;
+}
+
+/* 🔢 ESTADÍSTICAS MEJORADAS */
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin: 15px 0;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+    background: var(--card-background);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+}
+
+.stat-item.success {
+    border-color: #27ae60;
+    background: linear-gradient(135deg, #eafaf1 0%, #f8fff9 100%);
+}
+
+.stat-item.error {
+    border-color: #e74c3c;
+    background: linear-gradient(135deg, #ffeaea 0%, #fff5f5 100%);
+}
+
+.stat-item.info {
+    border-color: #3498db;
+    background: linear-gradient(135deg, #ebf3fd 0%, #f8fbff 100%);
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+/* 🎨 ANIMACIONES */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(52, 152, 219, 0.6);
+    }
+}
+
+.editable-quantity:focus {
+    animation: pulseGlow 2s infinite;
+}
+
+/* 📱 RESPONSIVE PARA MÓVILES */
+@media (max-width: 768px) {
+    .distribution-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .redistribution-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .editable-quantity-container {
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .quantity-controls {
+        flex-direction: row;
+        gap: 5px;
+    }
+    
+    .btn-micro {
+        width: 30px;
+        height: 25px;
+    }
+    
+    .summary-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .distribution-table {
+        font-size: 0.85rem;
+    }
+    
+    .distribution-table td,
+    .distribution-table th {
+        padding: 10px 8px;
+    }
+}
+
+/* 🌙 MODO OSCURO */
+.theme-dark .distribution-table-container {
+    background: var(--dark-card-bg);
+    border-color: var(--dark-border);
+}
+
+.theme-dark .distribution-table {
+    background: var(--dark-bg);
+}
+
+.theme-dark .distribution-table tbody tr:hover {
+    background: var(--dark-hover);
+}
+
+.theme-dark .editable-quantity {
+    background: var(--dark-input-bg);
+    border-color: var(--dark-border);
+    color: var(--dark-text-primary);
+}
+
+.theme-dark .editable-quantity:focus {
+    background: var(--dark-card-bg);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+}
+
+.theme-dark .btn-micro {
+    background: var(--dark-card-bg);
+    border-color: var(--dark-border);
+    color: var(--dark-text-secondary);
+}
+
+.theme-dark .quantity-status {
+    color: var(--dark-text-muted);
+}
+
+.theme-dark .stat-item {
+    background: var(--dark-card-bg);
+    border-color: var(--dark-border);
+}
+
+/* 🔧 ESTADOS ESPECÍFICOS */
+.btn-success:disabled {
+    background: #95a5a6;
+    border-color: #95a5a6;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-success:not(:disabled):hover {
+    background: #27ae60;
+    border-color: #27ae60;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+}
+
+/* 🏷️ BADGES PARA INFORMACIÓN EXTRA */
+.asesor-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-left: 8px;
+    text-transform: uppercase;
+}
+
+.asesor-badge.gerente {
+    background: #f39c12;
+}
+
+.asesor-badge.asesor {
+    background: #9b59b6;
+}
+
+# ✅ NUEVAS FUNCIONES HELPER: Agregar al final de utils/helpers.py
+
+def redistribuir_reclutas_existentes(reclutas_ids, nueva_distribucion, asesores):
+    """
+    🔄 NUEVA FUNCIÓN: Redistribuye reclutas existentes según nueva asignación manual.
+    
+    Args:
+        reclutas_ids: Lista de IDs de reclutas a redistribuir
+        nueva_distribucion: Dict {email_asesor: cantidad_asignada}
+        asesores: Lista de objetos Usuario asesor activos
+        
+    Returns:
+        Dict con resultado de la redistribución
+    """
+    try:
+        from models.recluta import Recluta
+        from models import db
+        
+        # Obtener reclutas ordenados (más recientes primero)
+        reclutas = Recluta.query.filter(
+            Recluta.id.in_(reclutas_ids),
+            Recluta.activo == True
+        ).order_by(Recluta.fecha_registro.desc()).all()
+        
+        if not reclutas:
+            return {
+                "success": False,
+                "message": "No se encontraron reclutas válidos para redistribuir"
+            }
+        
+        # Crear mapa de email -> Usuario para eficiencia
+        asesor_map = {a.email: a for a in asesores}
+        
+        # Validar que todos los emails existen
+        emails_faltantes = [email for email in nueva_distribucion.keys() if email not in asesor_map]
+        if emails_faltantes:
+            return {
+                "success": False,
+                "message": f"Asesores no encontrados: {emails_faltantes}"
+            }
+        
+        # Validar total
+        total_solicitado = sum(nueva_distribucion.values())
+        total_disponible = len(reclutas)
+        
+        if total_solicitado > total_disponible:
+            return {
+                "success": False,
+                "message": f"Total solicitado ({total_solicitado}) excede disponibles ({total_disponible})"
+            }
+        
+        # Ejecutar redistribución
+        cambios_realizados = []
+        indice_actual = 0
+        
+        with db.session.begin():
+            for email_asesor, cantidad in nueva_distribucion.items():
+                asesor = asesor_map[email_asesor]
+                
+                # Tomar siguiente grupo de reclutas
+                grupo_reclutas = reclutas[indice_actual:indice_actual + cantidad]
+                
+                for recluta in grupo_reclutas:
+                    asesor_anterior_id = recluta.asesor_id
+                    recluta.asesor_id = asesor.id
+                    
+                    cambios_realizados.append({
+                        "recluta_id": recluta.id,
+                        "folio": recluta.folio,
+                        "nombre": recluta.nombre,
+                        "asesor_anterior_id": asesor_anterior_id,
+                        "asesor_nuevo_id": asesor.id,
+                        "asesor_nuevo_email": email_asesor
+                    })
+                
+                indice_actual += cantidad
+        
+        # Generar reporte
+        reporte_final = {}
+        for asesor in asesores:
+            count = len([c for c in cambios_realizados if c['asesor_nuevo_id'] == asesor.id])
+            if count > 0:
+                reporte_final[asesor.email] = count
+        
+        return {
+            "success": True,
+            "total_redistribuidos": len(cambios_realizados),
+            "redistribucion_final": reporte_final,
+            "cambios_detalle": cambios_realizados,
+            "message": f"Redistribución exitosa: {len(cambios_realizados)} reclutas reasignados"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error en redistribución: {str(e)}"
+        }
+
+
+def obtener_reclutas_recientes(horas_atras=2, filtros_adicionales=None):
+    """
+    🔍 NUEVA FUNCIÓN: Obtiene reclutas importados recientemente para redistribución.
+    
+    Args:
+        horas_atras: Número de horas hacia atrás para buscar (default: 2)
+        filtros_adicionales: Dict con filtros extra (estado, asesor_id, etc.)
+        
+    Returns:
+        Dict con información de reclutas recientes
+    """
+    try:
+        from models.recluta import Recluta
+        from models.usuario import Usuario
+        from datetime import datetime, timedelta
+        from collections import defaultdict
+        
+        # Calcular fecha límite
+        fecha_limite = datetime.now() - timedelta(hours=horas_atras)
+        
+        # Query base
+        query = Recluta.query.filter(
+            Recluta.fecha_registro >= fecha_limite,
+            Recluta.activo == True
+        )
+        
+        # Aplicar filtros adicionales si existen
+        if filtros_adicionales:
+            if 'estado' in filtros_adicionales:
+                query = query.filter(Recluta.estado == filtros_adicionales['estado'])
+            
+            if 'asesor_id' in filtros_adicionales:
+                query = query.filter(Recluta.asesor_id == filtros_adicionales['asesor_id'])
+            
+            if 'solo_con_asesor' in filtros_adicionales and filtros_adicionales['solo_con_asesor']:
+                query = query.filter(Recluta.asesor_id.isnot(None))
+        
+        # Obtener reclutas ordenados
+        reclutas_recientes = query.order_by(Recluta.fecha_registro.desc()).all()
+        
+        if not reclutas_recientes:
+            return {
+                "success": True,
+                "total_recientes": 0,
+                "distribucion_actual": {},
+                "reclutas_ids": [],
+                "mensaje": f"No hay reclutas en las últimas {horas_atras} horas"
+            }
+        
+        # Agrupar por asesor
+        distribucion_actual = defaultdict(int)
+        asesor_info = {}
+        reclutas_ids = []
+        
+        for recluta in reclutas_recientes:
+            reclutas_ids.append(recluta.id)
+            
+            if recluta.asesor:
+                email = recluta.asesor.email
+                distribucion_actual[email] += 1
+                
+                if email not in asesor_info:
+                    asesor_info[email] = {
+                        "id": recluta.asesor.id,
+                        "nombre_completo": recluta.asesor.nombre_completo,
+                        "rol": recluta.asesor.rol,
+                        "is_active": recluta.asesor.is_active
+                    }
+        
+        return {
+            "success": True,
+            "total_recientes": len(reclutas_recientes),
+            "distribucion_actual": dict(distribucion_actual),
+            "asesor_info": asesor_info,
+            "reclutas_ids": reclutas_ids,
+            "periodo_consulta": f"Últimas {horas_atras} horas",
+            "fecha_limite": fecha_limite.isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Error consultando reclutas recientes: {str(e)}"
+        }
+
+
+def validar_distribucion_factible(nueva_distribucion, total_disponible):
+    """
+    ✅ NUEVA FUNCIÓN: Valida que una distribución sea matemáticamente factible.
+    
+    Args:
+        nueva_distribucion: Dict {email_asesor: cantidad}
+        total_disponible: Número total de reclutas disponibles
+        
+    Returns:
+        Dict con resultado de validación
+    """
+    try:
+        # Validaciones básicas
+        if not isinstance(nueva_distribucion, dict):
+            return {
+                "valida": False,
+                "errores": ["Distribución debe ser un diccionario"]
+            }
+        
+        if not nueva_distribucion:
+            return {
+                "valida": False,
+                "errores": ["Distribución no puede estar vacía"]
+            }
+        
+        errores = []
+        total_solicitado = 0
+        
+        # Validar cada asignación
+        for email, cantidad in nueva_distribucion.items():
+            if not isinstance(cantidad, int) or cantidad < 0:
+                errores.append(f"Cantidad para {email} debe ser entero positivo")
+                continue
+            
+            total_solicitado += cantidad
+        
+        # Validar total
+        if total_solicitado != total_disponible:
+            errores.append(f"Total solicitado ({total_solicitado}) no coincide con disponible ({total_disponible})")
+        
+        # Validar distribución balanceada (opcional - advertencia)
+        advertencias = []
+        if nueva_distribucion:
+            cantidades = list(nueva_distribucion.values())
+            min_cantidad = min(cantidades)
+            max_cantidad = max(cantidades)
+            diferencia = max_cantidad - min_cantidad
+            
+            if diferencia > 2:  # Permitir diferencia máxima de 2
+                advertencias.append(f"Distribución muy desbalanceada (diferencia: {diferencia})")
+        
+        return {
+            "valida": len(errores) == 0,
+            "errores": errores,
+            "advertencias": advertencias,
+            "total_solicitado": total_solicitado,
+            "total_disponible": total_disponible,
+            "diferencia": abs(total_solicitado - total_disponible)
+        }
+        
+    except Exception as e:
+        return {
+            "valida": False,
+            "errores": [f"Error validando distribución: {str(e)}"]
+        }
+
+
+def generar_distribucion_optimizada(total_reclutas, asesores, preferencias=None):
+    """
+    🎯 NUEVA FUNCIÓN: Genera distribución optimizada considerando preferencias.
+    
+    Args:
+        total_reclutas: Número total de reclutas a distribuir
+        asesores: Lista de objetos Usuario asesor
+        preferencias: Dict opcional con preferencias {email: peso_preferencia}
+        
+    Returns:
+        Dict con distribución optimizada
+    """
+    try:
+        if not asesores or total_reclutas <= 0:
+            return {}
+        
+        num_asesores = len(asesores)
+        distribucion = {}
+        
+        # Si no hay preferencias, distribución equitativa estándar
+        if not preferencias:
+            base_amount = total_reclutas // num_asesores
+            remainder = total_reclutas % num_asesores
+            
+            for i, asesor in enumerate(asesores):
+                cantidad = base_amount + (1 if i < remainder else 0)
+                distribucion[asesor.email] = cantidad
+        
+        else:
+            # Distribución con pesos por preferencias
+            total_peso = sum(preferencias.get(a.email, 1.0) for a in asesores)
+            asignado = 0
+            
+            for i, asesor in enumerate(asesores):
+                peso = preferencias.get(asesor.email, 1.0)
+                
+                if i == len(asesores) - 1:  # Último asesor recibe el resto
+                    cantidad = total_reclutas - asignado
+                else:
+                    cantidad = round((peso / total_peso) * total_reclutas)
+                
+                distribucion[asesor.email] = max(0, cantidad)  # No negativos
+                asignado += cantidad
+        
+        # Validar que suma sea correcta
+        total_distribuido = sum(distribucion.values())
+        if total_distribuido != total_reclutas:
+            # Ajuste fino para corregir errores de redondeo
+            diferencia = total_reclutas - total_distribuido
+            primer_asesor = asesores[0].email
+            distribucion[primer_asesor] += diferencia
+        
+        return distribucion
+        
+    except Exception as e:
+        print(f"Error generando distribución optimizada: {str(e)}")
+        return distribuir_equitativamente_simple(total_reclutas, asesores)
+
+
+def distribuir_equitativamente_simple(total_reclutas, asesores):
+    """
+    ⚖️ FUNCIÓN AUXILIAR: Distribución equitativa simple como fallback.
+    """
+    if not asesores or total_reclutas <= 0:
+        return {}
+    
+    num_asesores = len(asesores)
+    base_amount = total_reclutas // num_asesores
+    remainder = total_reclutas % num_asesores
+    
+    distribucion = {}
+    for i, asesor in enumerate(asesores):
+        cantidad = base_amount + (1 if i < remainder else 0)
+        distribucion[asesor.email] = cantidad
+    
+    return distribucion
+
+    // ✅ REEMPLAZAR FUNCIÓN EXISTENTE: Cambiar showDistribucionResults en static/js/reclutas.js
+
+/**
+ * 📊 FUNCIÓN MODIFICADA: Muestra resultados de distribución con capacidades de edición
+ * REEMPLAZA la función existente showDistribucionResults
+ */
+showDistribucionResults: function(data) {
+    console.log('📊 Mostrando resultados de distribución EDITABLE', data);
+    
+    const resultsContainer = document.getElementById('distribucion-results');
+    if (!resultsContainer) {
+        console.error('❌ No se encontró contenedor de resultados');
+        return;
+    }
+    
+    // 💾 Guardar datos originales para referencia y rollback
+    this.distribucionOriginal = JSON.parse(JSON.stringify(data)); // Deep copy
+    
+    // 📧 Obtener información adicional de asesores si está disponible
+    this.obtenerInfoAsesores().then(asesorInfo => {
+        this.asesorInfoCache = asesorInfo;
+        this.renderDistributionTable(data);
+    });
+},
+
+/**
+ * 🎨 NUEVA FUNCIÓN: Renderiza la tabla de distribución completa
+ */
+renderDistributionTable: function(data) {
+    const resultsContainer = document.getElementById('distribucion-results');
+    
+    // 📊 Construir filas de distribución con información de asesor
+    const distributionRows = Object.entries(data.distribucion || {}).map(([asesor, cantidad]) => {
+        const asesorInfo = this.asesorInfoCache?.[asesor] || {};
+        const rolBadge = asesorInfo.rol ? `<span class="asesor-badge ${asesorInfo.rol}">${asesorInfo.rol}</span>` : '';
+        
+        return `
+            <tr data-asesor="${asesor}" class="distribution-row">
+                <td class="asesor-cell">
+                    <div class="asesor-info">
+                        <span class="asesor-email">${asesor}</span>
+                        ${rolBadge}
+                        ${asesorInfo.nombre_completo ? `<br><small class="asesor-nombre">${asesorInfo.nombre_completo}</small>` : ''}
+                    </div>
+                </td>
+                <td class="cantidad-cell">
+                    <div class="editable-quantity-container">
+                        <input 
+                            type="number" 
+                            class="editable-quantity" 
+                            value="${cantidad}" 
+                            min="0" 
+                            max="${data.exitosos || 100}"
+                            data-asesor="${asesor}"
+                            data-original="${cantidad}"
+                            title="Número de reclutas asignados a ${asesor}"
+                        />
+                        <div class="quantity-controls">
+                            <button class="btn-micro btn-increment" onclick="Reclutas.adjustQuantity('${asesor}', 1)" title="Incrementar">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <button class="btn-micro btn-decrement" onclick="Reclutas.adjustQuantity('${asesor}', -1)" title="Decrementar">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <small class="quantity-status" id="status-${asesor.replace('@', '_').replace('.', '_')}">
+                        Original: ${cantidad}
+                    </small>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    // 🚨 Sección de errores si existen
+    const errorsHtml = data.errores > 0 ? 
+        `<div class="errors-section">
+            <h5><i class="fas fa-exclamation-triangle"></i> Errores Encontrados (${data.errores})</h5>
+            <div class="error-list">
+                ${data.errores_detalle.map(err => `
+                    <div class="error-item">
+                        <strong>Fila ${err.fila}:</strong> ${err.error}
+                        ${err.datos ? `<br><small>Datos: ${JSON.stringify(err.datos)}</small>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        </div>` : '';
+    
+    // 🎯 Template principal mejorado
+    resultsContainer.innerHTML = `
+        <div class="results-summary">
+            <h4><i class="fas fa-check-circle"></i> Distribución Excel Completada</h4>
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Total Procesados</span>
+                    <span class="stat-value" id="total-procesados">${data.total_procesados}</span>
+                </div>
+                <div class="stat-item success">
+                    <span class="stat-label">Creados Exitosamente</span>
+                    <span class="stat-value" id="total-exitosos">${data.exitosos}</span>
+                </div>
+                <div class="stat-item info">
+                    <span class="stat-label">Total Asignado</span>
+                    <span class="stat-value" id="total-asignado">${Object.values(data.distribucion || {}).reduce((a, b) => a + b, 0)}</span>
+                </div>
+                ${data.errores > 0 ? `
+                <div class="stat-item error">
+                    <span class="stat-label">Errores</span>
+                    <span class="stat-value">${data.errores}</span>
+                </div>` : ''}
+            </div>
+        </div>
+        
+        <div class="distribution-table-container">
+            <div class="distribution-header">
+                <h5><i class="fas fa-users"></i> Distribución por Asesor - Editable</h5>
+                <div class="redistribution-controls">
+                    <button class="btn-secondary btn-small" onclick="Reclutas.resetDistribucion()" title="Volver a distribución original">
+                        <i class="fas fa-undo"></i> Restaurar
+                    </button>
+                    <button class="btn-warning btn-small" onclick="Reclutas.distribuirEquitativamente()" title="Redistribuir de manera equitativa">
+                        <i class="fas fa-balance-scale"></i> Equitativo
+                    </button>
+                    <button class="btn-info btn-small" onclick="Reclutas.mostrarAyudaDistribucion()" title="Ver ayuda sobre redistribución">
+                        <i class="fas fa-question-circle"></i> Ayuda
+                    </button>
+                    <button class="btn-success" id="aplicar-redistribucion" onclick="Reclutas.aplicarRedistribucion()" disabled>
+                        <i class="fas fa-check-double"></i> Aplicar Cambios
+                    </button>
+                </div>
+            </div>
+            
+            <div class="redistribution-status" id="redistribution-status" style="display: none;">
+                <i class="fas fa-info-circle"></i>
+                <span id="redistribution-message">Estado de redistribución...</span>
+            </div>
+            
+            <table class="distribution-table">
+                <thead>
+                    <tr>
+                        <th><i class="fas fa-user"></i> Asesor</th>
+                        <th><i class="fas fa-chart-bar"></i> Reclutas Asignados</th>
+                    </tr>
+                </thead>
+                <tbody id="distribution-tbody">
+                    ${distributionRows}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td><strong>Total Distribuido:</strong></td>
+                        <td><strong id="total-footer">${Object.values(data.distribucion || {}).reduce((a, b) => a + b, 0)} reclutas</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        
+        ${errorsHtml}
+        
+        <div class="results-actions">
+            <button class="btn-primary" onclick="Reclutas.loadAndDisplayReclutas()">
+                <i class="fas fa-sync"></i> Actualizar Lista Principal
+            </button>
+            <button class="btn-secondary" onclick="Reclutas.exportarResultadosDistribucion()">
+                <i class="fas fa-download"></i> Exportar Resultados
+            </button>
+        </div>
+    `;
+    
+    resultsContainer.style.display = 'block';
+    
+    // 🔧 Configurar funcionalidad editable
+    this.setupEditableDistribution();
+    
+    // ⚡ Finalizar progress bar
+    this.finalizarProgressBar();
+    
+    // 📢 Mostrar notificación de éxito
+    Utils.showToast(`Distribución completada: ${data.exitosos} reclutas asignados`, 'success');
+},
+
+/**
+ * 📧 NUEVA FUNCIÓN: Obtiene información adicional de asesores
+ */
+obtenerInfoAsesores: function() {
+    return fetch('/api/usuarios/asesores-info')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Convertir array a objeto indexado por email
+                const asesorInfo = {};
+                data.asesores.forEach(asesor => {
+                    asesorInfo[asesor.email] = asesor;
+                });
+                return asesorInfo;
+            }
+            return {};
+        })
+        .catch(error => {
+            console.warn('No se pudo obtener info de asesores:', error);
+            return {};
+        });
+},
+
+/**
+ * ❓ NUEVA FUNCIÓN: Muestra ayuda sobre redistribución
+ */
+mostrarAyudaDistribucion: function() {
+    const helpModal = `
+        <div class="modal" id="help-redistribucion-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-question-circle"></i> Ayuda - Redistribución de Reclutas</h3>
+                    <span class="close-modal" onclick="document.getElementById('help-redistribucion-modal').remove()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="help-content">
+                        <h4>🎯 ¿Cómo funciona?</h4>
+                        <p>Después de importar un archivo Excel, puedes ajustar manualmente cuántos reclutas se asignan a cada asesor.</p>
+                        
+                        <h4>🔧 Controles disponibles:</h4>
+                        <ul>
+                            <li><strong>Campos numéricos:</strong> Edita directamente el número de reclutas</li>
+                            <li><strong>Botones +/-:</strong> Incrementa o decrementa de uno en uno</li>
+                            <li><strong>Restaurar:</strong> Vuelve a la distribución automática original</li>
+                            <li><strong>Equitativo:</strong> Redistribuye de manera equilibrada entre todos</li>
+                        </ul>
+                        
+                        <h4>⚠️ Reglas importantes:</h4>
+                        <ul>
+                            <li>El total asignado debe coincidir exactamente con los reclutas exitosos</li>
+                            <li>No puedes asignar números negativos</li>
+                            <li>Los cambios no se aplican hasta presionar "Aplicar Cambios"</li>
+                            <li>Solo se redistribuyen reclutas importados recientemente</li>
+                        </ul>
+                        
+                        <h4>🚀 Casos de uso:</h4>
+                        <ul>
+                            <li><strong>Balanceo de carga:</strong> Si un asesor está muy ocupado</li>
+                            <li><strong>Capacitación:</strong> Asignar menos reclutas a asesores nuevos</li>
+                            <li><strong>Especialización:</strong> Concentrar ciertos tipos de candidatos</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-primary" onclick="document.getElementById('help-redistribucion-modal').remove()">
+                        <i class="fas fa-check"></i> Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.insertAdjacentHTML('beforeend', helpModal);
+    document.getElementById('help-redistribucion-modal').style.display = 'block';
+},
+
+/**
+ * 📁 NUEVA FUNCIÓN: Exporta resultados de distribución
+ */
+exportarResultadosDistribucion: function() {
+    if (!this.distribucionOriginal) {
+        Utils.showToast('No hay datos de distribución para exportar', 'warning');
+        return;
+    }
+    
+    const data = this.distribucionOriginal;
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+    
+    // Crear contenido CSV
+    let csvContent = "Email Asesor,Reclutas Asignados,Fecha Importacion\n";
+    
+    Object.entries(data.distribucion || {}).forEach(([asesor, cantidad]) => {
+        csvContent += `"${asesor}",${cantidad},"${timestamp}"\n`;
+    });
+    
+    // Agregar resumen
+    csvContent += "\n--- RESUMEN ---\n";
+    csvContent += `Total Procesados,${data.total_procesados}\n`;
+    csvContent += `Exitosos,${data.exitosos}\n`;
+    csvContent += `Errores,${data.errores}\n`;
+    
+    // Descargar archivo
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `distribucion_reclutas_${timestamp}.csv`;
+    link.click();
+    
+    Utils.showToast('Resultados exportados exitosamente', 'success');
+},
+
+/**
+ * ⚡ NUEVA FUNCIÓN: Finaliza barra de progreso con animación
+ */
+finalizarProgressBar: function() {
+    const progressFill = document.getElementById('distribucion-progress-fill');
+    if (progressFill) {
+        progressFill.style.width = '100%';
+        progressFill.style.background = 'linear-gradient(90deg, #27ae60, #2ecc71)';
+    }
+    
+    setTimeout(() => {
+        this.hideDistribucionProgress();
+    }, 1500);
+}
