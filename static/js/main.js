@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Pre-cargar módulo si estamos en la página de dashboard
         if (document.getElementById('dashboard-section')) {
             // Cargar el módulo pero no inicializarlo hasta que sea necesario
-            loadMetricasAdminModule();
+            await loadMetricasAdminModule(); // Esperar la carga
         }
         } else if (currentUser?.rol === 'asesor') {
         console.log('👥 Usuario asesor detectado - Configurando vista simplificada');
@@ -509,6 +509,7 @@ async function loginSuccess(usuario) {
         
         // ✅ CONFIGURAR MÉTRICAS DESPUÉS DE UI
         if (usuario.rol === 'admin') {
+            if (usuario.rol === 'admin') {
             console.log('👑 Preparando métricas administrativas...');
             
             // Asegurar que los elementos admin-only sean visibles
@@ -516,6 +517,9 @@ async function loginSuccess(usuario) {
             adminElements.forEach(element => {
                 element.style.display = 'block';
             });
+
+            // Esperar a que el módulo MetricasAdmin esté cargado antes de inicializar
+            await loadMetricasAdminModule();
 
             setTimeout(() => {
                 // Inicializar métricas si estamos en estadísticas
@@ -869,49 +873,42 @@ function updateProfileRole(rol) {
 
 // Cargar módulo de métricas administrativas
 async function loadMetricasAdminModule() {
-    try {
+    return new Promise((resolve, reject) => {
         // Verificar si el módulo ya está cargado
         if (window.MetricasAdmin) {
             console.log('📊 Módulo MetricasAdmin ya está cargado');
+            resolve(window.MetricasAdmin);
             return;
         }
-        
+
         // Cargar dinámicamente el script de métricas
         const script = document.createElement('script');
         script.src = '/static/js/metricas-admin.js';
         script.onload = () => {
             console.log('✅ Módulo MetricasAdmin cargado exitosamente');
-            
-            // Inicializar módulo cuando esté cargado
             if (window.MetricasAdmin) {
                 MetricasAdmin = window.MetricasAdmin;
-                
-                // Esperar a que el DOM esté listo antes de inicializar
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', () => {
-                        initializeMetricasAdmin();
-                    });
-                } else {
-                    initializeMetricasAdmin();
-                }
+                resolve(window.MetricasAdmin);
+            } else {
+                console.error('❌ Módulo MetricasAdmin no se definió después de la carga del script.');
+                Notifications.show('Error al cargar métricas avanzadas: módulo no definido', 'error');
+                reject(new Error('MetricasAdmin no se definió después de la carga del script.'));
             }
         };
         script.onerror = () => {
             console.error('❌ Error al cargar módulo MetricasAdmin');
             Notifications.show('Error al cargar métricas avanzadas', 'error');
+            reject(new Error('Error al cargar el script de MetricasAdmin.'));
         };
-        
+
         document.head.appendChild(script);
-        
+
         // También cargar estilos CSS específicos
         const cssLink = document.createElement('link');
         cssLink.rel = 'stylesheet';
         cssLink.href = '/static/css/metricas-admin.css';
         document.head.appendChild(cssLink);
-        
-    } catch (error) {
-        console.error('❌ Error al cargar módulo de métricas:', error);
-    }
+    });
 }
 
 // Inicializar métricas administrativas
@@ -920,10 +917,16 @@ function initializeMetricasAdmin() {
     const estadisticasSection = document.getElementById('estadisticas-section');
     const currentUser = getCurrentUser();
     
-    if (estadisticasSection && currentUser?.rol === 'admin' && MetricasAdmin) {
+    // Asegurarse de que MetricasAdmin esté cargado antes de intentar inicializar
+    if (!window.MetricasAdmin) {
+        console.warn('⚠️ MetricasAdmin no está cargado, no se puede inicializar.');
+        return;
+    }
+
+    if (estadisticasSection && currentUser?.rol === 'admin' && window.MetricasAdmin) {
         try {
             console.log('🎯 Inicializando métricas administrativas...');
-            MetricasAdmin.init();
+            window.MetricasAdmin.init();
             
             // Agregar contenedor específico para métricas admin si no existe
             let metricasContainer = document.getElementById('metricas-admin-container');
@@ -982,6 +985,10 @@ async function loadEstadisticas() {
             } else {
                 console.log('⚠️ MetricasAdmin no disponible, cargando módulo...');
                 await loadMetricasAdminModule();
+                // Después de cargar, intentar de nuevo
+                if (typeof MetricasAdmin !== 'undefined' && MetricasAdmin) {
+                    await MetricasAdmin.loadMetricas(true);
+                }
             }
         } else {
             // 👥 ASESORES: Solo estadísticas básicas
@@ -996,7 +1003,7 @@ async function loadEstadisticas() {
 }
 
 // Cargar estadísticas básicas (para asesores)
-async function loadEstadisticasBasicas() {
+async async function loadEstadisticasBasicas() {
     try {
         console.log('📊 Cargando estadísticas básicas...');
         
@@ -1125,7 +1132,9 @@ function showSection(sectionId) {
                 
                 if (currentUser && currentUser.rol === 'admin') {
                     // Esperar un momento para que se muestre la sección
-                    setTimeout(() => {
+                    setTimeout(async () => {
+                        // Asegurarse de que MetricasAdmin esté cargado
+                        await loadMetricasAdminModule();
                         if (window.initializeMetricasAdmin) {
                             console.log('📈 Inicializando métricas admin para la sección');
                             window.initializeMetricasAdmin();
@@ -1133,7 +1142,9 @@ function showSection(sectionId) {
                     }, 200);
                 } else if (currentUser && currentUser.rol === 'asesor') {
                     // Configurar vista de asesor
-                    setTimeout(() => {
+                    setTimeout(async () => {
+                        // Asegurarse de que MetricasAdmin esté cargado
+                        await loadMetricasAdminModule();
                         if (window.MetricasAdmin && window.MetricasAdmin.setupContainer) {
                             window.MetricasAdmin.setupContainer();
                         }

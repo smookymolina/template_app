@@ -821,20 +821,8 @@ window.cleanupMetricasAdmin = function() {
 };
 
 // ✅ INICIALIZACIÓN SEGURA - Solo si hay elementos DOM
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('📄 DOM cargado - Preparando métricas admin...');
-    
-    // NO inicializar automáticamente
-    // Solo preparar la funcionalidad para cuando sea necesaria
-    
-    // Verificar que los contenedores existen
-    const estadisticasSection = document.getElementById('estadisticas-section');
-    if (estadisticasSection) {
-        console.log('✅ Sección de estadísticas encontrada - MetricasAdmin listo para inicializar');
-    } else {
-        console.log('⚠️ Sección de estadísticas no encontrada - MetricasAdmin en standby');
-    }
-});
+// Eliminado: document.addEventListener('DOMContentLoaded', ...)
+// La inicialización ahora es orquestada por main.js
 
 // ✅ FUNCIÓN DE DEBUG MEJORADA
 window.debugMetricas = function() {
