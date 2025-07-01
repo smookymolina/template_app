@@ -1,0 +1,41 @@
+# ANÁLISIS DE ERRORES Y PUNTOS DE MEJORA
+
+## 🔥 CRÍTICO
+
+### 1. Vulnerabilidades de Seguridad
+- **Inyección SQL (Potencial):** En `routes/api.py`, en la función `get_reclutas`, los parámetros `sort_by` y `sort_order` se concatenan directamente en la consulta (`query.order_by(f"{sort_by} {sort_order}")`). Esto es un vector de inyección SQL. Un atacante podría manipular estos parámetros para ejecutar código SQL arbitrario.
+- **Falta de Saneamiento de Entradas (XSS):** No se observa un saneamiento sistemático de los datos de entrada en las rutas que aceptan datos del usuario (ej. `add_recluta`, `update_recluta`). Esto podría permitir ataques de Cross-Site Scripting (XSS) si los datos se renderizan sin escapar en el frontend.
+- **Control de Acceso Roto en `routes/admin.py`:** El decorador `@admin_required` solo comprueba la IP y que el usuario esté logueado, pero no verifica explícitamente que el `current_user.rol` sea 'admin'. Esto permite que cualquier usuario autenticado (incluidos 'asesores') acceda a todas las rutas de administrador.
+- **Contraseñas en Texto Plano (Potencial):** El modelo `Usuario` usa `bcrypt` correctamente. Sin embargo, el archivo `utils/security.py` contiene funciones `hash_password` y `verify_password` que usan `hashlib.sha256` con un salt simple. Si estas funciones se usaran en alguna parte del código, las contraseñas no serían seguras.
+
+### 2. Fugas de Datos y Control de Acceso
+- **Divulgación de Información en `get_usuarios`:** La ruta `/admin/usuarios` devuelve una lista de todos los usuarios, incluyendo sus IDs y emails, a cualquier usuario autenticado.
+- **Acceso sin restricciones a `get_recluta`:** La función `get_recluta` en `routes/api.py` no verifica si un 'asesor' tiene permiso para ver un recluta específico. Un asesor podría acceder a los detalles de cualquier recluta si conoce su ID.
+
+## ⚠️ ALTO
+
+### 1. Lógica de Negocio y Errores Funcionales
+- **Asignación de Rol por Defecto Insegura:** En `routes/api.py`, la función `get_usuario_rol` asigna el rol 'admin' por defecto si un usuario no tiene un rol definido. Esto es peligroso, ya que podría escalar privilegios accidentalmente.
+- **Manejo de Errores Inconsistente:** Algunas funciones devuelven mensajes de error genéricos (`"Error al procesar la solicitud"`), mientras que otras exponen detalles de la excepción (`str(e)`), lo que puede filtrar información sensible.
+- **Falta de Validación en `update_recluta`:** La función permite cambiar el `asesor_id` de un recluta sin verificar si el nuevo `asesor_id` corresponde a un usuario válido y con el rol correcto.
+
+### 2. Rendimiento
+- **Consultas N+1 Potenciales:** En `get_metricas_asesores` (`routes/admin.py`), se realiza una consulta principal y luego se itera sobre los resultados. Si se accediera a relaciones adicionales dentro del bucle, podría haber problemas de N+1.
+- **Falta de Paginación en `get_usuarios` y `get_entrevistas`:** Estas rutas devuelven todos los registros de la base de datos, lo que podría causar problemas de rendimiento y memoria si el número de usuarios o entrevistas crece.
+
+## 📊 MEDIO
+
+### 1. Calidad del Código y Mantenibilidad
+- **Código Duplicado:** La lógica para obtener y filtrar reclutas está parcialmente duplicada entre `get_reclutas` y otras funciones. Se podría refactorizar a un método del modelo o a una función de utilidad.
+- **Falta de Transacciones Atómicas:** En operaciones que implican múltiples pasos (ej. `add_recluta` con subida de archivo), no se usan transacciones. Si la subida del archivo falla después de guardar el recluta, el sistema quedaría en un estado inconsistente.
+- **Uso de `request.form.to_dict()`:** En `add_recluta` y `update_recluta`, se usa `request.form.to_dict()` para obtener los datos. Esto puede ser problemático si el formulario contiene campos que no corresponden al modelo, lo que podría llevar a errores inesperados.
+
+### 2. Configuración y Entorno
+- **Falta de Variables de Entorno:** La configuración de la base de datos y otras claves secretas parecen estar directamente en el código (ej. `current_app.config['DEFAULT_PAGE_SIZE']`). Deberían gestionarse a través de variables de entorno.
+- **Logs Inconsistentes:** Los logs varían en formato y nivel de detalle. Sería beneficioso estandarizar los mensajes de log.
+
+## 🎨 BAJO
+
+### 1. UX y Frontend
+- **Falta de Feedback en Operaciones Asíncronas:** Aunque el frontend tiene indicadores de carga, no siempre se manejan todos los estados (ej. deshabilitar botones durante la carga).
+- **Validación de Formularios Limitada en el Frontend:** La validación en el frontend es básica. Se podrían añadir validaciones más robustas para mejorar la experiencia de usuario.
