@@ -1,559 +1,123 @@
-# 🚨 Fix Conciso - Errores Distribución Excel
+PS C:\Users\GIRTEC\Documents\GitHub\template_app> flask run
+[2025-06-29 23:57:08,512] INFO in app_factory: Aplicación inicializada en modo development
+2025-06-29 23:57:08,512 - app_factory - INFO - Aplicación inicializada en modo development
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Python313\Scripts\flask.exe\__main__.py", line 7, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "C:\Python313\Lib\site-packages\flask\cli.py", line 1064, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "C:\Users\GIRTEC\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "C:\Users\GIRTEC\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\GIRTEC\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\GIRTEC\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "C:\Users\GIRTEC\AppData\Roaming\Python\Python313\site-packages\click\decorators.py", line 92, in new_func
+    return ctx.invoke(f, obj, *args, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\GIRTEC\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "C:\Python313\Lib\site-packages\flask\cli.py", line 912, in run_command
+    raise e from None
+  File "C:\Python313\Lib\site-packages\flask\cli.py", line 898, in run_command
+    app = info.load_app()
+  File "C:\Python313\Lib\site-packages\flask\cli.py", line 313, in load_app
+    app = locate_app(import_name, None, raise_if_not_found=False)
+  File "C:\Python313\Lib\site-packages\flask\cli.py", line 219, in locate_app
+    __import__(module_name)
+    ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\GIRTEC\Documents\GitHub\template_app\app.py", line 15, in <module>
+    app = create_app(env)
+  File "C:\Users\GIRTEC\Documents\GitHub\template_app\app_factory.py", line 50, in create_app
+    register_blueprints(app)
+    ~~~~~~~~~~~~~~~~~~~^^^^^
+  File "C:\Users\GIRTEC\Documents\GitHub\template_app\app_factory.py", line 115, in register_blueprints
+    app.register_blueprint(api_bp, url_prefix='/api')
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\site-packages\flask\scaffold.py", line 50, in wrapper_func
+    return f(self, *args, **kwargs)
+  File "C:\Python313\Lib\site-packages\flask\app.py", line 997, in register_blueprint
+    blueprint.register(self, options)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Python313\Lib\site-packages\flask\blueprints.py", line 365, in register
+    deferred(state)
+    ~~~~~~~~^^^^^^^
+  File "C:\Python313\Lib\site-packages\flask\blueprints.py", line 431, in <lambda>
+    lambda s: s.add_url_rule(
+              ~~~~~~~~~~~~~~^
+        rule,
+        ^^^^^
+    ...<3 lines>...
+        **options,
+        ^^^^^^^^^^
+    )
+    ^
+  File "C:\Python313\Lib\site-packages\flask\blueprints.py", line 110, in add_url_rule
+    self.app.add_url_rule(
+    ~~~~~~~~~~~~~~~~~~~~~^
+        rule,
+        ^^^^^
+    ...<3 lines>...
+        **options,
+        ^^^^^^^^^^
+    )
+    ^
+  File "C:\Python313\Lib\site-packages\flask\scaffold.py", line 50, in wrapper_func
+    return f(self, *args, **kwargs)
+  File "C:\Python313\Lib\site-packages\flask\app.py", line 1059, in add_url_rule
+    raise AssertionError(
+    ...<2 lines>...
+    )
+AssertionError: View function mapping is overwriting an existing endpoint function: api.redistribuir_reclutas_manual
+PS C:\Users\GIRTEC\Documents\GitHub\template_app> 
+ *  History restored 
 
-## 🎯 **Errores Identificados**
-- **Error 500**: Ruta `/api/usuarios/asesores-info` no existe
-- **ReferenceError**: `Utils.showToast()` no definido (usar `showSuccess/showError` directamente)
-- **Dependencias**: Funciones de notificación mal referenciadas
-
-## 🔧 **Solución Backend**
-
-### **📁 `routes/api.py` - Agregar al final:**
-
-```python
-@api_bp.route('/usuarios/asesores-info', methods=['GET'])
-@admin_required  
-def obtener_asesores_info():
-    """Obtiene información básica de asesores activos."""
-    try:
-        from models import Usuario
-        asesores = Usuario.query.filter(
-            Usuario.is_active == True,
-            Usuario.rol.in_(['asesor', 'gerente'])
-        ).all()
-        
-        info_asesores = {}
-        for asesor in asesores:
-            info_asesores[asesor.email] = {
-                "id": asesor.id,
-                "nombre_completo": asesor.nombre_completo,
-                "rol": asesor.rol,
-                "email": asesor.email
-            }
-        
-        return jsonify({
-            "success": True,
-            "asesores": info_asesores,
-            "total": len(asesores)
-        }), 200
-        
-    except Exception as e:
-        current_app.logger.error(f"Error en asesores-info: {str(e)}")
-        return jsonify({"success": False, "message": str(e)}), 500
-
-@api_bp.route('/reclutas/redistribuir-manual', methods=['POST'])
-@admin_required
-def redistribuir_reclutas_manual():
-    """Redistribuye reclutas según cantidades manuales."""
-    try:
-        from models import Recluta, Usuario, db
-        import random
-        
-        data = request.get_json()
-        redistribucion_nueva = data['redistribucion']
-        filtros = data.get('filtros', {})
-        
-        # Obtener reclutas disponibles
-        query_reclutas = Recluta.query.filter(Recluta.activo == True)
-        
-        if filtros.get('solo_importados_hoy'):
-            from datetime import date
-            hoy = date.today()
-            query_reclutas = query_reclutas.filter(
-                db.func.date(Recluta.fecha_registro) == hoy
-            )
-        
-        reclutas_disponibles = query_reclutas.all()
-        total_disponible = len(reclutas_disponibles)
-        total_solicitado = sum(redistribucion_nueva.values())
-        
-        # Validar totales
-        if total_solicitado != total_disponible:
-            return jsonify({
-                "success": False,
-                "message": f"Total solicitado ({total_solicitado}) ≠ disponible ({total_disponible})"
-            }), 400
-        
-        # Validar asesores
-        emails_asesores = list(redistribucion_nueva.keys())
-        asesores_validos = Usuario.query.filter(
-            Usuario.email.in_(emails_asesores),
-            Usuario.is_active == True,
-            Usuario.rol.in_(['asesor', 'gerente'])
-        ).all()
-        
-        # Crear asignaciones aleatorias
-        asesor_map = {asesor.email: asesor for asesor in asesores_validos}
-        nuevas_asignaciones = []
-        
-        for email, cantidad in redistribucion_nueva.items():
-            if email in asesor_map and cantidad > 0:
-                nuevas_asignaciones.extend([asesor_map[email].id] * cantidad)
-        
-        random.shuffle(nuevas_asignaciones)
-        
-        # Aplicar redistribución
-        cambios_realizados = []
-        for i, recluta in enumerate(reclutas_disponibles):
-            nuevo_asesor_id = nuevas_asignaciones[i]
-            
-            if recluta.asesor_id != nuevo_asesor_id:
-                asesor_anterior = recluta.asesor.email if recluta.asesor else "Sin asignar"
-                nuevo_asesor = next((a for a in asesores_validos if a.id == nuevo_asesor_id), None)
-                
-                cambios_realizados.append({
-                    "recluta_id": recluta.id,
-                    "folio": recluta.folio,
-                    "asesor_anterior": asesor_anterior,
-                    "asesor_nuevo": nuevo_asesor.email if nuevo_asesor else "Error"
-                })
-                
-                recluta.asesor_id = nuevo_asesor_id
-        
-        db.session.commit()
-        
-        return jsonify({
-            "success": True,
-            "message": "Redistribución completada exitosamente",
-            "total_redistribuidos": len(cambios_realizados),
-            "redistribucion_final": redistribucion_nueva
-        }), 200
-        
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error en redistribución: {str(e)}")
-        return jsonify({"success": False, "message": str(e)}), 500
-```
-
-## 🎨 **Solución Frontend**
-
-### **📁 `static/js/reclutas.js` - Reemplazar función:**
-
-```javascript
-// ❌ BUSCAR esta función y REEMPLAZAR completamente:
-showDistribucionResults: function(data) {
-    console.log('📊 Mostrando resultados distribución EDITABLE', data);
-    
-    const resultsContainer = document.getElementById('distribucion-results');
-    if (!resultsContainer) {
-        showError('Contenedor de resultados no encontrado');
-        return;
-    }
-    
-    // Guardar datos originales
-    this.distribucionOriginal = JSON.parse(JSON.stringify(data));
-    
-    // Obtener información de asesores
-    this.obtenerInfoAsesores()
-        .then(asesorInfo => {
-            this.asesorInfoCache = asesorInfo || {};
-            this.renderDistributionTable(data);
-        })
-        .catch(error => {
-            console.error('Error obteniendo asesores:', error);
-            this.asesorInfoCache = {};
-            this.renderDistributionTable(data);
-        });
-},
-
-// ✅ AGREGAR estas nuevas funciones:
-obtenerInfoAsesores: function() {
-    return fetch('/api/usuarios/asesores-info', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-    })
-    .then(response => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-    })
-    .then(data => data.success ? data.asesores : {})
-    .catch(error => {
-        console.error('Error obteniendo asesores:', error);
-        showWarning('No se pudo obtener información de asesores');
-        return {};
-    });
-},
-
-renderDistributionTable: function(data) {
-    const resultsContainer = document.getElementById('distribucion-results');
-    
-    const distributionHTML = `
-        <div class="distribution-table-container">
-            <div class="distribution-header">
-                <h5><i class="fas fa-chart-pie"></i> Distribución de Reclutas</h5>
-                <div class="redistribution-controls">
-                    <button type="button" class="btn-small btn-secondary" onclick="Reclutas.resetDistribucion()">
-                        <i class="fas fa-undo"></i> Restaurar
-                    </button>
-                    <button type="button" class="btn-small btn-info" onclick="Reclutas.distribuirEquitativamente()">
-                        <i class="fas fa-balance-scale"></i> Equitativo
-                    </button>
-                    <button type="button" class="btn-small btn-success" id="aplicar-redistribucion" disabled>
-                        <i class="fas fa-check"></i> Aplicar Cambios
-                    </button>
-                </div>
-            </div>
-            
-            <table class="distribution-table">
-                <thead>
-                    <tr>
-                        <th>Asesor</th>
-                        <th>Cantidad</th>
-                        <th>Porcentaje</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${this.generateDistributionRows(data)}
-                </tbody>
-            </table>
-        </div>
-    `;
-    
-    resultsContainer.innerHTML = distributionHTML;
-    resultsContainer.style.display = 'block';
-    
-    this.setupEditableDistribution();
-    
-    const modal = document.getElementById('distribucion-excel-modal');
-    if (modal) setTimeout(() => modal.style.display = 'none', 1000);
-    
-    showSuccess('Distribución cargada exitosamente');
-},
-
-generateDistributionRows: function(data) {
-    if (!data.distribucion) return '';
-    
-    return Object.entries(data.distribucion).map(([email, cantidad]) => {
-        const asesorInfo = this.asesorInfoCache[email];
-        const nombre = asesorInfo ? asesorInfo.nombre_completo : email;
-        const total = data.total_procesados || Object.values(data.distribucion).reduce((a, b) => a + b, 0);
-        const porcentaje = total > 0 ? ((cantidad / total) * 100).toFixed(1) : '0.0';
-        
-        return `
-            <tr data-asesor="${email}">
-                <td>
-                    <div class="asesor-info">
-                        <strong>${nombre}</strong>
-                        <small>${email}</small>
-                    </div>
-                </td>
-                <td>
-                    <div class="quantity-controls">
-                        <button type="button" class="quantity-btn" onclick="Reclutas.adjustQuantity('${email}', -1)">-</button>
-                        <input type="number" class="editable-quantity" 
-                               value="${cantidad}" 
-                               data-asesor="${email}" 
-                               data-original="${cantidad}"
-                               min="0" max="999">
-                        <button type="button" class="quantity-btn" onclick="Reclutas.adjustQuantity('${email}', 1)">+</button>
-                    </div>
-                </td>
-                <td class="percentage-cell">${porcentaje}%</td>
-                <td>
-                    <button type="button" class="btn-small btn-outline" onclick="Reclutas.verDetalleAsesor('${email}')">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-},
-
-setupEditableDistribution: function() {
-    // Configurar eventos de inputs
-    document.querySelectorAll('.editable-quantity').forEach(input => {
-        input.addEventListener('input', () => this.handleQuantityChange(input));
-        input.addEventListener('blur', () => this.validateAndUpdateDistribution());
-    });
-    
-    // Configurar botón aplicar
-    const applyButton = document.getElementById('aplicar-redistribucion');
-    if (applyButton) {
-        applyButton.addEventListener('click', () => this.aplicarRedistribucion());
-    }
-},
-
-handleQuantityChange: function(input) {
-    const newValue = parseInt(input.value) || 0;
-    const originalValue = parseInt(input.dataset.original) || 0;
-    
-    // Marcar como modificado
-    if (newValue !== originalValue) {
-        input.classList.add('modified');
-    } else {
-        input.classList.remove('modified');
-    }
-    
-    this.updatePercentageDisplay(input.dataset.asesor, newValue);
-},
-
-updatePercentageDisplay: function(asesor, cantidad) {
-    const total = Array.from(document.querySelectorAll('.editable-quantity'))
-        .reduce((sum, input) => sum + (parseInt(input.value) || 0), 0);
-    
-    const porcentaje = total > 0 ? ((cantidad / total) * 100).toFixed(1) : '0.0';
-    const percentageCell = document.querySelector(`tr[data-asesor="${asesor}"] .percentage-cell`);
-    
-    if (percentageCell) {
-        percentageCell.textContent = `${porcentaje}%`;
-    }
-},
-
-validateAndUpdateDistribution: function() {
-    const inputs = document.querySelectorAll('.editable-quantity');
-    const total = Array.from(inputs).reduce((sum, input) => sum + (parseInt(input.value) || 0), 0);
-    const originalTotal = this.distribucionOriginal?.total_procesados || 0;
-    const hasChanges = Array.from(inputs).some(input => 
-        parseInt(input.value) !== parseInt(input.dataset.original)
-    );
-    
-    const applyButton = document.getElementById('aplicar-redistribucion');
-    if (applyButton) {
-        applyButton.disabled = !hasChanges || total !== originalTotal;
-        
-        if (total !== originalTotal) {
-            applyButton.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Total Incorrecto (${total}/${originalTotal})`;
-            applyButton.className = 'btn-small btn-warning';
-        } else if (hasChanges) {
-            applyButton.innerHTML = '<i class="fas fa-check"></i> Aplicar Cambios';
-            applyButton.className = 'btn-small btn-success';
-        } else {
-            applyButton.innerHTML = '<i class="fas fa-check"></i> Sin Cambios';
-            applyButton.className = 'btn-small btn-secondary';
-        }
-    }
-},
-
-adjustQuantity: function(asesor, delta) {
-    const input = document.querySelector(`input[data-asesor="${asesor}"]`);
-    if (input) {
-        const currentValue = parseInt(input.value) || 0;
-        const newValue = Math.max(0, currentValue + delta);
-        input.value = newValue;
-        this.handleQuantityChange(input);
-        this.validateAndUpdateDistribution();
-    }
-},
-
-resetDistribucion: function() {
-    const inputs = document.querySelectorAll('.editable-quantity');
-    inputs.forEach(input => {
-        input.value = input.dataset.original;
-        input.classList.remove('modified');
-        this.handleQuantityChange(input);
-    });
-    this.validateAndUpdateDistribution();
-    showInfo('Distribución restaurada a valores originales');
-},
-
-distribuirEquitativamente: function() {
-    const inputs = document.querySelectorAll('.editable-quantity');
-    const total = parseInt(this.distribucionOriginal?.total_procesados) || 0;
-    const numAsesores = inputs.length;
-    
-    if (numAsesores === 0) return;
-    
-    const baseCantidad = Math.floor(total / numAsesores);
-    const remainder = total % numAsesores;
-    
-    inputs.forEach((input, index) => {
-        const cantidad = baseCantidad + (index < remainder ? 1 : 0);
-        input.value = cantidad;
-        this.handleQuantityChange(input);
-    });
-    
-    this.validateAndUpdateDistribution();
-    showSuccess('Distribución equitativa aplicada');
-},
-
-aplicarRedistribucion: function() {
-    const inputs = document.querySelectorAll('.editable-quantity');
-    const redistribucion = {};
-    
-    inputs.forEach(input => {
-        redistribucion[input.dataset.asesor] = parseInt(input.value) || 0;
-    });
-    
-    const applyButton = document.getElementById('aplicar-redistribucion');
-    const originalText = applyButton.innerHTML;
-    applyButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Aplicando...';
-    applyButton.disabled = true;
-    
-    fetch('/api/reclutas/redistribuir-manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            redistribucion: redistribucion,
-            filtros: { solo_importados_hoy: true }
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showSuccess(`Redistribución exitosa: ${data.total_redistribuidos} reclutas procesados`);
-            
-            // Actualizar valores originales
-            inputs.forEach(input => {
-                input.dataset.original = input.value;
-                input.classList.remove('modified');
-            });
-            
-            setTimeout(() => {
-                if (this.loadAndDisplayReclutas) {
-                    this.loadAndDisplayReclutas();
-                }
-            }, 2000);
-            
-        } else {
-            showError(`Error: ${data.message}`);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showError('Error de conexión durante redistribución');
-    })
-    .finally(() => {
-        applyButton.innerHTML = originalText;
-        setTimeout(() => this.validateAndUpdateDistribution(), 1000);
-    });
-},
-
-verDetalleAsesor: function(email) {
-    showInfo(`Detalle de ${email} - Funcionalidad en desarrollo`);
-}
-```
-
-## 🎨 **CSS Básico**
-
-### **📁 `static/css/dashboard.css` - Agregar:**
-
-```css
-/* Distribución Editable */
-.distribution-table-container {
-    margin: 20px 0;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    overflow: hidden;
-}
-
-.distribution-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
-    background: linear-gradient(135deg, #4CAF50, #45a049);
-    color: white;
-}
-
-.redistribution-controls {
-    display: flex;
-    gap: 10px;
-}
-
-.distribution-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.distribution-table th {
-    background: #f8f9fa;
-    padding: 12px 15px;
-    text-align: left;
-    font-weight: 600;
-    border-bottom: 2px solid #dee2e6;
-}
-
-.distribution-table td {
-    padding: 12px 15px;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.quantity-controls {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.quantity-btn {
-    width: 30px;
-    height: 30px;
-    border: 1px solid #ddd;
-    background: #f8f9fa;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-.quantity-btn:hover {
-    background: #e9ecef;
-}
-
-.editable-quantity {
-    width: 80px;
-    text-align: center;
-    padding: 5px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.editable-quantity.modified {
-    border-color: #007bff;
-    background: #e3f2fd;
-}
-
-.asesor-info strong {
-    display: block;
-}
-
-.asesor-info small {
-    color: #666;
-    font-size: 0.85em;
-}
-
-.btn-small {
-    padding: 5px 10px;
-    font-size: 0.9em;
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-}
-
-.btn-success { background: #28a745; color: white; }
-.btn-secondary { background: #6c757d; color: white; }
-.btn-info { background: #17a2b8; color: white; }
-.btn-warning { background: #ffc107; color: #212529; }
-.btn-outline { background: transparent; border: 1px solid #ddd; }
-```
-
-## ✅ **Verificación Rápida**
-
-### **1. Consola del navegador:**
-```javascript
-// Verificar funciones de notificación
-console.log(typeof showSuccess); // debe ser 'function'
-console.log(typeof showError);   // debe ser 'function'
-
-// Test del sistema
-Reclutas.obtenerInfoAsesores().then(console.log);
-```
-
-### **2. Test backend:**
-```bash
-# Verificar ruta
-curl -X GET "http://localhost:5000/api/usuarios/asesores-info" \
-     -H "Content-Type: application/json"
-
-# Reiniciar servidor
-sudo systemctl restart gunicorn
-```
-
-## 🎯 **Resultado Esperado**
-
-- ✅ Sin errores 500 en `/api/usuarios/asesores-info`
-- ✅ Sin `ReferenceError: Utils is not defined` 
-- ✅ Distribución Excel totalmente funcional
-- ✅ Tabla editable con validación en tiempo real
-- ✅ Redistribución manual operativa
-
-**🚀 Con este fix conciso, la funcionalidad funcionará perfectamente en menos de 30 líneas de cambios por archivo.**
+PS C:\Users\GIRTEC\Documents\GitHub\template_app> flask run
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Python313\Scripts\flask.exe\__main__.py", line 7, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "C:\Python313\Lib\site-packages\flask\cli.py", line 1064, in main
+    cli.main()
+    ~~~~~~~~^^
+  File "C:\Users\GIRTEC\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1082, in main
+    rv = self.invoke(ctx)
+  File "C:\Users\GIRTEC\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\GIRTEC\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\GIRTEC\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "C:\Users\GIRTEC\AppData\Roaming\Python\Python313\site-packages\click\decorators.py", line 92, in new_func
+    return ctx.invoke(f, obj, *args, **kwargs)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\GIRTEC\AppData\Roaming\Python\Python313\site-packages\click\core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "C:\Python313\Lib\site-packages\flask\cli.py", line 912, in run_command
+    raise e from None
+  File "C:\Python313\Lib\site-packages\flask\cli.py", line 898, in run_command
+    app = info.load_app()
+  File "C:\Python313\Lib\site-packages\flask\cli.py", line 313, in load_app
+    app = locate_app(import_name, None, raise_if_not_found=False)
+  File "C:\Python313\Lib\site-packages\flask\cli.py", line 219, in locate_app
+    __import__(module_name)
+    ~~~~~~~~~~^^^^^^^^^^^^^
+  File "C:\Users\GIRTEC\Documents\GitHub\template_app\app.py", line 6, in <module>
+    from routes.api import api_bp
+  File "C:\Users\GIRTEC\Documents\GitHub\template_app\routes\api.py", line 1919
+    return jsonify({
+                   ^
+SyntaxError: '{' was never closed
+PS C:\Users\GIRTEC\Documents\GitHub\template_app> 

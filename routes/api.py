@@ -1492,34 +1492,7 @@ def check_auth():
         current_app.logger.error(f"Error al verificar autenticación: {str(e)}")
         return jsonify({"authenticated": False, "error": str(e)}), 500
     
-@api_bp.route('/check-auth', methods=['GET'])
-def check_auth_api():
-    """
-    Endpoint alternativo para verificar autenticación desde la API.
-    """
-    try:
-        from flask_login import current_user
 
-        if current_user and current_user.is_authenticated:
-            user_data = current_user.serialize()
-            if not user_data.get('rol'):
-                user_data['rol'] = 'admin'
-
-            return jsonify({
-                "authenticated": True,
-                "usuario": user_data
-            })
-        else:
-            return jsonify({
-                "authenticated": False
-            }), 401
-
-    except Exception as e:
-        current_app.logger.error(f"Error al verificar autenticación en API: {str(e)}")
-        return jsonify({
-            "authenticated": False, 
-            "error": str(e)
-        }), 500
 
 @api_bp.route('/reclutas/<int:id>/documentos', methods=['POST'])
 @login_required
@@ -1918,62 +1891,11 @@ def obtener_asesores_info():
         
         return jsonify({
             "success": True,
-            "asesores": info_asesores,
-            
-
-
-@api_bp.route('/reclutas/lote-reciente', methods=['GET'])
-@admin_required
-def obtener_lote_reciente():
-    """
-    🔍 NUEVA RUTA: Obtiene información del lote más reciente de reclutas.
-    """
-    try:
-        from models import Recluta
-        from datetime import datetime, timedelta
-        from collections import defaultdict
-        
-        # Obtener parámetros
-        horas_atras = request.args.get('horas', 2, type=int)
-        fecha_limite = datetime.now() - timedelta(hours=horas_atras)
-        
-        # Consultar reclutas recientes
-        reclutas_recientes = Recluta.query.filter(
-            Recluta.fecha_registro >= fecha_limite,
-            Recluta.activo == True
-        ).order_by(Recluta.fecha_registro.desc()).all()
-        
-        if not reclutas_recientes:
-            return jsonify({
-                "success": True,
-                "total_recientes": 0,
-                "distribucion_actual": {},
-                "message": f"No hay reclutas importados en las últimas {horas_atras} horas"
-            }), 200
-        
-        # Agrupar por asesor actual
-        distribucion_actual = defaultdict(int)
-        asesor_info = {}
-        
-        for recluta in reclutas_recientes:
-            if recluta.asesor:
-                email = recluta.asesor.email
-                distribucion_actual[email] += 1
-                asesor_info[email] = {
-                    "nombre_completo": recluta.asesor.nombre_completo,
-                    "rol": recluta.asesor.rol
-                }
-        
-        return jsonify({
-            "success": True,
-            "total_recientes": len(reclutas_recientes),
-            "distribucion_actual": dict(distribucion_actual),
-            "asesor_info": asesor_info,
-            "filtros_aplicados": {"horas_atras": horas_atras}
-        }), 200
+            "asesores": info_asesores
+        })
         
     except Exception as e:
-        current_app.logger.error(f"Error obteniendo lote reciente: {str(e)}")
+        current_app.logger.error(f"Error obteniendo la informacion de los asesores: {str(e)}")
         return jsonify({
             "success": False,
             "message": f"Error: {str(e)}"
