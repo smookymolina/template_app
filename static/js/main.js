@@ -543,6 +543,7 @@ async function loginSuccess(usuario) {
         if (typeof Reclutas !== 'undefined') {
             try {
                 Reclutas.userRole = usuario.rol;
+                await Reclutas.init();
                 await Reclutas.loadAndDisplayReclutas();
             } catch (e) {
                 console.error('❌ Error al cargar reclutas:', e);
