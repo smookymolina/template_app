@@ -1,5 +1,6 @@
 /**
  * Módulo para gestionar reclutas
+ * Version: 1.1 - Cache Busting
  */
 import CONFIG from './config.js';
 import Auth from './auth.js';
@@ -373,6 +374,9 @@ openDistribucionExcelModal: function() {
                     <button type="button" class="btn-primary" id="confirm-distribucion" style="display: none;">
                         <i class="fas fa-check"></i> Confirmar Distribución
                     </button>
+                    <button type="button" class="btn-success" id="save-asesor-distribution" style="display: none;">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
                 </div>
             </div>
         `;
@@ -435,6 +439,14 @@ setupDistribucionModalEvents: function(modal) {
             this.executeDistribucionExcel();
         });
     }
+
+    // Botón guardar cambios de asesor
+    const saveAsesorBtn = modal.querySelector('#save-asesor-distribution');
+    if (saveAsesorBtn) {
+        saveAsesorBtn.addEventListener('click', () => {
+            this.saveAsesorDistribution();
+        });
+    }
 },
 
 /**
@@ -489,6 +501,12 @@ executeDistribucionExcel: async function() {
     }
     
     console.log('🚀 Ejecutando distribución Excel...');
+
+    // Asegurarse de que los asesores estén cargados antes de procesar los resultados
+    if (this.asesores.length === 0) {
+        console.log('Cargando asesores antes de la distribución...');
+        await this.loadAsesores();
+    }
     
     // Mostrar progress
     this.showDistribucionProgress();
@@ -582,10 +600,20 @@ showDistribucionResults: function(data) {
     if (!resultsContainer) return;
     
     // Preparar HTML de resultados
+    console.log('DEBUG: this.asesores before map:', this.asesores);
     const distributionRows = Object.entries(data.distribucion || {})
-        .map(([email, count]) => 
-            `<tr><td>${email}</td><td><strong>${count}</strong> reclutas</td></tr>`
-        ).join('');
+        .map(([email, count]) => {
+            const asesor = this.asesores.find(a => a.email === email);
+            const asesorId = asesor ? String(asesor.id) : ''; // Ensure asesorId is a string
+            const asesorDisplay = asesor ? (asesor.nombre || asesor.email) : email; // Usar nombre o email si no hay nombre
+            return `<tr>
+                        <td>${asesorDisplay}</td>
+                        <td>
+                            <input type="number" class="form-control reclutas-input" data-asesor-id="${asesorId}" value="${count}" min="0">
+                            reclutas
+                        </td>
+                    </tr>`;
+        }).join('');
     
     const errorsHtml = data.errores_detalle && data.errores_detalle.length > 0 ? 
         `<div class="errors-section">
@@ -637,6 +665,12 @@ showDistribucionResults: function(data) {
     `;
     
     resultsContainer.style.display = 'block';
+
+    // Mostrar el botón de guardar cambios de asesor
+    const saveAsesorBtn = document.getElementById('save-asesor-distribution');
+    if (saveAsesorBtn) {
+        saveAsesorBtn.style.display = 'inline-block';
+    }
     
     // Completar progress bar
     const progressFill = document.getElementById('distribucion-progress-fill');
@@ -647,6 +681,63 @@ showDistribucionResults: function(data) {
     setTimeout(() => {
         this.hideDistribucionProgress();
     }, 1000);
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Guarda la distribución de reclutas por asesor
+ */
+saveAsesorDistribution: async function() {
+    console.log('💾 Guardando distribución de reclutas por asesor...');
+    const reclutasInputs = document.querySelectorAll('.reclutas-input');
+    const distributionData = {};
+
+    reclutasInputs.forEach(input => {
+        const asesorId = input.dataset.asesorId;
+        const count = parseInt(input.value, 10);
+        if (asesorId && !isNaN(count) && count >= 0) {
+            distributionData[asesorId] = count;
+        }
+    });
+
+    if (Object.keys(distributionData).length === 0) {
+        showError('No hay datos válidos para guardar.');
+        return;
+    }
+
+    const saveButton = document.getElementById('save-asesor-distribution');
+    if (saveButton) {
+        saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        saveButton.disabled = true;
+    }
+
+    try {
+        const response = await fetch(`${CONFIG.API_URL}/reclutas/redistribuir-manual`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ distribution: distributionData })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showSuccess('Distribución actualizada y reclutas redistribuidos.');
+            // Recargar la tabla de distribución para reflejar los cambios
+            this.showDistribucionResults(data);
+            this.loadAndDisplayReclutas(); // Recargar la lista principal de reclutas
+        } else {
+            showError(data.message || 'Error al guardar la distribución.');
+        }
+    } catch (error) {
+        console.error('❌ Error al guardar la distribución:', error);
+        showError('Error al conectar con el servidor para guardar la distribución.');
+    } finally {
+        if (saveButton) {
+            saveButton.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+            saveButton.disabled = false;
+        }
+    }
 },
 
 /**

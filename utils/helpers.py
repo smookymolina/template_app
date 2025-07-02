@@ -488,7 +488,7 @@ def procesar_y_distribuir_excel(archivo, asesores):
         if headers_faltantes:
             return {
                 "success": False,
-                "message": f"Headers faltantes: {headers_faltantes}. Disponibles: {headers_disponibles}",
+                "message": f"Error: Faltan headers requeridos: {headers_faltantes}. Headers encontrados en el archivo: {headers_disponibles}",
                 "headers_disponibles": headers_disponibles,
                 "headers_requeridos": headers_requeridos
             }
@@ -508,16 +508,29 @@ def procesar_y_distribuir_excel(archivo, asesores):
         # Obtener teléfonos ya existentes en BD para evitar duplicados
         telefonos_bd = set(r[0] for r in db.session.query(Recluta.telefono).all())
         
-        for row_num, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+        for row_num, row_cells in enumerate(sheet.iter_rows(min_row=2), start=2):
+            # Create a list of values, ensuring correct indexing for empty leading cells
+            # Determine the maximum column index we care about to initialize row_values
+            max_col_index = max(indices_encontrados.values()) if indices_encontrados else 0
+            row_values = [None] * (max_col_index + 1) 
+            for cell in row_cells:
+                # openpyxl cell.column is 1-based, convert to 0-based index
+                if cell.column - 1 <= max_col_index: # Ensure index is within our expected range
+                    row_values[cell.column - 1] = cell.value
+
+            current_app.logger.debug(f"Procesando fila {row_num}: {row_values}")
+
             # ✅ ACCESO SEGURO CON ÍNDICES CORRECTOS
-            fecha_str = row[indice_fecha] if len(row) > indice_fecha and row[indice_fecha] is not None else None
-            nombre = row[indice_nombre] if len(row) > indice_nombre and row[indice_nombre] is not None else None
-            telefono = row[indice_telefono] if len(row) > indice_telefono and row[indice_telefono] is not None else None
+            fecha_str = row_values[indice_fecha] if indice_fecha < len(row_values) and row_values[indice_fecha] is not None else None
+            nombre = row_values[indice_nombre] if indice_nombre < len(row_values) and row_values[indice_nombre] is not None else None
+            telefono = row_values[indice_telefono] if indice_telefono < len(row_values) and row_values[indice_telefono] is not None else None
             
             # Limpiar y validar datos
             nombre = str(nombre).strip() if nombre is not None else ""
             telefono = str(telefono).strip() if telefono is not None else ""
             
+            current_app.logger.debug(f"Fila {row_num} - Fecha: '{fecha_str}', Nombre: '{nombre}', Teléfono: '{telefono}'")
+
             # Validaciones mejoradas
             error_fila = None
             
@@ -531,6 +544,7 @@ def procesar_y_distribuir_excel(archivo, asesores):
                 error_fila = f"Teléfono {telefono} duplicado en Excel"
             
             if error_fila:
+                current_app.logger.warning(f"Error en fila {row_num}: {error_fila}")
                 errores.append({
                     "fila": row_num, 
                     "error": error_fila,
@@ -559,7 +573,7 @@ def procesar_y_distribuir_excel(archivo, asesores):
                                 except ValueError:
                                     continue
                     except Exception as e:
-                        print(f"⚠️ Error procesando fecha fila {row_num}: {str(e)}")
+                        current_app.logger.warning(f"⚠️ Error procesando fecha fila {row_num}: {str(e)}")
                 
                 # Usar fecha actual si no se pudo procesar
                 if not fecha_procesada:
@@ -571,6 +585,7 @@ def procesar_y_distribuir_excel(archivo, asesores):
                     'fecha_registro': fecha_procesada,
                     'fila': row_num
                 })
+                current_app.logger.debug(f"Fila {row_num} agregada a datos_excel.")
         
         # ✅ DISTRIBUCIÓN EQUITATIVA MEJORADA
         if not datos_excel:

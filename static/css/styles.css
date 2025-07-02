@@ -3,6 +3,12 @@
     --primary-color: #007bff;
     --primary-dark: #0056b3;
     --primary-light: #e9f2f9;
+    /* Colores adicionales para la paleta */
+    --color-option-blue: #007bff;
+    --color-option-green: #28a745;
+    --color-option-red: #dc3545;
+    --color-option-purple: #6f42c1;
+    --color-option-orange: #fd7e14;
     --secondary-color: #6c757d;
     --success-color: #28a745;
     --warning-color: #ffc107;

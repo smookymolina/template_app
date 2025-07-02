@@ -736,18 +736,43 @@ initDarkModeToggles: function() {
     const colorOptions = document.querySelectorAll('input[name="primary-color"]');
     colorOptions.forEach(option => {
         option.addEventListener('change', () => {
-            // ✅ SOLUCIÓN: Verificar Auth de forma defensiva
             const isAuthAvailable = typeof Auth !== 'undefined' && Auth !== null;
             const isAuthenticated = isAuthAvailable && typeof Auth.isAuthenticated === 'function' ? Auth.isAuthenticated() : false;
             
-            if (isAuthAvailable && isAuthenticated) {
+            if (isAuthenticated) {
                 this.changePrimaryColor(option.value);
             } else {
                 console.log('ℹ️ Cambiando color sin autenticación (temporal)');
                 this.changePrimaryColor(option.value);
             }
+            // Deseleccionar el input de color personalizado si se elige una opción predefinida
+            const customColorInput = document.getElementById('custom-primary-color');
+            if (customColorInput) {
+                customColorInput.value = option.value; // Sincronizar el valor
+            }
         });
     });
+
+    const customColorInput = document.getElementById('custom-primary-color');
+    if (customColorInput) {
+        customColorInput.addEventListener('input', (event) => { // Usar 'input' para cambios en tiempo real
+            const newColor = event.target.value;
+            const isAuthAvailable = typeof Auth !== 'undefined' && Auth !== null;
+            const isAuthenticated = isAuthAvailable && typeof Auth.isAuthenticated === 'function' ? Auth.isAuthenticated() : false;
+
+            if (isAuthenticated) {
+                this.changePrimaryColor(newColor);
+            } else {
+                console.log('ℹ️ Cambiando color personalizado sin autenticación (temporal)');
+                this.changePrimaryColor(newColor);
+            }
+            // Deseleccionar los radio buttons cuando se usa el selector de color personalizado
+            colorOptions.forEach(option => {
+                option.checked = false;
+                option.parentElement.classList.remove('selected');
+            });
+        });
+    }
     
     console.log('✅ Selectores de colores inicializados');
 }
