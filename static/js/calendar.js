@@ -2,8 +2,85 @@
  * Módulo para gestionar el calendario y entrevistas
  */
 import CONFIG from './config.js';
-import { showNotification, showError, showSuccess } from './notifications.js';
+import { showNotification, showError, showSuccess, handleApiError } from './notifications.js';
 import UI from './ui.js';
+
+const API_BASE_URL = CONFIG.API_URL;
+
+const Api = {
+    async getEntrevistas() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/entrevistas`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error al obtener entrevistas');
+            }
+            const data = await response.json();
+            return data.entrevistas;
+        } catch (error) {
+            handleApiError(error, 'Error al cargar las entrevistas.');
+            return [];
+        }
+    },
+
+    async createEntrevista(eventData) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/entrevistas`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(eventData),
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error al programar la entrevista');
+            }
+            const data = await response.json();
+            return data.entrevista;
+        } catch (error) {
+            handleApiError(error, 'Error al programar la entrevista.');
+            throw error; // Re-throw para que el Calendar lo maneje
+        }
+    },
+
+    async updateEntrevista(id, eventData) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/entrevistas/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(eventData),
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error al actualizar la entrevista');
+            }
+            const data = await response.json();
+            return data.entrevista;
+        } catch (error) {
+            handleApiError(error, 'Error al actualizar la entrevista.');
+            throw error;
+        }
+    },
+
+    async deleteEntrevista(id) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/entrevistas/${id}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error al eliminar la entrevista');
+            }
+            return true;
+        } catch (error) {
+            handleApiError(error, 'Error al eliminar la entrevista.');
+            throw error;
+        }
+    }
+};
 
 const Calendar = {
     currentDate: new Date(),
@@ -18,10 +95,14 @@ const Calendar = {
      * Inicializa el calendario
      */
     initCalendar: function() {
+        console.log('Calendar: initCalendar - Inicializando calendario.');
         const calendarGrid = document.getElementById('calendar-grid');
         const currentMonthElement = document.getElementById('current-month');
         
-        if (!calendarGrid || !currentMonthElement) return;
+        if (!calendarGrid || !currentMonthElement) {
+            console.error('Calendar: initCalendar - Elementos DOM del calendario no encontrados.');
+            return;
+        }
         
         // Mostrar mes actual
         currentMonthElement.textContent = `${this.monthNames[this.currentMonth]} ${this.currentYear}`;
@@ -30,7 +111,7 @@ const Calendar = {
         this.generateCalendarDays();
         
         // Cargar eventos guardados
-        this.loadSavedEvents();
+        this.loadEvents();
         
         // Configurar navegación del calendario
         this.setupCalendarNavigation();
@@ -40,8 +121,12 @@ const Calendar = {
      * Genera los días del calendario para el mes y año actual
      */
     generateCalendarDays: function() {
+        console.log('Calendar: generateCalendarDays - Generando días para', this.currentMonth, this.currentYear);
         const calendarGrid = document.getElementById('calendar-grid');
-        if (!calendarGrid) return;
+        if (!calendarGrid) {
+            console.error('Calendar: generateCalendarDays - calendar-grid no encontrado.');
+            return;
+        }
         
         calendarGrid.innerHTML = '';
         
@@ -63,6 +148,7 @@ const Calendar = {
             
             // Añadir evento para programar entrevista
             dayDiv.addEventListener('click', () => {
+                console.log('Calendar: Click en día (mes anterior):', dayDiv.dataset.date);
                 this.openAddEventModal(dayDiv.dataset.date);
             });
             
@@ -88,6 +174,7 @@ const Calendar = {
             
             // Añadir evento para programar entrevista
             dayDiv.addEventListener('click', () => {
+                console.log('Calendar: Click en día (mes actual):', dayDiv.dataset.date);
                 this.openAddEventModal(dayDiv.dataset.date);
             });
             
@@ -108,11 +195,13 @@ const Calendar = {
             
             // Añadir evento para programar entrevista
             dayDiv.addEventListener('click', () => {
+                console.log('Calendar: Click en día (mes siguiente):', dayDiv.dataset.date);
                 this.openAddEventModal(dayDiv.dataset.date);
             });
             
             calendarGrid.appendChild(dayDiv);
         }
+        console.log('Calendar: generateCalendarDays - Días generados.');
     },
     
     /**
@@ -159,27 +248,29 @@ const Calendar = {
         
         // Regenerar días y recargar eventos
         this.generateCalendarDays();
-        this.loadSavedEvents();
+        this.loadEvents();
     },
     
     /**
      * Carga y muestra eventos guardados
      */
-    loadSavedEvents: function() {
+    loadEvents: async function() {
+        console.log('Calendar: loadEvents - Cargando eventos del servidor...');
         try {
-            // Obtener eventos del almacenamiento local
-            const savedEvents = localStorage.getItem(CONFIG.STORAGE_KEYS.CALENDAR_EVENTS);
-            if (!savedEvents) return;
-            
-            const allEvents = JSON.parse(savedEvents);
+            const allEvents = await Api.getEntrevistas();
             this.calendarEvents = allEvents;
+            console.log('Calendar: loadEvents - Eventos recibidos:', allEvents);
             
+            // Limpiar eventos existentes en el calendario antes de mostrar los nuevos
+            document.querySelectorAll('.calendar-event').forEach(el => el.remove());
+
             // Filtrar eventos del mes actual
             const currentMonthEvents = allEvents.filter(event => {
-                const eventDate = new Date(event.date);
+                const eventDate = new Date(event.fecha); // Usar 'fecha' en lugar de 'date'
                 return eventDate.getMonth() === this.currentMonth && 
                        eventDate.getFullYear() === this.currentYear;
             });
+            console.log('Calendar: loadEvents - Eventos para el mes actual:', currentMonthEvents);
             
             // Mostrar eventos en el calendario
             currentMonthEvents.forEach(event => {
@@ -188,8 +279,10 @@ const Calendar = {
             
             // Actualizar lista de próximas entrevistas
             this.updateUpcomingEventsList();
+            console.log('Calendar: loadEvents - Eventos cargados y mostrados.');
         } catch (error) {
-            console.error('Error al cargar eventos guardados:', error);
+            console.error('Calendar: loadEvents - Error al cargar eventos:', error);
+            showError('Error al cargar las entrevistas del servidor.');
         }
     },
     
@@ -198,19 +291,26 @@ const Calendar = {
      * @param {Object} event - Evento a mostrar
      */
     displayEventInCalendar: function(event) {
-        if (!event || !event.date) return;
+        console.log('Calendar: displayEventInCalendar - Mostrando evento:', event);
+        if (!event || !event.fecha) {
+            console.warn('Calendar: displayEventInCalendar - Evento o fecha inválida.', event);
+            return;
+        }
         
-        const eventDate = new Date(event.date);
+        const eventDate = new Date(event.fecha);
         const formattedDate = this.formatDateForDataset(eventDate);
         
         // Buscar el div del día correspondiente
         const dayCell = document.querySelector(`.calendar-day[data-date="${formattedDate}"]`);
-        if (!dayCell) return;
+        if (!dayCell) {
+            console.warn('Calendar: displayEventInCalendar - Celda del día no encontrada para fecha:', formattedDate);
+            return;
+        }
         
         // Crear elemento del evento
         const eventElement = document.createElement('div');
         eventElement.className = 'calendar-event';
-        eventElement.textContent = `${event.time} - ${event.candidateName || event.title}`;
+        eventElement.textContent = `${event.hora} - ${event.candidato_nombre || event.title}`;
         eventElement.dataset.eventId = event.id;
         
         // Añadir evento al hacer clic para ver detalles
@@ -221,6 +321,7 @@ const Calendar = {
         
         // Añadir evento al día
         dayCell.appendChild(eventElement);
+        console.log('Calendar: displayEventInCalendar - Evento añadido a la celda.');
     },
     
     /**
@@ -330,34 +431,34 @@ const Calendar = {
                 <div class="modal-body">
                     <div class="detail-row">
                         <div class="detail-label"><i class="fas fa-user"></i> Candidato:</div>
-                        <div class="detail-value">${event.candidateName || 'N/A'}</div>
+                        <div class="detail-value">${event.candidato_nombre || 'N/A'}</div>
                     </div>
                     <div class="detail-row">
                         <div class="detail-label"><i class="fas fa-calendar"></i> Fecha:</div>
-                        <div class="detail-value">${UI.formatDate(event.date, 'medium')}</div>
+                        <div class="detail-value">${UI.formatDate(event.fecha, 'medium')}</div>
                     </div>
                     <div class="detail-row">
                         <div class="detail-label"><i class="fas fa-clock"></i> Hora:</div>
-                        <div class="detail-value">${event.time}</div>
+                        <div class="detail-value">${event.hora}</div>
                     </div>
                     <div class="detail-row">
                         <div class="detail-label"><i class="fas fa-hourglass-half"></i> Duración:</div>
-                        <div class="detail-value">${event.duration || 60} minutos</div>
+                        <div class="detail-value">${event.duracion || 60} minutos</div>
                     </div>
                     <div class="detail-row">
                         <div class="detail-label"><i class="fas fa-video"></i> Tipo:</div>
-                        <div class="detail-value">${event.type || 'Presencial'}</div>
+                        <div class="detail-value">${event.tipo || 'Presencial'}</div>
                     </div>
-                    ${event.location ? `
+                    ${event.ubicacion ? `
                     <div class="detail-row">
                         <div class="detail-label"><i class="fas fa-map-marker-alt"></i> Ubicación:</div>
-                        <div class="detail-value">${event.location}</div>
+                        <div class="detail-value">${event.ubicacion}</div>
                     </div>
                     ` : ''}
-                    ${event.notes ? `
+                    ${event.notas ? `
                     <div class="detail-row">
                         <div class="detail-label"><i class="fas fa-sticky-note"></i> Notas:</div>
-                        <div class="detail-value">${event.notes}</div>
+                        <div class="detail-value">${event.notas}</div>
                     </div>
                     ` : ''}
                 </div>
@@ -419,16 +520,16 @@ const Calendar = {
         }
         
         // Rellenar el formulario con los datos existentes
-        if (formElements.dateInput) formElements.dateInput.value = event.date;
-        if (formElements.timeInput) formElements.timeInput.value = event.time;
-        if (formElements.durationSelect) formElements.durationSelect.value = event.duration || '60';
-        if (formElements.typeSelect) formElements.typeSelect.value = event.type || 'presencial';
-        if (formElements.locationInput) formElements.locationInput.value = event.location || '';
-        if (formElements.notesTextarea) formElements.notesTextarea.value = event.notes || '';
+        if (formElements.dateInput) formElements.dateInput.value = event.fecha;
+        if (formElements.timeInput) formElements.timeInput.value = event.hora;
+        if (formElements.durationSelect) formElements.durationSelect.value = event.duracion || '60';
+        if (formElements.typeSelect) formElements.typeSelect.value = event.tipo || 'presencial';
+        if (formElements.locationInput) formElements.locationInput.value = event.ubicacion || '';
+        if (formElements.notesTextarea) formElements.notesTextarea.value = event.notas || '';
         if (formElements.sendInvitation) formElements.sendInvitation.checked = event.sendInvitation || false;
         
         // Información del candidato
-        if (formElements.candidateName) formElements.candidateName.textContent = event.candidateName || 'Candidato';
+        if (formElements.candidateName) formElements.candidateName.textContent = event.candidato_nombre || 'Candidato';
         if (formElements.candidatePic) formElements.candidatePic.src = '/api/placeholder/40/40';
         if (formElements.candidatePuesto) formElements.candidatePuesto.textContent = 'Edición de entrevista';
         
@@ -476,21 +577,23 @@ const Calendar = {
         
         // Crear objeto con nuevos datos
         const updatedEventData = {
-            ...originalEvent,
-            date: formElements.dateInput.value,
-            time: formElements.timeInput.value,
-            duration: formElements.durationSelect ? formElements.durationSelect.value : '60',
-            type: formElements.typeSelect ? formElements.typeSelect.value : 'presencial',
-            location: formElements.locationInput ? formElements.locationInput.value : '',
-            notes: formElements.notesTextarea ? formElements.notesTextarea.value : '',
+            id: originalEvent.id,
+            recluta_id: originalEvent.recluta_id,
+            candidato_nombre: originalEvent.candidato_nombre,
+            fecha: formElements.dateInput.value,
+            hora: formElements.timeInput.value,
+            duracion: formElements.durationSelect ? parseInt(formElements.durationSelect.value) : 60,
+            tipo: formElements.typeSelect ? formElements.typeSelect.value : 'presencial',
+            ubicacion: formElements.locationInput ? formElements.locationInput.value : '',
+            notas: formElements.notesTextarea ? formElements.notesTextarea.value : '',
             sendInvitation: formElements.sendInvitation ? formElements.sendInvitation.checked : false
         };
         
         // Verificar solapamientos si cambia la fecha o la hora
-        if (updatedEventData.date !== originalEvent.date || updatedEventData.time !== originalEvent.time) {
+        if (updatedEventData.fecha !== originalEvent.fecha || updatedEventData.hora !== originalEvent.hora) {
             this.checkTimeOverlap(updatedEventData, (hasOverlap, conflictEvent) => {
                 if (hasOverlap) {
-                    showError(`La entrevista se solapa con "${conflictEvent.candidateName}" a las ${conflictEvent.time}`);
+                    showError(`La entrevista se solapa con "${conflictEvent.candidato_nombre}" a las ${conflictEvent.hora}`);
                     
                     if (formElements.saveButton) {
                         formElements.saveButton.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
@@ -513,27 +616,28 @@ const Calendar = {
      * @param {Object} updatedEventData - Datos actualizados
      * @param {Object} originalEvent - Evento original
      */
-    completeEventUpdate: function(updatedEventData, originalEvent) {
-        // Actualizar evento en el almacenamiento
-        this.updateStoredEvent(updatedEventData);
-        
-        // Actualizar las vistas
-        this.refreshCalendarEvents();
-        
-        // Cerrar modal
-        UI.closeModal('schedule-interview-modal');
-        
-        // Mostrar notificación
-        showSuccess('Entrevista actualizada correctamente');
-        
-        // Restaurar botón
-        const saveButton = document.querySelector('#schedule-interview-modal .btn-primary');
-        if (saveButton) {
-            saveButton.innerHTML = '<i class="fas fa-calendar-check"></i> Programar';
-            saveButton.disabled = false;
+    completeEventUpdate: async function(updatedEventData, originalEvent) {
+        try {
+            await Api.updateEntrevista(updatedEventData.id, updatedEventData);
+            showSuccess('Entrevista actualizada correctamente');
+        } catch (error) {
+            showError('Error al actualizar la entrevista.');
+        } finally {
+            // Actualizar las vistas
+            this.refreshCalendarEvents();
             
-            // Restaurar comportamiento por defecto
-            saveButton.onclick = () => this.saveInterview();
+            // Cerrar modal
+            UI.closeModal('schedule-interview-modal');
+            
+            // Restaurar botón
+            const saveButton = document.querySelector('#schedule-interview-modal .btn-primary');
+            if (saveButton) {
+                saveButton.innerHTML = '<i class="fas fa-calendar-check"></i> Programar';
+                saveButton.disabled = false;
+                
+                // Restaurar comportamiento por defecto
+                saveButton.onclick = () => this.saveInterview();
+            }
         }
     },
     
@@ -544,7 +648,7 @@ const Calendar = {
     confirmDeleteEvent: function(event) {
         UI.showConfirmModal({
             title: 'Eliminar Entrevista',
-            message: `¿Estás seguro de que deseas eliminar la entrevista con ${event.candidateName || 'este candidato'}?`,
+            message: `¿Estás seguro de que deseas eliminar la entrevista con ${event.candidato_nombre || 'este candidato'}?`,
             confirmText: 'Eliminar',
             confirmButtonClass: 'btn-danger',
             onConfirm: () => this.deleteEvent(event)
@@ -555,91 +659,15 @@ const Calendar = {
      * Elimina un evento
      * @param {Object} event - Evento a eliminar
      */
-    deleteEvent: function(event) {
-        // Eliminar del almacenamiento
-        this.removeStoredEvent(event);
-        
-        // Actualizar vistas
-        this.refreshCalendarEvents();
-        
-        // Mostrar notificación
-        showSuccess('Entrevista eliminada correctamente');
-    },
-    
-    /**
-     * Actualiza un evento en el almacenamiento local
-     * @param {Object} eventData - Datos del evento
-     */
-    updateStoredEvent: function(eventData) {
+    deleteEvent: async function(event) {
         try {
-            // Obtener eventos guardados
-            let events = [];
-            const savedEvents = localStorage.getItem(CONFIG.STORAGE_KEYS.CALENDAR_EVENTS);
-            
-            if (savedEvents) {
-                events = JSON.parse(savedEvents);
-                
-                // Buscar si ya existe este evento
-                const index = events.findIndex(event => 
-                    event.id === eventData.id || 
-                    (event.candidateId === eventData.candidateId && 
-                     event.date === eventData.date && 
-                     event.time === eventData.time)
-                );
-                
-                if (index !== -1) {
-                    // Actualizar evento existente
-                    events[index] = eventData;
-                } else {
-                    // Añadir nuevo evento
-                    eventData.id = eventData.id || Date.now();
-                    events.push(eventData);
-                }
-            } else {
-                // Primera vez, crear array con este evento
-                eventData.id = eventData.id || Date.now();
-                events = [eventData];
-            }
-            
-            // Guardar en localStorage
-            localStorage.setItem(CONFIG.STORAGE_KEYS.CALENDAR_EVENTS, JSON.stringify(events));
-            
-            // Actualizar lista de eventos en memoria
-            this.calendarEvents = events;
+            await Api.deleteEntrevista(event.id);
+            showSuccess('Entrevista eliminada correctamente');
         } catch (error) {
-            console.error('Error al guardar evento:', error);
-            throw error;
-        }
-    },
-    
-    /**
-     * Elimina un evento del almacenamiento local
-     * @param {Object} eventData - Datos del evento a eliminar
-     */
-    removeStoredEvent: function(eventData) {
-        try {
-            // Obtener eventos guardados
-            const savedEvents = localStorage.getItem(CONFIG.STORAGE_KEYS.CALENDAR_EVENTS);
-            if (!savedEvents) return;
-            
-            let events = JSON.parse(savedEvents);
-            
-            // Filtrar para eliminar este evento
-            events = events.filter(event => 
-                event.id !== eventData.id && 
-                !(event.candidateId === eventData.candidateId && 
-                  event.date === eventData.date && 
-                  event.time === eventData.time)
-            );
-            
-            // Guardar lista actualizada
-            localStorage.setItem(CONFIG.STORAGE_KEYS.CALENDAR_EVENTS, JSON.stringify(events));
-            
-            // Actualizar lista de eventos en memoria
-            this.calendarEvents = events;
-        } catch (error) {
-            console.error('Error al eliminar evento:', error);
-            throw error;
+            showError('Error al eliminar la entrevista.');
+        } finally {
+            // Actualizar vistas
+            this.refreshCalendarEvents();
         }
     },
     
@@ -650,7 +678,7 @@ const Calendar = {
      */
     checkTimeOverlap: function(newEvent, callback) {
         // Obtener todos los eventos del mismo día
-        const eventsOnSameDay = this.getEventsForDate(newEvent.date);
+        const eventsOnSameDay = this.getEventsForDate(newEvent.fecha);
         
         // Si no hay eventos ese día, no hay solapamiento
         if (eventsOnSameDay.length === 0) {
@@ -659,8 +687,8 @@ const Calendar = {
         }
         
         // Convertir la hora del nuevo evento a minutos para comparar
-        const newStartTime = this.convertTimeToMinutes(newEvent.time);
-        const newDuration = parseInt(newEvent.duration, 10) || 60;
+        const newStartTime = this.convertTimeToMinutes(newEvent.hora);
+        const newDuration = parseInt(newEvent.duracion, 10) || 60;
         const newEndTime = newStartTime + newDuration;
         
         // Comprobar cada evento existente
@@ -668,8 +696,8 @@ const Calendar = {
             // No comparar con el mismo evento (para ediciones)
             if (event.id === newEvent.id) continue;
             
-            const eventStartTime = this.convertTimeToMinutes(event.time);
-            const eventDuration = parseInt(event.duration, 10) || 60;
+            const eventStartTime = this.convertTimeToMinutes(event.hora);
+            const eventDuration = parseInt(event.duracion, 10) || 60;
             const eventEndTime = eventStartTime + eventDuration;
             
             // Comprobar si hay solapamiento
@@ -698,7 +726,7 @@ const Calendar = {
         
         // Filtrar eventos por fecha
         return this.calendarEvents.filter(event => {
-            const eventDate = new Date(event.date);
+            const eventDate = new Date(event.fecha);
             const formattedEventDate = this.formatDateForDataset(eventDate);
             return formattedEventDate === formattedDate;
         });
@@ -741,17 +769,17 @@ const Calendar = {
         today.setHours(0, 0, 0, 0);
         
         const futureEvents = this.calendarEvents.filter(event => {
-            const eventDate = new Date(event.date);
+            const eventDate = new Date(event.fecha);
             return eventDate >= today;
         }).sort((a, b) => {
             // Ordenar primero por fecha
-            const dateA = new Date(a.date);
-            const dateB = new Date(b.date);
+            const dateA = new Date(a.fecha);
+            const dateB = new Date(b.fecha);
             if (dateA.getTime() !== dateB.getTime()) {
                 return dateA - dateB;
             }
             // Si son del mismo día, ordenar por hora
-            return this.convertTimeToMinutes(a.time) - this.convertTimeToMinutes(b.time);
+            return this.convertTimeToMinutes(a.hora) - this.convertTimeToMinutes(b.hora);
         });
         
         // Mostrar máximo 5 próximos eventos
@@ -777,7 +805,7 @@ const Calendar = {
      * @param {HTMLElement} container - Contenedor donde añadir el evento
      */
     addEventToUpcomingList: function(event, container) {
-        const eventDate = new Date(event.date);
+        const eventDate = new Date(event.fecha);
         const day = eventDate.getDate();
         const month = this.monthShortNames[eventDate.getMonth()];
         
@@ -791,8 +819,8 @@ const Calendar = {
                 <span class="event-month">${month}</span>
             </div>
             <div class="event-details">
-                <h6>Entrevista con ${event.candidateName || 'Candidato'}</h6>
-                <p><i class="fas fa-clock"></i> ${event.time} (${event.duration || 60} min)</p>
+                <h6>Entrevista con ${event.candidato_nombre || 'Candidato'}</h6>
+                <p><i class="fas fa-clock"></i> ${event.hora} (${event.duracion || 60} min)</p>
             </div>
         `;
         
@@ -816,7 +844,7 @@ const Calendar = {
         });
         
         // Volver a cargar y mostrar eventos
-        this.loadSavedEvents();
+        this.loadEvents();
     },
     
     /**
@@ -824,17 +852,23 @@ const Calendar = {
      * @param {string} dateString - Fecha en formato YYYY-MM-DD
      */
     openAddEventModal: function(dateString) {
+        console.log('Calendar: openAddEventModal - Abriendo modal para fecha:', dateString);
         import('./reclutas.js').then(module => {
             const Reclutas = module.default;
             
             // Si no hay reclutas, mostrar error
             if (!Reclutas.reclutas || Reclutas.reclutas.length === 0) {
                 showError('Primero debes añadir reclutas para programar entrevistas');
+                console.warn('Calendar: openAddEventModal - No hay reclutas disponibles.');
                 return;
             }
             
             // Abrir modal para seleccionar recluta
             this.showReclutaSelectorModal(dateString, Reclutas.reclutas);
+            console.log('Calendar: openAddEventModal - Mostrando selector de reclutas.');
+        }).catch(error => {
+            console.error('Calendar: openAddEventModal - Error al cargar módulo reclutas:', error);
+            showError('Error al cargar la lista de candidatos.');
         });
     },
     
@@ -996,7 +1030,8 @@ const Calendar = {
     /**
      * Guarda una nueva entrevista
      */
-    saveInterview: function() {
+    saveInterview: async function() {
+        console.log('Calendar: saveInterview - Intentando guardar entrevista...');
         const formElements = {
             dateInput: document.getElementById('interview-date'),
             timeInput: document.getElementById('interview-time'),
@@ -1011,15 +1046,17 @@ const Calendar = {
         // Validar datos básicos
         if (!formElements.dateInput || !formElements.timeInput || !formElements.dateInput.value || !formElements.timeInput.value) {
             showError('Por favor, completa los campos de fecha y hora');
+            console.warn('Calendar: saveInterview - Campos de fecha/hora vacíos.');
             return;
         }
         
         // Obtener ID y nombre del recluta
-        const reclutaId = formElements.saveButton ? formElements.saveButton.dataset.reclutaId : null;
+        const reclutaId = formElements.saveButton ? formElements.saveElements.saveButton.dataset.reclutaId : null;
         const reclutaName = formElements.saveButton ? formElements.saveButton.dataset.reclutaName : 'Candidato';
         
         if (!reclutaId) {
             showError('No se ha seleccionado un candidato');
+            console.warn('Calendar: saveInterview - No se seleccionó candidato.');
             return;
         }
         
@@ -1031,22 +1068,23 @@ const Calendar = {
         
         // Crear objeto de evento
         const eventData = {
-            id: Date.now(),
-            candidateId: reclutaId,
-            candidateName: reclutaName,
-            date: formElements.dateInput.value,
-            time: formElements.timeInput.value,
-            duration: formElements.durationSelect ? formElements.durationSelect.value : '60',
-            type: formElements.typeSelect ? formElements.typeSelect.value : 'presencial',
-            location: formElements.locationInput ? formElements.locationInput.value : '',
-            notes: formElements.notesTextarea ? formElements.notesTextarea.value : '',
+            recluta_id: reclutaId,
+            candidato_nombre: reclutaName,
+            fecha: formElements.dateInput.value,
+            hora: formElements.timeInput.value,
+            duracion: formElements.durationSelect ? parseInt(formElements.durationSelect.value) : 60,
+            tipo: formElements.typeSelect ? formElements.typeSelect.value : 'presencial',
+            ubicacion: formElements.locationInput ? formElements.locationInput.value : '',
+            notas: formElements.notesTextarea ? formElements.notesTextarea.value : '',
             sendInvitation: formElements.sendInvitation ? formElements.sendInvitation.checked : false
         };
+        console.log('Calendar: saveInterview - Datos del evento a guardar:', eventData);
         
         // Verificar solapamientos
-        this.checkTimeOverlap(eventData, (hasOverlap, conflictEvent) => {
+        this.checkTimeOverlap(eventData, async (hasOverlap, conflictEvent) => {
             if (hasOverlap) {
-                showError(`La entrevista se solapa con "${conflictEvent.candidateName}" a las ${conflictEvent.time}`);
+                showError(`La entrevista se solapa con "${conflictEvent.candidato_nombre}" a las ${conflictEvent.hora}`);
+                console.warn('Calendar: saveInterview - Solapamiento detectado.', conflictEvent);
                 
                 if (formElements.saveButton) {
                     formElements.saveButton.innerHTML = '<i class="fas fa-calendar-check"></i> Programar';
@@ -1057,8 +1095,8 @@ const Calendar = {
             
             // No hay solapamiento, guardar
             try {
-                // Guardar en almacenamiento local
-                this.updateStoredEvent(eventData);
+                console.log('Calendar: saveInterview - No hay solapamiento, llamando a Api.createEntrevista...');
+                await Api.createEntrevista(eventData);
                 
                 // Actualizar vistas
                 this.refreshCalendarEvents();
@@ -1068,8 +1106,9 @@ const Calendar = {
                 
                 // Mostrar notificación
                 showSuccess('Entrevista programada correctamente');
+                console.log('Calendar: saveInterview - Entrevista guardada con éxito.');
             } catch (error) {
-                console.error('Error al guardar entrevista:', error);
+                console.error('Calendar: saveInterview - Error al guardar entrevista:', error);
                 showError('Error al programar la entrevista');
             } finally {
                 // Restaurar botón

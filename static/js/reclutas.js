@@ -998,14 +998,18 @@ editRecluta: async function(id) {
      */
     loadAndDisplayReclutas: async function() {
     try {
-        console.log('Cargando reclutas...');
+        console.log('Reclutas: loadAndDisplayReclutas - Cargando reclutas...');
         const container = document.getElementById('reclutas-list');
         
-        if (!container) return;
+        if (!container) {
+            console.warn('Reclutas: loadAndDisplayReclutas - Contenedor #reclutas-list no encontrado.');
+            return;
+        }
         
         container.innerHTML = '<tr><td colspan="8" style="text-align:center"><i class="fas fa-spinner fa-spin"></i> Cargando reclutas...</td></tr>';
         
         const reclutas = await this.loadReclutas();
+        console.log('Reclutas: loadAndDisplayReclutas - Reclutas cargados:', reclutas);
         
         // AGREGAR: Obtener rol del usuario desde la respuesta
         if (this.lastApiResponse && this.lastApiResponse.user_role) {
@@ -1016,10 +1020,10 @@ editRecluta: async function(id) {
         this.renderReclutasTable(container);
         this.updatePagination();
         
-        console.log(`Se cargaron ${reclutas.length} reclutas`);
+        console.log(`Reclutas: Se cargaron ${reclutas.length} reclutas`);
         return reclutas;
     } catch (error) {
-        console.error('Error al cargar y mostrar reclutas:', error);
+        console.error('Reclutas: loadAndDisplayReclutas - Error al cargar y mostrar reclutas:', error);
             
             // Mostrar mensaje de error en la tabla
             const container = document.getElementById('reclutas-list');

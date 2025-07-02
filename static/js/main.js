@@ -549,6 +549,12 @@ async function loginSuccess(usuario) {
                 console.error('❌ Error al cargar reclutas:', e);
             }
         }
+
+        // Inicializar calendario si la sección está activa o se va a activar
+        if (typeof Calendar !== 'undefined') {
+            console.log('Main: Inicializando módulo de Calendario...');
+            Calendar.init();
+        }
         
         // Mensaje de bienvenida
         const welcomeMessage = getWelcomeMessage(usuario);
