@@ -624,21 +624,19 @@ showDistribucionResults: function(data) {
     // Preparar HTML de resultados
     console.log('DEBUG: this.asesores before map:', this.asesores);
     const distributionRows = Object.entries(data.distribucion || {})
-        .map(([email, count]) => {
+        .map(([email, distribData]) => {
             const asesor = this.asesores.find(a => a.email === email);
             const asesorId = asesor ? String(asesor.id) : ''; // Ensure asesorId is a string
             const asesorDisplay = asesor ? (asesor.nombre || asesor.email) : email; // Usar nombre o email si no hay nombre
-            // Initialize isFixed property for each asesor
-            if (asesor) {
-                asesor.isFixed = false; // Default to not fixed
-            }
+            const count = distribData.count; // Get count from the object
+            const isFixed = distribData.is_fixed; // Get is_fixed from the object
             return `<tr>
                         <td>${asesorDisplay}</td>
                         <td>
                             <input type="number" class="form-control reclutas-input" data-asesor-id="${asesorId}" value="${count}" min="0">
                             reclutas
                             <label class="checkbox-container fixed-checkbox-label">
-                                <input type="checkbox" class="fixed-checkbox" data-asesor-id="${asesorId}">
+                                <input type="checkbox" class="fixed-checkbox" data-asesor-id="${asesorId}" ${isFixed ? 'checked' : ''}>
                                 <span class="checkbox-label">Fijo</span>
                             </label>
                         </td>
@@ -718,7 +716,15 @@ showDistribucionResults: function(data) {
     // Attach event listeners to inputs and checkboxes
     const reclutasInputs = resultsContainer.querySelectorAll('.reclutas-input');
     reclutasInputs.forEach(input => {
-        input.addEventListener('input', () => this.recalculateDistribution());
+        input.addEventListener('input', () => {
+            // Mark as manually edited if not fixed
+            const asesorId = input.dataset.asesorId;
+            const checkbox = resultsContainer.querySelector(`.fixed-checkbox[data-asesor-id="${asesorId}"]`);
+            if (!checkbox || !checkbox.checked) { // Only for non-fixed inputs
+                input.dataset.manualEdited = "true";
+            }
+            this.recalculateDistribution();
+        });
     });
 
     const fixedCheckboxes = resultsContainer.querySelectorAll('.fixed-checkbox');
@@ -756,11 +762,12 @@ recalculateDistribution: function() {
 
     let totalReclutas = this.currentDistributionData.total_procesados;
     let fixedReclutas = 0;
+    let manuallyEditedReclutas = 0;
     let flexibleReclutas = totalReclutas;
     let flexibleAsesoresCount = 0;
     const flexibleAsesores = [];
 
-    // First pass: Identify fixed assignments and calculate remaining flexible recruits
+    // First pass: Identify fixed and manually edited assignments
     reclutasInputs.forEach(input => {
         const asesorId = input.dataset.asesorId;
         const checkbox = resultsContainer.querySelector(`.fixed-checkbox[data-asesor-id="${asesorId}"]`);
@@ -769,16 +776,19 @@ recalculateDistribution: function() {
         if (checkbox && checkbox.checked) {
             fixedReclutas += count;
             input.readOnly = true; // Ensure input is read-only if fixed
+        } else if (input.dataset.manualEdited === "true") {
+            manuallyEditedReclutas += count;
+            input.readOnly = false; // Ensure it remains editable
         } else {
-            input.readOnly = false; // Ensure input is editable if not fixed
+            input.readOnly = false; // Ensure it remains editable
             flexibleAsesores.push({ id: asesorId, input: input });
             flexibleAsesoresCount++;
         }
     });
 
-    flexibleReclutas = totalReclutas - fixedReclutas;
+    flexibleReclutas = totalReclutas - fixedReclutas - manuallyEditedReclutas;
 
-    // Second pass: Distribute remaining recruits among flexible advisors
+    // Second pass: Distribute remaining recruits among truly flexible advisors
     if (flexibleAsesoresCount > 0) {
         let basePerFlexible = Math.floor(flexibleReclutas / flexibleAsesoresCount);
         let remainder = flexibleReclutas % flexibleAsesoresCount;

@@ -1668,14 +1668,14 @@ def redistribuir_reclutas_manual():
         
         data = request.get_json()
         
-        if not data or 'redistribucion' not in data:
+        if not data or 'distribution' not in data:
             return jsonify({
                 "success": False,
-                "message": "Datos de redistribución requeridos"
+                "message": "Datos de distribución requeridos"
             }), 400
         
-        redistribucion_nueva = data['redistribucion']
-        filtros = data.get('filtros', {})
+        redistribucion_nueva = data['distribution']
+        filtros = data.get('filters', {})
         
         current_app.logger.info(f"Iniciando redistribución manual: {redistribucion_nueva}")
         
@@ -1688,7 +1688,16 @@ def redistribuir_reclutas_manual():
                 fecha_desde = datetime.fromisoformat(filtros['fecha_desde'].replace('Z', '+00:00'))
                 query_reclutas = query_reclutas.filter(Recluta.fecha_registro >= fecha_desde)
             except ValueError:
-                current_app.logger.warning(f"Formato de fecha inválido: {filtros['fecha_desde']}")
+                current_app.logger.warning(f"Formato de fecha inválido para fecha_desde: {filtros['fecha_desde']}")
+                return jsonify({"success": False, "message": "Formato de fecha inválido para fecha_desde"}), 400
+        
+        if filtros.get('fecha_hasta'):
+            try:
+                fecha_hasta = datetime.fromisoformat(filtros['fecha_hasta'].replace('Z', '+00:00'))
+                query_reclutas = query_reclutas.filter(Recluta.fecha_registro <= fecha_hasta)
+            except ValueError:
+                current_app.logger.warning(f"Formato de fecha inválido para fecha_hasta: {filtros['fecha_hasta']}")
+                return jsonify({"success": False, "message": "Formato de fecha inválido para fecha_hasta"}), 400
         
         if filtros.get('estado'):
             query_reclutas = query_reclutas.filter(Recluta.estado == filtros['estado'])
@@ -1702,7 +1711,20 @@ def redistribuir_reclutas_manual():
         # Obtener reclutas disponibles
         reclutas_disponibles = query_reclutas.all()
         total_disponible = len(reclutas_disponibles)
-        total_solicitado = sum(redistribucion_nueva.values())
+        
+        # Validar y sumar el total solicitado de la nueva distribución
+        total_solicitado = 0
+        for asesor_id_str, data_item in redistribucion_nueva.items():
+            try:
+                count = int(data_item['count'])
+                if count < 0:
+                    raise ValueError("Cantidad no puede ser negativa")
+                total_solicitado += count
+            except (ValueError, KeyError):
+                return jsonify({
+                    "success": False,
+                    "message": f"Datos de distribución inválidos para asesor {asesor_id_str}. Se esperaba un número entero positivo."
+                }), 400
         
         current_app.logger.info(f"Reclutas disponibles: {total_disponible}, solicitados: {total_solicitado}")
         
@@ -1710,34 +1732,36 @@ def redistribuir_reclutas_manual():
         if total_solicitado != total_disponible:
             return jsonify({
                 "success": False,
-                "message": f"Error: Total solicitado ({total_solicitado}) no coincide con disponible ({total_disponible})"
+                "message": f"Error: Total solicitado ({total_solicitado}) no coincide con disponible ({total_disponible}). Ajuste las cantidades."
             }), 400
         
-        # 🔍 Validar asesores
-        emails_asesores = list(redistribucion_nueva.keys())
+        # 🔍 Validar asesores y construir mapeo
+        asesor_ids_solicitados = [int(aid) for aid in redistribucion_nueva.keys()]
         asesores_validos = Usuario.query.filter(
-            Usuario.email.in_(emails_asesores),
+            Usuario.id.in_(asesor_ids_solicitados),
             Usuario.is_active == True,
             Usuario.rol.in_(['asesor', 'gerente'])
         ).all()
         
-        if len(asesores_validos) != len(emails_asesores):
-            emails_validos = [a.email for a in asesores_validos]
-            emails_invalidos = [e for e in emails_asesores if e not in emails_validos]
+        if len(asesores_validos) != len(asesor_ids_solicitados):
+            valid_ids = {a.id for a in asesores_validos}
+            invalid_ids = [aid for aid in asesor_ids_solicitados if aid not in valid_ids]
             return jsonify({
                 "success": False,
-                "message": f"Asesores inválidos o inactivos: {emails_invalidos}"
+                "message": f"Asesores inválidos o inactivos encontrados: {invalid_ids}"
             }), 400
         
-        # 📊 Crear mapeo email -> asesor
-        asesor_map = {asesor.email: asesor for asesor in asesores_validos}
+        asesor_map = {asesor.id: asesor for asesor in asesores_validos}
         
         # 🔄 Preparar lista de asignaciones
         nuevas_asignaciones = []
-        for email, cantidad in redistribucion_nueva.items():
-            if email in asesor_map and cantidad > 0:
-                asesor = asesor_map[email]
-                nuevas_asignaciones.extend([asesor.id] * cantidad)
+        for asesor_id_str, data_item in redistribucion_nueva.items():
+            asesor_id = int(asesor_id_str)
+            cantidad = int(data_item['count'])
+            is_fixed = data_item.get('is_fixed', False) # No se usa directamente para la asignación, pero se mantiene
+            
+            if asesor_id in asesor_map and cantidad > 0:
+                nuevas_asignaciones.extend([asesor_id] * cantidad)
         
         # 🎲 Barajar para distribución aleatoria
         random.shuffle(nuevas_asignaciones)
@@ -1749,7 +1773,7 @@ def redistribuir_reclutas_manual():
             
             if recluta.asesor_id != nuevo_asesor_id:
                 asesor_anterior = recluta.asesor.email if recluta.asesor else "Sin asignar"
-                nuevo_asesor = next((a for a in asesores_validos if a.id == nuevo_asesor_id), None)
+                nuevo_asesor = asesor_map.get(nuevo_asesor_id)
                 
                 if nuevo_asesor:
                     cambios_realizados.append({
@@ -1768,19 +1792,25 @@ def redistribuir_reclutas_manual():
             current_app.logger.info(f"Redistribución exitosa: {len(cambios_realizados)} cambios aplicados")
         except Exception as e:
             db.session.rollback()
-            raise e
+            current_app.logger.error(f"Error al confirmar cambios en DB: {str(e)}")
+            return jsonify({"success": False, "message": f"Error al guardar cambios en la base de datos: {str(e)}"}), 500
         
-        # 📊 Generar reporte final
+        # 📊 Generar reporte final (basado en la redistribución_nueva enviada por el frontend)
         reporte_final = {}
-        for asesor in asesores_validos:
-            reporte_final[asesor.email] = redistribucion_nueva.get(asesor.email, 0)
+        for asesor_id_str, data_item in redistribucion_nueva.items():
+            asesor_id = int(asesor_id_str)
+            if asesor_id in asesor_map:
+                reporte_final[asesor_map[asesor_id].email] = {
+                    "count": data_item['count'],
+                    "is_fixed": data_item.get('is_fixed', False)
+                }
         
         return jsonify({
             "success": True,
             "message": f"Redistribución completada exitosamente",
             "total_redistribuidos": len(cambios_realizados),
-            "total_disponibles": total_disponible,
-            "redistribucion_final": reporte_final,
+            "total_procesados": total_disponible, # Renombrado para consistencia con frontend
+            "distribucion": reporte_final, # Renombrado para consistencia con frontend
             "cambios_detalle": cambios_realizados[:10],  # Primeros 10 para UI
             "resumen": {
                 "reclutas_afectados": len(cambios_realizados),
@@ -1811,7 +1841,7 @@ def obtener_lote_reciente():
         # Obtener parámetros de consulta
         horas_atras = request.args.get('horas', 2, type=int)  # Últimas 2 horas por defecto
         
-        from datetime import datetime, timedelta
+
         fecha_limite = datetime.now() - timedelta(hours=horas_atras)
         
         # Consultar reclutas recientes
