@@ -347,7 +347,7 @@ openDistribucionExcelModal: function() {
                             <ul>
                                 <li>📊 <strong>Función:</strong> Distribuye reclutas automáticamente entre asesores activos</li>
                                 <li>📄 <strong>Formato:</strong> Excel (.xlsx, .xls) con headers: "Fecha de creación", "Nombre", "Teléfono"</li>
-                                <li>⚖️ <strong>Distribución:</strong> Equitativa entre todos los asesores disponibles</li>
+                                <li>⚖️ <strong>Distribución:</strong> Equitativa entre asesores no fijados</li>
                                 <li>🔍 <strong>Validación:</strong> Evita duplicados de teléfono</li>
                             </ul>
                         </div>
@@ -363,6 +363,28 @@ openDistribucionExcelModal: function() {
                             <p id="distribucion-status">Procesando...</p>
                         </div>
                         <div class="results-container" id="distribucion-results" style="display: none;">
+                            <div class="summary-stats-container">
+                                <div class="stat-item">
+                                    <span class="stat-label">Total Reclutas:</span>
+                                    <span class="stat-value" id="total-reclutas-summary">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Reclutas Fijos:</span>
+                                    <span class="stat-value" id="reclutas-fijos-summary">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Reclutas Flexibles:</span>
+                                    <span class="stat-value" id="reclutas-flexibles-summary">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Asesores Flexibles:</span>
+                                    <span class="stat-value" id="asesores-flexibles-summary">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Promedio Flexible:</span>
+                                    <span class="stat-value" id="promedio-flexible-summary">0</span>
+                                </div>
+                            </div>
                             <!-- Resultados se mostrarán aquí -->
                         </div>
                     </div>
@@ -606,11 +628,19 @@ showDistribucionResults: function(data) {
             const asesor = this.asesores.find(a => a.email === email);
             const asesorId = asesor ? String(asesor.id) : ''; // Ensure asesorId is a string
             const asesorDisplay = asesor ? (asesor.nombre || asesor.email) : email; // Usar nombre o email si no hay nombre
+            // Initialize isFixed property for each asesor
+            if (asesor) {
+                asesor.isFixed = false; // Default to not fixed
+            }
             return `<tr>
                         <td>${asesorDisplay}</td>
                         <td>
                             <input type="number" class="form-control reclutas-input" data-asesor-id="${asesorId}" value="${count}" min="0">
                             reclutas
+                            <label class="checkbox-container fixed-checkbox-label">
+                                <input type="checkbox" class="fixed-checkbox" data-asesor-id="${asesorId}">
+                                <span class="checkbox-label">Fijo</span>
+                            </label>
                         </td>
                     </tr>`;
         }).join('');
@@ -681,6 +711,107 @@ showDistribucionResults: function(data) {
     setTimeout(() => {
         this.hideDistribucionProgress();
     }, 1000);
+
+    // Store initial distribution data for recalculations
+    this.currentDistributionData = data;
+
+    // Attach event listeners to inputs and checkboxes
+    const reclutasInputs = resultsContainer.querySelectorAll('.reclutas-input');
+    reclutasInputs.forEach(input => {
+        input.addEventListener('input', () => this.recalculateDistribution());
+    });
+
+    const fixedCheckboxes = resultsContainer.querySelectorAll('.fixed-checkbox');
+    fixedCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', (e) => {
+            const asesorId = e.target.dataset.asesorId;
+            const input = resultsContainer.querySelector(`.reclutas-input[data-asesor-id="${asesorId}"]`);
+            if (e.target.checked) {
+                // If fixed, disable input and store its current value
+                input.dataset.fixedValue = input.value;
+                input.readOnly = true;
+            } else {
+                // If not fixed, enable input and restore its previous value or set to 0
+                input.readOnly = false;
+                delete input.dataset.fixedValue; // Clean up the stored value
+            }
+            this.recalculateDistribution();
+        });
+    });
+
+    // Initial recalculation to set up summary and flexible distribution
+    this.recalculateDistribution();
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Recalcula la distribución de reclutas entre asesores flexibles
+ */
+recalculateDistribution: function() {
+    console.log('🔄 Recalculando distribución...');
+    const resultsContainer = document.getElementById('distribucion-results');
+    if (!resultsContainer) return;
+
+    const reclutasInputs = resultsContainer.querySelectorAll('.reclutas-input');
+    const fixedCheckboxes = resultsContainer.querySelectorAll('.fixed-checkbox');
+
+    let totalReclutas = this.currentDistributionData.total_procesados;
+    let fixedReclutas = 0;
+    let flexibleReclutas = totalReclutas;
+    let flexibleAsesoresCount = 0;
+    const flexibleAsesores = [];
+
+    // First pass: Identify fixed assignments and calculate remaining flexible recruits
+    reclutasInputs.forEach(input => {
+        const asesorId = input.dataset.asesorId;
+        const checkbox = resultsContainer.querySelector(`.fixed-checkbox[data-asesor-id="${asesorId}"]`);
+        const count = parseInt(input.value, 10) || 0;
+
+        if (checkbox && checkbox.checked) {
+            fixedReclutas += count;
+            input.readOnly = true; // Ensure input is read-only if fixed
+        } else {
+            input.readOnly = false; // Ensure input is editable if not fixed
+            flexibleAsesores.push({ id: asesorId, input: input });
+            flexibleAsesoresCount++;
+        }
+    });
+
+    flexibleReclutas = totalReclutas - fixedReclutas;
+
+    // Second pass: Distribute remaining recruits among flexible advisors
+    if (flexibleAsesoresCount > 0) {
+        let basePerFlexible = Math.floor(flexibleReclutas / flexibleAsesoresCount);
+        let remainder = flexibleReclutas % flexibleAsesoresCount;
+
+        flexibleAsesores.forEach(asesor => {
+            let assigned = basePerFlexible;
+            if (remainder > 0) {
+                assigned++;
+                remainder--;
+            }
+            asesor.input.value = assigned;
+        });
+    } else if (flexibleReclutas > 0) {
+        // If there are flexible recruits but no flexible advisors, show error or handle
+        console.warn('No flexible advisors to assign remaining recruits to.');
+        // Optionally, display a message to the user
+    }
+
+    // Update summary fields
+    const totalReclutasSummary = document.getElementById('total-reclutas-summary');
+    if (totalReclutasSummary) totalReclutasSummary.textContent = totalReclutas;
+
+    const reclutasFijosSummary = document.getElementById('reclutas-fijos-summary');
+    if (reclutasFijosSummary) reclutasFijosSummary.textContent = fixedReclutas;
+
+    const reclutasFlexiblesSummary = document.getElementById('reclutas-flexibles-summary');
+    if (reclutasFlexiblesSummary) reclutasFlexiblesSummary.textContent = flexibleReclutas;
+
+    const asesoresFlexiblesSummary = document.getElementById('asesores-flexibles-summary');
+    if (asesoresFlexiblesSummary) asesoresFlexiblesSummary.textContent = flexibleAsesoresCount;
+
+    const promedioFlexibleSummary = document.getElementById('promedio-flexible-summary');
+    if (promedioFlexibleSummary) promedioFlexibleSummary.textContent = flexibleAsesoresCount > 0 ? (flexibleReclutas / flexibleAsesoresCount).toFixed(2) : 0;
 },
 
 /**
@@ -694,8 +825,9 @@ saveAsesorDistribution: async function() {
     reclutasInputs.forEach(input => {
         const asesorId = input.dataset.asesorId;
         const count = parseInt(input.value, 10);
+        const isFixed = document.querySelector(`.fixed-checkbox[data-asesor-id="${asesorId}"]`)?.checked || false;
         if (asesorId && !isNaN(count) && count >= 0) {
-            distributionData[asesorId] = count;
+            distributionData[asesorId] = { count: count, is_fixed: isFixed };
         }
     });
 

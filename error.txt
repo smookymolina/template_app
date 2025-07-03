@@ -1,0 +1,202 @@
+ Recalculando distribución...
+reclutas.js:802 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at Object.recalculateDistribution (reclutas.js:802:67)
+    at HTMLInputElement.<anonymous> (reclutas.js:721:52)
+recalculateDistribution @ reclutas.js:802
+(anonymous) @ reclutas.js:721Understand this error
+reclutas.js:751 🔄 Recalculando distribución...
+reclutas.js:802 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at Object.recalculateDistribution (reclutas.js:802:67)
+    at HTMLInputElement.<anonymous> (reclutas.js:721:52)
+recalculateDistribution @ reclutas.js:802
+(anonymous) @ reclutas.js:721Understand this error
+reclutas.js:751 🔄 Recalculando distribución...
+reclutas.js:802 Uncaught TypeError: Cannot set properties of null (setting 'textContent')
+    at Object.recalculateDistribution (reclutas.js:802:67)
+    at HTMLInputElement.<anonymous> (reclutas.js:721:52)
+recalculateDistribution @ reclutas.js:802
+(anonymous) @ reclutas.js:721Understand this error
+reclutas.js:751 🔄 Recalculando distribución...
+reclutas.js:802 Uncaught TypeError: Cannot set proper
+
+[2025-07-03 16:55:28,780] DEBUG in helpers: Fila 670 agregada a datos_excel.
+2025-07-03 16:55:28,780 - app_factory - DEBUG - Fila 670 agregada a datos_excel.
+[2025-07-03 16:55:28,780] DEBUG in helpers: Procesando fila 671: [None, '04/28/2025 11:37am', 'Jose Santos Covarrubias Covarrubias', 523346533079]
+2025-07-03 16:55:28,780 - app_factory - DEBUG - Procesando fila 671: [None, '04/28/2025 11:37am', 'Jose Santos Covarrubias Covarrubias', 523346533079]
+[2025-07-03 16:55:28,781] DEBUG in helpers: Fila 671 - Fecha: '04/28/2025 11:37am', Nombre: 'Jose Santos Covarrubias Covarrubias', Teléfono: '523346533079'
+2025-07-03 16:55:28,781 - app_factory - DEBUG - Fila 671 - Fecha: '04/28/2025 11:37am', Nombre: 'Jose Santos Covarrubias Covarrubias', Teléfono: '523346533079'
+[2025-07-03 16:55:28,782] DEBUG in helpers: Fila 671 agregada a datos_excel.
+2025-07-03 16:55:28,782 - app_factory - DEBUG - Fila 671 agregada a datos_excel.
+[2025-07-03 16:55:28,782] DEBUG in helpers: Procesando fila 672: [None, '04/28/2025 11:34am', 'Oswald Caballero', 524444383313]
+2025-07-03 16:55:28,782 - app_factory - DEBUG - Procesando fila 672: [None, '04/28/2025 11:34am', 'Oswald Caballero', 524444383313]     
+[2025-07-03 16:55:28,783] DEBUG in helpers: Fila 672 - Fecha: '04/28/2025 11:34am', Nombre: 'Oswald Caballero', Teléfono: '524444383313'2025-07-03 16:55:28,783 - app_factory - DEBUG - Fila 672 - Fecha: '04/28/2025 11:34am', Nombre: 'Oswald Caballero', Teléfono: '524444383313'
+[2025-07-03 16:55:28,784] DEBUG in helpers: Fila 672 agregada a datos_excel.
+2025-07-03 16:55:28,784 - app_factory - DEBUG - Fila 672 agregada a datos_excel.
+[2025-07-03 16:55:28,785] DEBUG in helpers: Procesando fila 673: [None, '04/28/2025 11:18am', 'Zoila Reina Ibañez García', 527571112784]2025-07-03 16:55:28,785 - app_factory - DEBUG - Procesando fila 673: [None, '04/28/2025 11:18am', 'Zoila Reina Ibañez García', 527571112784]
+[2025-07-03 16:55:28,785] DEBUG in helpers: Fila 673 - Fecha: '04/28/2025 11:18am', Nombre: 'Zoila Reina Ibañez García', Teléfono: '527571112784'
+2025-07-03 16:55:28,785 - app_factory - DEBUG - Fila 673 - Fecha: '04/28/2025 11:18am', Nombre: 'Zoila Reina Ibañez García', Teléfono: '527571112784'
+[2025-07-03 16:55:28,786] DEBUG in helpers: Fila 673 agregada a datos_excel.
+2025-07-03 16:55:28,786 - app_factory - DEBUG - Fila 673 agregada a datos_excel.
+[2025-07-03 16:55:28,786] DEBUG in helpers: Procesando fila 674: [None, '04/28/2025 11:17am', 'Reyes S. Luis', 527122135842]
+2025-07-03 16:55:28,786 - app_factory - DEBUG - Procesando fila 674: [None, '04/28/2025 11:17am', 'Reyes S. Luis', 527122135842]        
+[2025-07-03 16:55:28,787] DEBUG in helpers: Fila 674 - Fecha: '04/28/2025 11:17am', Nombre: 'Reyes S. Luis', Teléfono: '527122135842'
+2025-07-03 16:55:28,787 - app_factory - DEBUG - Fila 674 - Fecha: '04/28/2025 11:17am', Nombre: 'Reyes S. Luis', Teléfono: '527122135842'
+[2025-07-03 16:55:28,788] DEBUG in helpers: Fila 674 agregada a datos_excel.
+2025-07-03 16:55:28,788 - app_factory - DEBUG - Fila 674 agregada a datos_excel.
+[2025-07-03 16:55:28,789] DEBUG in helpers: Procesando fila 675: [None, '04/28/2025 10:51am', 'Fred Dc Carbajal', 525539215154]
+2025-07-03 16:55:28,789 - app_factory - DEBUG - Procesando fila 675: [None, '04/28/2025 10:51am', 'Fred Dc Carbajal', 525539215154]     
+[2025-07-03 16:55:28,789] DEBUG in helpers: Fila 675 - Fecha: '04/28/2025 10:51am', Nombre: 'Fred Dc Carbajal', Teléfono: '525539215154'2025-07-03 16:55:28,789 - app_factory - DEBUG - Fila 675 - Fecha: '04/28/2025 10:51am', Nombre: 'Fred Dc Carbajal', Teléfono: '525539215154'
+[2025-07-03 16:55:28,790] DEBUG in helpers: Fila 675 agregada a datos_excel.
+2025-07-03 16:55:28,790 - app_factory - DEBUG - Fila 675 agregada a datos_excel.
+[2025-07-03 16:55:28,790] DEBUG in helpers: Procesando fila 676: [None, '04/28/2025 10:32am', 'Adrian Ruelas', 528117943534]
+2025-07-03 16:55:28,790 - app_factory - DEBUG - Procesando fila 676: [None, '04/28/2025 10:32am', 'Adrian Ruelas', 528117943534]        
+[2025-07-03 16:55:28,793] DEBUG in helpers: Fila 676 - Fecha: '04/28/2025 10:32am', Nombre: 'Adrian Ruelas', Teléfono: '528117943534'   
+2025-07-03 16:55:28,793 - app_factory - DEBUG - Fila 676 - Fecha: '04/28/2025 10:32am', Nombre: 'Adrian Ruelas', Teléfono: '528117943534'
+[2025-07-03 16:55:28,795] DEBUG in helpers: Fila 676 agregada a datos_excel.
+2025-07-03 16:55:28,795 - app_factory - DEBUG - Fila 676 agregada a datos_excel.
+[2025-07-03 16:55:28,795] DEBUG in helpers: Procesando fila 677: [None, None, None, None]
+2025-07-03 16:55:28,795 - app_factory - DEBUG - Procesando fila 677: [None, None, None, None]
+[2025-07-03 16:55:28,796] DEBUG in helpers: Fila 677 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,796 - app_factory - DEBUG - Fila 677 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,796] WARNING in helpers: Error en fila 677: Nombre vacío o inválido
+2025-07-03 16:55:28,796 - app_factory - WARNING - Error en fila 677: Nombre vacío o inválido
+[2025-07-03 16:55:28,801] DEBUG in helpers: Procesando fila 678: [None, None, None, None]
+2025-07-03 16:55:28,801 - app_factory - DEBUG - Procesando fila 678: [None, None, None, None]
+[2025-07-03 16:55:28,802] DEBUG in helpers: Fila 678 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,802 - app_factory - DEBUG - Fila 678 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,802] WARNING in helpers: Error en fila 678: Nombre vacío o inválido
+2025-07-03 16:55:28,802 - app_factory - WARNING - Error en fila 678: Nombre vacío o inválido
+[2025-07-03 16:55:28,803] DEBUG in helpers: Procesando fila 679: [None, None, None, None]
+2025-07-03 16:55:28,803 - app_factory - DEBUG - Procesando fila 679: [None, None, None, None]
+[2025-07-03 16:55:28,803] DEBUG in helpers: Fila 679 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,803 - app_factory - DEBUG - Fila 679 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,804] WARNING in helpers: Error en fila 679: Nombre vacío o inválido
+2025-07-03 16:55:28,804 - app_factory - WARNING - Error en fila 679: Nombre vacío o inválido
+[2025-07-03 16:55:28,804] DEBUG in helpers: Procesando fila 680: [None, None, None, None]
+2025-07-03 16:55:28,804 - app_factory - DEBUG - Procesando fila 680: [None, None, None, None]
+[2025-07-03 16:55:28,805] DEBUG in helpers: Fila 680 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,805 - app_factory - DEBUG - Fila 680 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,805] WARNING in helpers: Error en fila 680: Nombre vacío o inválido
+2025-07-03 16:55:28,805 - app_factory - WARNING - Error en fila 680: Nombre vacío o inválido
+[2025-07-03 16:55:28,806] DEBUG in helpers: Procesando fila 681: [None, None, None, None]
+2025-07-03 16:55:28,806 - app_factory - DEBUG - Procesando fila 681: [None, None, None, None]
+[2025-07-03 16:55:28,807] DEBUG in helpers: Fila 681 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,807 - app_factory - DEBUG - Fila 681 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,811] WARNING in helpers: Error en fila 681: Nombre vacío o inválido
+2025-07-03 16:55:28,811 - app_factory - WARNING - Error en fila 681: Nombre vacío o inválido
+[2025-07-03 16:55:28,812] DEBUG in helpers: Procesando fila 682: [None, None, None, None]
+2025-07-03 16:55:28,812 - app_factory - DEBUG - Procesando fila 682: [None, None, None, None]
+[2025-07-03 16:55:28,812] DEBUG in helpers: Fila 682 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,812 - app_factory - DEBUG - Fila 682 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,813] WARNING in helpers: Error en fila 682: Nombre vacío o inválido
+2025-07-03 16:55:28,813 - app_factory - WARNING - Error en fila 682: Nombre vacío o inválido
+[2025-07-03 16:55:28,815] DEBUG in helpers: Procesando fila 683: [None, None, None, None]
+2025-07-03 16:55:28,815 - app_factory - DEBUG - Procesando fila 683: [None, None, None, None]
+[2025-07-03 16:55:28,818] DEBUG in helpers: Fila 683 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,818 - app_factory - DEBUG - Fila 683 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,819] WARNING in helpers: Error en fila 683: Nombre vacío o inválido
+2025-07-03 16:55:28,819 - app_factory - WARNING - Error en fila 683: Nombre vacío o inválido
+[2025-07-03 16:55:28,819] DEBUG in helpers: Procesando fila 684: [None, None, None, None]
+2025-07-03 16:55:28,819 - app_factory - DEBUG - Procesando fila 684: [None, None, None, None]
+[2025-07-03 16:55:28,820] DEBUG in helpers: Fila 684 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,820 - app_factory - DEBUG - Fila 684 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,820] WARNING in helpers: Error en fila 684: Nombre vacío o inválido
+2025-07-03 16:55:28,820 - app_factory - WARNING - Error en fila 684: Nombre vacío o inválido
+[2025-07-03 16:55:28,821] DEBUG in helpers: Procesando fila 685: [None, None, None, None]
+2025-07-03 16:55:28,821 - app_factory - DEBUG - Procesando fila 685: [None, None, None, None]
+[2025-07-03 16:55:28,821] DEBUG in helpers: Fila 685 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,821 - app_factory - DEBUG - Fila 685 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,822] WARNING in helpers: Error en fila 685: Nombre vacío o inválido
+2025-07-03 16:55:28,822 - app_factory - WARNING - Error en fila 685: Nombre vacío o inválido
+[2025-07-03 16:55:28,822] DEBUG in helpers: Procesando fila 686: [None, None, None, None]
+2025-07-03 16:55:28,822 - app_factory - DEBUG - Procesando fila 686: [None, None, None, None]
+[2025-07-03 16:55:28,823] DEBUG in helpers: Fila 686 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,823 - app_factory - DEBUG - Fila 686 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,823] WARNING in helpers: Error en fila 686: Nombre vacío o inválido
+2025-07-03 16:55:28,823 - app_factory - WARNING - Error en fila 686: Nombre vacío o inválido
+[2025-07-03 16:55:28,827] DEBUG in helpers: Procesando fila 687: [None, None, None, None]
+2025-07-03 16:55:28,827 - app_factory - DEBUG - Procesando fila 687: [None, None, None, None]
+[2025-07-03 16:55:28,828] DEBUG in helpers: Fila 687 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,828 - app_factory - DEBUG - Fila 687 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,831] WARNING in helpers: Error en fila 687: Nombre vacío o inválido
+2025-07-03 16:55:28,831 - app_factory - WARNING - Error en fila 687: Nombre vacío o inválido
+[2025-07-03 16:55:28,832] DEBUG in helpers: Procesando fila 688: [None, None, None, None]
+2025-07-03 16:55:28,832 - app_factory - DEBUG - Procesando fila 688: [None, None, None, None]
+[2025-07-03 16:55:28,832] DEBUG in helpers: Fila 688 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,832 - app_factory - DEBUG - Fila 688 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,833] WARNING in helpers: Error en fila 688: Nombre vacío o inválido
+2025-07-03 16:55:28,833 - app_factory - WARNING - Error en fila 688: Nombre vacío o inválido
+[2025-07-03 16:55:28,834] DEBUG in helpers: Procesando fila 689: [None, None, None, None]
+2025-07-03 16:55:28,834 - app_factory - DEBUG - Procesando fila 689: [None, None, None, None]
+[2025-07-03 16:55:28,834] DEBUG in helpers: Fila 689 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,834 - app_factory - DEBUG - Fila 689 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,835] WARNING in helpers: Error en fila 689: Nombre vacío o inválido
+2025-07-03 16:55:28,835 - app_factory - WARNING - Error en fila 689: Nombre vacío o inválido
+[2025-07-03 16:55:28,837] DEBUG in helpers: Procesando fila 690: [None, None, None, None]
+2025-07-03 16:55:28,837 - app_factory - DEBUG - Procesando fila 690: [None, None, None, None]
+[2025-07-03 16:55:28,838] DEBUG in helpers: Fila 690 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,838 - app_factory - DEBUG - Fila 690 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,838] WARNING in helpers: Error en fila 690: Nombre vacío o inválido
+2025-07-03 16:55:28,838 - app_factory - WARNING - Error en fila 690: Nombre vacío o inválido
+[2025-07-03 16:55:28,839] DEBUG in helpers: Procesando fila 691: [None, None, None, None]
+2025-07-03 16:55:28,839 - app_factory - DEBUG - Procesando fila 691: [None, None, None, None]
+[2025-07-03 16:55:28,840] DEBUG in helpers: Fila 691 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,840 - app_factory - DEBUG - Fila 691 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,840] WARNING in helpers: Error en fila 691: Nombre vacío o inválido
+2025-07-03 16:55:28,840 - app_factory - WARNING - Error en fila 691: Nombre vacío o inválido
+[2025-07-03 16:55:28,846] DEBUG in helpers: Procesando fila 692: [None, None, None, None]
+2025-07-03 16:55:28,846 - app_factory - DEBUG - Procesando fila 692: [None, None, None, None]
+[2025-07-03 16:55:28,847] DEBUG in helpers: Fila 692 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,847 - app_factory - DEBUG - Fila 692 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,848] WARNING in helpers: Error en fila 692: Nombre vacío o inválido
+2025-07-03 16:55:28,848 - app_factory - WARNING - Error en fila 692: Nombre vacío o inválido
+[2025-07-03 16:55:28,848] DEBUG in helpers: Procesando fila 693: [None, None, None, None]
+2025-07-03 16:55:28,848 - app_factory - DEBUG - Procesando fila 693: [None, None, None, None]
+[2025-07-03 16:55:28,849] DEBUG in helpers: Fila 693 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,849 - app_factory - DEBUG - Fila 693 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,849] WARNING in helpers: Error en fila 693: Nombre vacío o inválido
+2025-07-03 16:55:28,849 - app_factory - WARNING - Error en fila 693: Nombre vacío o inválido
+[2025-07-03 16:55:28,849] DEBUG in helpers: Procesando fila 694: [None, None, None, None]
+2025-07-03 16:55:28,849 - app_factory - DEBUG - Procesando fila 694: [None, None, None, None]
+[2025-07-03 16:55:28,850] DEBUG in helpers: Fila 694 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,850 - app_factory - DEBUG - Fila 694 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,850] WARNING in helpers: Error en fila 694: Nombre vacío o inválido
+2025-07-03 16:55:28,850 - app_factory - WARNING - Error en fila 694: Nombre vacío o inválido
+[2025-07-03 16:55:28,851] DEBUG in helpers: Procesando fila 695: [None, None, None, None]
+2025-07-03 16:55:28,851 - app_factory - DEBUG - Procesando fila 695: [None, None, None, None]
+[2025-07-03 16:55:28,852] DEBUG in helpers: Fila 695 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,852 - app_factory - DEBUG - Fila 695 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,852] WARNING in helpers: Error en fila 695: Nombre vacío o inválido
+2025-07-03 16:55:28,852 - app_factory - WARNING - Error en fila 695: Nombre vacío o inválido
+[2025-07-03 16:55:28,853] DEBUG in helpers: Procesando fila 696: [None, None, None, None]
+2025-07-03 16:55:28,853 - app_factory - DEBUG - Procesando fila 696: [None, None, None, None]
+[2025-07-03 16:55:28,853] DEBUG in helpers: Fila 696 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,853 - app_factory - DEBUG - Fila 696 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,854] WARNING in helpers: Error en fila 696: Nombre vacío o inválido
+2025-07-03 16:55:28,854 - app_factory - WARNING - Error en fila 696: Nombre vacío o inválido
+[2025-07-03 16:55:28,854] DEBUG in helpers: Procesando fila 697: [None, None, None, None]
+2025-07-03 16:55:28,854 - app_factory - DEBUG - Procesando fila 697: [None, None, None, None]
+[2025-07-03 16:55:28,854] DEBUG in helpers: Fila 697 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,854 - app_factory - DEBUG - Fila 697 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,855] WARNING in helpers: Error en fila 697: Nombre vacío o inválido
+2025-07-03 16:55:28,855 - app_factory - WARNING - Error en fila 697: Nombre vacío o inválido
+[2025-07-03 16:55:28,855] DEBUG in helpers: Procesando fila 698: [None, None, None, None]
+2025-07-03 16:55:28,855 - app_factory - DEBUG - Procesando fila 698: [None, None, None, None]
+[2025-07-03 16:55:28,856] DEBUG in helpers: Fila 698 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,856 - app_factory - DEBUG - Fila 698 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,856] WARNING in helpers: Error en fila 698: Nombre vacío o inválido
+2025-07-03 16:55:28,856 - app_factory - WARNING - Error en fila 698: Nombre vacío o inválido
+[2025-07-03 16:55:28,861] DEBUG in helpers: Procesando fila 699: [None, None, None, None]
+2025-07-03 16:55:28,861 - app_factory - DEBUG - Procesando fila 699: [None, None, None, None]
+[2025-07-03 16:55:28,863] DEBUG in helpers: Fila 699 - Fecha: 'None', Nombre: '', Teléfono: ''
+2025-07-03 16:55:28,863 - app_factory - DEBUG - Fila 699 - Fecha: 'None', Nombre: '', Teléfono: ''
+[2025-07-03 16:55:28,863] WARNING in helpers: Error en fila 699: Nombre vacío o inválido
+2025-07-03 16:55:28,863 - app_factory - WARNING - Error en fila 699: Nombre vacío o inválido
+📊 Asesor asesor1@example.com: 225 reclutas asignados
+📊 Asesor asesor2@example.com: 225 reclutas asignados
+📊 Asesor gerente1@example.com: 225 reclutas asignados
+[2025-07-03 16:55:34,598] INFO in api: Distribución Excel exitosa: 698 reclutas
+2025-07-03 16:55:34,598 - app_factory - INFO - Distribución Excel exitosa: 698 reclutas
+INFO:app_factory:Distribución Excel exitosa: 698 reclutas
+127.0.0.1 - - [03/Jul/2025 16:55:34] "POST /api/reclutas/distribuir-excel HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [03/Jul/2025 16:55:34] "POST /api/reclutas/distribuir-excel HTTP/1.1" 200 -
