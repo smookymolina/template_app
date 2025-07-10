@@ -284,7 +284,7 @@ setupDistribucionExcelButton: function() {
     if (!distribucionBtn) {
         distribucionBtn = document.createElement('button');
         distribucionBtn.id = 'distribuir-excel-btn';
-        distribucionBtn.className = 'btn-success';
+        distribucionBtn.className = 'btn-primary';
         distribucionBtn.style.marginRight = '10px';
         distribucionBtn.innerHTML = '<i class="fas fa-chart-line"></i> Distribuir Reclutas Excel';
         
@@ -753,55 +753,52 @@ recalculateDistribution: function(editedElement = null) {
     if (!resultsContainer) return;
 
     const reclutasInputs = Array.from(resultsContainer.querySelectorAll('.reclutas-input'));
-    const totalReclutas = this.currentDistributionData.exitosos; // Usar exitosos para el cálculo
+    const totalReclutasGeneral = this.currentDistributionData.exitosos; // Total de reclutas importados
 
-    let fixedReclutas = 0;
-    const flexibleAsesores = [];
+    let totalFixedReclutas = 0;
+    const flexibleAsesoresInputs = [];
+    const manuallyEditedFlexibleInputs = new Map(); // Map to store manually edited flexible inputs
 
-    // --- PASO 1: Identificar asesores fijos y flexibles ---
+    // --- PASO 1: Identificar asesores fijos y flexibles, y sumar reclutas fijos ---
     reclutasInputs.forEach(input => {
         const asesorId = input.dataset.asesorId;
         const checkbox = resultsContainer.querySelector(`.fixed-checkbox[data-asesor-id="${asesorId}"]`);
         const count = parseInt(input.value, 10) || 0;
 
         if (checkbox && checkbox.checked) {
-            fixedReclutas += count;
-            input.readOnly = true; // Asegurar que esté deshabilitado
+            totalFixedReclutas += count;
+            input.readOnly = true; // Ensure it's disabled
         } else {
-            input.readOnly = false; // Asegurar que esté habilitado
-            flexibleAsesores.push(input);
+            input.readOnly = false; // Ensure it's enabled
+            flexibleAsesoresInputs.push(input);
+            // If this flexible input was manually edited, store its value
+            if (editedElement === input) {
+                manuallyEditedFlexibleInputs.set(asesorId, count);
+            }
         }
     });
 
-    // --- PASO 2: Calcular reclutas restantes para distribuir ---
-    let reclutasADistribuir = totalReclutas - fixedReclutas;
-    let asesoresParaDistribuir = [...flexibleAsesores];
+    // --- PASO 2: Calculate remaining recruits for flexible distribution ---
+    let remainingFlexibleReclutas = totalReclutasGeneral - totalFixedReclutas;
 
-    // --- PASO 3: Manejar el input que fue editado manualmente ---
-    if (editedElement && editedElement.classList.contains('reclutas-input') && !editedElement.readOnly) {
-        const editedValue = parseInt(editedElement.value, 10) || 0;
-        
-        // Validar que el valor editado no exceda el total disponible
-        if (editedValue > reclutasADistribuir) {
-            showError(`El valor no puede exceder los ${reclutasADistribuir} reclutas flexibles disponibles.`);
-            editedElement.value = reclutasADistribuir; // Corregir al máximo posible
-        }
-        
-        const editedAsesorId = editedElement.dataset.asesorId;
-        reclutasADistribuir -= parseInt(editedElement.value, 10) || 0;
-        
-        // Excluir el input editado de la redistribución automática
-        asesoresParaDistribuir = asesoresParaDistribuir.filter(
-            input => input.dataset.asesorId !== editedAsesorId
-        );
-    }
+    // --- PASO 3: Account for manually edited flexible inputs ---
+    manuallyEditedFlexibleInputs.forEach((value, asesorId) => {
+        remainingFlexibleReclutas -= value;
+    });
 
-    // --- PASO 4: Distribuir los reclutas restantes entre los asesores flexibles ---
-    if (asesoresParaDistribuir.length > 0) {
-        const basePerAsesor = Math.floor(reclutasADistribuir / asesoresParaDistribuir.length);
-        let remainder = reclutasADistribuir % asesoresParaDistribuir.length;
+    // --- PASO 4: Distribute remaining flexible recruits among the *other* flexible advisors ---
+    const targetFlexibleInputs = flexibleAsesoresInputs.filter(input => !manuallyEditedFlexibleInputs.has(input.dataset.asesorId));
 
-        asesoresParaDistribuir.forEach(input => {
+    if (remainingFlexibleReclutas < 0) {
+        showError(`La suma de reclutas fijos y asignaciones manuales excede el total de reclutas (${totalReclutasGeneral}). Ajuste las cantidades.`);
+        // Reset all flexible inputs to 0 or a calculated value to prevent negative assignments
+        targetFlexibleInputs.forEach(input => input.value = 0);
+        remainingFlexibleReclutas = 0; // Prevent negative display in summary
+    } else if (targetFlexibleInputs.length > 0) {
+        const basePerAsesor = Math.floor(remainingFlexibleReclutas / targetFlexibleInputs.length);
+        let remainder = remainingFlexibleReclutas % targetFlexibleInputs.length;
+
+        targetFlexibleInputs.forEach(input => {
             let assigned = basePerAsesor;
             if (remainder > 0) {
                 assigned++;
@@ -809,31 +806,27 @@ recalculateDistribution: function(editedElement = null) {
             }
             input.value = assigned;
         });
-    } else if (reclutasADistribuir < 0) {
-        // Esto puede pasar si un valor manual excede el total. Ya se maneja arriba.
-        console.warn('Reclutas a distribuir es negativo. Revisar lógica.');
-    } else if (reclutasADistribuir > 0 && asesoresParaDistribuir.length === 0) {
-        // Si quedan reclutas pero no hay asesores flexibles (porque el único flexible fue editado)
-        // No hacemos nada, el valor restante se muestra en el resumen.
-        console.warn(`Quedan ${reclutasADistribuir} reclutas sin asignar porque no hay más asesores flexibles.`);
+    } else if (remainingFlexibleReclutas > 0 && targetFlexibleInputs.length === 0 && flexibleAsesoresInputs.length > 0) {
+        // This case means all flexible advisors were manually edited, and there are still recruits left.
+        // The remaining recruits will be unassigned, and the warning will show.
+        console.warn(`Quedan ${remainingFlexibleReclutas} reclutas sin asignar porque todos los asesores flexibles han sido asignados manualmente.`);
     }
 
-    // --- PASO 5: Actualizar el resumen ---
-    let totalCalculado = 0;
+    // --- PASO 5: Update the summary ---
+    let currentTotalAssigned = 0;
     reclutasInputs.forEach(input => {
-        totalCalculado += parseInt(input.value, 10) || 0;
+        currentTotalAssigned += parseInt(input.value, 10) || 0;
     });
-    
-    const reclutasFlexiblesCalculado = totalCalculado - fixedReclutas;
 
-    // Si hay una discrepancia por redondeo o porque no hay asesores flexibles, mostrarla
-    const noAsignados = totalReclutas - totalCalculado;
+    const totalFlexibleCalculated = currentTotalAssigned - totalFixedReclutas;
+    const unassignedReclutas = totalReclutasGeneral - currentTotalAssigned;
+
     const summaryContainer = document.querySelector('.summary-stats-container');
-    if (!summaryContainer) return; // Salir si el contenedor no está listo
+    if (!summaryContainer) return;
 
     let warningMessage = summaryContainer.querySelector('.no-asignados-warning');
 
-    if (noAsignados > 0) {
+    if (unassignedReclutas > 0) {
         if (!warningMessage) {
             warningMessage = document.createElement('div');
             warningMessage.className = 'stat-item error no-asignados-warning';
@@ -841,24 +834,18 @@ recalculateDistribution: function(editedElement = null) {
         }
         warningMessage.innerHTML = `
             <span class="stat-label"><i class="fas fa-exclamation-triangle"></i> No Asignados:</span>
-            <span class="stat-value">${noAsignados}</span>
+            <span class="stat-value">${unassignedReclutas}</span>
         `;
     } else if (warningMessage) {
         warningMessage.remove();
     }
 
-    document.getElementById('total-reclutas-summary').textContent = totalReclutas;
-    document.getElementById('reclutas-fijos-summary').textContent = fixedReclutas;
-    document.getElementById('reclutas-flexibles-summary').textContent = reclutasFlexiblesCalculado;
-    document.getElementById('asesores-flexibles-summary').textContent = flexibleAsesores.length;
+    document.getElementById('total-reclutas-summary').textContent = totalReclutasGeneral;
+    document.getElementById('reclutas-fijos-summary').textContent = totalFixedReclutas;
+    document.getElementById('reclutas-flexibles-summary').textContent = totalFlexibleCalculated;
+    document.getElementById('asesores-flexibles-summary').textContent = flexibleAsesoresInputs.length;
     
-    // Recalcular el total de reclutas flexibles para el promedio
-    let totalFlexibleValue = 0;
-    flexibleAsesores.forEach(input => {
-        totalFlexibleValue += parseInt(input.value, 10) || 0;
-    });
-
-    const promedio = flexibleAsesores.length > 0 ? (totalFlexibleValue / flexibleAsesores.length).toFixed(2) : '0.00';
+    const promedio = flexibleAsesoresInputs.length > 0 ? (totalFlexibleCalculated / flexibleAsesoresInputs.length).toFixed(2) : '0.00';
     document.getElementById('promedio-flexible-summary').textContent = promedio;
 },
 
@@ -994,17 +981,7 @@ hideAsesorSelectors: function() {
 /**
  * Oculta botones de Excel
  */
-hideExcelButtons: function() {
-    // Solo ocultar el botón de subir Excel para asesores
-    const uploadButton = document.getElementById('upload-excel-btn');
-    if (uploadButton) uploadButton.style.display = 'none';
-    
-    // Mantener visible el botón de plantilla para todos los roles
-    const templateButton = document.getElementById('download-template-btn');
-    if (templateButton) templateButton.style.display = 'inline-block';
-    
-    console.log('Botón de subir Excel ocultado para asesor');
-},
+
      /**
  * Inicializa todos los elementos y eventos de gestión de reclutas
  */

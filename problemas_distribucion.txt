@@ -1,31 +1,26 @@
+Problemas identificados en la funcionalidad de distribución de reclutas:
 
-Análisis de Problemas en la Redistribución de Reclutas
-======================================================
+1.  **Ruta de Redistribución Manual Duplicada:**
+    -   **Descripción:** Existe una duplicidad de la ruta `/reclutas/redistribuir-manual` con el método `POST` en `routes/admin.py` y `routes/api.py`. La implementación en `routes/api.py` es la que se utiliza desde el frontend.
+    -   **Impacto:** Confusión en el código, posible mantenimiento redundante o errores si ambas rutas fueran llamadas en diferentes contextos.
+    -   **Acción tomada:** Se eliminó la función duplicada de `routes/admin.py`.
 
-Fecha de Análisis: 10 de julio de 2025
+2.  **Funcionalidad de Exportación a Excel Incompleta:**
+    -   **Descripción:** La función `exportar_metricas` en `routes/admin.py` contiene lógica placeholder (`pass`) para la generación de archivos Excel/CSV. Aunque no está directamente relacionada con la distribución de reclutas, es una funcionalidad de Excel incompleta.
+    -   **Impacto:** La característica de exportación de métricas no es funcional.
+    -   **Acción tomada:** No se realizó ninguna acción sobre esta funcionalidad, ya que no era el enfoque principal de la solicitud.
 
-Este documento detalla los problemas identificados en la funcionalidad de redistribución de reclutas en el modal de carga de Excel, específicamente en el archivo `static/js/reclutas.js`.
+3.  **Referencias Obsoletas en el Frontend:**
+    -   **Descripción:** El archivo `static/js/reclutas.js` contenía referencias y lógica para botones (`upload-excel-btn` y `download-template-btn`) que estaban comentados o eliminados en `templates/components/seccion_reclutas.html`.
+    -   **Impacto:** Código muerto y redundante que dificulta la legibilidad y el mantenimiento.
+    -   **Acción tomada:** Se eliminó la función `hideExcelButtons` y las referencias a los botones obsoletos en `static/js/reclutas.js` y `templates/components/seccion_reclutas.html`.
 
-### Problema 1: Lógica de Recálculo Defectuosa
+4.  **Diseño del Botón "Distribuir Reclutas Excel" Inconsistente:**
+    -   **Descripción:** El botón de distribución de reclutas no seguía un diseño coherente con el resto de la aplicación, utilizando una clase genérica `btn-success`.
+    -   **Impacto:** Inconsistencia visual en la interfaz de usuario.
+    -   **Acción tomada:** Se modificó la clase del botón a `btn-primary` en `static/js/reclutas.js` para que utilice los estilos primarios de la aplicación, que son más acordes al diseño general.
 
-La función `recalculateDistribution` se basa en un indicador `dataset.manualEdited` para determinar si un campo de número de reclutas ha sido modificado por el usuario. Una vez que un campo es editado, se considera "manualmente editado" y se excluye de futuros cálculos de redistribución automática.
-
-**Impacto:** Esto rompe la lógica de balanceo. El comportamiento esperado es que solo los asesores marcados explícitamente como "Fijo" (con el checkbox) sean excluidos del cálculo. Los demás deberían ajustarse dinámicamente.
-
-### Problema 2: Persistencia Incorrecta del Estado "Editado Manualmente"
-
-El estado `manualEdited` es persistente. No hay un mecanismo para revertirlo. Si un usuario edita un campo, este queda bloqueado de la redistribución automática para todas las ediciones posteriores dentro de la misma sesión del modal.
-
-**Impacto:** A medida que el usuario edita más campos, la cantidad de asesores "flexibles" disminuye, haciendo que la redistribución automática sea cada vez más limitada y, finalmente, deje de funcionar por completo si todos los campos no fijos son editados al menos una vez.
-
-### Problema 3: Experiencia de Usuario (UX) Confusa
-
-El comportamiento resultante es contrario a la intuición del usuario. Un usuario esperaría poder ajustar libremente los números de los asesores no fijos y que el sistema balancee automáticamente los valores entre los otros asesores no fijos para mantener la suma total. El sistema actual no se comporta de esta manera.
-
-**Impacto:** Genera frustración y puede llevar a una distribución incorrecta de los reclutas, ya que el usuario no entiende por qué los valores no se actualizan como espera.
-
-### Problema 4: Falta de Retroalimentación sobre Reclutas no Asignados
-
-En el caso de que todos los asesores no fijos hayan sido editados manualmente y la suma de sus valores sea inferior al total de reclutas a distribuir, los reclutas sobrantes no se asignan a ningún lado. La interfaz no notifica al usuario de esta discrepancia.
-
-**Impacto:** Pueden quedar reclutas sin asignar sin que el administrador se dé cuenta, lo que anula parcialmente el propósito de la herramienta.
+5.  **Discrepancias en la Lógica de `recalculateDistribution` (Frontend):**
+    -   **Descripción:** La función `recalculateDistribution` en `static/js/reclutas.js` presentaba problemas lógicos que podían llevar a asignaciones incorrectas o mensajes de error confusos, especialmente cuando se combinaban asignaciones fijas y ediciones manuales de asignaciones flexibles.
+    -   **Impacto:** Cálculos de distribución imprecisos y experiencia de usuario deficiente al intentar ajustar manualmente la distribución.
+    -   **Acción tomada:** Se refactorizó la función `recalculateDistribution` para mejorar la lógica de cálculo, asegurando que los reclutas se distribuyan correctamente entre asesores fijos y flexibles, y proporcionando mensajes de error más claros en caso de inconsistencias.
