@@ -716,14 +716,9 @@ showDistribucionResults: function(data) {
     // Attach event listeners to inputs and checkboxes
     const reclutasInputs = resultsContainer.querySelectorAll('.reclutas-input');
     reclutasInputs.forEach(input => {
-        input.addEventListener('input', () => {
-            // Mark as manually edited if not fixed
-            const asesorId = input.dataset.asesorId;
-            const checkbox = resultsContainer.querySelector(`.fixed-checkbox[data-asesor-id="${asesorId}"]`);
-            if (!checkbox || !checkbox.checked) { // Only for non-fixed inputs
-                input.dataset.manualEdited = "true";
-            }
-            this.recalculateDistribution();
+        input.addEventListener('input', (e) => {
+            // Pass the element that triggered the event
+            this.recalculateDistribution(e.target);
         });
     });
 
@@ -733,15 +728,14 @@ showDistribucionResults: function(data) {
             const asesorId = e.target.dataset.asesorId;
             const input = resultsContainer.querySelector(`.reclutas-input[data-asesor-id="${asesorId}"]`);
             if (e.target.checked) {
-                // If fixed, disable input and store its current value
-                input.dataset.fixedValue = input.value;
+                // If fixed, disable input
                 input.readOnly = true;
             } else {
-                // If not fixed, enable input and restore its previous value or set to 0
+                // If not fixed, enable input
                 input.readOnly = false;
-                delete input.dataset.fixedValue; // Clean up the stored value
             }
-            this.recalculateDistribution();
+            // Pass the checkbox that was changed to recalculate
+            this.recalculateDistribution(e.target);
         });
     });
 
@@ -750,24 +744,21 @@ showDistribucionResults: function(data) {
 },
 
 /**
- * ✅ NUEVA FUNCIÓN: Recalcula la distribución de reclutas entre asesores flexibles
+ * ✅ FUNCIÓN CORREGIDA: Recalcula la distribución de reclutas
+ * @param {HTMLElement} [editedElement] - El elemento (input o checkbox) que disparó el evento.
  */
-recalculateDistribution: function() {
+recalculateDistribution: function(editedElement = null) {
     console.log('🔄 Recalculando distribución...');
     const resultsContainer = document.getElementById('distribucion-results');
     if (!resultsContainer) return;
 
-    const reclutasInputs = resultsContainer.querySelectorAll('.reclutas-input');
-    const fixedCheckboxes = resultsContainer.querySelectorAll('.fixed-checkbox');
+    const reclutasInputs = Array.from(resultsContainer.querySelectorAll('.reclutas-input'));
+    const totalReclutas = this.currentDistributionData.exitosos; // Usar exitosos para el cálculo
 
-    let totalReclutas = this.currentDistributionData.total_procesados;
     let fixedReclutas = 0;
-    let manuallyEditedReclutas = 0;
-    let flexibleReclutas = totalReclutas;
-    let flexibleAsesoresCount = 0;
     const flexibleAsesores = [];
 
-    // First pass: Identify fixed and manually edited assignments
+    // --- PASO 1: Identificar asesores fijos y flexibles ---
     reclutasInputs.forEach(input => {
         const asesorId = input.dataset.asesorId;
         const checkbox = resultsContainer.querySelector(`.fixed-checkbox[data-asesor-id="${asesorId}"]`);
@@ -775,53 +766,100 @@ recalculateDistribution: function() {
 
         if (checkbox && checkbox.checked) {
             fixedReclutas += count;
-            input.readOnly = true; // Ensure input is read-only if fixed
-        } else if (input.dataset.manualEdited === "true") {
-            manuallyEditedReclutas += count;
-            input.readOnly = false; // Ensure it remains editable
+            input.readOnly = true; // Asegurar que esté deshabilitado
         } else {
-            input.readOnly = false; // Ensure it remains editable
-            flexibleAsesores.push({ id: asesorId, input: input });
-            flexibleAsesoresCount++;
+            input.readOnly = false; // Asegurar que esté habilitado
+            flexibleAsesores.push(input);
         }
     });
 
-    flexibleReclutas = totalReclutas - fixedReclutas - manuallyEditedReclutas;
+    // --- PASO 2: Calcular reclutas restantes para distribuir ---
+    let reclutasADistribuir = totalReclutas - fixedReclutas;
+    let asesoresParaDistribuir = [...flexibleAsesores];
 
-    // Second pass: Distribute remaining recruits among truly flexible advisors
-    if (flexibleAsesoresCount > 0) {
-        let basePerFlexible = Math.floor(flexibleReclutas / flexibleAsesoresCount);
-        let remainder = flexibleReclutas % flexibleAsesoresCount;
+    // --- PASO 3: Manejar el input que fue editado manualmente ---
+    if (editedElement && editedElement.classList.contains('reclutas-input') && !editedElement.readOnly) {
+        const editedValue = parseInt(editedElement.value, 10) || 0;
+        
+        // Validar que el valor editado no exceda el total disponible
+        if (editedValue > reclutasADistribuir) {
+            showError(`El valor no puede exceder los ${reclutasADistribuir} reclutas flexibles disponibles.`);
+            editedElement.value = reclutasADistribuir; // Corregir al máximo posible
+        }
+        
+        const editedAsesorId = editedElement.dataset.asesorId;
+        reclutasADistribuir -= parseInt(editedElement.value, 10) || 0;
+        
+        // Excluir el input editado de la redistribución automática
+        asesoresParaDistribuir = asesoresParaDistribuir.filter(
+            input => input.dataset.asesorId !== editedAsesorId
+        );
+    }
 
-        flexibleAsesores.forEach(asesor => {
-            let assigned = basePerFlexible;
+    // --- PASO 4: Distribuir los reclutas restantes entre los asesores flexibles ---
+    if (asesoresParaDistribuir.length > 0) {
+        const basePerAsesor = Math.floor(reclutasADistribuir / asesoresParaDistribuir.length);
+        let remainder = reclutasADistribuir % asesoresParaDistribuir.length;
+
+        asesoresParaDistribuir.forEach(input => {
+            let assigned = basePerAsesor;
             if (remainder > 0) {
                 assigned++;
                 remainder--;
             }
-            asesor.input.value = assigned;
+            input.value = assigned;
         });
-    } else if (flexibleReclutas > 0) {
-        // If there are flexible recruits but no flexible advisors, show error or handle
-        console.warn('No flexible advisors to assign remaining recruits to.');
-        // Optionally, display a message to the user
+    } else if (reclutasADistribuir < 0) {
+        // Esto puede pasar si un valor manual excede el total. Ya se maneja arriba.
+        console.warn('Reclutas a distribuir es negativo. Revisar lógica.');
+    } else if (reclutasADistribuir > 0 && asesoresParaDistribuir.length === 0) {
+        // Si quedan reclutas pero no hay asesores flexibles (porque el único flexible fue editado)
+        // No hacemos nada, el valor restante se muestra en el resumen.
+        console.warn(`Quedan ${reclutasADistribuir} reclutas sin asignar porque no hay más asesores flexibles.`);
     }
 
-    // Update summary fields
-    const totalReclutasSummary = document.getElementById('total-reclutas-summary');
-    if (totalReclutasSummary) totalReclutasSummary.textContent = totalReclutas;
+    // --- PASO 5: Actualizar el resumen ---
+    let totalCalculado = 0;
+    reclutasInputs.forEach(input => {
+        totalCalculado += parseInt(input.value, 10) || 0;
+    });
+    
+    const reclutasFlexiblesCalculado = totalCalculado - fixedReclutas;
 
-    const reclutasFijosSummary = document.getElementById('reclutas-fijos-summary');
-    if (reclutasFijosSummary) reclutasFijosSummary.textContent = fixedReclutas;
+    // Si hay una discrepancia por redondeo o porque no hay asesores flexibles, mostrarla
+    const noAsignados = totalReclutas - totalCalculado;
+    const summaryContainer = document.querySelector('.summary-stats-container');
+    if (!summaryContainer) return; // Salir si el contenedor no está listo
 
-    const reclutasFlexiblesSummary = document.getElementById('reclutas-flexibles-summary');
-    if (reclutasFlexiblesSummary) reclutasFlexiblesSummary.textContent = flexibleReclutas;
+    let warningMessage = summaryContainer.querySelector('.no-asignados-warning');
 
-    const asesoresFlexiblesSummary = document.getElementById('asesores-flexibles-summary');
-    if (asesoresFlexiblesSummary) asesoresFlexiblesSummary.textContent = flexibleAsesoresCount;
+    if (noAsignados > 0) {
+        if (!warningMessage) {
+            warningMessage = document.createElement('div');
+            warningMessage.className = 'stat-item error no-asignados-warning';
+            summaryContainer.appendChild(warningMessage);
+        }
+        warningMessage.innerHTML = `
+            <span class="stat-label"><i class="fas fa-exclamation-triangle"></i> No Asignados:</span>
+            <span class="stat-value">${noAsignados}</span>
+        `;
+    } else if (warningMessage) {
+        warningMessage.remove();
+    }
 
-    const promedioFlexibleSummary = document.getElementById('promedio-flexible-summary');
-    if (promedioFlexibleSummary) promedioFlexibleSummary.textContent = flexibleAsesoresCount > 0 ? (flexibleReclutas / flexibleAsesoresCount).toFixed(2) : 0;
+    document.getElementById('total-reclutas-summary').textContent = totalReclutas;
+    document.getElementById('reclutas-fijos-summary').textContent = fixedReclutas;
+    document.getElementById('reclutas-flexibles-summary').textContent = reclutasFlexiblesCalculado;
+    document.getElementById('asesores-flexibles-summary').textContent = flexibleAsesores.length;
+    
+    // Recalcular el total de reclutas flexibles para el promedio
+    let totalFlexibleValue = 0;
+    flexibleAsesores.forEach(input => {
+        totalFlexibleValue += parseInt(input.value, 10) || 0;
+    });
+
+    const promedio = flexibleAsesores.length > 0 ? (totalFlexibleValue / flexibleAsesores.length).toFixed(2) : '0.00';
+    document.getElementById('promedio-flexible-summary').textContent = promedio;
 },
 
 /**

@@ -1,4 +1,31 @@
- Abriendo modal distribución Excel
+📊 Datos recibidos: {insights: {…}, metricas_asesores: Array(3), metricas_globales: {…}, success: true}
+metricas-admin.js:254 🎨 Renderizando métricas en estructura existente: {insights: {…}, metricas_asesores: Array(3), metricas_globales: {…}, success: true}
+notifications.js:52 🔔 Notificación mostrada: [success] Métricas actualizadas correctamente
+reclutas.js:1432 🔍 Botones de acción encontrados: 0
+reclutas.js:1434 ❌ NO se encontraron botones de acción - Problema en renderizado
+(anonymous) @ reclutas.js:1434
+setTimeout
+configureUIForRole @ reclutas.js:1430
+init @ reclutas.js:1017
+await in init
+loginSuccess @ main.js:546
+await in loginSuccess
+login @ main.js:464
+await in login
+(anonymous) @ main.js:409Understand this error
+reclutas.js:1432 🔍 Botones de acción encontrados: 0
+reclutas.js:1434 ❌ NO se encontraron botones de acción - Problema en renderizado
+(anonymous) @ reclutas.js:1434
+setTimeout
+configureUIForRole @ reclutas.js:1430
+loadAndDisplayReclutas @ reclutas.js:1286
+await in loadAndDisplayReclutas
+loginSuccess @ main.js:547
+await in loginSuccess
+login @ main.js:464
+await in login
+(anonymous) @ main.js:409Understand this error
+2reclutas.js:327 📤 Abriendo modal distribución Excel
 reclutas.js:478 📄 Archivo seleccionado: MAC 13 2025.xlsx
 reclutas.js:525 🚀 Ejecutando distribución Excel...
 reclutas.js:625 DEBUG: this.asesores before map: (3) [{…}, {…}, {…}]
@@ -17,4 +44,118 @@ showDistribucionResults @ reclutas.js:654
 executeDistribucionExcel @ reclutas.js:550
 await in executeDistribucionExcel
 (anonymous) @ reclutas.js:461Understand this warning
-reclutas.js:748 🔄 Recalculando distribución...
+reclutas.js:751 🔄 Recalculando distribución...
+reclutas.js:558 ❌ Error en distribución: TypeError: Cannot read properties of null (reading 'querySelector')
+    at Object.recalculateDistribution (reclutas.js:832:43)
+    at Object.showDistribucionResults (reclutas.js:743:10)
+    at Object.executeDistribucionExcel (reclutas.js:550:18)
+executeDistribucionExcel @ reclutas.js:558
+await in executeDistribucionExcel
+(anonymous) @ reclutas.js:461Understand this error
+notifications.js:52 🔔 Notificación mostrada: [error] Error al conectar con el servidor
+reclutas.js:751 🔄 Recalculando distribución...
+reclutas.js:832 Uncaught TypeError: Cannot read properties of null (reading 'querySelector')
+    at Object.recalculateDistribution (reclutas.js:832:43)
+    at HTMLInputElement.<anonymous> (reclutas.js:721:18)
+recalculateDistribution @ reclutas.js:832
+(anonymous) @ reclutas.js:721Understand this error
+reclutas.js:751 🔄 Recalculando distribución...
+reclutas.js:832 Uncaught TypeError: Cannot read properties of null (reading 'querySelector')
+    at Object.recalculateDistribution (reclutas.js:832:43)
+    at HTMLInputElement.<anonymous> (reclutas.js:721:18)
+recalculateDistribution @ reclutas.js:832
+(anonymous) @ reclutas.js:721Understand this error
+reclutas.js:751 🔄 Recalculando distribución...
+reclutas.js:832 Uncaught TypeError: Cannot read properties of null (reading 'querySelector')
+    at Object.recalculateDistribution (reclutas.js:832:43)
+    at HTMLInputElement.<anonymous> (reclutas.js:721:18)
+recalculateDistribution @ reclutas.js:832
+(anonymous) @ reclutas.js:721Understand this error
+reclutas.js:751 🔄 Recalculando distribución...
+reclutas.js:832 Uncaught TypeError: Cannot read properties of null (reading 'querySelector')
+    at Object.recalculateDistribution (reclutas.js:832:43)
+    at HTMLInputElement.<anonymous> (reclutas.js:721:18)
+recalculateDistribution @ reclutas.js:832
+(anonymous) @ reclutas.js:721Understand this error
+reclutas.js:751 🔄 Recalculando distribución...
+reclutas.js:832 Uncaught TypeError: Cannot read properties of null (reading 'querySelector')
+    at Object.recalculateDistribution (reclutas.js:832:43)
+    at HTMLInputElement.<anonymous> (reclutas.js:721:18)
+recalculateDistribution @ reclutas.js:832
+(anonymous) @ reclutas.js:721Understand this error
+reclutas.js:751 🔄 Recalculando distribución...
+reclutas.js:832 Uncaught TypeError: Cannot read properties of null (reading 'querySelector')
+    at Object.recalculateDistribution (reclutas.js:832:43)
+    at HTMLInputElement.<anonymous> (reclutas.js:721:18)
+recalculateDistribution @ reclutas.js:832
+(anonymous) @ reclutas.js:721Understand this error
+reclutas.js:751 🔄 Recalculando distribución...
+reclutas.js:832 Uncaught TypeError: Cannot read properties of null (reading 'querySelector')
+    at Object.recalculateDistribution (reclutas.js:832:43)
+    at HTMLInputElement.<anonymous> (reclutas.js:721:18)
+recalculateDistribution @ reclutas.js:832
+(anonymous) @ reclutas.js:721Understand this error
+reclutas.js:1270 Reclutas: loadAndDisplayReclutas - Cargando reclutas...
+reclutas.js:1281 Reclutas: loadAndDisplayReclutas - Reclutas cargados: (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+reclutas.js:1415 🔧 Configurando UI de reclutas para rol: admin
+reclutas.js:243 Configurando características de administrador
+reclutas.js:141 Mostrando columna de asesor
+reclutas.js:977 Selectores de asesor mostrados
+reclutas.js:36 Configurando filtro de asesor para admin
+reclutas.js:98 Filtro de asesor poblado con 3 asesores
+reclutas.js:273 🔧 Configurando botón distribución Excel para admin
+reclutas.js:320 ✅ Botón distribución Excel configurado
+reclutas.js:36 Configurando filtro de asesor para admin
+reclutas.js:98 Filtro de asesor poblado con 3 asesores
+reclutas.js:977 Selectores de asesor mostrados
+reclutas.js:1423 ✅ Modo ADMIN activado - Botones de acción visibles
+reclutas.js:1730 🔧 Configurando botones para recluta 108
+reclutas.js:1745 ✅ Botón Ver configurado
+reclutas.js:1763 ✅ Botón Editar configurado
+reclutas.js:1781 ✅ Botón Eliminar configurado
+reclutas.js:1730 🔧 Configurando botones para recluta 361
+reclutas.js:1745 ✅ Botón Ver configurado
+reclutas.js:1763 ✅ Botón Editar configurado
+reclutas.js:1781 ✅ Botón Eliminar configurado
+reclutas.js:1730 🔧 Configurando botones para recluta 304
+reclutas.js:1745 ✅ Botón Ver configurado
+reclutas.js:1763 ✅ Botón Editar configurado
+reclutas.js:1781 ✅ Botón Eliminar configurado
+reclutas.js:1730 🔧 Configurando botones para recluta 122
+reclutas.js:1745 ✅ Botón Ver configurado
+reclutas.js:1763 ✅ Botón Editar configurado
+reclutas.js:1781 ✅ Botón Eliminar configurado
+reclutas.js:1730 🔧 Configurando botones para recluta 403
+reclutas.js:1745 ✅ Botón Ver configurado
+reclutas.js:1763 ✅ Botón Editar configurado
+reclutas.js:1781 ✅ Botón Eliminar configurado
+reclutas.js:1730 🔧 Configurando botones para recluta 339
+reclutas.js:1745 ✅ Botón Ver configurado
+reclutas.js:1763 ✅ Botón Editar configurado
+reclutas.js:1781 ✅ Botón Eliminar configurado
+reclutas.js:1730 🔧 Configurando botones para recluta 595
+reclutas.js:1745 ✅ Botón Ver configurado
+reclutas.js:1763 ✅ Botón Editar configurado
+reclutas.js:1781 ✅ Botón Eliminar configurado
+reclutas.js:1730 🔧 Configurando botones para recluta 158
+reclutas.js:1745 ✅ Botón Ver configurado
+reclutas.js:1763 ✅ Botón Editar configurado
+reclutas.js:1781 ✅ Botón Eliminar configurado
+reclutas.js:1730 🔧 Configurando botones para recluta 442
+reclutas.js:1745 ✅ Botón Ver configurado
+reclutas.js:1763 ✅ Botón Editar configurado
+reclutas.js:1781 ✅ Botón Eliminar configurado
+reclutas.js:1730 🔧 Configurando botones para recluta 378
+reclutas.js:1745 ✅ Botón Ver configurado
+reclutas.js:1763 ✅ Botón Editar configurado
+reclutas.js:1781 ✅ Botón Eliminar configurado
+reclutas.js:1292 Reclutas: Se cargaron 10 reclutas
+reclutas.js:1511 Selector poblado con 3 asesores
+reclutas.js:1518 Selectores de asesor poblados correctamente
+reclutas.js:98 Filtro de asesor poblado con 3 asesores
+reclutas.js:867 💾 Guardando distribución de reclutas por asesor...
+reclutas.js:892  POST http://127.0.0.1:5000/api/reclutas/redistribuir-manual 500 (INTERNAL SERVER ERROR)
+saveAsesorDistribution @ reclutas.js:892
+(anonymous) @ reclutas.js:469Understand this error
+notifications.js:52 🔔 Notificación mostrada: [error] Error al redistribuir: type object 'Recluta' has no attribute 'activo'
+reclutas.js:1432 🔍 Botones de acción encontrados: 30

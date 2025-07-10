@@ -1680,7 +1680,7 @@ def redistribuir_reclutas_manual():
         current_app.logger.info(f"Iniciando redistribución manual: {redistribucion_nueva}")
         
         # 🔍 Construir query base de reclutas
-        query_reclutas = Recluta.query.filter(Recluta.activo == True)
+        query_reclutas = Recluta.query.filter(Recluta.estado != 'Rechazado')
         
         # Aplicar filtros opcionales
         if filtros.get('fecha_desde'):
