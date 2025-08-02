@@ -96,8 +96,10 @@
             </div>
         </div>
 
-        <!-- 📋 GRID DE ASESORES -->
-        <div id="asesores-metricas" class="asesores-metricas-container">
+        <h4 class="subsection-title">
+            <i class="fas fa-chart-bar"></i> Comparativa de Asesores
+        </h4>
+        <div id="asesores-metricas" class="asesores-metricas-container card-content">
             <div class="loading-placeholder">
                 <i class="fas fa-users fa-spin"></i>
                 <p>Cargando métricas de asesores...</p>
@@ -155,12 +157,11 @@
                 <div class="chart-header">
                     <h5>Tendencia Temporal</h5>
                     <div class="time-filters">
-                        <button class="time-filter active" data-period="7d">7 días</button>
-                        <button class="time-filter" data-period="30d">30 días</button>
-                        <button class="time-filter" data-period="90d">90 días</button>
+                        <button class="time-filter active" data-period="mensual">Mensual</button>
+                        <button class="time-filter" data-period="semanal">Semanal</button>
                     </div>
                 </div>
-                <div id="grafico-tendencia" class="chart-container">
+                <div id="grafico-tendencia" class="chart-container card-content">
                     <div class="loading-placeholder">
                         <i class="fas fa-chart-line fa-spin"></i>
                         <p>Calculando tendencias...</p>
@@ -653,5 +654,45 @@
     font-size: 2rem;
     margin-bottom: 1rem;
     display: block;
+}
+
+.bar-chart-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    height: 150px;
+    padding: 10px;
+    gap: 5px;
+}
+
+.bar-chart-bar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+}
+
+.bar-chart-bar {
+    width: 50%;
+    background-color: #e0e0e0;
+    border-radius: 5px 5px 0 0;
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+.bar-segment {
+    width: 100%;
+    transition: height 0.3s ease;
+}
+
+.bar-segment.verde { background-color: #10B981; }
+.bar-segment.amarillo { background-color: #F59E0B; }
+.bar-segment.rojo { background-color: #EF4444; }
+
+.bar-chart-label {
+    font-size: 10px;
+    color: #6b7280;
+    margin-top: 5px;
+    text-align: center;
 }
 </style>

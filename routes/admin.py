@@ -353,6 +353,85 @@ def admin_dashboard():
     """
     return render_template('admin/dashboard.html')
 
+@admin_bp.route('/metricas/tendencias', methods=['GET'])
+@admin_required
+def get_metricas_tendencias():
+    """
+    NUEVA FUNCIONALIDAD: Obtiene tendencias temporales de reclutamiento.
+    """
+    try:
+        periodo = request.args.get('periodo', 'mensual') # mensual, semanal
+        now = datetime.utcnow()
+        tendencia = []
+
+        if periodo == 'mensual':
+            # Analizar los últimos 6 meses
+            for i in range(6):
+                mes_inicio = (now.replace(day=1) - timedelta(days=i*30)).replace(day=1)
+                # Asegurar que el mes siguiente se calcule correctamente
+                if mes_inicio.month == 12:
+                    mes_fin = mes_inicio.replace(year=mes_inicio.year + 1, month=1, day=1)
+                else:
+                    mes_fin = mes_inicio.replace(month=mes_inicio.month + 1, day=1)
+
+                query = db.session.query(
+                    func.count(Recluta.id).label('total'),
+                    func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes'),
+                    func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('amarillos'),
+                    func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rojos')
+                ).filter(
+                    Recluta.fecha_registro >= mes_inicio,
+                    Recluta.fecha_registro < mes_fin
+                ).first()
+
+                tendencia.append({
+                    "periodo": mes_inicio.strftime('%Y-%m'),
+                    "periodo_nombre": mes_inicio.strftime('%B %Y'),
+                    "total": query.total or 0,
+                    "verdes": query.verdes or 0,
+                    "amarillos": query.amarillos or 0,
+                    "rojos": query.rojos or 0
+                })
+            tendencia.reverse()
+
+        elif periodo == 'semanal':
+            # Analizar las últimas 8 semanas
+            for i in range(8):
+                fin_semana = now - timedelta(weeks=i)
+                inicio_semana = fin_semana - timedelta(days=6)
+
+                query = db.session.query(
+                    func.count(Recluta.id).label('total'),
+                    func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes'),
+                    func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('amarillos'),
+                    func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rojos')
+                ).filter(
+                    Recluta.fecha_registro >= inicio_semana,
+                    Recluta.fecha_registro <= fin_semana
+                ).first()
+
+                tendencia.append({
+                    "periodo": inicio_semana.strftime('%Y-%W'),
+                    "periodo_nombre": f"Semana del {inicio_semana.strftime('%d %b')} al {fin_semana.strftime('%d %b')}",
+                    "total": query.total or 0,
+                    "verdes": query.verdes or 0,
+                    "amarillos": query.amarillos or 0,
+                    "rojos": query.rojos or 0
+                })
+            tendencia.reverse()
+
+        return jsonify({
+            "success": True,
+            "tendencia": tendencia
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener tendencias: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al generar tendencias: {str(e)}"
+        }), 500
+
 @admin_bp.route('/metricas/asesores', methods=['GET'])
 @cross_origin()
 @admin_required

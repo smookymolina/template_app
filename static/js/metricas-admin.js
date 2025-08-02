@@ -19,6 +19,8 @@ const MetricasAdmin = {
         animacionDuracion: 300,
         initialized: false  // ✅ NUEVO: Flag para evitar doble inicialización
     },
+    
+    asesoresData: [],
 
     // 🔄 INICIALIZAR MÓDULO
     init() {
@@ -153,6 +155,18 @@ const MetricasAdmin = {
             this.ordenarHandler = (e) => this.ordenarAsesores(e.target.value);
             ordenarPor.addEventListener('change', this.ordenarHandler);
         }
+
+        const timeFilters = document.querySelectorAll('.time-filter');
+        timeFilters.forEach(button => {
+            button.addEventListener('click', (e) => {
+                const periodo = e.target.dataset.period;
+                this.loadTendencias(periodo);
+
+                // Update active button
+                timeFilters.forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+        });
     },
 
     // ✅ CARGAR MÉTRICAS CON VERIFICACIÓN DE USUARIO
@@ -253,6 +267,8 @@ const MetricasAdmin = {
     renderMetricas(data) {
         console.log('🎨 Renderizando métricas en estructura existente:', data);
         
+        this.asesoresData = data.metricas_asesores || []; // Store data here
+
         if (data.metricas_globales) {
             this.renderResumenGlobal(data.metricas_globales);
         }
@@ -276,6 +292,7 @@ const MetricasAdmin = {
         }
 
         this.updateKPIs(data);
+        this.loadTendencias(); // Cargar tendencias iniciales
     },
 
     // ✅ RESTO DE FUNCIONES (sin cambios - copiar del anterior)
@@ -680,6 +697,79 @@ const MetricasAdmin = {
 
     ordenarAsesores(criterio) {
         console.log('Ordenando asesores por:', criterio);
+        if (!this.asesoresData || this.asesoresData.length === 0) {
+            return;
+        }
+
+        let asesoresOrdenados = [...this.asesoresData]; // Create a copy to sort
+
+        switch (criterio) {
+            case 'performance':
+                asesoresOrdenados.sort((a, b) => (b.performance?.score || 0) - (a.performance?.score || 0));
+                break;
+            case 'total':
+                asesoresOrdenados.sort((a, b) => (b.total_reclutas || 0) - (a.total_reclutas || 0));
+                break;
+            case 'nombre':
+                asesoresOrdenados.sort((a, b) => {
+                    const nombreA = a.nombre || a.email || '';
+                    const nombreB = b.nombre || b.email || '';
+                    return nombreA.localeCompare(nombreB);
+                });
+                break;
+        }
+
+        // Re-render the views with the sorted data
+        this.renderAsesoresMetricas(asesoresOrdenados);
+        this.renderTablaDetallada(asesoresOrdenados);
+    },
+
+    async loadTendencias(periodo = 'mensual') {
+        try {
+            const response = await fetch(`/admin/metricas/tendencias?periodo=${periodo}`);
+            const data = await response.json();
+
+            if (data.success) {
+                this.renderGraficoTendencia(data.tendencia);
+            } else {
+                console.error('Error al cargar tendencias:', data.message);
+            }
+        } catch (error) {
+            console.error('Error en fetch de tendencias:', error);
+        }
+    },
+
+    renderGraficoTendencia(tendencia) {
+        const container = document.getElementById('grafico-tendencia');
+        if (!container) return;
+
+        if (!tendencia || tendencia.length === 0) {
+            container.innerHTML = `<div class="loading-placeholder"><p>No hay datos de tendencia.</p></div>`;
+            return;
+        }
+
+        const maxTotal = Math.max(...tendencia.map(t => t.total), 1);
+
+        const barsHTML = tendencia.map(t => {
+            const total = t.total || 0;
+            const verdes = (t.verdes || 0) / total * 100;
+            const amarillos = (t.amarillos || 0) / total * 100;
+            const rojos = (t.rojos || 0) / total * 100;
+            const height = (total / maxTotal) * 100;
+
+            return `
+                <div class="bar-chart-bar-container">
+                    <div class="bar-chart-bar" style="height: ${height}%;">
+                        <div class="bar-segment verde" style="height: ${verdes}%;"></div>
+                        <div class="bar-segment amarillo" style="height: ${amarillos}%;"></div>
+                        <div class="bar-segment rojo" style="height: ${rojos}%;"></div>
+                    </div>
+                    <div class="bar-chart-label">${t.periodo_nombre}</div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = `<div class="bar-chart-container">${barsHTML}</div>`;
     },
 
     toggleView(detallada) {

@@ -1,0 +1,32 @@
+Análisis del Módulo de Métricas Avanzadas para Administradores
+
+Fecha de Análisis: 31 de julio de 2025
+
+Resumen General:
+El módulo de métricas para administradores carga sus datos desde un único endpoint principal: GET /admin/metricas/asesores. La funcionalidad se centraliza en el archivo static/js/metricas-admin.js, que procesa la respuesta y renderiza varias secciones.
+
+Los problemas identificados no se deben a la falta de múltiples fetches, sino a la ausencia de lógica y datos específicos para las funcionalidades deseadas.
+
+1.  Comparativa de Asesores:
+    *   Estado Actual: Existe una comparativa básica. La función renderTablaDetallada y renderAsesoresMetricas renderizan una tabla y tarjetas con los datos de cada asesor, mostrando métricas de rendimiento (tasa de éxito, total de reclutas, etc.). Esta información SÍ se obtiene del fetch a /admin/metricas/asesores.
+    *   Problema Identificado: La funcionalidad de "ordenar" la comparativa no está implementada. La función ordenarAsesores(criterio) en metricas-admin.js solo contiene un console.log('Ordenando asesores por:', criterio); y no ejecuta ninguna lógica de ordenamiento en el frontend ni solicita datos ordenados al backend. El usuario puede percibir esto como una funcionalidad incompleta.
+
+2.  Tendencias Temporales y KPIs:
+    *   Estado Actual:
+        *   KPIs: Se renderizan algunos KPIs básicos (Tasa de Conversión, Productividad, etc.) en la función updateKPIs. Estos se calculan a partir de los datos globales obtenidos en el único fetch, que es una "foto" del momento actual.
+        *   Tendencias Temporales: No existe ninguna funcionalidad para visualizar tendencias a lo largo del tiempo (ej. rendimiento por semana, mes, etc.).
+    *   Problema Identificado:
+        *   Falta de Endpoint: El endpoint actual (/admin/metricas/asesores) no devuelve datos históricos o series de tiempo. Para implementar tendencias, se necesitaría un nuevo endpoint (ej. /api/admin/metricas/tendencias?periodo=mensual) que proporcione los datos necesarios.
+        *   Falta de Lógica Frontend: No hay funciones en metricas-admin.js para solicitar, procesar o renderizar gráficos de tendencias temporales (ej. usando una librería como Chart.js). La sección correspondiente en el HTML no tiene un mecanismo para ser poblada con esta información.
+
+Conclusión y Pasos Siguientes Recomendados:
+
+1.  Para la "Comparativa de Asesores":
+    *   Implementar la lógica de ordenamiento en la función ordenarAsesores en el frontend para reordenar la vista de tarjetas y la tabla según el criterio seleccionado (nombre, tasa de éxito, etc.).
+
+2.  Para las "Tendencias Temporales y KPIs":
+    *   Backend: Crear un nuevo endpoint en routes/admin.py que consulte la base de datos y agregue métricas a lo largo del tiempo (por ejemplo, agrupando por fecha de creación o actualización).
+    *   Frontend:
+        *   Añadir una nueva función en metricas-admin.js que realice un fetch a este nuevo endpoint.
+        *   Integrar una librería de gráficos (como Chart.js o similar) para visualizar los datos de tendencias recibidos.
+        *   Crear los componentes HTML (canvas para el gráfico, selectores de período de tiempo) en el template correspondiente.
