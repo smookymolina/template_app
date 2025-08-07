@@ -70,51 +70,15 @@ const Tutorial = {
         },
         {
             id: 'admin-step-2',
-            target: '#recluta-nombre, #recluta-email, #recluta-telefono',
-            title: '👤 Datos Personales',
-            description: 'Ingresa el nombre completo, correo electrónico y número de teléfono del candidato. Estos campos son esenciales para el registro y contacto.',
+            target: '#add-recluta-modal .modal-body',
+            title: '📝 Datos del Recluta',
+            description: 'Completa todos los campos con la información del candidato: nombre, correo, teléfono, puesto, estado, asesor asignado y notas adicionales. Todos son importantes para un registro completo.',
             position: 'right',
             action: 'highlight',
             nextButton: 'Siguiente'
         },
         {
             id: 'admin-step-3',
-            target: '#recluta-puesto',
-            title: '💼 Puesto al que aplica',
-            description: 'Especifica el puesto o la vacante a la que el candidato está aplicando. Esto ayuda a categorizar y filtrar.',
-            position: 'right',
-            action: 'highlight',
-            nextButton: 'Siguiente'
-        },
-        {
-            id: 'admin-step-4',
-            target: '#recluta-estado',
-            title: '📊 Estado del Recluta',
-            description: 'Selecciona el estado inicial del recluta en el proceso. Por defecto, se establece como \'En proceso\'.',
-            position: 'left',
-            action: 'highlight',
-            nextButton: 'Siguiente'
-        },
-        {
-            id: 'admin-step-5',
-            target: '#recluta-asesor',
-            title: '👨‍💼 Asesor Asignado',
-            description: 'Asigna un asesor responsable a este recluta. Si eres un asesor, se te asignará automáticamente.',
-            position: 'right',
-            action: 'highlight',
-            nextButton: 'Siguiente'
-        },
-        {
-            id: 'admin-step-6',
-            target: '#recluta-notas',
-            title: '🗒️ Notas Adicionales',
-            description: 'Añade cualquier nota relevante sobre el candidato, como observaciones, historial o detalles importantes para el seguimiento.',
-            position: 'top',
-            action: 'highlight',
-            nextButton: 'Casi listo'
-        },
-        {
-            id: 'admin-step-7',
             target: '#add-recluta-modal .modal-footer .btn-primary',
             title: '💾 Guardar Recluta',
             description: 'Una vez que hayas completado todos los campos necesarios, haz clic aquí para guardar el nuevo recluta en el sistema.',
@@ -132,8 +96,17 @@ const Tutorial = {
             title: '➕ Botón Agregar Nuevo Recluta',
             description: 'Este botón te permite añadir un nuevo candidato al sistema. Al hacer clic, se abrirá un formulario para ingresar sus datos.',
             position: 'bottom',
+            action: 'clickAndProceed', // Changed to clickAndProceed
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'add-button-step-2',
+            target: '#add-recluta-modal .modal-body', // Target the modal body
+            title: '📝 Formulario de Nuevo Recluta',
+            description: 'Aquí puedes ingresar la información detallada del nuevo recluta, incluyendo nombre, apellidos, correo electrónico y otros datos relevantes. Asegúrate de completar todos los campos obligatorios.',
+            position: 'right',
             action: 'highlight',
-            nextButton: 'Entendido'
+            nextButton: 'Finalizar'
         }
     ],
 
@@ -451,9 +424,14 @@ const Tutorial = {
     positionTooltip(tooltip, targetElement, preferredPosition) {
         const rect = targetElement.getBoundingClientRect();
         const tooltipWidth = 350; // Ancho fijo del tooltip
-        const tooltipHeight = tooltip.offsetHeight; // Obtener altura real del tooltip
         const margin = 30; // Increased margin for better spacing
         
+        // Temporarily make tooltip visible and off-screen to calculate accurate height
+        tooltip.style.visibility = 'hidden';
+        tooltip.style.display = 'block';
+        let tooltipHeight = tooltip.offsetHeight; // Obtener altura real del tooltip
+        tooltip.style.visibility = 'visible';
+
         let top, left;
         let positionsToTry = [];
 

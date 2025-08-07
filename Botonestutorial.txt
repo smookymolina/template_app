@@ -1,3 +1,62 @@
-<button class="btn-primary" id="open-add-recluta-modal">
-                <i class="fas fa-user-plus"></i> Agregar Nuevo Recluta
-            </button>
+<div class="tutorial-tooltip-content" id="tutorial-step-1">
+                <div class="tutorial-header">
+                    <h3>➕ Botón Agregar Nuevo Recluta</h3>
+                    <div class="tutorial-progress">
+                        <span>Paso 1 de 2</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 50%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tutorial-body">
+                    <p>Este botón te permite añadir un nuevo candidato al sistema. Al hacer clic, se abrirá un formulario para ingresar sus datos.</p>
+                </div>
+                
+                <div class="tutorial-footer">
+                    <div class="tutorial-controls">
+                        <label class="tutorial-checkbox">
+                            <input type="checkbox" id="no-show-again"> 
+                            <span>No mostrar este tutorial nuevamente</span>
+                        </label>
+                    </div>
+                    
+                    <div class="tutorial-buttons">
+                        
+                        <button id="tutorial-skip" class="btn btn-outline">Saltar Tutorial</button>
+                        <button id="tutorial-next" class="btn btn-primary">Siguiente ➡️</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tutorial-tooltip-content" id="tutorial-step-2" style="display:none;">
+                <div class="tutorial-header">
+                    <h3>📝 Formulario de Nuevo Recluta</h3>
+                    <div class="tutorial-progress">
+                        <span>Paso 2 de 2</span>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="tutorial-body">
+                    <p>Aquí puedes ingresar la información detallada del nuevo recluta, incluyendo nombre, apellidos, correo electrónico y otros datos relevantes. Asegúrate de completar todos los campos obligatorios.</p>
+                </div>
+                
+                <div class="tutorial-footer">
+                    <div class="tutorial-controls">
+                        <label class="tutorial-checkbox">
+                            <input type="checkbox" id="no-show-again-step-2"> 
+                            <span>No mostrar este tutorial nuevamente</span>
+                        </label>
+                    </div>
+                    
+                    <div class="tutorial-buttons">
+                        <button id="tutorial-prev" class="btn btn-outline">⬅️ Anterior</button>
+                        <button id="tutorial-skip-step-2" class="btn btn-outline">Saltar Tutorial</button>
+                        <button id="tutorial-finish" class="btn btn-primary">Finalizar ✅</button>
+                    </div>
+                </div>
+            </div>
+<h3>➕ Botón Agregar Nuevo Recluta</h3>
