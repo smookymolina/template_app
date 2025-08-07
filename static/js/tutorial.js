@@ -70,7 +70,7 @@ const Tutorial = {
         },
         {
             id: 'admin-step-2',
-            target: '#add-recluta-modal .modal-body',
+            target: '#add-recluta-modal',
             title: '📝 Datos del Recluta',
             description: 'Completa todos los campos con la información del candidato: nombre, correo, teléfono, puesto, estado, asesor asignado y notas adicionales. Todos son importantes para un registro completo.',
             position: 'right',
@@ -79,8 +79,8 @@ const Tutorial = {
         },
         {
             id: 'admin-step-3',
-            target: '#add-recluta-modal .modal-footer .btn-primary',
-            title: '💾 Guardar Recluta',
+            target: '#save-recluta-btn',
+            title: '💾 Guardar Nuevo Recluta',
             description: 'Una vez que hayas completado todos los campos necesarios, haz clic aquí para guardar el nuevo recluta en el sistema.',
             position: 'top',
             action: 'highlight',
@@ -106,7 +106,16 @@ const Tutorial = {
             description: 'Aquí puedes ingresar la información detallada del nuevo recluta, incluyendo nombre, apellidos, correo electrónico y otros datos relevantes. Asegúrate de completar todos los campos obligatorios.',
             position: 'right',
             action: 'highlight',
-            nextButton: 'Finalizar'
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'add-button-step-3',
+            target: '#save-recluta-btn',
+            title: '💾 Guardar Nuevo Recluta',
+            description: 'Una vez que hayas completado todos los campos necesarios, haz clic aquí para guardar el nuevo recluta en el sistema.',
+            position: 'top',
+            action: 'highlight',
+            nextButton: 'Finalizar Tutorial'
         }
     ],
 
@@ -249,9 +258,8 @@ const Tutorial = {
         const targetElement = document.querySelector(step.target);
         
         if (!targetElement) {
-            console.warn(`⚠️ Elemento no encontrado: ${step.target}, saltando paso...`);
-            this.nextStep();
-            return;
+            console.warn(`⚠️ Elemento no encontrado: ${step.target}, no se puede mostrar el paso.`);
+            return; // Do not call nextStep here to avoid infinite loops if element is persistently missing
         }
 
         console.log(`📍 Mostrando paso ${stepIndex + 1}/${this.steps.length}: ${step.title}`);
@@ -424,18 +432,10 @@ const Tutorial = {
         const targetElement = document.querySelector(targetSelector);
         if (targetElement) {
             targetElement.click(); // Simular clic en el botón
-            // Esperar a que el modal aparezca y luego avanzar al siguiente paso
-            const observer = new MutationObserver((mutations, obs) => {
-                if (document.getElementById('add-recluta-modal') && 
-                    document.getElementById('add-recluta-modal').style.display === 'block') {
-                    obs.disconnect(); // Detener la observación
-                    // Pequeño delay para asegurar que el modal esté completamente renderizado
-                    setTimeout(() => {
-                        this.nextStep(); // Avanzar al siguiente paso del tutorial
-                    }, 100);
-                }
-            });
-            observer.observe(document.body, { childList: true, subtree: true });
+            // Esperar un tiempo fijo para que el modal se abra y se renderice
+            setTimeout(() => {
+                this.nextStep(); // Avanzar al siguiente paso del tutorial
+            }, 500); // Retraso de 500ms
         } else {
             console.warn(`Elemento objetivo no encontrado para clickAndProceed: ${targetSelector}`);
             this.nextStep(); // Si no se encuentra, avanzar de todos modos
@@ -535,33 +535,58 @@ const Tutorial = {
 
     // 🔗 VINCULAR EVENTOS DEL TOOLTIP
     bindTooltipEvents(tooltip) {
+        // Remove previous listeners to prevent duplicates
+        if (this._nextBtnListener) {
+            const oldNextBtn = tooltip.querySelector('#tutorial-next');
+            if (oldNextBtn) oldNextBtn.removeEventListener('click', this._nextBtnListener);
+        }
+        if (this._prevBtnListener) {
+            const oldPrevBtn = tooltip.querySelector('#tutorial-prev');
+            if (oldPrevBtn) oldPrevBtn.removeEventListener('click', this._prevBtnListener);
+        }
+        if (this._skipBtnListener) {
+            const oldSkipBtn = tooltip.querySelector('#tutorial-skip');
+            if (oldSkipBtn) oldSkipBtn.removeEventListener('click', this._skipBtnListener);
+        }
+        if (this._checkboxListener) {
+            const oldCheckbox = tooltip.querySelector('#no-show-again');
+            if (oldCheckbox) oldCheckbox.removeEventListener('change', this._checkboxListener);
+        }
+
         // Botón siguiente
         const nextBtn = tooltip.querySelector('#tutorial-next');
         if (nextBtn) {
-            nextBtn.addEventListener('click', () => this.nextStep());
+            const currentStepId = this.steps[this.config.currentStep].id;
+            if (currentStepId === 'admin-step-3' || currentStepId === 'add-button-step-3') {
+                this._nextBtnListener = () => this.complete();
+            } else {
+                this._nextBtnListener = () => this.nextStep();
+            }
+            nextBtn.addEventListener('click', this._nextBtnListener);
         }
         
         // Botón anterior
         const prevBtn = tooltip.querySelector('#tutorial-prev');
         if (prevBtn) {
-            prevBtn.addEventListener('click', () => this.prevStep());
+            this._prevBtnListener = () => this.prevStep();
+            prevBtn.addEventListener('click', this._prevBtnListener);
         }
         
         // Botón saltar
         const skipBtn = tooltip.querySelector('#tutorial-skip');
         if (skipBtn) {
-            skipBtn.addEventListener('click', () => this.skip());
+            this._skipBtnListener = () => this.skip();
+            skipBtn.addEventListener('click', this._skipBtnListener);
         }
         
         // Checkbox "no mostrar más"
         const checkbox = tooltip.querySelector('#no-show-again');
         if (checkbox) {
-            // Establecer estado inicial del checkbox
             checkbox.checked = localStorage.getItem(this.config.storageKey) === 'true';
-            
-            checkbox.addEventListener('change', (e) => {
+            this._checkboxListener = (e) => {
                 this.toggleCompleted(e.target.checked);
-            });
+            };
+            checkbox.addEventListener('change', this._checkboxListener);
         }
     },
 
