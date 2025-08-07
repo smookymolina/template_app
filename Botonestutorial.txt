@@ -1,62 +1,99 @@
-<div class="tutorial-tooltip-content" id="tutorial-step-1">
-                <div class="tutorial-header">
-                    <h3>➕ Botón Agregar Nuevo Recluta</h3>
-                    <div class="tutorial-progress">
-                        <span>Paso 1 de 2</span>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 50%"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="tutorial-body">
-                    <p>Este botón te permite añadir un nuevo candidato al sistema. Al hacer clic, se abrirá un formulario para ingresar sus datos.</p>
-                </div>
-                
-                <div class="tutorial-footer">
-                    <div class="tutorial-controls">
-                        <label class="tutorial-checkbox">
-                            <input type="checkbox" id="no-show-again"> 
-                            <span>No mostrar este tutorial nuevamente</span>
-                        </label>
-                    </div>
-                    
-                    <div class="tutorial-buttons">
-                        
-                        <button id="tutorial-skip" class="btn btn-outline">Saltar Tutorial</button>
-                        <button id="tutorial-next" class="btn btn-primary">Siguiente ➡️</button>
-                    </div>
-                </div>
-            </div>
+<div class="modal-content" data-original-position="" style="position: relative;">
+        <div class="modal-header">
+            <h3>Agregar Nuevo Recluta</h3>
+            <span class="close-modal">×</span>
+        </div>
 
-            <div class="tutorial-tooltip-content" id="tutorial-step-2" style="display:none;">
-                <div class="tutorial-header">
-                    <h3>📝 Formulario de Nuevo Recluta</h3>
-                    <div class="tutorial-progress">
-                        <span>Paso 2 de 2</span>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: 100%"></div>
+        <div class="modal-body">
+            <form id="add-recluta-form">
+                <div class="profile-section">
+                    <div class="profile-pic-container modal-profile">
+                        <div id="recluta-pic-preview" class="profile-pic-preview"><i class="fas fa-user-circle"></i></div>
+                        <div class="profile-pic-overlay">
+                            <label for="recluta-upload" class="profile-pic-edit">
+                                <i class="fas fa-camera"></i>
+                            </label>
+                            <input type="file" id="recluta-upload" accept="image/*" style="display: none;">
                         </div>
                     </div>
                 </div>
-                
-                <div class="tutorial-body">
-                    <p>Aquí puedes ingresar la información detallada del nuevo recluta, incluyendo nombre, apellidos, correo electrónico y otros datos relevantes. Asegúrate de completar todos los campos obligatorios.</p>
-                </div>
-                
-                <div class="tutorial-footer">
-                    <div class="tutorial-controls">
-                        <label class="tutorial-checkbox">
-                            <input type="checkbox" id="no-show-again-step-2"> 
-                            <span>No mostrar este tutorial nuevamente</span>
-                        </label>
-                    </div>
-                    
-                    <div class="tutorial-buttons">
-                        <button id="tutorial-prev" class="btn btn-outline">⬅️ Anterior</button>
-                        <button id="tutorial-skip-step-2" class="btn btn-outline">Saltar Tutorial</button>
-                        <button id="tutorial-finish" class="btn btn-primary">Finalizar ✅</button>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="recluta-nombre">Nombre completo</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="recluta-nombre" placeholder="Nombre y apellidos" required="">
+                        </div>
                     </div>
                 </div>
-            </div>
-<h3>➕ Botón Agregar Nuevo Recluta</h3>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="recluta-email">Correo electrónico</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="recluta-email" placeholder="Correo electrónico" required="">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="recluta-telefono">Teléfono</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-phone"></i>
+                            <input type="tel" id="recluta-telefono" placeholder="Número de teléfono" required="">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="recluta-puesto">Puesto al que aplica</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-briefcase"></i>
+                            <input type="text" id="recluta-puesto" placeholder="Puesto deseado">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="recluta-estado">Estado</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-clipboard-check"></i>
+                            <select id="recluta-estado" required="">
+                                <option value="En proceso" selected="">En proceso</option>
+                                <option value="Activo">Activo</option>
+                                <option value="Rechazado">Rechazado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+              <div class="form-row asesor-selector-group" style="display: block;">
+                    <div class="form-group">
+                        <label for="recluta-asesor">Asesor asignado</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-user-tie"></i>
+                            <select id="recluta-asesor"><option value="">-- Seleccionar asesor --</option><option value="3">María García</option><option value="4">Juan Rodríguez</option><option value="5">Ana López</option></select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <!-- Grupo vacío para mantener el diseño -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="recluta-notas">Notas</label>
+                    <textarea id="recluta-notas" placeholder="Notas adicionales sobre el candidato..."></textarea>
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+    <button type="button" class="btn-secondary close-modal">
+        <i class="fas fa-times"></i> Cancelar
+    </button>
+    <button type="button" class="btn-primary">
+        <i class="fas fa-save"></i> Guardar Recluta
+    </button>
+</div>
+    </div>

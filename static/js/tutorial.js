@@ -101,7 +101,7 @@ const Tutorial = {
         },
         {
             id: 'add-button-step-2',
-            target: '#add-recluta-modal .modal-body', // Target the modal body
+            target: '#add-recluta-modal', // Target the entire modal container
             title: '📝 Formulario de Nuevo Recluta',
             description: 'Aquí puedes ingresar la información detallada del nuevo recluta, incluyendo nombre, apellidos, correo electrónico y otros datos relevantes. Asegúrate de completar todos los campos obligatorios.',
             position: 'right',
@@ -272,8 +272,23 @@ const Tutorial = {
     // 🎯 RESALTAR ELEMENTO
     highlightElement(element) {
         const highlight = document.getElementById('tutorial-highlight');
+        // Hide the highlight initially to prevent flickering or showing at old position
+        highlight.style.display = 'none';
+
         const rect = element.getBoundingClientRect();
+
+        // Restore z-index and position of previously highlighted element
+        if (this.lastHighlightedElement && this.lastHighlightedElement !== element) {
+            this.lastHighlightedElement.style.zIndex = this.lastHighlightedElement.dataset.originalZindex || '';
+            this.lastHighlightedElement.style.position = this.lastHighlightedElement.dataset.originalPosition || '';
+            this.lastHighlightedElement.removeAttribute('data-original-zindex');
+            this.lastHighlightedElement.removeAttribute('data-original-position');
+        }
         
+        // Save original z-index and position of the new element
+        element.dataset.originalZindex = element.style.zIndex;
+        element.dataset.originalPosition = element.style.position;
+
         // Configurar estilo del highlight
         highlight.style.cssText = `
             position: fixed;
@@ -288,11 +303,15 @@ const Tutorial = {
             transition: all 0.3s ease;
             box-shadow: 0 0 20px rgba(0, 123, 255, 0.5);
             animation: tutorial-pulse 2s infinite;
+            display: block; /* Make it visible after positioning */
         `;
         
         // Traer elemento al frente temporalmente
         element.style.position = 'relative';
         element.style.zIndex = this.config.zIndex + 2;
+
+        // Save reference to currently highlighted element
+        this.lastHighlightedElement = element;
     },
 
     // 💬 MOSTRAR TOOLTIP
@@ -410,7 +429,10 @@ const Tutorial = {
                 if (document.getElementById('add-recluta-modal') && 
                     document.getElementById('add-recluta-modal').style.display === 'block') {
                     obs.disconnect(); // Detener la observación
-                    this.nextStep(); // Avanzar al siguiente paso del tutorial
+                    // Pequeño delay para asegurar que el modal esté completamente renderizado
+                    setTimeout(() => {
+                        this.nextStep(); // Avanzar al siguiente paso del tutorial
+                    }, 100);
                 }
             });
             observer.observe(document.body, { childList: true, subtree: true });
