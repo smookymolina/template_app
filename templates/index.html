@@ -254,6 +254,16 @@
                 adminLoginTab.classList.remove('active');
                 trackingWrapper.classList.add('active');
                 loginForm.classList.remove('active');
+
+                // Cargar e iniciar el tutorial
+                import('/static/js/tutorial.js').then(module => {
+                    const Tutorial = module.default;
+                    if (Tutorial && typeof Tutorial.init === 'function') {
+                        Tutorial.init();
+                    }
+                }).catch(err => {
+                    console.warn('⚠️ Error cargando tutorial:', err);
+                });
             });
         }
 

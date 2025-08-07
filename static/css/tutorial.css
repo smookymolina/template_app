@@ -1,0 +1,285 @@
+/* ============================================================================ */
+/* 🎓 ESTILOS PARA SISTEMA DE TUTORIAL INTERACTIVO */
+/* Archivo: static/css/tutorial.css */
+/* ============================================================================ */
+
+/* 🎭 OVERLAY BASE */
+.tutorial-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    transition: opacity 0.3s ease;
+}
+
+/* 🎯 HIGHLIGHT DEL ELEMENTO */
+.tutorial-highlight {
+    position: fixed;
+    border: 3px solid #007bff;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    z-index: 10001;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 20px rgba(0, 123, 255, 0.5);
+    animation: tutorial-pulse 2s infinite;
+}
+
+/* 📋 TOOLTIP PRINCIPAL */
+.tutorial-tooltip {
+    position: fixed;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    z-index: 10002;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+    animation: tutorial-fadeIn 0.3s ease;
+}
+
+.tutorial-tooltip-content {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 200px;
+}
+
+/* 📊 HEADER DEL TOOLTIP */
+.tutorial-header {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    padding: 20px;
+    border-radius: 12px 12px 0 0;
+}
+
+.tutorial-header h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.3em;
+    font-weight: 600;
+}
+
+.tutorial-progress {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
+
+.progress-bar {
+    width: 120px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: white;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* 📝 BODY DEL TOOLTIP */
+.tutorial-body {
+    padding: 20px;
+    flex: 1;
+    font-size: 1em;
+    line-height: 1.6;
+    color: #333;
+}
+
+.tutorial-body p {
+    margin: 0;
+}
+
+/* 🎮 FOOTER CON CONTROLES */
+.tutorial-footer {
+    padding: 20px;
+    border-top: 1px solid #eee;
+    background: #f8f9fa;
+    border-radius: 0 0 12px 12px;
+}
+
+.tutorial-controls {
+    margin-bottom: 15px;
+}
+
+.tutorial-checkbox {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.tutorial-checkbox input {
+    margin-right: 8px;
+    transform: scale(1.1);
+}
+
+.tutorial-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* 🔘 BOTONES DEL TUTORIAL */
+.tutorial-tooltip .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.tutorial-tooltip .btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.tutorial-tooltip .btn-primary:hover {
+    background: #0056b3;
+    transform: translateY(-1px);
+}
+
+.tutorial-tooltip .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.tutorial-tooltip .btn-secondary:hover {
+    background: #545b62;
+    transform: translateY(-1px);
+}
+
+.tutorial-tooltip .btn-outline {
+    background: transparent;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+}
+
+.tutorial-tooltip .btn-outline:hover {
+    background: #f8f9fa;
+    border-color: #6c757d;
+}
+
+/* ✨ ANIMACIONES */
+@keyframes tutorial-pulse {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(0, 123, 255, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(0, 123, 255, 0.8);
+    }
+}
+
+@keyframes tutorial-fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+/* Removed duplicate .tutorial-tooltip selector with animation property */
+
+/* 📱 RESPONSIVE */
+@media (max-width: 768px) {
+    .tutorial-tooltip {
+        width: 95vw !important;
+        left: 2.5vw !important;
+        max-width: none;
+    }
+    
+    .tutorial-header {
+        padding: 15px;
+    }
+    
+    .tutorial-body {
+        padding: 15px;
+    }
+    
+    .tutorial-footer {
+        padding: 15px;
+    }
+    
+    .tutorial-buttons {
+        flex-direction: column;
+    }
+    
+    .tutorial-tooltip .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* 🆘 BOTÓN DE AYUDA FLOTANTE */
+#tutorial-help-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #007bff;
+    color: white;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+#tutorial-help-btn:hover {
+    transform: scale(1.1);
+    background: #0056b3;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+#tutorial-help-btn:active {
+    transform: scale(0.95);
+}
+
+/* 🌙 MODO OSCURO */
+[data-theme="dark"] .tutorial-tooltip {
+    background: #2c3e50;
+    color: white;
+}
+
+[data-theme="dark"] .tutorial-body {
+    color: #ecf0f1;
+}
+
+[data-theme="dark"] .tutorial-footer {
+    background: #34495e;
+    border-top-color: #4a5f7a;
+}
+
+[data-theme="dark"] .tutorial-checkbox {
+    color: #bdc3c7;
+}
+
+[data-theme="dark"] .tutorial-tooltip .btn-outline {
+    border-color: #4a5f7a;
+    color: #bdc3c7;
+}
+
+[data-theme="dark"] .tutorial-tooltip .btn-outline:hover {
+    background: #4a5f7a;
+    color: white;
+}

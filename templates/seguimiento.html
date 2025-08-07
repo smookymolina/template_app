@@ -3,6 +3,30 @@
 {% block title %}Seguimiento de Proceso | Sistema de Gestión de Reclutas{% endblock %}
 
 {% block extra_css %}
+
+/* Botón con apariencia de enlace */
+.link-button {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: inherit;
+    font-family: inherit;
+    padding: 0;
+    margin: 0;
+    display: inline;
+}
+
+.link-button:hover {
+    color: var(--primary-dark);
+    text-decoration: none;
+}
+
+.link-button:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
 <style>
     .hero-section {
         background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
@@ -391,7 +415,7 @@
         
         <div class="header-nav">
             <a href="{{ url_for('main.index') }}">Inicio</a>
-            <a href="{{ url_for('main.seguimiento') }}" class="active">Seguimiento</a>
+            <a href="{{ url_for('main.seguimiento') }}" class="active" onclick="Tutorial.restart();">Seguimiento</a>
             <a href="#contacto">Contacto</a>
         </div>
     </div>
@@ -442,12 +466,12 @@
                 <label for="folio">Folio de Seguimiento</label>
                 <div class="input-icon-wrapper">
                     <i class="fas fa-file-alt"></i>
-                    <input type="text" id="folio" placeholder="Ingresa tu folio (Ejemplo: REC-1A2B3C4D)" required>
+                    <input type="text" id="folio-input" placeholder="Ingresa tu folio (Ejemplo: REC-1A2B3C4D)" required>
                 </div>
             </div>
             
             <div class="form-button">
-                <button id="consultar-btn" class="btn-primary">
+                <button id="tracking-button" class="btn-primary">
                     <i class="fas fa-search"></i> Consultar Estado
                 </button>
             </div>
@@ -455,7 +479,8 @@
             <div class="help-text">
                 <i class="fas fa-info-circle"></i> 
                 El número de folio se te proporcionó al iniciar tu proceso. Si no cuentas con él, 
-                comunícate con tu asesor o al correo <a href="mailto:contacto@empresa.com">contacto@empresa.com</a>.
+                <button id="forgot-folio-link" type="button" class="link-button" onclick="alert('Función de recuperación próximamente')">¿olvidaste tu folio?</button> o 
+                comunícate con tu asesor al correo <a href="mailto:contacto@empresa.com">contacto@empresa.com</a>.
             </div>
         </div>
         
@@ -464,7 +489,7 @@
             <!-- Los resultados se cargarán dinámicamente aquí -->
         </div>
         
-        <div class="faq-section">
+        <div id="faq-section" class="faq-section">
             <h3>Preguntas Frecuentes</h3>
             
             <div class="faq-item">
@@ -525,8 +550,8 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Obtener elementos del DOM
-        const folioInput = document.getElementById('folio');
-        const consultarBtn = document.getElementById('consultar-btn');
+        const folioInput = document.getElementById('folio-input');
+        const consultarBtn = document.getElementById('tracking-button');
         const trackingForm = document.getElementById('tracking-form');
         const trackingResults = document.getElementById('tracking-results');
         
@@ -539,40 +564,6 @@
             if (urlParams.get('auto_consulta') === 'true') {
                 setTimeout(() => consultarFolio(), 500); // Pequeño retraso para mejor UX
             }
-        }
-        
-        // Función para compartir el resultado
-        function shareResultado(folio) {
-            // Crear URL con el folio y el parámetro de auto consulta
-            const shareUrl = `${window.location.origin}${window.location.pathname}?folio=${folio}&auto_consulta=true`;
-            
-            // Verificar si la API de compartir está disponible
-            if (navigator.share) {
-                navigator.share({
-                    title: 'Seguimiento de proceso de reclutamiento',
-                    text: 'Consulta el estado de mi proceso de reclutamiento',
-                    url: shareUrl
-                })
-                .catch(error => {
-                    console.error('Error al compartir:', error);
-                    // Fallback: copiar al portapapeles
-                    copyToClipboard(shareUrl);
-                });
-            } else {
-                // Fallback: copiar al portapapeles
-                copyToClipboard(shareUrl);
-            }
-        }
-        
-        // Función auxiliar para copiar al portapapeles
-        function copyToClipboard(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            showNotification('Enlace copiado al portapapeles. ¡Compártelo!', 'success');
         }
         
         // Función para mostrar notificaciones
@@ -613,35 +604,6 @@
                 case 'telefonica': return 'Telefónica';
                 default: return tipo;
             }
-        }
-        
-        // Función para validar el formato del folio
-        function validateFolio(folio) {
-            if (!folio) {
-                return {
-                    valid: false,
-                    message: "Por favor, ingresa un número de folio"
-                };
-            }
-            
-            // Eliminar espacios y convertir a mayúsculas
-            folio = folio.trim().toUpperCase();
-            
-            // Validar formato: REC-XXXXXXXX donde X son caracteres hexadecimales
-            const folioPattern = /^REC-[0-9A-F]{8}$/;
-            
-            if (!folioPattern.test(folio)) {
-                return {
-                    valid: false,
-                    message: "Formato de folio inválido. El formato correcto es REC-XXXXXXXX"
-                };
-            }
-            
-            return {
-                valid: true,
-                message: "",
-                folio: folio
-            };
         }
         
         // Función para renderizar los items de la timeline según el estado
@@ -721,58 +683,6 @@
             return timelineHTML;
         }
         
-        // Función para consultar el folio
-        function consultarFolio() {
-            const folioText = folioInput.value.trim();
-            
-            // Validar el folio
-            const validation = validateFolio(folioText);
-            if (!validation.valid) {
-                showNotification(validation.message, 'warning');
-                folioInput.classList.add('input-error');
-                setTimeout(() => folioInput.classList.remove('input-error'), 3000);
-                return;
-            }
-            
-            const folio = validation.folio;
-            
-            // Mostrar estado de carga
-            consultarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Consultando...';
-            consultarBtn.disabled = true;
-            folioInput.disabled = true;
-            
-            // Realizar petición al servidor
-            fetch(`/api/tracking/${folio}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(response.status === 404 ? 'Folio no encontrado' : 'Error en la consulta');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        displayTrackingResults(data.tracking_info);
-                        showNotification('Información obtenida correctamente', 'success');
-                    } else {
-                        showNotification(data.message || 'No se encontró información para este folio', 'error');
-                        folioInput.classList.add('input-error');
-                        setTimeout(() => folioInput.classList.remove('input-error'), 3000);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    showNotification(error.message || 'Error al consultar el folio. Intenta más tarde.', 'error');
-                    folioInput.classList.add('input-error');
-                    setTimeout(() => folioInput.classList.remove('input-error'), 3000);
-                })
-                .finally(() => {
-                    // Restaurar botón
-                    consultarBtn.innerHTML = '<i class="fas fa-search"></i> Consultar Estado';
-                    consultarBtn.disabled = false;
-                    folioInput.disabled = false;
-                });
-        }
-        
         // Función para mostrar los resultados del seguimiento
         function displayTrackingResults(info) {
             if (!info) return;
@@ -823,7 +733,7 @@
                     </div>
                 </div>
                 
-                <div class="timeline-container">
+                <div id="timeline-container" class="timeline-container">
                     <div class="timeline">
                         ${renderTimelineItems(info.estado)}
                     </div>
@@ -833,10 +743,6 @@
                     <i class="fas fa-arrow-left"></i> Realizar otra consulta
                 </button>
                 
-                <!-- Botón para compartir el resultado -->
-                <button class="btn-primary share-result-btn" style="margin-left: 10px;">
-                    <i class="fas fa-share-alt"></i> Compartir resultado
-                </button>
             `;
             
             // Mostrar el contenedor de resultados
@@ -904,3 +810,7 @@
     });
 </script>
 {% endblock %}
+
+<!-- 🎓 TUTORIAL INTERACTIVO -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tutorial.css') }}">
+<script type="module" src="{{ url_for('static', filename='js/tutorial.js') }}"></script>

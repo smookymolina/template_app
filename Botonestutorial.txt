@@ -1,0 +1,3 @@
+<button class="btn-primary" id="open-add-recluta-modal">
+                <i class="fas fa-user-plus"></i> Agregar Nuevo Recluta
+            </button>

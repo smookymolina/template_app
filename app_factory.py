@@ -109,12 +109,14 @@ def register_blueprints(app):
     from routes.api import api_bp
     from routes.auth import auth_bp
     from routes.admin import admin_bp
+    from routes.tutorial import tutorial_bp
     
     # Registrar blueprints
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(admin_bp, url_prefix='/admin')
+    app.register_blueprint(tutorial_bp, url_prefix='/tutorial')
 
 def register_shell_context(app):
     """Registra variables para el contexto del shell"""
