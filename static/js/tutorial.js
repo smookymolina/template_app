@@ -434,18 +434,50 @@ makeDraggable(element) {
 },
 
     // 🆕 MANEJAR ACCIÓN 'clickAndProceed'
-    handleStepClickAndProceed(targetSelector) {
-        const targetElement = document.querySelector(targetSelector);
-        if (targetElement) {
-            targetElement.click(); // Simular clic en el botón
-            // Esperar un tiempo fijo para que el modal se abra y se renderice
-            setTimeout(() => {
-                this.nextStep(); // Avanzar al siguiente paso del tutorial
-            }, 500); // Retraso de 500ms
+handleStepClickAndProceed(targetSelector) {
+    const targetElement = document.querySelector(targetSelector);
+    if (targetElement) {
+        // Simular clic en el botón que abre el modal
+        targetElement.click();
+
+        // El siguiente paso del tutorial se mostrará cuando el modal sea visible
+        const nextStepInfo = this.steps[this.config.currentStep + 1];
+        if (nextStepInfo?.target) {
+            this.waitForElement(nextStepInfo.target, () => {
+                this.nextStep();
+            });
         } else {
-            console.warn(`Elemento objetivo no encontrado para clickAndProceed: ${targetSelector}`);
-            this.nextStep(); // Si no se encuentra, avanzar de todos modos
+            // Si no hay un siguiente paso claro, avanzar de todos modos
+            this.nextStep();
         }
+    } else {
+        console.warn(`Elemento objetivo no encontrado para clickAndProceed: ${targetSelector}`);
+        this.nextStep(); // Si no se encuentra, avanzar de todos modos
+    }
+},
+
+    // 👁️ ESPERAR A QUE UN ELEMENTO SEA VISIBLE
+    waitForElement(selector, callback) {
+        const observer = new MutationObserver((mutations, obs) => {
+            const element = document.querySelector(selector);
+            if (element) {
+                // Una vez que el elemento existe, desconectar el observador y ejecutar el callback
+                obs.disconnect();
+                callback();
+            }
+        });
+
+        // Observar cambios en el cuerpo del documento
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        // Timeout de seguridad por si el elemento nunca aparece
+        setTimeout(() => {
+            observer.disconnect();
+            console.warn(`Timeout esperando por el elemento: ${selector}`);
+        }, 5000); // 5 segundos de espera máxima
     },
 
     // 📐 POSICIONAR TOOLTIP 

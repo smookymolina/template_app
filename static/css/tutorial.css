@@ -49,7 +49,7 @@
     height: 100%; /* Make content take full height of tooltip */
 }
 
-/* 📝 BODY DEL TOOLTIP */
+/* 📝 BODY DEL TOOLTIP (ÚNICO BLOQUE) */
 .tutorial-body {
     padding: 20px;
     flex: 1;
@@ -57,6 +57,10 @@
     line-height: 1.6;
     color: #333;
     overflow-y: auto; /* Add scroll for overflowing content */
+}
+
+.tutorial-body p {
+    margin: 0;
 }
 
 /* 📊 HEADER DEL TOOLTIP */
@@ -94,19 +98,6 @@
     background: white;
     border-radius: 2px;
     transition: width 0.3s ease;
-}
-
-/* 📝 BODY DEL TOOLTIP */
-.tutorial-body {
-    padding: 20px;
-    flex: 1;
-    font-size: 1em;
-    line-height: 1.6;
-    color: #333;
-}
-
-.tutorial-body p {
-    margin: 0;
 }
 
 /* 🎮 FOOTER CON CONTROLES */
@@ -215,23 +206,23 @@
         left: 2.5vw !important;
         max-width: none;
     }
-    
+
     .tutorial-header {
         padding: 15px;
     }
-    
+
     .tutorial-body {
         padding: 15px;
     }
-    
+
     .tutorial-footer {
         padding: 15px;
     }
-    
+
     .tutorial-buttons {
         flex-direction: column;
     }
-    
+
     .tutorial-tooltip .btn {
         width: 100%;
         justify-content: center;
