@@ -1,7 +1,7 @@
-// ============================================================================
+// ============================================================================ 
 // 🎓 SISTEMA DE TUTORIAL INTERACTIVO - PORTAL PÚBLICO DE SEGUIMIENTO
 // Archivo: static/js/tutorial.js
-// ============================================================================
+// ============================================================================ 
 
 const Tutorial = {
     // 🎛️ CONFIGURACIÓN DEL TUTORIAL
@@ -116,6 +116,46 @@ const Tutorial = {
             position: 'top',
             action: 'highlight',
             nextButton: 'Finalizar Tutorial'
+        }
+    ],
+
+    // 📚 PASOS DEL TUTORIAL PARA DISTRIBUIR RECLUTAS EXCEL
+    distribuirReclutasExcelSteps: [
+        {
+            id: 'dist-excel-step-1',
+            target: '#distribuir-excel-btn',
+            title: '📊 Distribuir Reclutas desde Excel',
+            description: 'Este botón abre una herramienta para cargar un archivo Excel y distribuir automáticamente los reclutas entre los asesores.',
+            position: 'bottom',
+            action: 'clickAndProceed',
+            nextButton: 'Abrir Herramienta'
+        },
+        {
+            id: 'dist-excel-step-2',
+            target: '#distribucion-drop-zone',
+            title: '📂 Cargar Archivo',
+            description: 'Arrastra y suelta un archivo Excel (.xlsx o .xls) en esta zona, o haz clic para seleccionarlo. El archivo debe contener las columnas "Fecha de creación", "Nombre" y "Teléfono".',
+            position: 'bottom',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'dist-excel-step-3',
+            target: '#confirm-distribucion',
+            title: '🚀 Confirmar Distribución',
+            description: 'Después de cargar el archivo, haz clic aquí para iniciar el proceso de validación y distribución equitativa de los reclutas.',
+            position: 'top',
+            action: 'highlight',
+            nextButton: 'Entendido'
+        },
+        {
+            id: 'dist-excel-step-4',
+            target: '#distribucion-results',
+            title: '📈 Resultados de la Distribución',
+            description: 'Aquí verás un resumen de la distribución, incluyendo los reclutas asignados a cada asesor y cualquier error encontrado. Puedes ajustar manualmente la distribución antes de guardar.',
+            position: 'top',
+            action: 'highlight',
+            nextButton: 'Finalizar'
         }
     ],
 
@@ -333,7 +373,7 @@ const Tutorial = {
                     <div class="tutorial-progress">
                         <span>Paso ${this.config.currentStep + 1} de ${this.config.totalSteps}</span>
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${((this.config.currentStep + 1) / this.config.totalSteps) * 100}%"></div>
+                            <div class="progress-fill" style="width: ${(this.config.currentStep + 1) / this.config.totalSteps * 100}%"></div>
                         </div>
                     </div>
                 </div>
@@ -674,13 +714,26 @@ _setupCheckbox(tooltip) {
         // Restaurar scroll
         document.body.style.overflow = '';
         
-        // Mostrar mensaje de bienvenida
-        this.showWelcomeMessage();
-        
         // Marcar como completado si checkbox estaba marcado
         const checkbox = document.querySelector('#no-show-again');
         if (checkbox?.checked) {
             this.markAsCompleted();
+        }
+
+        // Encadenar tutoriales
+        if (this.config.tutorialType === 'admin_add_button') {
+            console.log('🔗 Encadenando al tutorial de distribución Excel...');
+            setTimeout(() => {
+                this.startTutorial({
+                    type: 'admin_distribute_excel',
+                    steps: this.distribuirReclutasExcelSteps,
+                    storageKey: 'sistema_reclutas_tutorial_completed_admin_distribute_excel',
+                    force: true // Forzar inicio sin importar localStorage
+                });
+            }, 500); // Pequeña pausa antes de iniciar el siguiente
+        } else {
+            // Mostrar mensaje de bienvenida solo si no se encadena otro tutorial
+            this.showWelcomeMessage();
         }
     },
 
@@ -833,19 +886,28 @@ document.addEventListener('DOMContentLoaded', function(){
 // 🌍 EXPORTAR PARA USO GLOBAL
 export default Tutorial;
 
+// 🚀 FUNCIÓN PARA INICIAR UN TUTORIAL ESPECÍFICO
+Tutorial.startTutorial = function(tutorialConfig) {
+    console.log(`🎓 Iniciando tutorial: ${tutorialConfig.type}...`);
+    this.config.tutorialType = tutorialConfig.type;
+    this.steps = tutorialConfig.steps;
+    this.config.storageKey = tutorialConfig.storageKey;
+
+    if (this.shouldShowTutorial() || tutorialConfig.force) {
+        console.log(`✅ Iniciando tutorial ${tutorialConfig.type}`);
+        this.restart();
+    } else {
+        console.log(`ℹ️ Tutorial ${tutorialConfig.type} ya completado anteriormente`);
+    }
+};
+
 // 🚀 FUNCIÓN PARA INICIAR EL TUTORIAL DEL BOTÓN DE AGREGAR RECLUTA
 Tutorial.startAdminRecruitTutorial = function() {
-    console.log('🎓 Iniciando tutorial del botón de agregar recluta...');
-    this.config.tutorialType = 'admin_add_button';
-    this.steps = this.addButtonTutorialSteps;
-    this.config.storageKey = 'sistema_reclutas_tutorial_completed_admin_add_button';
-
-    if (this.shouldShowTutorial()) {
-        console.log('✅ Primera visita detectada para tutorial de botón, iniciando');
-        setTimeout(() => this.start(), 1000);
-    } else {
-        console.log('ℹ️ Tutorial de botón ya completado anteriormente');
-    }
+    this.startTutorial({
+        type: 'admin_add_button',
+        steps: this.addButtonTutorialSteps,
+        storageKey: 'sistema_reclutas_tutorial_completed_admin_add_button'
+    });
 };
 
 // === JARVIS PATCH: Tutorial de PRIMERA SESIÓN (one-shot por usuario/rol) ===
