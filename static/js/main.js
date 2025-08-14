@@ -251,6 +251,7 @@ function getCurrentUser() {
         return null;
     }
 }
+
 /**
  * ✅ INICIALIZACIÓN DEL SISTEMA DE TRACKING PÚBLICO (Refactorizada)
  */
@@ -438,12 +439,12 @@ function setupModalCloseEvents() {
     const modal = document.getElementById('cliente-modal');
     const closeButtons = document.querySelectorAll('.close-modal, .close-modal-btn');
 
-    closeButtons.forEach(button => {
+    for (const button of closeButtons) {
         button.addEventListener('click', closeClientModal);
-    });
+    }
 
-    window.addEventListener('click', (event) => {
-        if (event.target === modal) {
+    window.addEventListener('click', (clickEvent) => {
+        if (clickEvent.target === modal) {
             closeClientModal();
         }
     });
@@ -487,8 +488,8 @@ function setupLoginEvents() {
     loginButton?.addEventListener('click', login);
     
     [emailField, passwordField].forEach(field => {
-        field?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
+        field?.addEventListener('keypress', (keyEvent) => {
+            if (keyEvent.key === 'Enter') {
                 login();
             }
         });
@@ -521,6 +522,7 @@ function setupProfileEvents() {
     updateProfileBtn?.addEventListener('click', updateProfile);
     profileUpload?.addEventListener('change', handleProfileImageChange);
 }
+
 /**
  * ✅ FUNCIÓN DE LOGIN (Simplificada)
  */
@@ -578,27 +580,52 @@ function updateLoginButtonState(button, isLoading) {
 }
 
 /**
- * ✅ ACCIONES TRAS LOGIN EXITOSO (Refactorizada)
+ * ✅ ACCIONES TRAS LOGIN EXITOSO (Refactorizada y simplificada para reducir complejidad)
  */
 async function loginSuccess(usuario) {
     try {
         console.log('🎉 Procesando login exitoso para:', usuario.email, 'Rol:', usuario.rol);
         
-        if (!usuario?.email) {
-            throw new Error('Datos de usuario incompletos');
-        }
-        
-        await processSuccessfulLogin(usuario);
-        await setupUserInterface(usuario);
-        await initializeUserModules(usuario);
-        
+        validateUserData(usuario);
+        await processLogin(usuario);
+        startTutorial(usuario);
         showWelcomeMessage(usuario);
+        
         console.log('✅ Login completado exitosamente para:', usuario.rol);
         
     } catch (error) {
         console.error('❌ Error en loginSuccess:', error);
         showError('Error al cargar el dashboard: ' + error.message);
         showLoginScreen(true);
+    }
+}
+
+/**
+ * ✅ VALIDAR DATOS DE USUARIO
+ */
+function validateUserData(usuario) {
+    if (!usuario?.email) {
+        throw new Error('Datos de usuario incompletos');
+    }
+}
+
+/**
+ * ✅ PROCESAR LOGIN
+ */
+async function processLogin(usuario) {
+    await processSuccessfulLogin(usuario);
+    await setupUserInterface(usuario);
+    await initializeUserModules(usuario);
+}
+
+/**
+ * ✅ INICIAR TUTORIAL
+ */
+function startTutorial(usuario) {
+    try {
+        window.Tutorial?.startFirstSessionTutorial?.(usuario);
+    } catch (e) {
+        console.warn('No se pudo iniciar el tutorial de primera sesión:', e);
     }
 }
 
@@ -651,9 +678,9 @@ async function setupAdminModules() {
     console.log('👑 Preparando métricas administrativas...');
     
     const adminElements = document.querySelectorAll('.admin-only');
-    adminElements.forEach(element => {
+    for (const element of adminElements) {
         element.style.display = 'block';
-    });
+    }
 
     await loadMetricasAdminModule();
 
@@ -785,14 +812,14 @@ async function performLogout() {
  */
 function resetElementVisibility() {
     const adminElements = document.querySelectorAll('.admin-only');
-    adminElements.forEach(element => {
+    for (const element of adminElements) {
         if (element) element.style.display = 'none';
-    });
+    }
     
     const asesorMessages = document.querySelectorAll('.asesor-only-message');
-    asesorMessages.forEach(element => {
+    for (const element of asesorMessages) {
         if (element) element.style.display = 'none';
-    });
+    }
 }
 
 /**
@@ -843,11 +870,12 @@ function updateProfileElements(usuario) {
         'user-phone': usuario.telefono || ''
     };
     
-    Object.entries(userFields).forEach(([id, value]) => {
+    for (const [id, value] of Object.entries(userFields)) {
         const element = document.getElementById(id);
         if (element) element.value = value;
-    });
+    }
 }
+
 /**
  * ✅ FUNCIÓN CORREGIDA: configureDashboardForRole (Refactorizada)
  */
@@ -940,9 +968,9 @@ function setupAsesorConfiguration() {
  */
 function hideAsesorOnlyMessages() {
     const asesorMessages = document.querySelectorAll('.asesor-only-message');
-    asesorMessages.forEach(element => {
+    for (const element of asesorMessages) {
         if (element) element.style.display = 'none';
-    });
+    }
 }
 
 /**
@@ -950,9 +978,9 @@ function hideAsesorOnlyMessages() {
  */
 function showAsesorOnlyMessages() {
     const asesorMessages = document.querySelectorAll('.asesor-only-message');
-    asesorMessages.forEach(element => {
+    for (const element of asesorMessages) {
         if (element) element.style.display = 'block';
-    });
+    }
 }
 
 /**
@@ -1059,9 +1087,9 @@ function updateProfileRole(rol) {
  */
 function hideAdminFeatures() {
     const adminElements = document.querySelectorAll('.admin-only');
-    adminElements.forEach(element => {
+    for (const element of adminElements) {
         element.style.display = 'none';
-    });
+    }
     
     const asesorMessage = document.querySelector('.asesor-only-message');
     asesorMessage?.style && (asesorMessage.style.display = 'block');
@@ -1093,7 +1121,9 @@ function performForcedCleanup() {
     
     // Limpiar elementos dinámicos
     const dynamicElements = document.querySelectorAll('.admin-welcome, .asesor-welcome, .role-specific-element');
-    dynamicElements.forEach(el => el.remove());
+    for (const el of dynamicElements) {
+        el.remove();
+    }
     
     // Remover clases de rol
     document.body.classList.remove('admin-view', 'asesor-view');
@@ -1132,7 +1162,9 @@ function forceCleanupAndShowLogin() {
             'user_data'
         ].filter(Boolean);
         
-        itemsToRemove.forEach(item => localStorage.removeItem(item));
+        for (const item of itemsToRemove) {
+            localStorage.removeItem(item);
+        }
     } catch (e) {
         console.warn('⚠️ Error en limpieza de emergencia:', e);
     }
@@ -1163,9 +1195,9 @@ function showSection(sectionId) {
  */
 function hidePreviousSections() {
     const sections = document.querySelectorAll('.dashboard-content-section');
-    sections.forEach(section => {
+    for (const section of sections) {
         if (section) section.style.display = 'none';
-    });
+    }
 }
 
 /**
@@ -1229,13 +1261,14 @@ function setupEstadisticasForAsesor() {
  */
 function updateActiveNavigation(sectionId) {
     const navLinks = document.querySelectorAll('.nav-link');
-    navLinks.forEach(link => {
+    for (const link of navLinks) {
         link.classList.remove('active');
-    });
+    }
     
     const activeLink = document.querySelector(`[onclick*="${sectionId}"]`);
     activeLink?.classList.add('active');
 }
+
 /**
  * ✅ CARGAR MÓDULO DE MÉTRICAS ADMINISTRATIVAS
  */
@@ -1443,12 +1476,12 @@ function updateEstadisticasUI(data) {
         { selector: '.stat-card:nth-child(4) .stat-number', value: data.entrevistas?.pendientes }
     ];
     
-    statElements.forEach(({ selector, value }) => {
+    for (const { selector, value } of statElements) {
         const element = document.querySelector(selector);
         if (element && value !== undefined) {
             element.textContent = value;
         }
-    });
+    }
 }
 
 /**
@@ -1558,10 +1591,10 @@ function clearPasswordFields() {
         'confirm-password'
     ];
     
-    passwordFields.forEach(id => {
+    for (const id of passwordFields) {
         const field = document.getElementById(id);
         if (field) field.value = '';
-    });
+    }
 }
 
 /**
@@ -1639,7 +1672,7 @@ async function handleProfileUpdateResponse(response) {
     
     const responseData = await response.json();
     if (responseData.success) {
-        Auth.currentUser = responseData.usuario;
+        Auth.currentUser = { ...responseData.usuario };
         updateUserInfo(responseData.usuario);
         window.profileImage = null;
         showSuccess?.('Perfil actualizado correctamente');
@@ -1666,8 +1699,8 @@ function updateProfileButtonState(button, isLoading) {
 /**
  * ✅ MANEJAR CAMBIO DE IMAGEN DE PERFIL (Refactorizada)
  */
-function handleProfileImageChange(event) {
-    const file = event?.target?.files?.[0];
+function handleProfileImageChange(profileEvent) {
+    const file = profileEvent?.target?.files?.[0];
     if (!file) return;
     
     const profilePic = document.getElementById('dashboard-profile-pic');
@@ -1676,7 +1709,7 @@ function handleProfileImageChange(event) {
     if (file.size > CONFIG?.MAX_UPLOAD_SIZE) {
         const maxSizeMB = CONFIG.MAX_UPLOAD_SIZE / (1024 * 1024);
         showError?.(`La imagen es demasiado grande. Máximo ${maxSizeMB}MB.`);
-        event.target.value = '';
+        profileEvent.target.value = '';
         return;
     }
     
@@ -1691,6 +1724,7 @@ function handleProfileImageChange(event) {
     
     reader.readAsDataURL(file);
 }
+
 /**
  * ✅ FUNCIÓN DE DEBUG: Verificar visibilidad de elementos admin
  */
@@ -1977,7 +2011,9 @@ function cleanupMainDOMElements() {
     }
     
     const dynamicButtons = document.querySelectorAll('.dynamic-button, .role-button');
-    dynamicButtons.forEach(button => button.remove());
+    for (const button of dynamicButtons) {
+        button.remove();
+    }
     
     // Cleanup de módulos si existe
     const modules = [
@@ -1985,9 +2021,9 @@ function cleanupMainDOMElements() {
         { obj: window.Calendar, method: 'cleanup' }
     ];
     
-    modules.forEach(({ obj, method }) => {
+    for (const { obj, method } of modules) {
         obj?.[method]?.();
-    });
+    }
     
     console.log('✅ Elementos específicos de main.js limpiados');
 }

@@ -385,47 +385,53 @@ const Tutorial = {
         }
     },
 
-    // ✋ HACER ELEMENTO ARRASTRABLE
-    makeDraggable(element) {
-        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    // ✅ HACER ELEMENTO ARRASTRABLE
+makeDraggable(element) {
+    let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
-        // Obtener el header del tooltip para usarlo como "handle" de arrastre
-        const dragHandle = element.querySelector('.tutorial-header');
-        if (!dragHandle) return; // No hay handle, no se puede arrastrar
+    // Obtener el header del tooltip para usarlo como "handle" de arrastre
+    const dragHandle = element.querySelector('.tutorial-header');
+    if (!dragHandle) return; // No hay handle, no se puede arrastrar
 
-        dragHandle.onmousedown = dragMouseDown;
+    dragHandle.onmousedown = dragMouseDown;
 
-        const self = this; // Referencia a 'this' para usar dentro de las funciones anidadas
+    function dragMouseDown(dragEvent) {
+        // Validar que el evento existe
+        if (!dragEvent) return;
+        
+        dragEvent.preventDefault();
+        
+        // Obtener la posición del cursor al inicio
+        pos3 = dragEvent.clientX;
+        pos4 = dragEvent.clientY;
+        
+        document.onmouseup = closeDragElement;
+        document.onmousemove = elementDrag;
+    }
 
-        function dragMouseDown(e) {
-            e = e || window.event;
-            e.preventDefault();
-            // Obtener la posición del cursor al inicio
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmouseup = closeDragElement;
-            document.onmousemove = elementDrag;
-        }
+    function elementDrag(moveEvent) {
+        // Validar que el evento existe
+        if (!moveEvent) return;
+        
+        moveEvent.preventDefault();
+        
+        // Calcular la nueva posición del cursor
+        pos1 = pos3 - moveEvent.clientX;
+        pos2 = pos4 - moveEvent.clientY;
+        pos3 = moveEvent.clientX;
+        pos4 = moveEvent.clientY;
+        
+        // Establecer la nueva posición del elemento
+        element.style.top = (element.offsetTop - pos2) + "px";
+        element.style.left = (element.offsetLeft - pos1) + "px";
+    }
 
-        function elementDrag(e) {
-            e = e || window.event;
-            e.preventDefault();
-            // Calcular la nueva posición del cursor
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            // Establecer la nueva posición del elemento
-            element.style.top = (element.offsetTop - pos2) + "px";
-            element.style.left = (element.offsetLeft - pos1) + "px";
-        }
-
-        function closeDragElement() {
-            // Detener el arrastre cuando se suelta el botón del ratón
-            document.onmouseup = null;
-            document.onmousemove = null;
-        }
-    },
+    function closeDragElement() {
+        // Detener el arrastre cuando se suelta el botón del ratón
+        document.onmouseup = null;
+        document.onmousemove = null;
+    }
+},
 
     // 🆕 MANEJAR ACCIÓN 'clickAndProceed'
     handleStepClickAndProceed(targetSelector) {
@@ -442,153 +448,165 @@ const Tutorial = {
         }
     },
 
-    // 📐 POSICIONAR TOOLTIP
-    positionTooltip(tooltip, targetElement, preferredPosition) {
-        const rect = targetElement.getBoundingClientRect();
-        const tooltipWidth = 350; // Ancho fijo del tooltip
-        const margin = 30; // Increased margin for better spacing
-        
-        // Temporarily make tooltip visible and off-screen to calculate accurate height
-        tooltip.style.visibility = 'hidden';
-        tooltip.style.display = 'block';
-        let tooltipHeight = tooltip.offsetHeight; // Obtener altura real del tooltip
-        tooltip.style.visibility = 'visible';
+    // 📐 POSICIONAR TOOLTIP 
+positionTooltip(tooltip, targetElement, preferredPosition) {
+    const rect = targetElement.getBoundingClientRect();
+    const tooltipWidth = 350; // Ancho fijo del tooltip
+    const margin = 30; // Increased margin for better spacing
+    
+    // Temporarily make tooltip visible and off-screen to calculate accurate height
+    tooltip.style.visibility = 'hidden';
+    tooltip.style.display = 'block';
+    let tooltipHeight = tooltip.offsetHeight; // Obtener altura real del tooltip
+    tooltip.style.visibility = 'visible';
 
-        let top, left;
-        let positionsToTry = [];
+    let top, left;
+    let positionsToTry = [];
 
-        // Define the order of positions to try based on preferredPosition
-        switch (preferredPosition) {
+    // Define the order of positions to try based on preferredPosition
+    switch (preferredPosition) {
+        case 'right':
+            positionsToTry = ['right', 'left', 'bottom', 'top'];
+            break;
+        case 'left':
+            positionsToTry = ['left', 'right', 'bottom', 'top'];
+            break;
+        case 'top':
+            positionsToTry = ['top', 'bottom', 'right', 'left'];
+            break;
+        case 'bottom':
+            positionsToTry = ['bottom', 'top', 'right', 'left'];
+            break;
+        default: // Default to bottom if no valid preferredPosition
+            positionsToTry = ['bottom', 'top', 'right', 'left'];
+    }
+
+    // ✅ CAMBIO: for-of en lugar de for tradicional
+    for (const currentPosition of positionsToTry) {
+        switch (currentPosition) {
             case 'right':
-                positionsToTry = ['right', 'left', 'bottom', 'top'];
+                top = rect.top; // Align top of tooltip with top of target
+                left = rect.right + margin;
                 break;
             case 'left':
-                positionsToTry = ['left', 'right', 'bottom', 'top'];
-                break;
-            case 'top':
-                positionsToTry = ['top', 'bottom', 'right', 'left'];
+                top = rect.top; // Align top of tooltip with top of target
+                left = rect.left - tooltipWidth - margin;
                 break;
             case 'bottom':
-                positionsToTry = ['bottom', 'top', 'right', 'left'];
+                top = rect.bottom + margin;
+                left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
                 break;
-            default: // Default to bottom if no valid preferredPosition
-                positionsToTry = ['bottom', 'top', 'right', 'left'];
-        }
-
-        for (let i = 0; i < positionsToTry.length; i++) {
-            const currentPosition = positionsToTry[i];
-
-            switch (currentPosition) {
-                case 'right':
-                    top = rect.top; // Align top of tooltip with top of target
-                    left = rect.right + margin;
-                    break;
-                case 'left':
-                    top = rect.top; // Align top of tooltip with top of target
-                    left = rect.left - tooltipWidth - margin;
-                    break;
-                case 'bottom':
-                    top = rect.bottom + margin;
-                    left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
-                    break;
-                case 'top':
-                    top = rect.top - tooltipHeight - margin;
-                    left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
-                    break;
-            }
-
-            // Check if the current position is within viewport
-            const isWithinViewport = (
-                top >= margin &&
-                left >= margin &&
-                (top + tooltipHeight <= window.innerHeight - margin) &&
-                (left + tooltipWidth <= window.innerWidth - margin)
-            );
-
-            if (isWithinViewport) {
-                // Found a valid position, break the loop
+            case 'top':
+                top = rect.top - tooltipHeight - margin;
+                left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
                 break;
-            }
         }
 
-        // Final adjustments to ensure it's always within bounds, even if no ideal position was found
-        if (left < margin) left = margin;
-        if (left + tooltipWidth > window.innerWidth - margin) {
-            left = window.innerWidth - tooltipWidth - margin;
+        // Check if the current position is within viewport
+        const isWithinViewport = (
+            top >= margin &&
+            left >= margin &&
+            (top + tooltipHeight <= window.innerHeight - margin) &&
+            (left + tooltipWidth <= window.innerWidth - margin)
+        );
+
+        if (isWithinViewport) {
+            // Found a valid position, break the loop
+            break;
         }
-        if (top < margin) top = margin;
-        if (top + tooltipHeight > window.innerHeight - margin) {
-            top = window.innerHeight - tooltipHeight - margin;
-        }
-        
-        tooltip.style.cssText = `
-            position: fixed;
-            top: ${top}px;
-            left: ${left}px;
-            width: ${tooltipWidth}px;
-            max-width: 90vw;
-            z-index: ${this.config.zIndex + 3};
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        `;
-    },
+    }
+
+    // Final adjustments to ensure it's always within bounds, even if no ideal position was found
+    if (left < margin) left = margin;
+    if (left + tooltipWidth > window.innerWidth - margin) {
+        left = window.innerWidth - tooltipWidth - margin;
+    }
+    if (top < margin) top = margin;
+    if (top + tooltipHeight > window.innerHeight - margin) {
+        top = window.innerHeight - tooltipHeight - margin;
+    }
+
+    tooltip.style.cssText = `
+        position: fixed;
+        top: ${top}px;
+        left: ${left}px;
+        width: ${tooltipWidth}px;
+        max-width: 90vw;
+        z-index: ${this.config.zIndex + 3};
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    `;
+},
 
     // 🔗 VINCULAR EVENTOS DEL TOOLTIP
-    bindTooltipEvents(tooltip) {
-        // Remove previous listeners to prevent duplicates
-        if (this._nextBtnListener) {
-            const oldNextBtn = tooltip.querySelector('#tutorial-next');
-            if (oldNextBtn) oldNextBtn.removeEventListener('click', this._nextBtnListener);
-        }
-        if (this._prevBtnListener) {
-            const oldPrevBtn = tooltip.querySelector('#tutorial-prev');
-            if (oldPrevBtn) oldPrevBtn.removeEventListener('click', this._prevBtnListener);
-        }
-        if (this._skipBtnListener) {
-            const oldSkipBtn = tooltip.querySelector('#tutorial-skip');
-            if (oldSkipBtn) oldSkipBtn.removeEventListener('click', this._skipBtnListener);
-        }
-        if (this._checkboxListener) {
-            const oldCheckbox = tooltip.querySelector('#no-show-again');
-            if (oldCheckbox) oldCheckbox.removeEventListener('change', this._checkboxListener);
-        }
+bindTooltipEvents(tooltip) {
+    // Remover listeners previos para evitar duplicados
+    this._removePreviousListeners(tooltip);
+    
+    // Configurar todos los eventos de los botones y elementos
+    this._setupNextButton(tooltip);
+    this._setupPrevButton(tooltip);
+    this._setupSkipButton(tooltip);
+    this._setupCheckbox(tooltip);
+},
 
-        // Botón siguiente
-        const nextBtn = tooltip.querySelector('#tutorial-next');
-        if (nextBtn) {
-            const currentStepId = this.steps[this.config.currentStep].id;
-            if (currentStepId === 'admin-step-3' || currentStepId === 'add-button-step-3') {
-                this._nextBtnListener = () => this.complete();
-            } else {
-                this._nextBtnListener = () => this.nextStep();
-            }
-            nextBtn.addEventListener('click', this._nextBtnListener);
+// 🧹 REMOVER LISTENERS PREVIOS
+_removePreviousListeners(tooltip) {
+    const listenersToRemove = [
+        { selector: '#tutorial-next', listener: '_nextBtnListener' },
+        { selector: '#tutorial-prev', listener: '_prevBtnListener' },
+        { selector: '#tutorial-skip', listener: '_skipBtnListener' },
+        { selector: '#no-show-again', listener: '_checkboxListener' }
+    ];
+
+    for (const { selector, listener } of listenersToRemove) {
+        if (this[listener]) {
+            const element = tooltip.querySelector(selector);
+            const eventType = selector === '#no-show-again' ? 'change' : 'click';
+            if (element) element.removeEventListener(eventType, this[listener]);
         }
-        
-        // Botón anterior
-        const prevBtn = tooltip.querySelector('#tutorial-prev');
-        if (prevBtn) {
-            this._prevBtnListener = () => this.prevStep();
-            prevBtn.addEventListener('click', this._prevBtnListener);
-        }
-        
-        // Botón saltar
-        const skipBtn = tooltip.querySelector('#tutorial-skip');
-        if (skipBtn) {
-            this._skipBtnListener = () => this.skip();
-            skipBtn.addEventListener('click', this._skipBtnListener);
-        }
-        
-        // Checkbox "no mostrar más"
-        const checkbox = tooltip.querySelector('#no-show-again');
-        if (checkbox) {
-            checkbox.checked = localStorage.getItem(this.config.storageKey) === 'true';
-            this._checkboxListener = (e) => {
-                this.toggleCompleted(e.target.checked);
-            };
-            checkbox.addEventListener('change', this._checkboxListener);
-        }
-    },
+    }
+},
+
+// ▶️ CONFIGURAR BOTÓN SIGUIENTE
+_setupNextButton(tooltip) {
+    const nextBtn = tooltip.querySelector('#tutorial-next');
+    if (!nextBtn) return;
+
+    const currentStepId = this.steps[this.config.currentStep].id;
+    const isLastStep = currentStepId === 'admin-step-3' || currentStepId === 'add-button-step-3';
+    
+    this._nextBtnListener = () => isLastStep ? this.complete() : this.nextStep();
+    nextBtn.addEventListener('click', this._nextBtnListener);
+},
+
+// ◀️ CONFIGURAR BOTÓN ANTERIOR
+_setupPrevButton(tooltip) {
+    const prevBtn = tooltip.querySelector('#tutorial-prev');
+    if (!prevBtn) return;
+
+    this._prevBtnListener = () => this.prevStep();
+    prevBtn.addEventListener('click', this._prevBtnListener);
+},
+
+// ⏭️ CONFIGURAR BOTÓN SALTAR
+_setupSkipButton(tooltip) {
+    const skipBtn = tooltip.querySelector('#tutorial-skip');
+    if (!skipBtn) return;
+
+    this._skipBtnListener = () => this.skip();
+    skipBtn.addEventListener('click', this._skipBtnListener);
+},
+
+// ☑️ CONFIGURAR CHECKBOX
+_setupCheckbox(tooltip) {
+    const checkbox = tooltip.querySelector('#no-show-again');
+    if (!checkbox) return;
+
+    checkbox.checked = localStorage.getItem(this.config.storageKey) === 'true';
+    this._checkboxListener = (e) => this.toggleCompleted(e.target.checked);
+    checkbox.addEventListener('change', this._checkboxListener);
+},
 
     // ➡️ PASO SIGUIENTE
     nextStep() {
@@ -797,3 +815,121 @@ Tutorial.startAdminRecruitTutorial = function() {
         console.log('ℹ️ Tutorial de botón ya completado anteriormente');
     }
 };
+
+// === JARVIS PATCH: Tutorial de PRIMERA SESIÓN (one-shot por usuario/rol) ===
+(function () {
+  // Asegurar objeto global
+  const T = window.Tutorial || (window.Tutorial = {});
+  
+  // ✅ CAMBIO: Object spread en lugar de Object.assign
+  T.config = {
+    storageKey: 'sistema_reclutas_tutorial_completed',
+    currentStep: 0,
+    totalSteps: 0,
+    isActive: false,
+    canSkip: true,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    highlightColor: '#007bff',
+    zIndex: 10000,
+    tutorialType: null, // 'public' | 'admin_recluta' | 'first_session'
+    ...T.config || {} // Spread de configuración existente
+  };
+
+  // Pasos sugeridos (ajuste selectores a su DOM si difieren)
+  T.firstSessionSteps = [
+    {
+      id: 'fs-0',
+      target: '#sidebar-nav',
+      title: '🧭 Navegación principal',
+      description: 'Cambia entre secciones: Reclutas, Calendario, Métricas y más.',
+      position: 'right',
+      action: 'highlight',
+      nextButton: 'Siguiente'
+    },
+    {
+      id: 'fs-1',
+      target: '#open-add-recluta-modal',
+      title: '➕ Agregar recluta',
+      description: 'Crea un nuevo registro de recluta desde este botón.',
+      position: 'bottom',
+      action: 'highlight',
+      nextButton: 'Siguiente'
+    },
+    {
+      id: 'fs-2',
+      target: '#calendar-section, #calendar-container',
+      title: '🗓️ Calendario',
+      description: 'Consulta eventos, citas y recordatorios del proceso.',
+      position: 'top',
+      action: 'highlight',
+      nextButton: 'Siguiente'
+    },
+    {
+      id: 'fs-3',
+      target: '#metrics-panel, #metricas-admin-container',
+      title: '📊 Métricas',
+      description: 'Indicadores clave para seguimiento y control.',
+      position: 'left',
+      action: 'highlight',
+      nextButton: 'Siguiente'
+    },
+    {
+      id: 'fs-4',
+      target: '#user-menu, #profile-dropdown',
+      title: '👤 Perfil y sesión',
+      description: 'Edita tu perfil o cierra sesión desde aquí.',
+      position: 'bottom',
+      action: 'highlight',
+      nextButton: 'Finalizar'
+    }
+  ];
+
+  /**
+   * Inicia el tutorial de primera sesión para un usuario específico.
+   * Se ejecuta solo una vez por {rol}-{id|email}, persistiendo en localStorage.
+   */
+  T.startFirstSessionTutorial = function (usuario) {
+    try {
+      if (!usuario || (!usuario.id && !usuario.email)) return;
+      const role = usuario.rol || 'user';
+      const uid = usuario.id || usuario.email;
+
+      T.config.tutorialType = 'first_session';
+      T.config.storageKey = `tutorial_first_session_${role}_${uid}`;
+      T.steps = T.firstSessionSteps;
+
+      if (typeof T.shouldShowTutorial === 'function' ? T.shouldShowTutorial() : true) {
+        // Dar tiempo a que la UI renderice
+        setTimeout(() => {
+          if (typeof T.start === 'function') {
+            T.start();
+          } else {
+            console.warn('Tutorial.start() no existe. Verifique el motor del tutorial.');
+          }
+        }, 700);
+      }
+    } catch (e) {
+      console.warn('No se pudo iniciar tutorial de primera sesión:', e);
+    }
+  };
+
+  // (Opcional) Exponer helper para forzar desde consola: Tutorial.firstSessionTest(user)
+  T.firstSessionTest = function (usuario) {
+    localStorage.removeItem(`tutorial_first_session_${(usuario?.rol || 'user')}_${(usuario?.id || usuario?.email || 'unknown')}`);
+    T.startFirstSessionTutorial(usuario || { id: 'debug', rol: 'user', email: 'debug@example.com' });
+  };
+})();
+// === FIN DEL PATCH: Tutorial de PRIMERA SESIÓN ===
+
+
+// 🎓 Iniciar tutorial para el portal público cuando la ruta coincida
+document.addEventListener('DOMContentLoaded', function () {
+  try {
+    if (window.location.pathname.includes('/seguimiento')) {
+      // Asume que el motor ya está cargado en la página
+      window.Tutorial?.init?.();
+    }
+  } catch (err) {
+    console.warn('⚠️ Error iniciando tutorial público:', err);
+  }
+});
