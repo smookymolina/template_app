@@ -45,7 +45,7 @@ const Tutorial = {
         },
         {
             id: 'step-3',
-            target: '#forgot-folio-link',
+            target: '#tab-recuperar-folio-link',
             title: '❓ ¿Olvidaste tu Folio?',
             description: 'Si no recuerdas tu folio, haz clic aquí. Podrás recuperarlo ingresando el email y teléfono que usaste al aplicar. Es completamente seguro.',
             position: 'top',
