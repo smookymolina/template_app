@@ -37,4 +37,4 @@ Después:
         }
 ```
 
-Este cambio asegura que el tutorial esperará dinámicamente por la disponibilidad de los elementos, haciendo el sistema más robusto frente a problemas de temporización en la carga de la página.
+Este cambio asegura que el tutorial esperará dinámicamente por la disponibilidad de los elementos, haciendo el sistema más robusto frente a problemas de temporización en la carga de la página., , 
