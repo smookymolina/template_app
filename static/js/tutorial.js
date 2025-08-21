@@ -431,20 +431,41 @@ const Tutorial = {
 
     // 🆕 MANEJAR ACCIÓN 'clickAndProceed'
     handleStepClickAndProceed(targetSelector) {
-        const targetElement = document.querySelector(targetSelector);
-        if (targetElement) {
-            targetElement.click();
-            const nextStepInfo = this.steps[this.config.currentStep + 1];
+    console.log(`🔄 Ejecutando clickAndProceed para: ${targetSelector}`);
+    
+    const targetElement = document.querySelector(targetSelector);
+    if (targetElement) {
+        console.log('✅ Elemento encontrado, haciendo clic...');
+        targetElement.click();
+        
+        // Dar tiempo para que se ejecuten los efectos del clic (abrir modal, etc.)
+        this._setTimeout(() => {
+            const nextStepIndex = this.config.currentStep + 1;
+            const nextStepInfo = this.steps[nextStepIndex];
+            
             if (nextStepInfo?.target) {
-                this.waitForElement(nextStepInfo.target, () => this.nextStep(), { timeout: 5000, interval: 100 });
+                console.log(`🔍 Esperando elemento del paso ${nextStepIndex + 1}: ${nextStepInfo.target}`);
+                
+                this.waitForElement(nextStepInfo.target, (element) => {
+                    if (element) {
+                        console.log(`✅ Elemento del siguiente paso encontrado, avanzando...`);
+                        this.nextStep();
+                    } else {
+                        console.warn(`⚠️ Elemento del siguiente paso no encontrado, avanzando de todos modos`);
+                        this.nextStep();
+                    }
+                }, { timeout: 3000, interval: 200 });
             } else {
+                console.log('📍 No hay siguiente paso definido, avanzando...');
                 this.nextStep();
             }
-        } else {
-            console.warn(`Elemento objetivo no encontrado para clickAndProceed: ${targetSelector}`);
-            this.nextStep();
-        }
-    },
+        }, 300); // Dar 300ms para que se complete la acción del clic
+        
+    } else {
+        console.warn(`❌ Elemento objetivo no encontrado para clickAndProceed: ${targetSelector}`);
+        this.nextStep();
+    }
+},
 
     // 👁️ ESPERAR A QUE UN ELEMENTO APAREZCA (con timeout y polling)
     waitForElement(selector, callback, opts = {}) {
@@ -579,15 +600,22 @@ const Tutorial = {
 
     // ▶️ CONFIGURAR BOTÓN SIGUIENTE
     _setupNextButton(tooltip) {
-        const nextBtn = tooltip.querySelector('#tutorial-next');
-        if (!nextBtn) return;
+    const nextBtn = tooltip.querySelector('#tutorial-next');
+    if (!nextBtn) return;
 
-        const currentStepId = this.steps[this.config.currentStep].id;
-        const isLastStep = currentStepId === 'admin-step-3' || currentStepId === 'add-button-step-3' || this.config.currentStep === this.steps.length - 1;
+    // ✅ VERIFICAR SI YA TIENE ACCIÓN ESPECIAL CONFIGURADA
+    const currentStep = this.steps[this.config.currentStep];
+    if (currentStep && currentStep.action === 'clickAndProceed') {
+        console.log('⚠️ Paso con acción especial, no agregando listener normal');
+        return; // No agregar listener normal para evitar doble ejecución
+    }
 
-        this._nextBtnListener = () => isLastStep ? this.complete() : this.nextStep();
-        nextBtn.addEventListener('click', this._nextBtnListener);
-    },
+    const currentStepId = this.steps[this.config.currentStep].id;
+    const isLastStep = currentStepId === 'admin-step-3' || currentStepId === 'add-button-step-3' || this.config.currentStep === this.steps.length - 1;
+
+    this._nextBtnListener = () => isLastStep ? this.complete() : this.nextStep();
+    nextBtn.addEventListener('click', this._nextBtnListener);
+},
 
     // ◀️ CONFIGURAR BOTÓN ANTERIOR
     _setupPrevButton(tooltip) {
