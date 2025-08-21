@@ -1,6 +1,7 @@
 // ============================================================================
 // 🎓 SISTEMA DE TUTORIAL INTERACTIVO - PORTAL PÚBLICO DE SEGUIMIENTO
 // Archivo: static/js/tutorial.js
+// Versión: 3.1 - Código Completo Corregido
 // ============================================================================
 
 const Tutorial = {
@@ -22,6 +23,7 @@ const Tutorial = {
     _activeIntervals: [],
     _activeTimeouts: [],
     _activeObservers: [],
+    lastHighlightedElement: null,
 
     // 📚 PASOS DEL TUTORIAL PARA PORTAL PÚBLICO
     publicSteps: [
@@ -107,7 +109,7 @@ const Tutorial = {
         },
         {
             id: 'add-button-step-2',
-            target: '#add-recluta-modal',
+            target: '#add-recluta-modal .modal-content, #add-recluta-modal, .modal.show .modal-content, .modal[style*="block"] .modal-content',
             title: '📝 Formulario de Nuevo Recluta',
             description: 'Aquí puedes ingresar la información detallada del nuevo recluta, incluyendo nombre, apellidos, correo electrónico y otros datos relevantes. Asegúrate de completar todos los campos obligatorios.',
             position: 'right',
@@ -116,7 +118,7 @@ const Tutorial = {
         },
         {
             id: 'add-button-step-3',
-            target: '#save-recluta-btn',
+            target: '#save-recluta-btn, .modal-footer .btn-primary, button[type="submit"]',
             title: '💾 Guardar Nuevo Recluta',
             description: 'Una vez que hayas completado todos los campos necesarios, haz clic aquí para guardar el nuevo recluta en el sistema.',
             position: 'top',
@@ -125,43 +127,49 @@ const Tutorial = {
         }
     ],
 
-    // 📚 PASOS DEL TUTORIAL PARA DISTRIBUIR RECLUTAS EXCEL
+    // 📚 PASOS DEL TUTORIAL PARA DISTRIBUIR RECLUTAS EXCEL (MEJORADO PARA ENCADENAMIENTO)
     distribuirReclutasExcelSteps: [
         {
             id: 'dist-excel-step-1',
             target: '#distribuir-excel-btn',
             title: '📊 Distribuir Reclutas desde Excel',
-            description: 'Este botón abre una herramienta para cargar un archivo Excel y distribuir automáticamente los reclutas entre los asesores.',
+            description: 'Este botón abre una herramienta para cargar un archivo Excel y distribuir automáticamente los reclutas entre los asesores. Haz clic en "Siguiente" para abrir la herramienta.',
             position: 'bottom',
             action: 'clickAndProceed',
             nextButton: 'Abrir Herramienta'
         },
         {
             id: 'dist-excel-step-2',
-            target: '#distribucion-drop-zone',
-            title: '📂 Cargar Archivo',
-            description: 'Arrastra y suelta un archivo Excel (.xlsx o .xls) en esta zona, o haz clic para seleccionarlo. El archivo debe contener las columnas "Fecha de creación", "Nombre" y "Teléfono".',
+            target: '#distribucion-drop-zone, .drop-zone, [class*="drop"], .upload-area, #distribucion-modal .modal-body',
+            title: '📂 Área de Carga de Archivo',
+            description: 'Una vez que se abra la herramienta, verás esta área donde puedes arrastrar y soltar un archivo Excel (.xlsx o .xls) o hacer clic para seleccionarlo desde tu computadora.',
             position: 'bottom',
             action: 'highlight',
-            nextButton: 'Siguiente'
+            nextButton: 'Siguiente',
+            waitForElement: true,
+            timeout: 10000
         },
         {
             id: 'dist-excel-step-3',
-            target: '#confirm-distribucion',
-            title: '🚀 Confirmar Distribución',
-            description: 'Después de cargar el archivo, haz clic aquí para iniciar el proceso de validación y distribución equitativa de los reclutas.',
+            target: '#confirm-distribucion, .confirm-btn, button[class*="confirm"], .modal-footer .btn-primary',
+            title: '🚀 Botón de Confirmación',
+            description: 'Después de cargar tu archivo Excel, aparecerá un botón para confirmar y procesar la distribución. El sistema validará los datos antes de asignar reclutas a los asesores.',
             position: 'top',
             action: 'highlight',
-            nextButton: 'Entendido'
+            nextButton: 'Continuar',
+            waitForElement: true,
+            timeout: 15000
         },
         {
             id: 'dist-excel-step-4',
-            target: '#distribucion-results',
+            target: '#distribucion-results, .results-container, [class*="result"], .distribution-summary',
             title: '📈 Resultados de la Distribución',
-            description: 'Aquí verás un resumen de la distribución, incluyendo los reclutas asignados a cada asesor y cualquier error encontrado. Puedes ajustar manualmente la distribución antes de guardar.',
+            description: 'Finalmente, aquí se mostrarán los resultados de la distribución: qué reclutas fueron asignados a cada asesor, errores encontrados en el archivo, y un resumen del proceso.',
             position: 'top',
             action: 'highlight',
-            nextButton: 'Finalizar'
+            nextButton: 'Finalizar Tutorial',
+            waitForElement: true,
+            timeout: 20000
         }
     ],
 
@@ -196,32 +204,77 @@ const Tutorial = {
 
     // 🔍 VERIFICAR SI ES PÁGINA DE SEGUIMIENTO
     isTrackingPage() {
-        return window.location.pathname.includes('/seguimiento') ||
-               document.getElementById('tracking-wrapper') !== null;
+        const trackingIndicators = [
+            () => window.location.pathname.includes('/seguimiento'),
+            () => document.getElementById('tracking-wrapper') !== null,
+            () => document.getElementById('folio-input') !== null && 
+                  document.getElementById('tracking-button') !== null,
+            () => document.title && document.title.toLowerCase().includes('seguimiento')
+        ];
+        
+        return trackingIndicators.some(check => {
+            try {
+                return check();
+            } catch (e) {
+                console.warn('Error checking tracking page indicator:', e.message);
+                return false;
+            }
+        });
     },
 
     // 🔍 VERIFICAR SI ES PÁGINA DE AÑADIR RECLUTA (ADMIN)
     isAddRecruitPage() {
-        return window.location.pathname.includes('/admin/dashboard') &&
-               document.getElementById('add-recluta-modal') !== null;
+        try {
+            return window.location.pathname.includes('/admin/dashboard') &&
+                   document.getElementById('add-recluta-modal') !== null;
+        } catch (e) {
+            console.warn('Error checking admin recruit page:', e.message);
+            return false;
+        }
     },
 
-    // ✅ VERIFICAR SI DEBE MOSTRAR TUTORIAL
+    // ✅ VERIFICAR SI DEBE MOSTRAR TUTORIAL (MEJORADO PARA PRIMERA VISITA GLOBAL)
     shouldShowTutorial() {
-        const tutorialCompleted = localStorage.getItem(this.config.storageKey) === 'true';
-        const urlParams = new URLSearchParams(window.location.search);
-        const forceTutorial = urlParams.get('tutorial') === 'true';
-        return !tutorialCompleted || forceTutorial;
+        try {
+            // Verificar si es primera visita global al sistema
+            const isFirstVisitGlobal = !localStorage.getItem('sistema_reclutas_first_visit_completed');
+            
+            // Si es primera visita, siempre mostrar tutoriales
+            if (isFirstVisitGlobal) {
+                return true;
+            }
+            
+            // Si no es primera visita, verificar parámetro URL para forzar
+            const urlParams = new URLSearchParams(window.location.search);
+            const forceTutorial = urlParams.get('tutorial') === 'true';
+            
+            // Si no hay parámetro forzado, no mostrar
+            if (!forceTutorial) {
+                return false;
+            }
+            
+            // Si hay parámetro forzado, verificar si este tutorial específico está completado
+            const tutorialCompleted = localStorage.getItem(this.config.storageKey) === 'true';
+            return !tutorialCompleted || forceTutorial;
+            
+        } catch (e) {
+            console.warn('Error checking tutorial status:', e.message);
+            return true; // Default to showing tutorial on error
+        }
     },
 
     // 📝 MARCAR O DESMARCAR COMO COMPLETADO
     toggleCompleted(isCompleted) {
-        if (isCompleted) {
-            localStorage.setItem(this.config.storageKey, 'true');
-            console.log('💾 Tutorial marcado como completado');
-        } else {
-            localStorage.removeItem(this.config.storageKey);
-            console.log('🗑️ Tutorial desmarcado como completado');
+        try {
+            if (isCompleted) {
+                localStorage.setItem(this.config.storageKey, 'true');
+                console.log('💾 Tutorial marcado como completado');
+            } else {
+                localStorage.removeItem(this.config.storageKey);
+                console.log('🗑️ Tutorial desmarcado como completado');
+            }
+        } catch (e) {
+            console.warn('Error toggling tutorial completion:', e.message);
         }
     },
 
@@ -269,7 +322,7 @@ const Tutorial = {
         document.addEventListener('keydown', this._keyHandler);
     },
 
-    // 📍 MOSTRAR PASO ESPECÍFICO (Robustecido)
+    // 📍 MOSTRAR PASO ESPECÍFICO (MEJORADO PARA SELECTORES MÚLTIPLES)
     showStep(stepIndex) {
         if (!this.config.isActive) return;
 
@@ -279,20 +332,54 @@ const Tutorial = {
         }
 
         const step = this.steps[stepIndex];
-        let targetElement = document.querySelector(step.target);
+        
+        // Manejar selectores múltiples
+        let targetElement = null;
+        const selectors = step.target.split(',').map(s => s.trim());
+        
+        for (const selector of selectors) {
+            targetElement = document.querySelector(selector);
+            if (targetElement) {
+                console.log(`📍 Elemento encontrado con selector: ${selector}`);
+                break;
+            }
+        }
 
         if (!targetElement) {
-            console.warn(`⚠️ Elemento no encontrado: ${step.target}. Esperando a que aparezca...`);
-            this.waitForElement(step.target, () => {
-                if (!this.config.isActive) return;
-                targetElement = document.querySelector(step.target);
-                if (!targetElement) {
-                    console.warn(`⛔ El elemento ${step.target} no apareció a tiempo. Saltando paso.`);
-                    this.nextStep(); // avanzar sin bloquear el flujo
-                    return;
+            console.warn(`⚠️ Ningún elemento encontrado para: ${step.target}. Esperando...`);
+            
+            // Para pasos con elementos dinámicos, usar timeout extendido
+            const timeoutMs = step.timeout || 5000;
+            const hasWaitFlag = step.waitForElement === true;
+            
+            if (hasWaitFlag) {
+                console.log(`🔍 Esperando elemento dinámico (timeout: ${timeoutMs}ms)...`);
+            }
+            
+            let found = false;
+            for (const selector of selectors) {
+                if (!found) {
+                    this.waitForElement(selector, (foundElement) => {
+                        if (foundElement && !found) {
+                            found = true;
+                            console.log(`✅ Elemento dinámico apareció: ${selector}`);
+                            this.showStep(stepIndex);
+                        }
+                    }, { 
+                        timeout: timeoutMs, 
+                        interval: hasWaitFlag ? 500 : 200 
+                    });
                 }
-                this.showStep(stepIndex); // reintenta con el mismo índice
-            }, { timeout: 5000, interval: 100 });
+            }
+            
+            // Timeout de emergencia para evitar bloqueo
+            this._setTimeout(() => {
+                if (!found && this.config.isActive) {
+                    console.warn(`⏰ Timeout alcanzado para paso ${stepIndex + 1}. Saltando...`);
+                    this.nextStep();
+                }
+            }, timeoutMs + 1000);
+            
             return;
         }
 
@@ -403,12 +490,14 @@ const Tutorial = {
         const dragHandle = element.querySelector('.tutorial-header');
         if (!dragHandle) return;
 
+        dragHandle.style.cursor = 'move';
         dragHandle.onmousedown = dragMouseDown;
 
         function dragMouseDown(e) {
             if (!e) return;
             e.preventDefault();
-            pos3 = e.clientX; pos4 = e.clientY;
+            pos3 = e.clientX; 
+            pos4 = e.clientY;
             document.onmouseup = closeDragElement;
             document.onmousemove = elementDrag;
         }
@@ -418,7 +507,8 @@ const Tutorial = {
             e.preventDefault();
             pos1 = pos3 - e.clientX;
             pos2 = pos4 - e.clientY;
-            pos3 = e.clientX; pos4 = e.clientY;
+            pos3 = e.clientX; 
+            pos4 = e.clientY;
             element.style.top = (element.offsetTop - pos2) + "px";
             element.style.left = (element.offsetLeft - pos1) + "px";
         }
@@ -429,87 +519,129 @@ const Tutorial = {
         }
     },
 
-    // 🆕 MANEJAR ACCIÓN 'clickAndProceed'
+    // 🆕 MANEJAR ACCIÓN 'clickAndProceed' (CORREGIDA)
     handleStepClickAndProceed(targetSelector) {
-    console.log(`🔄 Ejecutando clickAndProceed para: ${targetSelector}`);
-    
-    const targetElement = document.querySelector(targetSelector);
-    if (targetElement) {
-        console.log('✅ Elemento encontrado, haciendo clic...');
-        targetElement.click();
+        console.log(`🔄 Ejecutando clickAndProceed para: ${targetSelector}`);
         
-        // Dar tiempo para que se ejecuten los efectos del clic (abrir modal, etc.)
-        this._setTimeout(() => {
-            const nextStepIndex = this.config.currentStep + 1;
-            const nextStepInfo = this.steps[nextStepIndex];
+        const targetElement = document.querySelector(targetSelector);
+        if (targetElement) {
+            console.log('✅ Elemento encontrado, haciendo clic...');
+            targetElement.click();
             
-            if (nextStepInfo?.target) {
-                console.log(`🔍 Esperando elemento del paso ${nextStepIndex + 1}: ${nextStepInfo.target}`);
+            // Dar tiempo para que se ejecuten los efectos del clic
+            this._setTimeout(() => {
+                const nextStepIndex = this.config.currentStep + 1;
+                const nextStepInfo = this.steps[nextStepIndex];
                 
-                this.waitForElement(nextStepInfo.target, (element) => {
-                    if (element) {
-                        console.log(`✅ Elemento del siguiente paso encontrado, avanzando...`);
-                        this.nextStep();
-                    } else {
-                        console.warn(`⚠️ Elemento del siguiente paso no encontrado, avanzando de todos modos`);
-                        this.nextStep();
-                    }
-                }, { timeout: 3000, interval: 200 });
-            } else {
-                console.log('📍 No hay siguiente paso definido, avanzando...');
-                this.nextStep();
-            }
-        }, 300); // Dar 300ms para que se complete la acción del clic
-        
-    } else {
-        console.warn(`❌ Elemento objetivo no encontrado para clickAndProceed: ${targetSelector}`);
-        this.nextStep();
-    }
-},
+                if (nextStepInfo?.target) {
+                    console.log(`🔍 Esperando elemento del paso ${nextStepIndex + 1}: ${nextStepInfo.target}`);
+                    
+                    this.waitForElement(nextStepInfo.target, (element) => {
+                        if (element) {
+                            console.log('✅ Elemento del siguiente paso encontrado, avanzando...');
+                            this.nextStep();
+                        } else {
+                            console.warn('⚠️ Elemento del siguiente paso no encontrado, avanzando de todos modos');
+                            this.nextStep();
+                        }
+                    }, { timeout: 3000, interval: 200 });
+                } else {
+                    console.log('📍 No hay siguiente paso definido, avanzando...');
+                    this.nextStep();
+                }
+            }, 300);
+            
+        } else {
+            console.warn(`❌ Elemento objetivo no encontrado para clickAndProceed: ${targetSelector}`);
+            this.nextStep();
+        }
+    },
 
-    // 👁️ ESPERAR A QUE UN ELEMENTO APAREZCA (con timeout y polling)
+    // 👁️ ESPERAR A QUE UN ELEMENTO APAREZCA (VERSIÓN MEJORADA Y CORREGIDA)
     waitForElement(selector, callback, opts = {}) {
-        const interval = typeof opts.interval === 'number' ? opts.interval : 100;
-        const timeout  = typeof opts.timeout === 'number' ? opts.timeout : 5000;
+        const interval = typeof opts.interval === 'number' ? Math.max(opts.interval, 50) : 200;
+        const timeout = typeof opts.timeout === 'number' ? opts.timeout : 5000;
+        const startTime = Date.now();
+
+        console.log(`🔍 Esperando elemento: ${selector} (timeout: ${timeout}ms)`);
+
+        // Función para buscar elemento (maneja selectores múltiples)
+        const findElement = () => {
+            if (selector.includes(',')) {
+                const selectors = selector.split(',').map(s => s.trim());
+                for (const sel of selectors) {
+                    const el = document.querySelector(sel);
+                    if (el) return el;
+                }
+                return null;
+            } else {
+                return document.querySelector(selector);
+            }
+        };
 
         // Chequeo inmediato
-        const immediate = () => !!document.querySelector(selector);
-        if (immediate()) { try { callback(); } catch(e){ console.error(e);} return; }
+        const element = findElement();
+        if (element) {
+            console.log(`✅ Elemento encontrado inmediatamente: ${selector}`);
+            this._safeCallback(callback, element);
+            return;
+        }
 
-        // Observador de mutaciones
-        const observer = new MutationObserver(() => {
-            if (immediate()) {
-                observer.disconnect();
-                this._activeObservers = this._activeObservers.filter(o => o !== observer);
-                try { callback(); } catch(e){ console.error(e); }
-            }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-        this._activeObservers.push(observer);
+        let found = false;
+        let pollId = null;
+        let timeoutId = null;
 
-        // Polling y timeout de seguridad
-        const pollId = this._setInterval(() => {
-            if (!this.config.isActive) { this._clearInterval(pollId); return; }
-            if (immediate()) {
+        // Función de limpieza
+        const cleanup = () => {
+            if (pollId) {
                 this._clearInterval(pollId);
-                try { callback(); } catch(e){ console.error(e); }
+                pollId = null;
+            }
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+        };
+
+        // Polling mejorado
+        pollId = this._setInterval(() => {
+            if (!this.config.isActive || found) {
+                cleanup();
+                return;
+            }
+
+            const element = findElement();
+            if (element) {
+                found = true;
+                cleanup();
+                console.log(`✅ Elemento encontrado por polling: ${selector}`);
+                this._safeCallback(callback, element);
             }
         }, interval);
 
-        this._setTimeout(() => {
-            try {
-                observer.disconnect();
-                this._activeObservers = this._activeObservers.filter(o => o !== observer);
-            } catch(e){}
-            this._clearInterval(pollId);
-            console.warn(`⌛ Timeout esperando ${selector} (${timeout}ms).`);
-            // Fallback: no bloqueamos el flujo del tutorial
-            try { callback.__timedout__ = true; } catch(e){}
-            // Decisión: dejamos que el caller decida si salta el paso.
+        // Timeout de seguridad
+        timeoutId = setTimeout(() => {
+            if (!found) {
+                found = true;
+                cleanup();
+                console.warn(`⏰ Timeout alcanzado esperando: ${selector}`);
+                this._safeCallback(callback, null);
+            }
         }, timeout);
     },
 
-    // 📐 POSICIONAR TOOLTIP
+    // Callback seguro para evitar errores no manejados
+    _safeCallback(callback, ...args) {
+        try {
+            if (typeof callback === 'function') {
+                callback(...args);
+            }
+        } catch (e) {
+            console.error('Error ejecutando callback:', e.message);
+        }
+    },
+
+    // 📐 POSICIONAR TOOLTIP (MEJORADA)
     positionTooltip(tooltip, targetElement, preferredPosition) {
         const rect = targetElement.getBoundingClientRect();
         const tooltipWidth = 350;
@@ -598,24 +730,27 @@ const Tutorial = {
         }
     },
 
-    // ▶️ CONFIGURAR BOTÓN SIGUIENTE
+    // ▶️ CONFIGURAR BOTÓN SIGUIENTE (CORREGIDO PARA TODOS LOS TUTORIALES)
     _setupNextButton(tooltip) {
-    const nextBtn = tooltip.querySelector('#tutorial-next');
-    if (!nextBtn) return;
+        const nextBtn = tooltip.querySelector('#tutorial-next');
+        if (!nextBtn) return;
 
-    // ✅ VERIFICAR SI YA TIENE ACCIÓN ESPECIAL CONFIGURADA
-    const currentStep = this.steps[this.config.currentStep];
-    if (currentStep && currentStep.action === 'clickAndProceed') {
-        console.log('⚠️ Paso con acción especial, no agregando listener normal');
-        return; // No agregar listener normal para evitar doble ejecución
-    }
+        // Verificar si ya tiene acción especial configurada
+        const currentStep = this.steps[this.config.currentStep];
+        if (currentStep && currentStep.action === 'clickAndProceed') {
+            console.log('⚠️ Paso con acción especial, no agregando listener normal');
+            return;
+        }
 
-    const currentStepId = this.steps[this.config.currentStep].id;
-    const isLastStep = currentStepId === 'admin-step-3' || currentStepId === 'add-button-step-3' || this.config.currentStep === this.steps.length - 1;
+        const currentStepId = this.steps[this.config.currentStep].id;
+        const isLastStep = currentStepId === 'admin-step-3' || 
+                          currentStepId === 'add-button-step-3' || 
+                          currentStepId === 'dist-excel-step-4' ||  // Agregado para tutorial de distribución
+                          this.config.currentStep === this.steps.length - 1;
 
-    this._nextBtnListener = () => isLastStep ? this.complete() : this.nextStep();
-    nextBtn.addEventListener('click', this._nextBtnListener);
-},
+        this._nextBtnListener = () => isLastStep ? this.complete() : this.nextStep();
+        nextBtn.addEventListener('click', this._nextBtnListener);
+    },
 
     // ◀️ CONFIGURAR BOTÓN ANTERIOR
     _setupPrevButton(tooltip) {
@@ -637,7 +772,12 @@ const Tutorial = {
     _setupCheckbox(tooltip) {
         const checkbox = tooltip.querySelector('#no-show-again');
         if (!checkbox) return;
-        checkbox.checked = localStorage.getItem(this.config.storageKey) === 'true';
+        try {
+            checkbox.checked = localStorage.getItem(this.config.storageKey) === 'true';
+        } catch (e) {
+            console.warn('Error accessing localStorage:', e.message);
+            checkbox.checked = false;
+        }
         this._checkboxListener = (e) => this.toggleCompleted(e.target.checked);
         checkbox.addEventListener('change', this._checkboxListener);
     },
@@ -668,9 +808,9 @@ const Tutorial = {
         if (confirmSkip) this.complete();
     },
 
-    // ✅ COMPLETAR TUTORIAL
+    // ✅ COMPLETAR TUTORIAL (ENCADENAMIENTO AUTOMÁTICO SIN POPUPS)
     complete() {
-        console.log('✅ Tutorial completado');
+        console.log('Tutorial completado');
         this.config.isActive = false;
 
         this.cleanup();
@@ -679,19 +819,74 @@ const Tutorial = {
         const checkbox = document.querySelector('#no-show-again');
         if (checkbox?.checked) this.markAsCompleted();
 
+        // Encadenamiento automático para primera visita
         if (this.config.tutorialType === 'admin_add_button') {
-            console.log('🔗 Encadenando al tutorial de distribución Excel...');
-            this._setTimeout(() => {
-                this.startTutorial({
-                    type: 'admin_distribute_excel',
-                    steps: this.distribuirReclutasExcelSteps,
-                    storageKey: 'sistema_reclutas_tutorial_completed_admin_distribute_excel',
-                    force: true
-                });
-            }, 500);
+            console.log('Encadenando automáticamente al tutorial de distribución Excel...');
+            
+            // Cerrar modal de agregar recluta
+            const openModal = document.querySelector('#add-recluta-modal');
+            if (openModal) {
+                openModal.style.display = 'none';
+            }
+            
+            // Verificar si es primera visita global
+            const isFirstVisit = !localStorage.getItem('sistema_reclutas_first_visit_completed');
+            
+            if (isFirstVisit) {
+                // Dar tiempo para que la UI se estabilice y continuar automáticamente
+                this._setTimeout(() => {
+                    this.startDistributionTutorialAutomatic();
+                }, 1000);
+            } else {
+                this.showWelcomeMessage();
+            }
         } else {
+            // Marcar primera visita como completada si es el último tutorial
+            if (this.config.tutorialType === 'admin_distribute_excel') {
+                try {
+                    localStorage.setItem('sistema_reclutas_first_visit_completed', 'true');
+                    console.log('Primera visita marcada como completada');
+                } catch (e) {
+                    console.warn('Error marcando primera visita:', e.message);
+                }
+            }
             this.showWelcomeMessage();
         }
+    },
+
+    // Iniciar tutorial de distribución automáticamente (sin popup)
+    startDistributionTutorialAutomatic() {
+        console.log('Iniciando tutorial de distribución Excel automáticamente...');
+        
+        // Verificar si el botón de distribución existe
+        const distribuirBtn = document.querySelector('#distribuir-excel-btn');
+        
+        if (!distribuirBtn) {
+            console.warn('Botón de distribución no encontrado. Finalizando secuencia de tutoriales.');
+            // Marcar primera visita como completada aunque no se complete este tutorial
+            try {
+                localStorage.setItem('sistema_reclutas_first_visit_completed', 'true');
+            } catch (e) {
+                console.warn('Error marcando primera visita:', e.message);
+            }
+            this.showWelcomeMessage();
+            return;
+        }
+
+        // Iniciar tutorial de distribución automáticamente
+        try {
+            localStorage.removeItem('sistema_reclutas_tutorial_completed_admin_distribute_excel');
+        } catch (e) {
+            console.warn('Error reseteando tutorial de distribución:', e.message);
+        }
+        
+        // Iniciar el tutorial de distribución inmediatamente
+        this.startTutorial({
+            type: 'admin_distribute_excel',
+            steps: this.distribuirReclutasExcelSteps,
+            storageKey: 'sistema_reclutas_tutorial_completed_admin_distribute_excel',
+            force: true
+        });
     },
 
     // 🧹 LIMPIAR ELEMENTOS DEL TUTORIAL
@@ -716,7 +911,13 @@ const Tutorial = {
         // Limpiar timers/observers activos
         this._activeIntervals.forEach(id => clearInterval(id));
         this._activeTimeouts.forEach(id => clearTimeout(id));
-        this._activeObservers.forEach(obs => { try { obs.disconnect(); } catch(e){} });
+        this._activeObservers.forEach(obs => { 
+            try { 
+                obs.disconnect(); 
+            } catch(e) {
+                console.warn('Error desconectando observer:', e.message);
+            }
+        });
 
         this._activeIntervals = [];
         this._activeTimeouts = [];
@@ -727,42 +928,69 @@ const Tutorial = {
 
     // 📝 MARCAR COMO COMPLETADO
     markAsCompleted() {
-        localStorage.setItem(this.config.storageKey, 'true');
-        console.log('💾 Tutorial marcado como completado');
+        try {
+            localStorage.setItem(this.config.storageKey, 'true');
+            console.log('💾 Tutorial marcado como completado');
+        } catch (e) {
+            console.warn('Error marcando tutorial como completado:', e.message);
+        }
     },
 
     // 🎉 MENSAJE DE BIENVENIDA
     showWelcomeMessage() {
         if (typeof showNotification === 'function') {
-            showNotification('¡Bienvenido al Portal de Seguimiento! 🎉 Ya puedes consultar el estado de tu proceso de selección usando tu folio.', 'success', 5000);
+            try {
+                showNotification('¡Tutorial completado exitosamente! 🎉', 'success', 5000);
+            } catch (e) {
+                console.warn('Error mostrando notificación:', e.message);
+                this._fallbackMessage();
+            }
         } else {
-            alert('¡Bienvenido al Portal de Seguimiento! 🎉\n\nYa puedes consultar el estado de tu proceso de selección usando tu folio.');
+            this._fallbackMessage();
         }
+    },
+
+    _fallbackMessage() {
+        alert('¡Tutorial completado exitosamente! 🎉\n\nYa conoces las funciones principales del sistema.');
     },
 
     // ⌨️ MANEJAR TECLAS
     handleKeyPress(event) {
         if (!this.config.isActive) return;
-        switch(event.key) {
-            case 'Escape': this.skip(); break;
-            case 'ArrowRight':
-            case 'Enter':
-                event.preventDefault();
-                this.nextStep();
-                break;
-            case 'ArrowLeft':
-                event.preventDefault();
-                this.prevStep();
-                break;
+        try {
+            switch(event.key) {
+                case 'Escape': 
+                    this.skip(); 
+                    break;
+                case 'ArrowRight':
+                case 'Enter':
+                    event.preventDefault();
+                    this.nextStep();
+                    break;
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    this.prevStep();
+                    break;
+            }
+        } catch (e) {
+            console.warn('Error manejando tecla:', e.message);
         }
     },
 
     // 📜 SCROLL AL ELEMENTO
     scrollToElement(element) {
-        const rect = element.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        if (rect.top < 0 || rect.bottom > viewportHeight) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        try {
+            const rect = element.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            if (rect.top < 0 || rect.bottom > viewportHeight) {
+                element.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center', 
+                    inline: 'nearest' 
+                });
+            }
+        } catch (e) {
+            console.warn('Error haciendo scroll al elemento:', e.message);
         }
     },
 
@@ -782,64 +1010,160 @@ const Tutorial = {
         `;
 
         helpButton.addEventListener('click', () => {
-            const wasCompleted = localStorage.getItem(this.config.storageKey);
-            localStorage.removeItem(this.config.storageKey);
-            this.start();
-            if (wasCompleted) {
-                this._setTimeout(() => localStorage.setItem(this.config.storageKey, 'true'), 1000);
+            try {
+                const wasCompleted = localStorage.getItem(this.config.storageKey);
+                localStorage.removeItem(this.config.storageKey);
+                this.start();
+                if (wasCompleted) {
+                    this._setTimeout(() => {
+                        try {
+                            localStorage.setItem(this.config.storageKey, 'true');
+                        } catch (e) {
+                            console.warn('Error restaurando estado del tutorial:', e.message);
+                        }
+                    }, 1000);
+                }
+            } catch (e) {
+                console.warn('Error en botón de ayuda:', e.message);
             }
         });
 
-        helpButton.addEventListener('mouseenter', () => { helpButton.style.transform = 'scale(1.1)'; });
-        helpButton.addEventListener('mouseleave', () => { helpButton.style.transform = 'scale(1)'; });
+        helpButton.addEventListener('mouseenter', () => { 
+            helpButton.style.transform = 'scale(1.1)'; 
+        });
+        helpButton.addEventListener('mouseleave', () => { 
+            helpButton.style.transform = 'scale(1)'; 
+        });
 
         document.body.appendChild(helpButton);
     },
 
-    // 🔄 REINICIAR TUTORIAL (FUNCIÓN PÚBLICA)
+    // 🔄 REINICIAR TUTORIAL
     restart() {
-        localStorage.removeItem(this.config.storageKey);
-        if (this.config.isActive) this.cleanup();
-        this._setTimeout(() => this.start(), 100);
+        try {
+            localStorage.removeItem(this.config.storageKey);
+            if (this.config.isActive) this.cleanup();
+            this._setTimeout(() => this.start(), 100);
+        } catch (e) {
+            console.warn('Error reiniciando tutorial:', e.message);
+        }
     },
 
-    // 🗑️ RESET TUTORIAL (FUNCIÓN PARA DESARROLLO)
+    // 🗑️ RESET TUTORIAL
     reset() {
-        localStorage.removeItem(this.config.storageKey);
-        console.log('🗑️ Tutorial reseteado - se mostrará en próxima visita');
+        try {
+            localStorage.removeItem(this.config.storageKey);
+            console.log('🗑️ Tutorial reseteado - se mostrará en próxima visita');
+        } catch (e) {
+            console.warn('Error reseteando tutorial:', e.message);
+        }
     },
 
     // Helpers para controlar timers/observers y facilitar limpieza
-    _setInterval(fn, ms) { const id = setInterval(fn, ms); this._activeIntervals.push(id); return id; },
-    _clearInterval(id) { clearInterval(id); this._activeIntervals = this._activeIntervals.filter(x => x !== id); },
-    _setTimeout(fn, ms) { const id = setTimeout(fn, ms); this._activeTimeouts.push(id); return id; }
+    _setInterval(fn, ms) { 
+        const id = setInterval(fn, ms); 
+        this._activeIntervals.push(id); 
+        return id; 
+    },
+    _clearInterval(id) { 
+        clearInterval(id); 
+        this._activeIntervals = this._activeIntervals.filter(x => x !== id); 
+    },
+    _setTimeout(fn, ms) { 
+        const id = setTimeout(fn, ms); 
+        this._activeTimeouts.push(id); 
+        return id; 
+    }
 };
 
-// 🚀 AUTO-INICIALIZACIÓN (ruta de seguimiento)
+// Tutorial para distribución Excel (simplificado para primera visita)
+Tutorial.startDistributionTutorial = function() {
+    // Verificar que estamos en el contexto correcto
+    const distribuirBtn = document.querySelector('#distribuir-excel-btn');
+    if (!distribuirBtn) {
+        console.warn('Botón de distribución no encontrado. Tutorial no disponible.');
+        return false;
+    }
+
+    console.log('Iniciando tutorial de distribución Excel...');
+
+    // Resetear tutorial para asegurar que se muestre
+    try {
+        localStorage.removeItem('sistema_reclutas_tutorial_completed_admin_distribute_excel');
+    } catch (e) {
+        console.warn('Error reseteando tutorial de distribución:', e.message);
+    }
+    
+    // Configurar y iniciar el tutorial
+    this.config.tutorialType = 'admin_distribute_excel';
+    this.steps = this.distribuirReclutasExcelSteps;
+    this.config.storageKey = 'sistema_reclutas_tutorial_completed_admin_distribute_excel';
+    
+    // Iniciar tutorial
+    if (this.config.isActive) {
+        this.cleanup();
+    }
+    
+    this._setTimeout(() => {
+        this.start();
+    }, 100);
+    
+    return true;
+};
+
+// Función de conveniencia para testing (simplificada)
+Tutorial.testDistributionTutorial = function() {
+    console.log('Iniciando tutorial de distribución Excel en modo test...');
+    return this.startDistributionTutorial();
+};
+
+// Función para resetear completamente el sistema de primera visita (para desarrollo)
+Tutorial.resetFirstVisit = function() {
+    try {
+        localStorage.removeItem('sistema_reclutas_first_visit_completed');
+        localStorage.removeItem('sistema_reclutas_tutorial_completed_public');
+        localStorage.removeItem('sistema_reclutas_tutorial_completed_admin_add_button');
+        localStorage.removeItem('sistema_reclutas_tutorial_completed_admin_distribute_excel');
+        console.log('Sistema de primera visita reseteado completamente');
+    } catch (e) {
+        console.warn('Error reseteando primera visita:', e.message);
+    }
+};
+
+// 🚀 AUTO-INICIALIZACIÓN SEGURA
 document.addEventListener('DOMContentLoaded', function(){
     try {
         if (window.location.pathname.includes('/seguimiento')) {
-            window.Tutorial?.init?.();
+            window.Tutorial = Tutorial;
+            Tutorial.init();
         }
     } catch (err) {
-        console.warn('⚠️ Error iniciando tutorial público:', err);
+        console.warn('⚠️ Error iniciando tutorial público:', err.message);
     }
 });
 
-// 🌍 EXPORTAR PARA USO GLOBAL (ESM)
-export default Tutorial;
+// 🌍 EXPORTAR PARA USO GLOBAL
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Tutorial;
+} else if (typeof window !== 'undefined') {
+    window.Tutorial = Tutorial;
+}
 
 // 🚀 FUNCIÓN PARA INICIAR UN TUTORIAL ESPECÍFICO
 Tutorial.startTutorial = function(tutorialConfig) {
-    console.log(`🎓 Iniciando tutorial: ${tutorialConfig.type}...`);
-    this.config.tutorialType = tutorialConfig.type;
-    this.steps = tutorialConfig.steps;
-    this.config.storageKey = tutorialConfig.storageKey;
-    if (this.shouldShowTutorial() || tutorialConfig.force) {
-        console.log(`✅ Iniciando tutorial ${tutorialConfig.type}`);
-        this.restart();
-    } else {
-        console.log(`ℹ️ Tutorial ${tutorialConfig.type} ya completado anteriormente`);
+    try {
+        console.log(`🎓 Iniciando tutorial: ${tutorialConfig.type}...`);
+        this.config.tutorialType = tutorialConfig.type;
+        this.steps = tutorialConfig.steps;
+        this.config.storageKey = tutorialConfig.storageKey;
+        if (this.shouldShowTutorial() || tutorialConfig.force) {
+            console.log(`✅ Iniciando tutorial ${tutorialConfig.type}`);
+            this.restart();
+        } else {
+            console.log(`ℹ️ Tutorial ${tutorialConfig.type} ya completado anteriormente`);
+        }
+    } catch (e) {
+        console.warn('Error iniciando tutorial específico:', e.message);
     }
 };
 
@@ -852,54 +1176,4 @@ Tutorial.startAdminRecruitTutorial = function() {
     });
 };
 
-// === JARVIS PATCH: Tutorial de PRIMERA SESIÓN (one-shot por usuario/rol) ===
-(function () {
-  const T = window.Tutorial || (window.Tutorial = {});
-  T.config = {
-    storageKey: 'sistema_reclutas_tutorial_completed',
-    currentStep: 0,
-    totalSteps: 0,
-    isActive: false,
-    canSkip: true,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    highlightColor: '#007bff',
-    zIndex: 10000,
-    tutorialType: null,
-    ...T.config || {}
-  };
-
-  T.firstSessionSteps = [
-    { id: 'fs-0', target: '#sidebar-nav', title: '🧭 Navegación principal', description: 'Cambia entre secciones: Reclutas, Calendario, Métricas y más.', position: 'right', action: 'highlight', nextButton: 'Siguiente' },
-    { id: 'fs-1', target: '#open-add-recluta-modal', title: '➕ Agregar recluta', description: 'Crea un nuevo registro de recluta desde este botón.', position: 'bottom', action: 'highlight', nextButton: 'Siguiente' },
-    { id: 'fs-2', target: '#calendar-section, #calendar-container', title: '🗓️ Calendario', description: 'Consulta eventos, citas y recordatorios del proceso.', position: 'top', action: 'highlight', nextButton: 'Siguiente' },
-    { id: 'fs-3', target: '#metrics-panel, #metricas-admin-container', title: '📊 Métricas', description: 'Indicadores clave para seguimiento y control.', position: 'left', action: 'highlight', nextButton: 'Siguiente' },
-    { id: 'fs-4', target: '#user-menu, #profile-dropdown', title: '👤 Perfil y sesión', description: 'Edita tu perfil o cierra sesión desde aquí.', position: 'bottom', action: 'highlight', nextButton: 'Finalizar' }
-  ];
-
-  T.startFirstSessionTutorial = function (usuario) {
-    try {
-      if (!usuario || (!usuario.id && !usuario.email)) return;
-      const role = usuario.rol || 'user';
-      const uid = usuario.id || usuario.email;
-
-      T.config.tutorialType = 'first_session';
-      T.config.storageKey = `tutorial_first_session_${role}_${uid}`;
-      T.steps = T.firstSessionSteps;
-
-      if (typeof T.shouldShowTutorial === 'function' ? T.shouldShowTutorial() : true) {
-        setTimeout(() => {
-          if (typeof T.start === 'function') T.start();
-          else console.warn('Tutorial.start() no existe. Verifique el motor del tutorial.');
-        }, 700);
-      }
-    } catch (e) {
-      console.warn('No se pudo iniciar tutorial de primera sesión:', e);
-    }
-  };
-
-  T.firstSessionTest = function (usuario) {
-    localStorage.removeItem(`tutorial_first_session_${(usuario?.rol || 'user')}_${(usuario?.id || usuario?.email || 'unknown')}`);
-    T.startFirstSessionTutorial(usuario || { id: 'debug', rol: 'user', email: 'debug@example.com' });
-  };
-})();
-// === FIN DEL PATCH ===
+export default Tutorial;
