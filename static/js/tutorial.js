@@ -29,6 +29,7 @@ const Tutorial = {
     _activeTimeouts: [],
     _activeObservers: [],
     lastHighlightedElement: null,
+    _scrollListener: null,
 
     // 📚 PASOS DEL TUTORIAL PARA PORTAL PÚBLICO
     publicSteps: [
@@ -600,52 +601,56 @@ const Tutorial = {
 
     // 🎯 RESALTAR ELEMENTO CON SOPORTE MEJORADO PARA MODALES
     highlightElement(element) {
-        const highlight = document.getElementById('tutorial-highlight');
-        if (!highlight) return;
+    const highlight = document.getElementById('tutorial-highlight');
+    if (!highlight) return;
 
-        highlight.style.display = 'none';
+    highlight.style.display = 'none';
 
-        const isModal = element.classList.contains('modal') || 
-                       element.closest('.modal') || 
-                       element.classList.contains('modal-content') ||
-                       element.querySelector('.modal-content');
+    const isModal = element.classList.contains('modal') || 
+                   element.closest('.modal') || 
+                   element.classList.contains('modal-content') ||
+                   element.querySelector('.modal-content');
 
-        if (isModal) {
-            console.log('🔍 Detectado modal, esperando renderizado completo...');
+    if (isModal) {
+        console.log('🔍 Detectado modal, esperando renderizado completo...');
+        
+        const highlightModal = () => {
+            let modalElement = element;
             
-            const highlightModal = () => {
-                let modalElement = element;
-                
-                if (element.classList.contains('modal')) {
-                    const modalContent = element.querySelector('.modal-content');
-                    if (modalContent) modalElement = modalContent;
-                }
-                
-                if (element.closest('.modal')) {
-                    const modalContent = element.closest('.modal').querySelector('.modal-content');
-                    if (modalContent) modalElement = modalContent;
-                }
+            if (element.classList.contains('modal')) {
+                const modalContent = element.querySelector('.modal-content');
+                if (modalContent) modalElement = modalContent;
+            }
+            
+            if (element.closest('.modal')) {
+                const modalContent = element.closest('.modal').querySelector('.modal-content');
+                if (modalContent) modalElement = modalContent;
+            }
 
-                const rect = modalElement.getBoundingClientRect();
-                
-                if (rect.width === 0 || rect.height === 0) {
-                    console.warn('⚠️ Modal aún no visible, reintentando...');
-                    setTimeout(highlightModal, 100);
-                    return;
-                }
+            const rect = modalElement.getBoundingClientRect();
+            
+            if (rect.width === 0 || rect.height === 0) {
+                console.warn('⚠️ Modal aún no visible, reintentando...');
+                setTimeout(highlightModal, 100);
+                return;
+            }
 
-                this._applyHighlight(modalElement, rect, true);
-            };
+            this._applyHighlight(modalElement, rect, true);
+            // NUEVO: Configurar scroll listener para modales
+            this._setupScrollListener(modalElement, true);
+        };
 
-            requestAnimationFrame(() => {
-                requestAnimationFrame(highlightModal);
-            });
-            return;
-        }
+        requestAnimationFrame(() => {
+            requestAnimationFrame(highlightModal);
+        });
+        return;
+    }
 
-        const rect = element.getBoundingClientRect();
-        this._applyHighlight(element, rect, false);
-    },
+    const rect = element.getBoundingClientRect();
+    this._applyHighlight(element, rect, false);
+    // NUEVO: Configurar scroll listener para elementos normales
+    this._setupScrollListener(element, false);
+},
 
     // 🎯 FUNCIÓN AUXILIAR: APLICAR HIGHLIGHT
     _applyHighlight(element, rect, isModal = false) {
@@ -691,6 +696,126 @@ const Tutorial = {
         
         console.log(`✅ Highlight aplicado a ${isModal ? 'modal' : 'elemento'} con z-index: ${targetZIndex}`);
     },
+
+    // NUEVA FUNCIÓN: Throttle para optimizar scroll performance
+_throttle(func, limit) {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    }
+},
+
+    // Configurar listener de scroll para actualizar highlight
+_setupScrollListener(element, isModal = false) {
+    // Limpiar listener anterior si existe
+    if (this._scrollListener) {
+        window.removeEventListener('scroll', this._scrollListener, true);
+        this._scrollListener = null;
+    }
+
+    // Crear nuevo listener
+    this._scrollListener = () => {
+        if (!this.config.isActive || !element) return;
+
+        const highlight = document.getElementById('tutorial-highlight');
+        if (!highlight) return;
+
+        // Recalcular posición del elemento
+        const rect = element.getBoundingClientRect();
+        
+        // Verificar si el elemento sigue visible
+        if (rect.width === 0 || rect.height === 0) {
+            highlight.style.display = 'none';
+            return;
+        }
+
+        // Actualizar posición del highlight
+        const targetZIndex = isModal ? 10050 : this.config.zIndex + 2;
+        const highlightZIndex = isModal ? 10049 : this.config.zIndex + 1;
+
+        highlight.style.cssText = `
+            position: fixed;
+            top: ${rect.top - 10}px; 
+            left: ${rect.left - 10}px;
+            width: ${rect.width + 20}px; 
+            height: ${rect.height + 20}px;
+            border: 3px solid ${this.config.highlightColor}; 
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            z-index: ${highlightZIndex};
+            transition: all 0.1s ease;
+            box-shadow: 0 0 20px rgba(0,123,255,0.5);
+            animation: tutorial-pulse 2s infinite;
+            display: block;
+            pointer-events: none;
+        `;
+
+        this._debug(`🔄 Highlight actualizado por scroll: ${rect.top}, ${rect.left}`);
+    };
+
+    // Agregar listener con captura para todos los elementos padre
+    window.addEventListener('scroll', this._throttle(this._scrollListener, 16), true);
+    this._debug('✅ Scroll listener configurado');
+},
+
+    // Configurar listener de scroll para actualizar highlight
+_setupScrollListener(element, isModal = false) {
+    // Limpiar listener anterior si existe
+    if (this._scrollListener) {
+        window.removeEventListener('scroll', this._scrollListener, true);
+        this._scrollListener = null;
+    }
+
+    // Crear nuevo listener
+    this._scrollListener = () => {
+        if (!this.config.isActive || !element) return;
+
+        const highlight = document.getElementById('tutorial-highlight');
+        if (!highlight) return;
+
+        // Recalcular posición del elemento
+        const rect = element.getBoundingClientRect();
+        
+        // Verificar si el elemento sigue visible
+        if (rect.width === 0 || rect.height === 0) {
+            highlight.style.display = 'none';
+            return;
+        }
+
+        // Actualizar posición del highlight
+        const targetZIndex = isModal ? 10050 : this.config.zIndex + 2;
+        const highlightZIndex = isModal ? 10049 : this.config.zIndex + 1;
+
+        highlight.style.cssText = `
+            position: fixed;
+            top: ${rect.top - 10}px; 
+            left: ${rect.left - 10}px;
+            width: ${rect.width + 20}px; 
+            height: ${rect.height + 20}px;
+            border: 3px solid ${this.config.highlightColor}; 
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            z-index: ${highlightZIndex};
+            transition: all 0.1s ease;
+            box-shadow: 0 0 20px rgba(0,123,255,0.5);
+            animation: tutorial-pulse 2s infinite;
+            display: block;
+            pointer-events: none;
+        `;
+
+        this._debug(`🔄 Highlight actualizado por scroll: ${rect.top}, ${rect.left}`);
+    };
+
+    // Agregar listener con captura para todos los elementos padre
+    window.addEventListener('scroll', this._scrollListener, true);
+    this._debug('✅ Scroll listener configurado');
+},
 
     // 💬 MOSTRAR TOOLTIP
     showTooltip(step, targetElement) {
@@ -1148,6 +1273,18 @@ const Tutorial = {
     // ✅ CLEANUP MEJORADO CON VERIFICACIONES
     cleanup() {
         this._debug('🧹 Iniciando limpieza de tutorial');
+
+        // NUEVO: Limpiar scroll listener
+    if (this._scrollListener) {
+        window.removeEventListener('scroll', this._scrollListener, true);
+        this._scrollListener = null;
+        this._debug('🗑️ Scroll listener removido');
+    }
+
+    if (this.config.autoCleanupDisabled) {
+        this._debug('⚠️ Cleanup automático deshabilitado');
+        return;
+    }
 
         if (this.config.autoCleanupDisabled) {
             this._debug('⚠️ Cleanup automático deshabilitado');
