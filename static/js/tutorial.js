@@ -179,6 +179,109 @@ const Tutorial = {
         }
     ],
 
+    // 📚 NUEVO TUTORIAL ONBOARDING PARA ADMINISTRADORES
+    adminFirstVisitTutorialSteps: [
+        {
+            id: 'admin-onboarding-1',
+            target: '.section-header h3',
+            title: '¡Bienvenido al Panel de Gestión de Reclutas!',
+            description: 'Este es tu centro de operaciones. Desde aquí podrás ver, filtrar, buscar y gestionar a todos los candidatos del sistema. ¡Empecemos el recorrido!',
+            position: 'bottom',
+            action: 'highlight',
+            nextButton: 'Comenzar'
+        },
+        {
+            id: 'admin-onboarding-2',
+            target: '#open-add-recluta-modal',
+            title: '➕ Agregar un Recluta',
+            description: 'Usa este botón para añadir un nuevo candidato manualmente. Se abrirá un formulario para que ingreses toda su información.',
+            position: 'left',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'admin-onboarding-3',
+            target: '#distribuir-excel-btn',
+            title: '📊 Agregar Múltiples Reclutas',
+            description: '¿Tienes una lista de candidatos? Usa esta potente herramienta para cargarlos desde un archivo Excel y distribuirlos automáticamente entre tus asesores.',
+            position: 'left',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'admin-onboarding-4',
+            target: '#search-reclutas',
+            title: '🔍 Buscar un Candidato',
+            description: 'Usa este campo para buscar rápidamente a un candidato por su nombre, email o cualquier otro dato. Los resultados se actualizarán al instante.',
+            position: 'right',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'admin-onboarding-5',
+            target: '#filter-estado',
+            title: '🚦 Filtrar por Estado',
+            description: 'Este filtro te permite ver solo a los candidatos que se encuentran en un estado específico (Activo, En proceso, etc.). Es muy útil para enfocarte en un grupo.',
+            position: 'right',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'admin-onboarding-6',
+            target: '#filter-asesor',
+            title: '👤 Filtrar por Asesor',
+            description: 'Como administrador, puedes usar este filtro para ver los candidatos asignados a un asesor en particular. Perfecto para supervisar el trabajo de tu equipo.',
+            position: 'right',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'admin-onboarding-7',
+            target: '#sort-by',
+            title: '⇅ Ordenar la Lista',
+            description: 'Organiza la tabla de reclutas según tu preferencia: por nombre, por fecha de registro, etc. Facilita la visualización de los datos.',
+            position: 'right',
+action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'admin-onboarding-8',
+            target: '#reclutas-table',
+            title: '📋 Tabla de Reclutas',
+            description: 'Aquí se muestra la lista de todos tus candidatos. Cada fila representa un recluta y puedes ver su información más importante de un vistazo.',
+            position: 'top',
+            action: 'highlight',
+            nextButton: 'Casi terminamos...'
+        },
+        {
+            id: 'admin-onboarding-9',
+            target: '#reclutas-list tr:first-child .actions-column',
+            title: '⚙️ Acciones por Recluta',
+            description: 'Cada recluta tiene su propio set de acciones: Ver detalles, Editar su información o Eliminarlo del sistema. Pasa el cursor sobre los íconos para ver qué hace cada uno.',
+            position: 'left',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'admin-onboarding-10',
+            target: '.pagination-controls',
+            title: '🔢 Navegación de Páginas',
+            description: 'Si tienes muchos reclutas, la lista se dividirá en varias páginas. Usa estos controles para navegar entre ellas.',
+            position: 'top',
+            action: 'highlight',
+            nextButton: '¡Entendido!'
+        },
+        {
+            id: 'admin-onboarding-11',
+            target: '.dashboard-header',
+            title: '🎉 ¡Has completado el recorrido!',
+            description: 'Ya conoces lo esencial para gestionar a tus reclutas. Explora las demás secciones como el Calendario y las Métricas para dominar todo el sistema. ¡Mucho éxito!',
+            position: 'bottom',
+            action: 'highlight',
+            nextButton: 'Finalizar'
+        }
+    ],
+
     // ✅ FUNCIÓN DE DEBUG MEJORADA
     _debug(message, data = null) {
         if (this.config.debugMode) {
@@ -1218,6 +1321,12 @@ _processCompletion() {
     
     // Determinar siguiente acción basada en tipo de tutorial
     this._handleTutorialChaining();
+
+    // ✅ Execute onComplete callback if it exists
+    if (this.config.onComplete && typeof this.config.onComplete === 'function') {
+        this._debug('🏃‍♂️ Ejecutando callback onComplete...');
+        this.config.onComplete();
+    }
 },
 
 // ✅ FUNCIÓN AUXILIAR: MANEJAR CHECKBOX "NO MOSTRAR OTRA VEZ"
@@ -1642,6 +1751,7 @@ Tutorial.startTutorial = function(tutorialConfig) {
         this.config.tutorialType = tutorialConfig.type;
         this.steps = tutorialConfig.steps;
         this.config.storageKey = tutorialConfig.storageKey;
+        this.config.onComplete = tutorialConfig.onComplete || null; // Store the callback
         if (this.shouldShowTutorial() || tutorialConfig.force) {
             console.log(`✅ Iniciando tutorial ${tutorialConfig.type}`);
             this.restart();

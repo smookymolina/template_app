@@ -693,9 +693,24 @@ async function setupAdminModules() {
         console.warn('⚠️ No se pudo inicializar métricas: sección o función no encontrada.');
     }
 
-    // Iniciar tutorial para administradores si es la primera vez
-    if (Tutorial && typeof Tutorial.startAdminRecruitTutorial === 'function') {
-        Tutorial.startAdminRecruitTutorial();
+    // Iniciar tutorial de onboarding para la primera visita del admin
+    const onboardingCompleted = localStorage.getItem('admin_onboarding_tutorial_completed');
+    if (!onboardingCompleted && Tutorial && typeof Tutorial.startTutorial === 'function') {
+        console.log('🚀 Lanzando tutorial de primera visita para admin...');
+        Tutorial.startTutorial({
+            type: 'admin_first_visit',
+            steps: Tutorial.adminFirstVisitTutorialSteps,
+            storageKey: 'admin_onboarding_tutorial_completed',
+            force: true,
+            onComplete: () => {
+                try {
+                    localStorage.setItem('admin_onboarding_tutorial_completed', 'true');
+                    console.log('✅ Tutorial de onboarding para admin marcado como completado.');
+                } catch (e) {
+                    console.error('Error al marcar el tutorial como completado:', e);
+                }
+            }
+        });
     }
 }
 
