@@ -1,0 +1,2 @@
+:5000/api/reclutas/distribuir-excel:1  Failed to load resource: the server responded with a status of 400 (BAD REQUEST)Understand this error
+notifications.js:52 🔔 Notificación mostrada: [error] Error al procesar el archivo Excel: 'int' object has no attribute 'strip'

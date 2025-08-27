@@ -1,4 +1,4 @@
-﻿import os
+import os
 import uuid
 import hashlib
 import logging
@@ -105,3 +105,83 @@ def paginate_data(data, page, per_page):
         'current_page': page,
         'per_page': per_page
     }
+
+def get_next_asesor(asesores, last_asesor_index):
+    """
+    Obtiene el siguiente asesor de la lista de forma circular.
+    """
+    if not asesores:
+        return None, -1
+    
+    next_index = (last_asesor_index + 1) % len(asesores)
+    return asesores[next_index], next_index
+
+def procesar_y_distribuir_excel(archivo, asesores):
+    """
+    Procesa un archivo Excel de reclutas y los distribuye entre los asesores.
+    """
+    import pandas as pd
+    from models import db
+    from models.recluta import Recluta
+    from flask import current_app
+    from datetime import datetime
+
+    column_mapping = {
+        'nombre': ['nombre'],
+        'telefono': ['telefono', 'teléfono'],
+        'fecha_creacion': ['fecha de creacion', 'fecha de creación']
+    }
+
+    try:
+        df = pd.read_excel(archivo, engine='openpyxl', header=1)
+
+        # Clean column names (convert to string, lowercase and strip whitespace)
+        cleaned_columns = {str(col).strip().lower(): col for col in df.columns}
+        
+        found_columns = {}
+        for field, possible_names in column_mapping.items():
+            for name in possible_names:
+                if name in cleaned_columns:
+                    found_columns[field] = cleaned_columns[name]
+                    break
+        
+        required_fields = ['nombre', 'telefono', 'fecha_creacion']
+        for field in required_fields:
+            if field not in found_columns:
+                return {"success": False, "message": f"No se encontró una columna para el campo requerido: '{field}'. Se esperaba una de: {column_mapping[field]}"}
+
+        last_asesor_index = -1
+        nuevos_reclutas = []
+
+        for index, row in df.iterrows():
+            # Generate temporary email
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            nombre_limpio = ''.join(e for e in row[found_columns['nombre']] if e.isalnum())
+            temp_email = f"{nombre_limpio.lower()}{timestamp}@temp.com"
+
+            nuevo_recluta = Recluta(
+                nombre=row[found_columns['nombre']],
+                email=temp_email,
+                telefono=str(row[found_columns['telefono']]),
+                fecha_registro=row[found_columns['fecha_creacion']],
+                estado='En proceso'
+            )
+
+            asesor, last_asesor_index = get_next_asesor(asesores, last_asesor_index)
+            if asesor:
+                nuevo_recluta.asesor_id = asesor.id
+
+            nuevos_reclutas.append(nuevo_recluta)
+
+        db.session.add_all(nuevos_reclutas)
+        db.session.commit()
+
+        return {
+            "success": True,
+            "message": f"Se procesaron y distribuyeron {len(nuevos_reclutas)} reclutas exitosamente.",
+            "total_procesados": len(nuevos_reclutas)
+        }
+
+    except Exception as e:
+        current_app.logger.error(f"Error al procesar el archivo Excel: {str(e)}")
+        return {"success": False, "message": f"Error al procesar el archivo Excel: {str(e)}"}

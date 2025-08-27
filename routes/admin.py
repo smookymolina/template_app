@@ -24,13 +24,13 @@ def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         # Verificar si la IP está permitida
-        ip_address = request.remote_addr
-        if not check_ip_allowed(ip_address, current_app.config.get('IPS_PERMITIDAS')):
-            current_app.logger.warning(f"Intento de acceso administrativo desde IP no permitida: {ip_address}")
-            return jsonify({
-                "success": False,
-                "message": "Acceso no autorizado desde esta IP"
-            }), 403
+        # ip_address = request.remote_addr
+        # if not check_ip_allowed(ip_address, current_app.config.get('IPS_PERMITIDAS')):
+        #     current_app.logger.warning(f"Intento de acceso administrativo desde IP no permitida: {ip_address}")
+        #     return jsonify({
+        #         "success": False,
+        #         "message": "Acceso no autorizado desde esta IP"
+        #     }), 403
         
         # Aquí podríamos verificar si el usuario tiene rol de admin
         # Por ahora, todos los usuarios autenticados son considerados admin

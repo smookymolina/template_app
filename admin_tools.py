@@ -16,6 +16,7 @@ from datetime import datetime
 import hashlib
 import secrets
 
+
 # Configurar logging
 LOG_FILE = "admin_activity.log"
 logging.basicConfig(
@@ -68,6 +69,8 @@ class Color:
 # Configuración de seguridad para el script
 ADMIN_PASSWORD_HASH_FILE = ".admin_hash"
 MAX_LOGIN_ATTEMPTS = 3
+
+
 
 def clear_screen():
     """Limpia la pantalla de la terminal"""
