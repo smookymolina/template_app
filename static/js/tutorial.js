@@ -233,24 +233,25 @@ const Tutorial = {
     },
 
     // 🔍 VERIFICAR SI ES PÁGINA DE SEGUIMIENTO
-    isTrackingPage() {
-        const trackingIndicators = [
-            () => window.location.pathname.includes('/seguimiento'),
-            () => document.getElementById('tracking-wrapper') !== null,
-            () => document.getElementById('folio-input') !== null && 
-                  document.getElementById('tracking-button') !== null,
-            () => document.title && document.title.toLowerCase().includes('seguimiento')
-        ];
-        
-        return trackingIndicators.some(check => {
-            try {
-                return check();
-            } catch (e) {
-                console.warn('Error checking tracking page indicator:', e.message);
-                return false;
-            }
-        });
-    },
+isTrackingPage() {
+    const trackingIndicators = [
+        () => window.location.pathname.includes('/seguimiento'),
+        () => document.getElementById('tracking-wrapper') !== null,
+        () => document.getElementById('folio-input') !== null && 
+              document.getElementById('tracking-button') !== null,
+        // ✅ CORREGIDO: Uso de optional chaining en lugar de verificación manual
+        () => document.title?.toLowerCase().includes('seguimiento')
+    ];
+    
+    return trackingIndicators.some(check => {
+        try {
+            return check();
+        } catch (e) {
+            console.warn('Error checking tracking page indicator:', e.message);
+            return false;
+        }
+    });
+},
 
     // 🔍 VERIFICAR SI ES PÁGINA DE AÑADIR RECLUTA (ADMIN)
     isAddRecruitPage() {
@@ -347,106 +348,153 @@ const Tutorial = {
         document.addEventListener('keydown', this._keyHandler);
     },
 
-    // ✅ FUNCIÓN SHOWSTEP COMPLETAMENTE REESCRITA CON ESTABILIDAD
-    showStep(stepIndex) {
-        // ✅ VERIFICACIONES DE ESTADO EXHAUSTIVAS
+    // ✅ FUNCIÓN SHOWSTEP REFACTORIZADA - COMPLEJIDAD COGNITIVA REDUCIDA
+showStep(stepIndex) {
+    // ✅ VALIDACIONES INICIALES (Extraídas a función separada)
+    if (!this._validateStepExecution(stepIndex)) {
+        return;
+    }
+
+    // ✅ ADQUIRIR LOCK Y CONFIGURAR PASO
+    if (!this._acquireLock()) {
+        this._debug('⚠️ No se pudo adquirir lock, cancelando showStep');
+        return;
+    }
+
+    const step = this.steps[stepIndex];
+    this._debug(`📍 Mostrando paso ${stepIndex + 1}/${this.steps.length}: ${step.title}`);
+    this.config.currentStep = stepIndex;
+
+    // ✅ BUSCAR ELEMENTO TARGET
+    const targetElement = this._findTargetElement(step.target);
+    
+    if (!targetElement) {
+        this._handleMissingElement(step, stepIndex);
+        return;
+    }
+
+    // ✅ PROCESAR PASO CON ELEMENTO ENCONTRADO
+    this._processStepWithElement(step, targetElement, stepIndex);
+},
+
+// ✅ FUNCIÓN AUXILIAR: VALIDAR EJECUCIÓN DEL PASO
+_validateStepExecution(stepIndex) {
+    if (!this.config.isActive) {
+        this._debug('❌ Tutorial inactivo, cancelando showStep');
+        return false;
+    }
+
+    if (this.config.isLocked) {
+        this._debug('⚠️ Tutorial locked, retrasando showStep');
+        setTimeout(() => this.showStep(stepIndex), 100);
+        return false;
+    }
+
+    if (stepIndex < 0 || stepIndex >= this.steps.length) {
+        this._debug('📊 Índice fuera de rango, completando tutorial', { 
+            stepIndex, 
+            totalSteps: this.steps.length 
+        });
+        this.complete();
+        return false;
+    }
+
+    return true;
+},
+
+// ✅ FUNCIÓN AUXILIAR: BUSCAR ELEMENTO TARGET
+_findTargetElement(targetSelector) {
+    const selectors = targetSelector.split(',').map(s => s.trim());
+    
+    for (const selector of selectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+            this._debug(`📍 Elemento encontrado con selector: ${selector}`);
+            return element;
+        }
+    }
+    
+    return null;
+},
+
+// ✅ FUNCIÓN AUXILIAR: MANEJAR ELEMENTO FALTANTE
+_handleMissingElement(step, stepIndex) {
+    this._debug(`⚠️ Ningún elemento encontrado para: ${step.target}. Iniciando búsqueda...`);
+    
+    // Liberar lock antes de waitForElement
+    this._releaseLock();
+    
+    const waitConfig = this._getWaitConfiguration(step);
+    this._debug(`🔍 Esperando elemento ${waitConfig.type}`, { timeout: waitConfig.timeout });
+    
+    // Usar waitForElement mejorado
+    this.waitForElement(step.target, (foundElement) => {
+        this._onElementFound(foundElement, stepIndex, waitConfig.isModal);
+    }, { 
+        timeout: waitConfig.timeout, 
+        interval: waitConfig.interval 
+    });
+},
+
+// ✅ FUNCIÓN AUXILIAR: OBTENER CONFIGURACIÓN DE ESPERA
+_getWaitConfiguration(step) {
+    const isModal = step.target.includes('modal') || step.target.includes('.modal');
+    return {
+        isModal,
+        type: isModal ? 'modal' : 'regular',
+        timeout: isModal ? 10000 : (step.timeout || 8000),
+        interval: isModal ? 300 : 200
+    };
+},
+
+// ✅ FUNCIÓN AUXILIAR: PROCESAR CUANDO SE ENCUENTRA ELEMENTO
+_onElementFound(foundElement, stepIndex, isModal) {
+    if (!foundElement || !this.config.isActive) {
+        return;
+    }
+    
+    this._debug('✅ Elemento apareció, reintentando showStep');
+    
+    const delay = isModal ? 300 : 0;
+    
+    if (delay > 0) {
+        setTimeout(() => this.showStep(stepIndex), delay);
+    } else {
+        this.showStep(stepIndex);
+    }
+},
+
+// ✅ FUNCIÓN AUXILIAR: PROCESAR PASO CON ELEMENTO
+_processStepWithElement(step, targetElement, stepIndex) {
+    try {
+        this._debug('🎯 Aplicando highlight y tooltip');
+
+        // Verificar que el tutorial sigue activo
         if (!this.config.isActive) {
-            this._debug('❌ Tutorial inactivo, cancelando showStep');
+            this._debug('❌ Tutorial se desactivó durante showStep');
+            this._releaseLock();
             return;
         }
 
-        if (this.config.isLocked) {
-            this._debug('⚠️ Tutorial locked, retrasando showStep');
-            setTimeout(() => this.showStep(stepIndex), 100);
-            return;
-        }
-
-        if (stepIndex < 0 || stepIndex >= this.steps.length) {
-            this._debug('📊 Índice fuera de rango, completando tutorial', { stepIndex, totalSteps: this.steps.length });
-            this.complete();
-            return;
-        }
-
-        if (!this._acquireLock()) {
-            this._debug('⚠️ No se pudo adquirir lock, cancelando showStep');
-            return;
-        }
-
-        const step = this.steps[stepIndex];
-        this._debug(`📍 Mostrando paso ${stepIndex + 1}/${this.steps.length}: ${step.title}`);
-
-        // ✅ ACTUALIZAR ESTADO
-        this.config.currentStep = stepIndex;
-
-        // ✅ BUSCAR ELEMENTO TARGET CON SELECTORES MÚLTIPLES
-        let targetElement = null;
-        const selectors = step.target.split(',').map(s => s.trim());
+        // Aplicar efectos visuales
+        this._applyVisualEffects(step, targetElement);
         
-        for (const selector of selectors) {
-            targetElement = document.querySelector(selector);
-            if (targetElement) {
-                this._debug(`📍 Elemento encontrado con selector: ${selector}`);
-                break;
-            }
-        }
+        this._debug(`✅ Paso ${stepIndex + 1} configurado exitosamente`);
+        
+    } catch (error) {
+        console.error('❌ Error configurando paso:', error);
+        this._debug('❌ Error en showStep', error.message);
+    } finally {
+        this._releaseLock();
+    }
+},
 
-        if (!targetElement) {
-            this._debug(`⚠️ Ningún elemento encontrado para: ${step.target}. Iniciando búsqueda...`);
-            
-            // ✅ LIBERAR LOCK ANTES DE WAITFORELEMENT
-            this._releaseLock();
-
-            // ✅ DETECTAR SI ES PASO DE MODAL PARA TIMEOUT EXTENDIDO
-            const isModalStep = step.target.includes('modal') || step.target.includes('.modal');
-            const timeoutMs = isModalStep ? 10000 : (step.timeout || 8000);
-            
-            this._debug(`🔍 Esperando elemento ${isModalStep ? 'modal' : 'regular'}`, { timeout: timeoutMs });
-            
-            // ✅ USAR WAITFORELEMENT MEJORADO
-            this.waitForElement(step.target, (foundElement) => {
-                if (foundElement && this.config.isActive) {
-                    this._debug(`✅ Elemento apareció, reintentando showStep`);
-                    
-                    // ✅ DELAY ADICIONAL PARA MODALES
-                    if (isModalStep) {
-                        setTimeout(() => this.showStep(stepIndex), 300);
-                    } else {
-                        this.showStep(stepIndex);
-                    }
-                }
-            }, { 
-                timeout: timeoutMs, 
-                interval: isModalStep ? 300 : 200 
-            });
-            
-            return;
-        }
-
-        // ✅ ELEMENTO ENCONTRADO - PROCEDER CON EL PASO
-        try {
-            this._debug(`🎯 Aplicando highlight y tooltip`);
-
-            // ✅ VERIFICAR QUE EL TUTORIAL SIGUE ACTIVO ANTES DE CONTINUAR
-            if (!this.config.isActive) {
-                this._debug('❌ Tutorial se desactivó durante showStep');
-                this._releaseLock();
-                return;
-            }
-
-            // ✅ APLICAR EFECTOS VISUALES
-            this.highlightElement(targetElement);
-            this.showTooltip(step, targetElement);
-            this.scrollToElement(targetElement);
-
-            this._debug(`✅ Paso ${stepIndex + 1} configurado exitosamente`);
-            
-        } catch (error) {
-            console.error('❌ Error configurando paso:', error);
-            this._debug('❌ Error en showStep', error.message);
-        } finally {
-            this._releaseLock();
-        }
-    },
+// ✅ FUNCIÓN AUXILIAR: APLICAR EFECTOS VISUALES
+_applyVisualEffects(step, targetElement) {
+    this.highlightElement(targetElement);
+    this.showTooltip(step, targetElement);
+    this.scrollToElement(targetElement);
+},
 
     // ✅ FUNCIÓN WAITFORELEMENT COMPLETAMENTE REESCRITA
     waitForElement(selector, callback, opts = {}) {
@@ -458,7 +506,7 @@ const Tutorial = {
         const interval = typeof opts.interval === 'number' ? Math.max(opts.interval, 50) : 200;
         const timeout = typeof opts.timeout === 'number' ? opts.timeout : 8000;
         const startTime = Date.now();
-        const waitId = `wait_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const waitId = `wait_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
         this._debug(`🔍 Iniciando waitForElement para: ${selector}`, { waitId, timeout });
 
@@ -711,7 +759,7 @@ _throttle(func, limit) {
     }
 },
 
-    // Configurar listener de scroll para actualizar highlight
+// Configurar listener de scroll para actualizar highlight
 _setupScrollListener(element, isModal = false) {
     // Limpiar listener anterior si existe
     if (this._scrollListener) {
@@ -736,78 +784,24 @@ _setupScrollListener(element, isModal = false) {
         }
 
         // Actualizar posición del highlight
-        const targetZIndex = isModal ? 10050 : this.config.zIndex + 2;
-        const highlightZIndex = isModal ? 10049 : this.config.zIndex + 1;
+const highlightZIndex = isModal ? 10049 : this.config.zIndex + 1;
 
-        highlight.style.cssText = `
-            position: fixed;
-            top: ${rect.top - 10}px; 
-            left: ${rect.left - 10}px;
-            width: ${rect.width + 20}px; 
-            height: ${rect.height + 20}px;
-            border: 3px solid ${this.config.highlightColor}; 
-            border-radius: 8px;
-            background: rgba(255,255,255,0.1);
-            z-index: ${highlightZIndex};
-            transition: all 0.1s ease;
-            box-shadow: 0 0 20px rgba(0,123,255,0.5);
-            animation: tutorial-pulse 2s infinite;
-            display: block;
-            pointer-events: none;
-        `;
-
-        this._debug(`🔄 Highlight actualizado por scroll: ${rect.top}, ${rect.left}`);
-    };
-
-    // Agregar listener con captura para todos los elementos padre
-    window.addEventListener('scroll', this._throttle(this._scrollListener, 16), true);
-    this._debug('✅ Scroll listener configurado');
-},
-
-    // Configurar listener de scroll para actualizar highlight
-_setupScrollListener(element, isModal = false) {
-    // Limpiar listener anterior si existe
-    if (this._scrollListener) {
-        window.removeEventListener('scroll', this._scrollListener, true);
-        this._scrollListener = null;
-    }
-
-    // Crear nuevo listener
-    this._scrollListener = () => {
-        if (!this.config.isActive || !element) return;
-
-        const highlight = document.getElementById('tutorial-highlight');
-        if (!highlight) return;
-
-        // Recalcular posición del elemento
-        const rect = element.getBoundingClientRect();
-        
-        // Verificar si el elemento sigue visible
-        if (rect.width === 0 || rect.height === 0) {
-            highlight.style.display = 'none';
-            return;
-        }
-
-        // Actualizar posición del highlight
-        const targetZIndex = isModal ? 10050 : this.config.zIndex + 2;
-        const highlightZIndex = isModal ? 10049 : this.config.zIndex + 1;
-
-        highlight.style.cssText = `
-            position: fixed;
-            top: ${rect.top - 10}px; 
-            left: ${rect.left - 10}px;
-            width: ${rect.width + 20}px; 
-            height: ${rect.height + 20}px;
-            border: 3px solid ${this.config.highlightColor}; 
-            border-radius: 8px;
-            background: rgba(255,255,255,0.1);
-            z-index: ${highlightZIndex};
-            transition: all 0.1s ease;
-            box-shadow: 0 0 20px rgba(0,123,255,0.5);
-            animation: tutorial-pulse 2s infinite;
-            display: block;
-            pointer-events: none;
-        `;
+highlight.style.cssText = `
+    position: fixed;
+    top: ${rect.top - 10}px; 
+    left: ${rect.left - 10}px;
+    width: ${rect.width + 20}px; 
+    height: ${rect.height + 20}px;
+    border: 3px solid ${this.config.highlightColor}; 
+    border-radius: 8px;
+    background: rgba(255,255,255,0.1);
+    z-index: ${highlightZIndex};
+    transition: all 0.1s ease;
+    box-shadow: 0 0 20px rgba(0,123,255,0.5);
+    animation: tutorial-pulse 2s infinite;
+    display: block;
+    pointer-events: none;
+`;
 
         this._debug(`🔄 Highlight actualizado por scroll: ${rect.top}, ${rect.left}`);
     };
@@ -1174,70 +1168,127 @@ _setupScrollListener(element, isModal = false) {
         if (confirmSkip) this.complete();
     },
 
-    // ✅ COMPLETE MEJORADO CON VERIFICACIONES
-    complete() {
-        this._debug('🏁 Iniciando complete()');
+    // ✅ COMPLETE REFACTORIZADA - COMPLEJIDAD COGNITIVA REDUCIDA
+complete() {
+    this._debug('🏁 Iniciando complete()');
+    
+    // ✅ VALIDACIONES INICIALES (Complejidad: 2)
+    if (!this._validateCompleteExecution()) {
+        return;
+    }
+    
+    // ✅ ADQUIRIR LOCK (Complejidad: 1)
+    if (!this._acquireLock()) {
+        this._debug('⚠️ No se pudo adquirir lock para complete()');
+        return;
+    }
+    
+    // ✅ PROCESAR FINALIZACIÓN (Complejidad: 1)
+    try {
+        this._processCompletion();
+        this._debug('✅ Complete() finalizado exitosamente');
+    } catch (error) {
+        console.error('❌ Error en complete():', error);
+        this._debug('❌ Error en complete()', error.message);
+    } finally {
+        this._releaseLock();
+    }
+},
+// TOTAL COMPLEJIDAD complete(): 4 puntos (muy por debajo del límite de 15)
 
-        if (!this.config.isActive) {
-            this._debug('⚠️ Complete() llamado pero tutorial ya inactivo');
-            return;
-        }
+// ✅ FUNCIÓN AUXILIAR: VALIDAR EJECUCIÓN DE COMPLETE
+_validateCompleteExecution() {
+    if (!this.config.isActive) {
+        this._debug('⚠️ Complete() llamado pero tutorial ya inactivo');
+        return false;
+    }
+    return true;
+},
 
-        if (!this._acquireLock()) {
-            this._debug('⚠️ No se pudo adquirir lock para complete()');
-            return;
-        }
+// ✅ FUNCIÓN AUXILIAR: PROCESAR FINALIZACIÓN
+_processCompletion() {
+    this._debug('✅ Marcando tutorial como inactivo');
+    this.config.isActive = false;
+    
+    // Cleanup básico
+    this.cleanup();
+    document.body.style.overflow = '';
+    
+    // Manejar checkbox de "no mostrar otra vez"
+    this._handleNoShowAgainCheckbox();
+    
+    // Determinar siguiente acción basada en tipo de tutorial
+    this._handleTutorialChaining();
+},
 
-        try {
-            this._debug('✅ Marcando tutorial como inactivo');
-            this.config.isActive = false;
+// ✅ FUNCIÓN AUXILIAR: MANEJAR CHECKBOX "NO MOSTRAR OTRA VEZ"
+_handleNoShowAgainCheckbox() {
+    const checkbox = document.querySelector('#no-show-again');
+    if (checkbox?.checked) {
+        this.markAsCompleted();
+    }
+},
 
-            this.cleanup();
-            document.body.style.overflow = '';
+// ✅ FUNCIÓN AUXILIAR: MANEJAR ENCADENAMIENTO DE TUTORIALES
+_handleTutorialChaining() {
+    const tutorialType = this.config.tutorialType;
+    
+    if (tutorialType === 'admin_add_button') {
+        this._handleAddButtonTutorialComplete();
+    } else if (tutorialType === 'admin_distribute_excel') {
+        this._handleDistributeExcelTutorialComplete();
+    } else {
+        this.showWelcomeMessage();
+    }
+},
 
-            const checkbox = document.querySelector('#no-show-again');
-            if (checkbox?.checked) {
-                this.markAsCompleted();
-            }
+// ✅ FUNCIÓN AUXILIAR: MANEJAR FINALIZACIÓN DE TUTORIAL DE BOTÓN AGREGAR
+_handleAddButtonTutorialComplete() {
+    this._debug('🔗 Iniciando encadenamiento automático');
+    
+    // Cerrar modal si está abierto
+    this._closeAddReclutaModal();
+    
+    // Decidir próxima acción basada en si es primera visita
+    const isFirstVisit = this._isFirstVisit();
+    
+    if (isFirstVisit) {
+        this._setTimeout(() => {
+            this.startDistributionTutorialAutomatic();
+        }, 1500);
+    } else {
+        this.showWelcomeMessage();
+    }
+},
 
-            if (this.config.tutorialType === 'admin_add_button') {
-                this._debug('🔗 Iniciando encadenamiento automático');
-                
-                const openModal = document.querySelector('#add-recluta-modal');
-                if (openModal) {
-                    openModal.style.display = 'none';
-                }
-                
-                const isFirstVisit = !localStorage.getItem('sistema_reclutas_first_visit_completed');
-                
-                if (isFirstVisit) {
-                    this._setTimeout(() => {
-                        this.startDistributionTutorialAutomatic();
-                    }, 1500);
-                } else {
-                    this.showWelcomeMessage();
-                }
-            } else {
-                if (this.config.tutorialType === 'admin_distribute_excel') {
-                    try {
-                        localStorage.setItem('sistema_reclutas_first_visit_completed', 'true');
-                        this._debug('✅ Primera visita marcada como completada');
-                    } catch (e) {
-                        this._debug('⚠️ Error marcando primera visita', e.message);
-                    }
-                }
-                this.showWelcomeMessage();
-            }
+// ✅ FUNCIÓN AUXILIAR: MANEJAR FINALIZACIÓN DE TUTORIAL DE DISTRIBUCIÓN EXCEL
+_handleDistributeExcelTutorialComplete() {
+    this._markFirstVisitCompleted();
+    this.showWelcomeMessage();
+},
 
-            this._debug('✅ Complete() finalizado exitosamente');
-            
-        } catch (error) {
-            console.error('❌ Error en complete():', error);
-            this._debug('❌ Error en complete()', error.message);
-        } finally {
-            this._releaseLock();
-        }
-    },
+// ✅ FUNCIÓN AUXILIAR: CERRAR MODAL DE AGREGAR RECLUTA
+_closeAddReclutaModal() {
+    const openModal = document.querySelector('#add-recluta-modal');
+    if (openModal) {
+        openModal.style.display = 'none';
+    }
+},
+
+// ✅ FUNCIÓN AUXILIAR: VERIFICAR SI ES PRIMERA VISITA
+_isFirstVisit() {
+    return !localStorage.getItem('sistema_reclutas_first_visit_completed');
+},
+
+// ✅ FUNCIÓN AUXILIAR: MARCAR PRIMERA VISITA COMO COMPLETADA
+_markFirstVisitCompleted() {
+    try {
+        localStorage.setItem('sistema_reclutas_first_visit_completed', 'true');
+        this._debug('✅ Primera visita marcada como completada');
+    } catch (e) {
+        this._debug('⚠️ Error marcando primera visita', e.message);
+    }
+},
 
     // Iniciar tutorial de distribución automáticamente
     startDistributionTutorialAutomatic() {
@@ -1646,7 +1697,8 @@ Tutorial.diagnose = function() {
         firstVisit: localStorage.getItem('sistema_reclutas_first_visit_completed')
     });
     
-    if (this.steps && this.steps[this.config.currentStep]) {
+    // ✅ CORREGIDO: Uso de optional chaining en lugar de verificación manual
+    if (this.steps?.[this.config.currentStep]) {
         const currentStep = this.steps[this.config.currentStep];
         const targetExists = !!document.querySelector(currentStep.target);
         console.log('🎯 Paso actual:', {
@@ -1670,7 +1722,7 @@ Tutorial.autoFix = function() {
         console.log('🏗️ Recreando elementos perdidos...');
         this.createOverlay();
         
-        if (this.steps && this.steps[this.config.currentStep]) {
+        if (this.steps?.[this.config.currentStep]) {
             this.showStep(this.config.currentStep);
         }
     }
