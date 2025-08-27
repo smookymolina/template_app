@@ -1,10 +1,11 @@
 // ============================================================================
 // 🎓 SISTEMA DE TUTORIAL INTERACTIVO - PORTAL PÚBLICO DE SEGUIMIENTO
 // Archivo: static/js/tutorial.js
+// Versión: 3.2 - Código Completo con Fixes de Estabilidad
 // ============================================================================
 
 const Tutorial = {
-    // 🎛️ CONFIGURACIÓN DEL TUTORIAL
+    // 🎛️ CONFIGURACIÓN DEL TUTORIAL CON CONTROLES DE ESTABILIDAD
     config: {
         storageKey: 'sistema_reclutas_tutorial_completed',
         currentStep: 0,
@@ -14,7 +15,12 @@ const Tutorial = {
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         highlightColor: '#007bff',
         zIndex: 10000,
-        tutorialType: null // 'public' or 'admin_recluta'
+        tutorialType: null, // 'public' or 'admin_recluta'
+        // ✅ NUEVOS CONTROLES DE ESTABILIDAD
+        isLocked: false,          // Prevenir ejecuciones múltiples
+        debugMode: false,         // Logging detallado
+        autoCleanupDisabled: false, // Deshabilitar limpieza automática temporal
+        waitForCallbacks: new Map() // Rastrear callbacks activos
     },
 
     // Internos para limpieza
@@ -22,6 +28,8 @@ const Tutorial = {
     _activeIntervals: [],
     _activeTimeouts: [],
     _activeObservers: [],
+    lastHighlightedElement: null,
+    _scrollListener: null,
 
     // 📚 PASOS DEL TUTORIAL PARA PORTAL PÚBLICO
     publicSteps: [
@@ -107,7 +115,7 @@ const Tutorial = {
         },
         {
             id: 'add-button-step-2',
-            target: '#add-recluta-modal',
+            target: '#add-recluta-modal .modal-content, #add-recluta-modal, .modal.show .modal-content, .modal[style*="block"] .modal-content',
             title: '📝 Formulario de Nuevo Recluta',
             description: 'Aquí puedes ingresar la información detallada del nuevo recluta, incluyendo nombre, apellidos, correo electrónico y otros datos relevantes. Asegúrate de completar todos los campos obligatorios.',
             position: 'right',
@@ -116,7 +124,7 @@ const Tutorial = {
         },
         {
             id: 'add-button-step-3',
-            target: '#save-recluta-btn',
+            target: '#save-recluta-btn, .modal-footer .btn-primary, button[type="submit"]',
             title: '💾 Guardar Nuevo Recluta',
             description: 'Una vez que hayas completado todos los campos necesarios, haz clic aquí para guardar el nuevo recluta en el sistema.',
             position: 'top',
@@ -131,39 +139,69 @@ const Tutorial = {
             id: 'dist-excel-step-1',
             target: '#distribuir-excel-btn',
             title: '📊 Distribuir Reclutas desde Excel',
-            description: 'Este botón abre una herramienta para cargar un archivo Excel y distribuir automáticamente los reclutas entre los asesores.',
+            description: 'Este botón abre una herramienta para cargar un archivo Excel y distribuir automáticamente los reclutas entre los asesores. Haz clic en "Siguiente" para abrir la herramienta.',
             position: 'bottom',
             action: 'clickAndProceed',
             nextButton: 'Abrir Herramienta'
         },
         {
             id: 'dist-excel-step-2',
-            target: '#distribucion-drop-zone',
-            title: '📂 Cargar Archivo',
-            description: 'Arrastra y suelta un archivo Excel (.xlsx o .xls) en esta zona, o haz clic para seleccionarlo. El archivo debe contener las columnas "Fecha de creación", "Nombre" y "Teléfono".',
+            target: '#distribucion-drop-zone, .drop-zone, [class*="drop"], .upload-area, #distribucion-modal .modal-body',
+            title: '📂 Área de Carga de Archivo',
+            description: 'Una vez que se abra la herramienta, verás esta área donde puedes arrastrar y soltar un archivo Excel (.xlsx o .xls) o hacer clic para seleccionarlo desde tu computadora.',
             position: 'bottom',
             action: 'highlight',
-            nextButton: 'Siguiente'
+            nextButton: 'Siguiente',
+            waitForElement: true,
+            timeout: 10000
         },
         {
             id: 'dist-excel-step-3',
-            target: '#confirm-distribucion',
-            title: '🚀 Confirmar Distribución',
-            description: 'Después de cargar el archivo, haz clic aquí para iniciar el proceso de validación y distribución equitativa de los reclutas.',
+            target: '#confirm-distribucion, .confirm-btn, button[class*="confirm"], .modal-footer .btn-primary',
+            title: '🚀 Botón de Confirmación',
+            description: 'Después de cargar tu archivo Excel, aparecerá un botón para confirmar y procesar la distribución. El sistema validará los datos antes de asignar reclutas a los asesores.',
             position: 'top',
             action: 'highlight',
-            nextButton: 'Entendido'
+            nextButton: 'Continuar',
+            waitForElement: true,
+            timeout: 15000
         },
         {
             id: 'dist-excel-step-4',
-            target: '#distribucion-results',
+            target: '#distribucion-results, .results-container, [class*="result"], .distribution-summary',
             title: '📈 Resultados de la Distribución',
-            description: 'Aquí verás un resumen de la distribución, incluyendo los reclutas asignados a cada asesor y cualquier error encontrado. Puedes ajustar manualmente la distribución antes de guardar.',
+            description: 'Finalmente, aquí se mostrarán los resultados de la distribución: qué reclutas fueron asignados a cada asesor, errores encontrados en el archivo, y un resumen del proceso.',
             position: 'top',
             action: 'highlight',
-            nextButton: 'Finalizar'
+            nextButton: 'Finalizar Tutorial',
+            waitForElement: true,
+            timeout: 20000
         }
     ],
+
+    // ✅ FUNCIÓN DE DEBUG MEJORADA
+    _debug(message, data = null) {
+        if (this.config.debugMode) {
+            const timestamp = new Date().toISOString().split('T')[1].slice(0, 8);
+            console.log(`🎓[${timestamp}] Tutorial: ${message}`, data || '');
+        }
+    },
+
+    // ✅ SISTEMA DE LOCKS PARA PREVENIR CONDICIONES DE CARRERA
+    _acquireLock() {
+        if (this.config.isLocked) {
+            this._debug('⚠️ Lock ya adquirido, operación cancelada');
+            return false;
+        }
+        this.config.isLocked = true;
+        this._debug('🔒 Lock adquirido');
+        return true;
+    },
+
+    _releaseLock() {
+        this.config.isLocked = false;
+        this._debug('🔓 Lock liberado');
+    },
 
     // 🏁 INICIALIZAR TUTORIAL
     init() {
@@ -196,32 +234,72 @@ const Tutorial = {
 
     // 🔍 VERIFICAR SI ES PÁGINA DE SEGUIMIENTO
     isTrackingPage() {
-        return window.location.pathname.includes('/seguimiento') ||
-               document.getElementById('tracking-wrapper') !== null;
+        const trackingIndicators = [
+            () => window.location.pathname.includes('/seguimiento'),
+            () => document.getElementById('tracking-wrapper') !== null,
+            () => document.getElementById('folio-input') !== null && 
+                  document.getElementById('tracking-button') !== null,
+            () => document.title && document.title.toLowerCase().includes('seguimiento')
+        ];
+        
+        return trackingIndicators.some(check => {
+            try {
+                return check();
+            } catch (e) {
+                console.warn('Error checking tracking page indicator:', e.message);
+                return false;
+            }
+        });
     },
 
     // 🔍 VERIFICAR SI ES PÁGINA DE AÑADIR RECLUTA (ADMIN)
     isAddRecruitPage() {
-        return window.location.pathname.includes('/admin/dashboard') &&
-               document.getElementById('add-recluta-modal') !== null;
+        try {
+            return window.location.pathname.includes('/admin/dashboard') &&
+                   document.getElementById('add-recluta-modal') !== null;
+        } catch (e) {
+            console.warn('Error checking admin recruit page:', e.message);
+            return false;
+        }
     },
 
     // ✅ VERIFICAR SI DEBE MOSTRAR TUTORIAL
     shouldShowTutorial() {
-        const tutorialCompleted = localStorage.getItem(this.config.storageKey) === 'true';
-        const urlParams = new URLSearchParams(window.location.search);
-        const forceTutorial = urlParams.get('tutorial') === 'true';
-        return !tutorialCompleted || forceTutorial;
+        try {
+            const isFirstVisitGlobal = !localStorage.getItem('sistema_reclutas_first_visit_completed');
+            
+            if (isFirstVisitGlobal) {
+                return true;
+            }
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const forceTutorial = urlParams.get('tutorial') === 'true';
+            
+            if (!forceTutorial) {
+                return false;
+            }
+            
+            const tutorialCompleted = localStorage.getItem(this.config.storageKey) === 'true';
+            return !tutorialCompleted || forceTutorial;
+            
+        } catch (e) {
+            console.warn('Error checking tutorial status:', e.message);
+            return true;
+        }
     },
 
     // 📝 MARCAR O DESMARCAR COMO COMPLETADO
     toggleCompleted(isCompleted) {
-        if (isCompleted) {
-            localStorage.setItem(this.config.storageKey, 'true');
-            console.log('💾 Tutorial marcado como completado');
-        } else {
-            localStorage.removeItem(this.config.storageKey);
-            console.log('🗑️ Tutorial desmarcado como completado');
+        try {
+            if (isCompleted) {
+                localStorage.setItem(this.config.storageKey, 'true');
+                console.log('💾 Tutorial marcado como completado');
+            } else {
+                localStorage.removeItem(this.config.storageKey);
+                console.log('🗑️ Tutorial desmarcado como completado');
+            }
+        } catch (e) {
+            console.warn('Error toggling tutorial completion:', e.message);
         }
     },
 
@@ -269,49 +347,315 @@ const Tutorial = {
         document.addEventListener('keydown', this._keyHandler);
     },
 
-    // 📍 MOSTRAR PASO ESPECÍFICO (Robustecido)
+    // ✅ FUNCIÓN SHOWSTEP COMPLETAMENTE REESCRITA CON ESTABILIDAD
     showStep(stepIndex) {
-        if (!this.config.isActive) return;
+        // ✅ VERIFICACIONES DE ESTADO EXHAUSTIVAS
+        if (!this.config.isActive) {
+            this._debug('❌ Tutorial inactivo, cancelando showStep');
+            return;
+        }
+
+        if (this.config.isLocked) {
+            this._debug('⚠️ Tutorial locked, retrasando showStep');
+            setTimeout(() => this.showStep(stepIndex), 100);
+            return;
+        }
 
         if (stepIndex < 0 || stepIndex >= this.steps.length) {
+            this._debug('📊 Índice fuera de rango, completando tutorial', { stepIndex, totalSteps: this.steps.length });
             this.complete();
             return;
         }
 
-        const step = this.steps[stepIndex];
-        let targetElement = document.querySelector(step.target);
-
-        if (!targetElement) {
-            console.warn(`⚠️ Elemento no encontrado: ${step.target}. Esperando a que aparezca...`);
-            this.waitForElement(step.target, () => {
-                if (!this.config.isActive) return;
-                targetElement = document.querySelector(step.target);
-                if (!targetElement) {
-                    console.warn(`⛔ El elemento ${step.target} no apareció a tiempo. Saltando paso.`);
-                    this.nextStep(); // avanzar sin bloquear el flujo
-                    return;
-                }
-                this.showStep(stepIndex); // reintenta con el mismo índice
-            }, { timeout: 5000, interval: 100 });
+        if (!this._acquireLock()) {
+            this._debug('⚠️ No se pudo adquirir lock, cancelando showStep');
             return;
         }
 
-        console.log(`📍 Mostrando paso ${stepIndex + 1}/${this.steps.length}: ${step.title}`);
+        const step = this.steps[stepIndex];
+        this._debug(`📍 Mostrando paso ${stepIndex + 1}/${this.steps.length}: ${step.title}`);
+
+        // ✅ ACTUALIZAR ESTADO
         this.config.currentStep = stepIndex;
 
-        this.highlightElement(targetElement);
-        this.showTooltip(step, targetElement);
-        this.scrollToElement(targetElement);
+        // ✅ BUSCAR ELEMENTO TARGET CON SELECTORES MÚLTIPLES
+        let targetElement = null;
+        const selectors = step.target.split(',').map(s => s.trim());
+        
+        for (const selector of selectors) {
+            targetElement = document.querySelector(selector);
+            if (targetElement) {
+                this._debug(`📍 Elemento encontrado con selector: ${selector}`);
+                break;
+            }
+        }
+
+        if (!targetElement) {
+            this._debug(`⚠️ Ningún elemento encontrado para: ${step.target}. Iniciando búsqueda...`);
+            
+            // ✅ LIBERAR LOCK ANTES DE WAITFORELEMENT
+            this._releaseLock();
+
+            // ✅ DETECTAR SI ES PASO DE MODAL PARA TIMEOUT EXTENDIDO
+            const isModalStep = step.target.includes('modal') || step.target.includes('.modal');
+            const timeoutMs = isModalStep ? 10000 : (step.timeout || 8000);
+            
+            this._debug(`🔍 Esperando elemento ${isModalStep ? 'modal' : 'regular'}`, { timeout: timeoutMs });
+            
+            // ✅ USAR WAITFORELEMENT MEJORADO
+            this.waitForElement(step.target, (foundElement) => {
+                if (foundElement && this.config.isActive) {
+                    this._debug(`✅ Elemento apareció, reintentando showStep`);
+                    
+                    // ✅ DELAY ADICIONAL PARA MODALES
+                    if (isModalStep) {
+                        setTimeout(() => this.showStep(stepIndex), 300);
+                    } else {
+                        this.showStep(stepIndex);
+                    }
+                }
+            }, { 
+                timeout: timeoutMs, 
+                interval: isModalStep ? 300 : 200 
+            });
+            
+            return;
+        }
+
+        // ✅ ELEMENTO ENCONTRADO - PROCEDER CON EL PASO
+        try {
+            this._debug(`🎯 Aplicando highlight y tooltip`);
+
+            // ✅ VERIFICAR QUE EL TUTORIAL SIGUE ACTIVO ANTES DE CONTINUAR
+            if (!this.config.isActive) {
+                this._debug('❌ Tutorial se desactivó durante showStep');
+                this._releaseLock();
+                return;
+            }
+
+            // ✅ APLICAR EFECTOS VISUALES
+            this.highlightElement(targetElement);
+            this.showTooltip(step, targetElement);
+            this.scrollToElement(targetElement);
+
+            this._debug(`✅ Paso ${stepIndex + 1} configurado exitosamente`);
+            
+        } catch (error) {
+            console.error('❌ Error configurando paso:', error);
+            this._debug('❌ Error en showStep', error.message);
+        } finally {
+            this._releaseLock();
+        }
     },
 
-    // 🎯 RESALTAR ELEMENTO
+    // ✅ FUNCIÓN WAITFORELEMENT COMPLETAMENTE REESCRITA
+    waitForElement(selector, callback, opts = {}) {
+        if (!this.config.isActive) {
+            this._debug('❌ Tutorial inactivo, cancelando waitForElement');
+            return;
+        }
+
+        const interval = typeof opts.interval === 'number' ? Math.max(opts.interval, 50) : 200;
+        const timeout = typeof opts.timeout === 'number' ? opts.timeout : 8000;
+        const startTime = Date.now();
+        const waitId = `wait_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        this._debug(`🔍 Iniciando waitForElement para: ${selector}`, { waitId, timeout });
+
+        // ✅ FUNCIÓN DE BÚSQUEDA MEJORADA
+        const findElement = () => {
+            if (selector.includes(',')) {
+                const selectors = selector.split(',').map(s => s.trim());
+                for (const sel of selectors) {
+                    const el = document.querySelector(sel);
+                    if (el) {
+                        this._debug(`✅ Elemento encontrado con selector: ${sel}`);
+                        return el;
+                    }
+                }
+                return null;
+            } else {
+                return document.querySelector(selector);
+            }
+        };
+
+        // ✅ CHEQUEO INMEDIATO
+        const element = findElement();
+        if (element) {
+            this._debug(`✅ Elemento encontrado inmediatamente: ${selector}`);
+            this._safeCallback(callback, element);
+            return;
+        }
+
+        // ✅ PREVENIR CALLBACKS DUPLICADOS
+        if (this.config.waitForCallbacks.has(selector)) {
+            this._debug(`⚠️ Ya existe waitForElement para: ${selector}, cancelando duplicado`);
+            return;
+        }
+
+        let found = false;
+        let pollId = null;
+        let timeoutId = null;
+        let isCleanedUp = false;
+
+        // ✅ FUNCIÓN DE LIMPIEZA SEGURA
+        const cleanup = (reason = 'unknown') => {
+            if (isCleanedUp) return;
+            isCleanedUp = true;
+
+            this._debug(`🧹 Limpiando waitForElement: ${selector} (razón: ${reason})`);
+
+            if (pollId) {
+                this._clearInterval(pollId);
+                pollId = null;
+            }
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+                timeoutId = null;
+            }
+            
+            this.config.waitForCallbacks.delete(selector);
+            this.config.waitForCallbacks.delete(waitId);
+        };
+
+        // ✅ REGISTRAR CALLBACK ACTIVO
+        this.config.waitForCallbacks.set(selector, { waitId, startTime, cleanup });
+        this.config.waitForCallbacks.set(waitId, { selector, startTime, cleanup });
+
+        // ✅ POLLING MEJORADO CON VERIFICACIONES DE ESTADO
+        pollId = this._setInterval(() => {
+            if (!this.config.isActive) {
+                cleanup('tutorial_inactive');
+                return;
+            }
+
+            if (found || isCleanedUp) {
+                cleanup('already_found');
+                return;
+            }
+
+            const element = findElement();
+            if (element) {
+                found = true;
+                cleanup('element_found');
+                
+                this._debug(`✅ Elemento encontrado por polling: ${selector}`);
+                this._safeCallback(callback, element);
+            }
+        }, interval);
+
+        // ✅ TIMEOUT MEJORADO - NO AVANZA AUTOMÁTICAMENTE
+        timeoutId = setTimeout(() => {
+            if (!found && !isCleanedUp) {
+                cleanup('timeout');
+                this._debug(`⏰ Timeout alcanzado para: ${selector} después de ${timeout}ms`);
+                
+                console.warn(`⚠️ Elemento ${selector} no encontrado después de ${timeout}ms. Tutorial permanece en paso actual.`);
+                this._showElementNotFoundMessage(selector);
+            }
+        }, timeout);
+
+        this._debug(`🕐 Configurado polling para: ${selector}`, { interval, timeout, waitId });
+    },
+
+    // ✅ FUNCIÓN PARA MOSTRAR MENSAJE CUANDO NO SE ENCUENTRA ELEMENTO
+    _showElementNotFoundMessage(selector) {
+        const tooltip = document.getElementById('tutorial-tooltip');
+        if (tooltip) {
+            const body = tooltip.querySelector('.tutorial-body');
+            if (body) {
+                const originalContent = body.innerHTML;
+                body.innerHTML = `
+                    <div style="border: 2px solid #ffc107; padding: 10px; border-radius: 6px; background: #fff3cd;">
+                        <strong>⚠️ Elemento no encontrado</strong><br>
+                        <small>El tutorial está esperando que aparezca: <code>${selector}</code></small><br>
+                        <small>Verifica que la página esté completamente cargada.</small>
+                    </div>
+                    <hr>
+                    ${originalContent}
+                `;
+            }
+        }
+    },
+
+    // ✅ CALLBACK SEGURO MEJORADO
+    _safeCallback(callback, ...args) {
+        if (typeof callback !== 'function') {
+            this._debug('❌ Callback no es una función');
+            return;
+        }
+
+        try {
+            if (!this.config.isActive) {
+                this._debug('❌ Tutorial inactivo, cancelando callback');
+                return;
+            }
+
+            this._debug('📞 Ejecutando callback');
+            callback(...args);
+        } catch (error) {
+            console.error('❌ Error ejecutando callback:', error);
+            this._debug('❌ Error en callback', error.message);
+        }
+    },
+
+    // 🎯 RESALTAR ELEMENTO CON SOPORTE MEJORADO PARA MODALES
     highlightElement(element) {
+    const highlight = document.getElementById('tutorial-highlight');
+    if (!highlight) return;
+
+    highlight.style.display = 'none';
+
+    const isModal = element.classList.contains('modal') || 
+                   element.closest('.modal') || 
+                   element.classList.contains('modal-content') ||
+                   element.querySelector('.modal-content');
+
+    if (isModal) {
+        console.log('🔍 Detectado modal, esperando renderizado completo...');
+        
+        const highlightModal = () => {
+            let modalElement = element;
+            
+            if (element.classList.contains('modal')) {
+                const modalContent = element.querySelector('.modal-content');
+                if (modalContent) modalElement = modalContent;
+            }
+            
+            if (element.closest('.modal')) {
+                const modalContent = element.closest('.modal').querySelector('.modal-content');
+                if (modalContent) modalElement = modalContent;
+            }
+
+            const rect = modalElement.getBoundingClientRect();
+            
+            if (rect.width === 0 || rect.height === 0) {
+                console.warn('⚠️ Modal aún no visible, reintentando...');
+                setTimeout(highlightModal, 100);
+                return;
+            }
+
+            this._applyHighlight(modalElement, rect, true);
+            // NUEVO: Configurar scroll listener para modales
+            this._setupScrollListener(modalElement, true);
+        };
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(highlightModal);
+        });
+        return;
+    }
+
+    const rect = element.getBoundingClientRect();
+    this._applyHighlight(element, rect, false);
+    // NUEVO: Configurar scroll listener para elementos normales
+    this._setupScrollListener(element, false);
+},
+
+    // 🎯 FUNCIÓN AUXILIAR: APLICAR HIGHLIGHT
+    _applyHighlight(element, rect, isModal = false) {
         const highlight = document.getElementById('tutorial-highlight');
         if (!highlight) return;
-
-        highlight.style.display = 'none';
-
-        const rect = element.getBoundingClientRect();
 
         if (this.lastHighlightedElement && this.lastHighlightedElement !== element) {
             this.lastHighlightedElement.style.zIndex = this.lastHighlightedElement.dataset.originalZindex || '';
@@ -323,24 +667,155 @@ const Tutorial = {
         element.dataset.originalZindex = element.style.zIndex;
         element.dataset.originalPosition = element.style.position;
 
+        const targetZIndex = isModal ? 10050 : this.config.zIndex + 2;
+        const highlightZIndex = isModal ? 10049 : this.config.zIndex + 1;
+
         highlight.style.cssText = `
             position: fixed;
-            top: ${rect.top - 10}px; left: ${rect.left - 10}px;
-            width: ${rect.width + 20}px; height: ${rect.height + 20}px;
-            border: 3px solid ${this.config.highlightColor}; border-radius: 8px;
+            top: ${rect.top - 10}px; 
+            left: ${rect.left - 10}px;
+            width: ${rect.width + 20}px; 
+            height: ${rect.height + 20}px;
+            border: 3px solid ${this.config.highlightColor}; 
+            border-radius: 8px;
             background: rgba(255,255,255,0.1);
-            z-index: ${this.config.zIndex + 1};
+            z-index: ${highlightZIndex};
             transition: all 0.3s ease;
             box-shadow: 0 0 20px rgba(0,123,255,0.5);
             animation: tutorial-pulse 2s infinite;
             display: block;
+            pointer-events: none;
         `;
 
-        element.style.position = 'relative';
-        element.style.zIndex = this.config.zIndex + 2;
+        if (!element.style.position || element.style.position === 'static') {
+            element.style.position = 'relative';
+        }
+        element.style.zIndex = targetZIndex;
 
         this.lastHighlightedElement = element;
+        
+        console.log(`✅ Highlight aplicado a ${isModal ? 'modal' : 'elemento'} con z-index: ${targetZIndex}`);
     },
+
+    // NUEVA FUNCIÓN: Throttle para optimizar scroll performance
+_throttle(func, limit) {
+    let inThrottle;
+    return function() {
+        const args = arguments;
+        const context = this;
+        if (!inThrottle) {
+            func.apply(context, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    }
+},
+
+    // Configurar listener de scroll para actualizar highlight
+_setupScrollListener(element, isModal = false) {
+    // Limpiar listener anterior si existe
+    if (this._scrollListener) {
+        window.removeEventListener('scroll', this._scrollListener, true);
+        this._scrollListener = null;
+    }
+
+    // Crear nuevo listener
+    this._scrollListener = () => {
+        if (!this.config.isActive || !element) return;
+
+        const highlight = document.getElementById('tutorial-highlight');
+        if (!highlight) return;
+
+        // Recalcular posición del elemento
+        const rect = element.getBoundingClientRect();
+        
+        // Verificar si el elemento sigue visible
+        if (rect.width === 0 || rect.height === 0) {
+            highlight.style.display = 'none';
+            return;
+        }
+
+        // Actualizar posición del highlight
+        const targetZIndex = isModal ? 10050 : this.config.zIndex + 2;
+        const highlightZIndex = isModal ? 10049 : this.config.zIndex + 1;
+
+        highlight.style.cssText = `
+            position: fixed;
+            top: ${rect.top - 10}px; 
+            left: ${rect.left - 10}px;
+            width: ${rect.width + 20}px; 
+            height: ${rect.height + 20}px;
+            border: 3px solid ${this.config.highlightColor}; 
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            z-index: ${highlightZIndex};
+            transition: all 0.1s ease;
+            box-shadow: 0 0 20px rgba(0,123,255,0.5);
+            animation: tutorial-pulse 2s infinite;
+            display: block;
+            pointer-events: none;
+        `;
+
+        this._debug(`🔄 Highlight actualizado por scroll: ${rect.top}, ${rect.left}`);
+    };
+
+    // Agregar listener con captura para todos los elementos padre
+    window.addEventListener('scroll', this._throttle(this._scrollListener, 16), true);
+    this._debug('✅ Scroll listener configurado');
+},
+
+    // Configurar listener de scroll para actualizar highlight
+_setupScrollListener(element, isModal = false) {
+    // Limpiar listener anterior si existe
+    if (this._scrollListener) {
+        window.removeEventListener('scroll', this._scrollListener, true);
+        this._scrollListener = null;
+    }
+
+    // Crear nuevo listener
+    this._scrollListener = () => {
+        if (!this.config.isActive || !element) return;
+
+        const highlight = document.getElementById('tutorial-highlight');
+        if (!highlight) return;
+
+        // Recalcular posición del elemento
+        const rect = element.getBoundingClientRect();
+        
+        // Verificar si el elemento sigue visible
+        if (rect.width === 0 || rect.height === 0) {
+            highlight.style.display = 'none';
+            return;
+        }
+
+        // Actualizar posición del highlight
+        const targetZIndex = isModal ? 10050 : this.config.zIndex + 2;
+        const highlightZIndex = isModal ? 10049 : this.config.zIndex + 1;
+
+        highlight.style.cssText = `
+            position: fixed;
+            top: ${rect.top - 10}px; 
+            left: ${rect.left - 10}px;
+            width: ${rect.width + 20}px; 
+            height: ${rect.height + 20}px;
+            border: 3px solid ${this.config.highlightColor}; 
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            z-index: ${highlightZIndex};
+            transition: all 0.1s ease;
+            box-shadow: 0 0 20px rgba(0,123,255,0.5);
+            animation: tutorial-pulse 2s infinite;
+            display: block;
+            pointer-events: none;
+        `;
+
+        this._debug(`🔄 Highlight actualizado por scroll: ${rect.top}, ${rect.left}`);
+    };
+
+    // Agregar listener con captura para todos los elementos padre
+    window.addEventListener('scroll', this._scrollListener, true);
+    this._debug('✅ Scroll listener configurado');
+},
 
     // 💬 MOSTRAR TOOLTIP
     showTooltip(step, targetElement) {
@@ -387,7 +862,6 @@ const Tutorial = {
 
         this.makeDraggable(tooltip);
 
-        // Acción especial
         if (step.action === 'clickAndProceed') {
             const nextButton = tooltip.querySelector('#tutorial-next');
             if (nextButton) {
@@ -397,180 +871,133 @@ const Tutorial = {
         }
     },
 
-    // ✅ HACER ELEMENTO ARRASTRABLE
-    makeDraggable(element) {
-        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-        const dragHandle = element.querySelector('.tutorial-header');
-        if (!dragHandle) return;
+    // 📐 POSICIONAR TOOLTIP MEJORADO
+    positionTooltip(tooltip, targetElement, preferredPosition = 'bottom') {
+    if (!tooltip || !targetElement) return;
 
-        dragHandle.onmousedown = dragMouseDown;
-
-        function dragMouseDown(e) {
-            if (!e) return;
-            e.preventDefault();
-            pos3 = e.clientX; pos4 = e.clientY;
-            document.onmouseup = closeDragElement;
-            document.onmousemove = elementDrag;
-        }
-
-        function elementDrag(e) {
-            if (!e) return;
-            e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX; pos4 = e.clientY;
-            element.style.top = (element.offsetTop - pos2) + "px";
-            element.style.left = (element.offsetLeft - pos1) + "px";
-        }
-
-        function closeDragElement() {
-            document.onmouseup = null;
-            document.onmousemove = null;
-        }
-    },
-
-    // 🆕 MANEJAR ACCIÓN 'clickAndProceed'
-    handleStepClickAndProceed(targetSelector) {
-    console.log(`🔄 Ejecutando clickAndProceed para: ${targetSelector}`);
+    const rect = targetElement.getBoundingClientRect();
+    const margin = 20;
     
-    const targetElement = document.querySelector(targetSelector);
-    if (targetElement) {
-        console.log('✅ Elemento encontrado, haciendo clic...');
-        targetElement.click();
+    // FIJO: Usar dimensiones consistentes para evitar saltos
+    const tooltipWidth = Math.min(350, window.innerWidth * 0.9);
+    const tooltipHeight = Math.min(280, window.innerHeight * 0.8); // Altura estimada fija
+    
+    console.log(`📏 Tooltip dimensions fijas: ${tooltipWidth}x${tooltipHeight}`);
+
+    // Posiciones candidatas más conservadoras
+    const positions = {
+        bottom: {
+            top: rect.bottom + margin,
+            left: rect.left + (rect.width / 2) - (tooltipWidth / 2)
+        },
+        top: {
+            top: rect.top - tooltipHeight - margin,
+            left: rect.left + (rect.width / 2) - (tooltipWidth / 2)
+        },
+        right: {
+            top: rect.top + (rect.height / 2) - (tooltipHeight / 2),
+            left: rect.right + margin
+        },
+        left: {
+            top: rect.top + (rect.height / 2) - (tooltipHeight / 2),
+            left: rect.left - tooltipWidth - margin
+        }
+    };
+
+    // Validar que la posición preferida no tape el elemento resaltado
+    let bestPosition = null;
+    let finalPosition = preferredPosition;
+
+    // NUEVO: Verificar que no se superpone con el elemento target
+    const validatePosition = (pos) => {
+        const tooltipRect = {
+            top: pos.top,
+            left: pos.left,
+            right: pos.left + tooltipWidth,
+            bottom: pos.top + tooltipHeight
+        };
         
-        // Dar tiempo para que se ejecuten los efectos del clic (abrir modal, etc.)
-        this._setTimeout(() => {
-            const nextStepIndex = this.config.currentStep + 1;
-            const nextStepInfo = this.steps[nextStepIndex];
-            
-            if (nextStepInfo?.target) {
-                console.log(`🔍 Esperando elemento del paso ${nextStepIndex + 1}: ${nextStepInfo.target}`);
-                
-                this.waitForElement(nextStepInfo.target, (element) => {
-                    if (element) {
-                        console.log(`✅ Elemento del siguiente paso encontrado, avanzando...`);
-                        this.nextStep();
-                    } else {
-                        console.warn(`⚠️ Elemento del siguiente paso no encontrado, avanzando de todos modos`);
-                        this.nextStep();
-                    }
-                }, { timeout: 3000, interval: 200 });
-            } else {
-                console.log('📍 No hay siguiente paso definido, avanzando...');
-                this.nextStep();
-            }
-        }, 300); // Dar 300ms para que se complete la acción del clic
+        const targetRect = {
+            top: rect.top - 10,
+            left: rect.left - 10,
+            right: rect.right + 10,
+            bottom: rect.bottom + 10
+        };
         
-    } else {
-        console.warn(`❌ Elemento objetivo no encontrado para clickAndProceed: ${targetSelector}`);
-        this.nextStep();
+        // Verificar que no se superponen
+        const noOverlap = (
+            tooltipRect.left > targetRect.right ||
+            tooltipRect.right < targetRect.left ||
+            tooltipRect.top > targetRect.bottom ||
+            tooltipRect.bottom < targetRect.top
+        );
+        
+        // Verificar que cabe en viewport
+        const fitsInViewport = (
+            pos.top >= margin &&
+            pos.left >= margin &&
+            (pos.top + tooltipHeight) <= (window.innerHeight - margin) &&
+            (pos.left + tooltipWidth) <= (window.innerWidth - margin)
+        );
+        
+        return noOverlap && fitsInViewport;
+    };
+
+    // Probar posiciones en orden de preferencia
+    const positionOrder = [preferredPosition, 'bottom', 'top', 'right', 'left'];
+    
+    for (const pos of positionOrder) {
+        const candidate = positions[pos];
+        if (validatePosition(candidate)) {
+            bestPosition = candidate;
+            finalPosition = pos;
+            break;
+        }
     }
+
+    // Si ninguna posición es válida, usar la menos problemática
+    if (!bestPosition) {
+        bestPosition = positions['top']; // Top por defecto
+        finalPosition = 'top';
+        console.warn('⚠️ Ninguna posición ideal encontrada, usando top por defecto');
+    }
+
+    // Ajustes finales para asegurar visibilidad sin superposición
+    let { top, left } = bestPosition;
+
+    // Clamp horizontal conservador
+    left = Math.max(margin, Math.min(left, window.innerWidth - tooltipWidth - margin));
+    
+    // Clamp vertical conservador - evitar solapar con elemento target
+    if (finalPosition === 'top' || finalPosition === 'bottom') {
+        // Para posiciones arriba/abajo, asegurar separación mínima
+        if (finalPosition === 'bottom' && top < rect.bottom + margin) {
+            top = rect.bottom + margin;
+        }
+        if (finalPosition === 'top' && (top + tooltipHeight) > rect.top - margin) {
+            top = rect.top - tooltipHeight - margin;
+        }
+    }
+    
+    top = Math.max(margin, Math.min(top, window.innerHeight - tooltipHeight - margin));
+
+    // Aplicar posición final con dimensiones fijas
+    tooltip.style.cssText = `
+        position: fixed;
+        top: ${top}px; 
+        left: ${left}px;
+        width: ${tooltipWidth}px; 
+        max-width: 90vw;
+        max-height: ${tooltipHeight}px;
+        z-index: ${this.config.zIndex + 3};
+        opacity: 0; 
+        transition: opacity 0.3s ease;
+        display: block;
+        overflow: hidden;
+    `;
+
+    console.log(`📍 Tooltip posicionado: ${finalPosition} en (${Math.round(top)}, ${Math.round(left)}) - Sin superposición`);
 },
-
-    // 👁️ ESPERAR A QUE UN ELEMENTO APAREZCA (con timeout y polling)
-    waitForElement(selector, callback, opts = {}) {
-        const interval = typeof opts.interval === 'number' ? opts.interval : 100;
-        const timeout  = typeof opts.timeout === 'number' ? opts.timeout : 5000;
-
-        // Chequeo inmediato
-        const immediate = () => !!document.querySelector(selector);
-        if (immediate()) { try { callback(); } catch(e){ console.error(e);} return; }
-
-        // Observador de mutaciones
-        const observer = new MutationObserver(() => {
-            if (immediate()) {
-                observer.disconnect();
-                this._activeObservers = this._activeObservers.filter(o => o !== observer);
-                try { callback(); } catch(e){ console.error(e); }
-            }
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-        this._activeObservers.push(observer);
-
-        // Polling y timeout de seguridad
-        const pollId = this._setInterval(() => {
-            if (!this.config.isActive) { this._clearInterval(pollId); return; }
-            if (immediate()) {
-                this._clearInterval(pollId);
-                try { callback(); } catch(e){ console.error(e); }
-            }
-        }, interval);
-
-        this._setTimeout(() => {
-            try {
-                observer.disconnect();
-                this._activeObservers = this._activeObservers.filter(o => o !== observer);
-            } catch(e){}
-            this._clearInterval(pollId);
-            console.warn(`⌛ Timeout esperando ${selector} (${timeout}ms).`);
-            // Fallback: no bloqueamos el flujo del tutorial
-            try { callback.__timedout__ = true; } catch(e){}
-            // Decisión: dejamos que el caller decida si salta el paso.
-        }, timeout);
-    },
-
-    // 📐 POSICIONAR TOOLTIP
-    positionTooltip(tooltip, targetElement, preferredPosition) {
-        const rect = targetElement.getBoundingClientRect();
-        const tooltipWidth = 350;
-        const margin = 30;
-
-        tooltip.style.visibility = 'hidden';
-        tooltip.style.display = 'block';
-        let tooltipHeight = tooltip.offsetHeight;
-        tooltip.style.visibility = 'visible';
-
-        let top, left;
-        let positionsToTry = [];
-        switch (preferredPosition) {
-            case 'right':  positionsToTry = ['right','left','bottom','top']; break;
-            case 'left':   positionsToTry = ['left','right','bottom','top']; break;
-            case 'top':    positionsToTry = ['top','bottom','right','left']; break;
-            case 'bottom': positionsToTry = ['bottom','top','right','left']; break;
-            default:       positionsToTry = ['bottom','top','right','left'];
-        }
-
-        for (const currentPosition of positionsToTry) {
-            switch (currentPosition) {
-                case 'right':
-                    top = rect.top;
-                    left = rect.right + margin;
-                    break;
-                case 'left':
-                    top = rect.top;
-                    left = rect.left - tooltipWidth - margin;
-                    break;
-                case 'bottom':
-                    top = rect.bottom + margin;
-                    left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
-                    break;
-                case 'top':
-                    top = rect.top - tooltipHeight - margin;
-                    left = rect.left + (rect.width / 2) - (tooltipWidth / 2);
-                    break;
-            }
-            const isWithinViewport = (
-                top >= margin &&
-                left >= margin &&
-                (top + tooltipHeight <= window.innerHeight - margin) &&
-                (left + tooltipWidth <= window.innerWidth - margin)
-            );
-            if (isWithinViewport) break;
-        }
-
-        if (left < margin) left = margin;
-        if (left + tooltipWidth > window.innerWidth - margin) left = window.innerWidth - tooltipWidth - margin;
-        if (top < margin) top = margin;
-        if (top + tooltipHeight > window.innerHeight - margin) top = window.innerHeight - tooltipHeight - margin;
-
-        tooltip.style.cssText = `
-            position: fixed;
-            top: ${top}px; left: ${left}px;
-            width: ${tooltipWidth}px; max-width: 90vw;
-            z-index: ${this.config.zIndex + 3};
-            opacity: 0; transition: opacity 0.3s ease;
-        `;
-    },
 
     // 🔗 VINCULAR EVENTOS DEL TOOLTIP
     bindTooltipEvents(tooltip) {
@@ -600,22 +1027,24 @@ const Tutorial = {
 
     // ▶️ CONFIGURAR BOTÓN SIGUIENTE
     _setupNextButton(tooltip) {
-    const nextBtn = tooltip.querySelector('#tutorial-next');
-    if (!nextBtn) return;
+        const nextBtn = tooltip.querySelector('#tutorial-next');
+        if (!nextBtn) return;
 
-    // ✅ VERIFICAR SI YA TIENE ACCIÓN ESPECIAL CONFIGURADA
-    const currentStep = this.steps[this.config.currentStep];
-    if (currentStep && currentStep.action === 'clickAndProceed') {
-        console.log('⚠️ Paso con acción especial, no agregando listener normal');
-        return; // No agregar listener normal para evitar doble ejecución
-    }
+        const currentStep = this.steps[this.config.currentStep];
+        if (currentStep && currentStep.action === 'clickAndProceed') {
+            console.log('⚠️ Paso con acción especial, no agregando listener normal');
+            return;
+        }
 
-    const currentStepId = this.steps[this.config.currentStep].id;
-    const isLastStep = currentStepId === 'admin-step-3' || currentStepId === 'add-button-step-3' || this.config.currentStep === this.steps.length - 1;
+        const currentStepId = this.steps[this.config.currentStep].id;
+        const isLastStep = currentStepId === 'admin-step-3' || 
+                          currentStepId === 'add-button-step-3' || 
+                          currentStepId === 'dist-excel-step-4' ||
+                          this.config.currentStep === this.steps.length - 1;
 
-    this._nextBtnListener = () => isLastStep ? this.complete() : this.nextStep();
-    nextBtn.addEventListener('click', this._nextBtnListener);
-},
+        this._nextBtnListener = () => isLastStep ? this.complete() : this.nextStep();
+        nextBtn.addEventListener('click', this._nextBtnListener);
+    },
 
     // ◀️ CONFIGURAR BOTÓN ANTERIOR
     _setupPrevButton(tooltip) {
@@ -637,9 +1066,86 @@ const Tutorial = {
     _setupCheckbox(tooltip) {
         const checkbox = tooltip.querySelector('#no-show-again');
         if (!checkbox) return;
-        checkbox.checked = localStorage.getItem(this.config.storageKey) === 'true';
+        try {
+            checkbox.checked = localStorage.getItem(this.config.storageKey) === 'true';
+        } catch (e) {
+            console.warn('Error accessing localStorage:', e.message);
+            checkbox.checked = false;
+        }
         this._checkboxListener = (e) => this.toggleCompleted(e.target.checked);
         checkbox.addEventListener('change', this._checkboxListener);
+    },
+
+    // ✅ HACER ELEMENTO ARRASTRABLE
+    makeDraggable(element) {
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        const dragHandle = element.querySelector('.tutorial-header');
+        if (!dragHandle) return;
+
+        dragHandle.style.cursor = 'move';
+        dragHandle.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            if (!e) return;
+            e.preventDefault();
+            pos3 = e.clientX; 
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            if (!e) return;
+            e.preventDefault();
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX; 
+            pos4 = e.clientY;
+            element.style.top = (element.offsetTop - pos2) + "px";
+            element.style.left = (element.offsetLeft - pos1) + "px";
+        }
+
+        function closeDragElement() {
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    },
+
+    // 🆕 MANEJAR ACCIÓN 'clickAndProceed'
+    handleStepClickAndProceed(targetSelector) {
+        console.log(`🔄 Ejecutando clickAndProceed para: ${targetSelector}`);
+        
+        const targetElement = document.querySelector(targetSelector);
+        if (targetElement) {
+            console.log('✅ Elemento encontrado, haciendo clic...');
+            targetElement.click();
+            
+            this._setTimeout(() => {
+                const nextStepIndex = this.config.currentStep + 1;
+                const nextStepInfo = this.steps[nextStepIndex];
+                
+                if (nextStepInfo?.target) {
+                    console.log(`🔍 Esperando elemento del paso ${nextStepIndex + 1}: ${nextStepInfo.target}`);
+                    
+                    this.waitForElement(nextStepInfo.target, (element) => {
+                        if (element) {
+                            console.log('✅ Elemento del siguiente paso encontrado, avanzando...');
+                            this.nextStep();
+                        } else {
+                            console.warn('⚠️ Elemento del siguiente paso no encontrado, avanzando de todos modos');
+                            this.nextStep();
+                        }
+                    }, { timeout: 3000, interval: 200 });
+                } else {
+                    console.log('📍 No hay siguiente paso definido, avanzando...');
+                    this.nextStep();
+                }
+            }, 300);
+            
+        } else {
+            console.warn(`❌ Elemento objetivo no encontrado para clickAndProceed: ${targetSelector}`);
+            this.nextStep();
+        }
     },
 
     // ➡️ PASO SIGUIENTE
@@ -668,101 +1174,255 @@ const Tutorial = {
         if (confirmSkip) this.complete();
     },
 
-    // ✅ COMPLETAR TUTORIAL
+    // ✅ COMPLETE MEJORADO CON VERIFICACIONES
     complete() {
-        console.log('✅ Tutorial completado');
-        this.config.isActive = false;
+        this._debug('🏁 Iniciando complete()');
 
-        this.cleanup();
-        document.body.style.overflow = '';
+        if (!this.config.isActive) {
+            this._debug('⚠️ Complete() llamado pero tutorial ya inactivo');
+            return;
+        }
 
-        const checkbox = document.querySelector('#no-show-again');
-        if (checkbox?.checked) this.markAsCompleted();
+        if (!this._acquireLock()) {
+            this._debug('⚠️ No se pudo adquirir lock para complete()');
+            return;
+        }
 
-        if (this.config.tutorialType === 'admin_add_button') {
-            console.log('🔗 Encadenando al tutorial de distribución Excel...');
-            this._setTimeout(() => {
-                this.startTutorial({
-                    type: 'admin_distribute_excel',
-                    steps: this.distribuirReclutasExcelSteps,
-                    storageKey: 'sistema_reclutas_tutorial_completed_admin_distribute_excel',
-                    force: true
-                });
-            }, 500);
-        } else {
-            this.showWelcomeMessage();
+        try {
+            this._debug('✅ Marcando tutorial como inactivo');
+            this.config.isActive = false;
+
+            this.cleanup();
+            document.body.style.overflow = '';
+
+            const checkbox = document.querySelector('#no-show-again');
+            if (checkbox?.checked) {
+                this.markAsCompleted();
+            }
+
+            if (this.config.tutorialType === 'admin_add_button') {
+                this._debug('🔗 Iniciando encadenamiento automático');
+                
+                const openModal = document.querySelector('#add-recluta-modal');
+                if (openModal) {
+                    openModal.style.display = 'none';
+                }
+                
+                const isFirstVisit = !localStorage.getItem('sistema_reclutas_first_visit_completed');
+                
+                if (isFirstVisit) {
+                    this._setTimeout(() => {
+                        this.startDistributionTutorialAutomatic();
+                    }, 1500);
+                } else {
+                    this.showWelcomeMessage();
+                }
+            } else {
+                if (this.config.tutorialType === 'admin_distribute_excel') {
+                    try {
+                        localStorage.setItem('sistema_reclutas_first_visit_completed', 'true');
+                        this._debug('✅ Primera visita marcada como completada');
+                    } catch (e) {
+                        this._debug('⚠️ Error marcando primera visita', e.message);
+                    }
+                }
+                this.showWelcomeMessage();
+            }
+
+            this._debug('✅ Complete() finalizado exitosamente');
+            
+        } catch (error) {
+            console.error('❌ Error en complete():', error);
+            this._debug('❌ Error en complete()', error.message);
+        } finally {
+            this._releaseLock();
         }
     },
 
-    // 🧹 LIMPIAR ELEMENTOS DEL TUTORIAL
+    // Iniciar tutorial de distribución automáticamente
+    startDistributionTutorialAutomatic() {
+        console.log('Iniciando tutorial de distribución Excel automáticamente...');
+        
+        const distribuirBtn = document.querySelector('#distribuir-excel-btn');
+        
+        if (!distribuirBtn) {
+            console.warn('Botón de distribución no encontrado. Finalizando secuencia de tutoriales.');
+            try {
+                localStorage.setItem('sistema_reclutas_first_visit_completed', 'true');
+            } catch (e) {
+                console.warn('Error marcando primera visita:', e.message);
+            }
+            this.showWelcomeMessage();
+            return;
+        }
+
+        try {
+            localStorage.removeItem('sistema_reclutas_tutorial_completed_admin_distribute_excel');
+        } catch (e) {
+            console.warn('Error reseteando tutorial de distribución:', e.message);
+        }
+        
+        this.startTutorial({
+            type: 'admin_distribute_excel',
+            steps: this.distribuirReclutasExcelSteps,
+            storageKey: 'sistema_reclutas_tutorial_completed_admin_distribute_excel',
+            force: true
+        });
+    },
+
+    // ✅ CLEANUP MEJORADO CON VERIFICACIONES
     cleanup() {
+        this._debug('🧹 Iniciando limpieza de tutorial');
+
+        // NUEVO: Limpiar scroll listener
+    if (this._scrollListener) {
+        window.removeEventListener('scroll', this._scrollListener, true);
+        this._scrollListener = null;
+        this._debug('🗑️ Scroll listener removido');
+    }
+
+    if (this.config.autoCleanupDisabled) {
+        this._debug('⚠️ Cleanup automático deshabilitado');
+        return;
+    }
+
+        if (this.config.autoCleanupDisabled) {
+            this._debug('⚠️ Cleanup automático deshabilitado');
+            return;
+        }
+
         const elementsToRemove = ['tutorial-overlay', 'tutorial-highlight', 'tutorial-tooltip'];
         elementsToRemove.forEach(id => {
             const element = document.getElementById(id);
-            if (element) element.remove();
+            if (element) {
+                element.remove();
+                this._debug(`🗑️ Elemento removido: ${id}`);
+            }
         });
 
         document.querySelectorAll('[data-original-zindex]').forEach(el => {
-            el.style.zIndex = el.dataset.originalZindex;
+            el.style.zIndex = el.dataset.originalZindex || '';
             el.removeAttribute('data-original-zindex');
         });
         document.querySelectorAll('[data-original-position]').forEach(el => {
-            el.style.position = el.dataset.originalPosition;
+            el.style.position = el.dataset.originalPosition || '';
             el.removeAttribute('data-original-position');
         });
 
-        if (this._keyHandler) document.removeEventListener('keydown', this._keyHandler);
+        if (this._keyHandler) {
+            document.removeEventListener('keydown', this._keyHandler);
+            this._keyHandler = null;
+        }
 
-        // Limpiar timers/observers activos
-        this._activeIntervals.forEach(id => clearInterval(id));
-        this._activeTimeouts.forEach(id => clearTimeout(id));
-        this._activeObservers.forEach(obs => { try { obs.disconnect(); } catch(e){} });
+        this._debug(`🧹 Limpiando ${this._activeIntervals.length} intervals y ${this._activeTimeouts.length} timeouts`);
+        
+        this._activeIntervals.forEach(id => {
+            try {
+                clearInterval(id);
+            } catch (e) {
+                this._debug('⚠️ Error limpiando interval', e.message);
+            }
+        });
+        
+        this._activeTimeouts.forEach(id => {
+            try {
+                clearTimeout(id);
+            } catch (e) {
+                this._debug('⚠️ Error limpiando timeout', e.message);
+            }
+        });
+        
+        this._activeObservers.forEach(obs => { 
+            try { 
+                obs.disconnect(); 
+            } catch(e) {
+                this._debug('⚠️ Error desconectando observer', e.message);
+            }
+        });
+
+        this.config.waitForCallbacks.forEach((data, key) => {
+            try {
+                if (data.cleanup) data.cleanup('tutorial_cleanup');
+            } catch (e) {
+                this._debug('⚠️ Error limpiando callback', e.message);
+            }
+        });
 
         this._activeIntervals = [];
         this._activeTimeouts = [];
         this._activeObservers = [];
-        this._keyHandler = null;
+        this.config.waitForCallbacks.clear();
         this.lastHighlightedElement = null;
+        this.config.isLocked = false;
+
+        this._debug('✅ Limpieza completada');
     },
 
     // 📝 MARCAR COMO COMPLETADO
     markAsCompleted() {
-        localStorage.setItem(this.config.storageKey, 'true');
-        console.log('💾 Tutorial marcado como completado');
+        try {
+            localStorage.setItem(this.config.storageKey, 'true');
+            console.log('💾 Tutorial marcado como completado');
+        } catch (e) {
+            console.warn('Error marcando tutorial como completado:', e.message);
+        }
     },
 
     // 🎉 MENSAJE DE BIENVENIDA
     showWelcomeMessage() {
         if (typeof showNotification === 'function') {
-            showNotification('¡Bienvenido al Portal de Seguimiento! 🎉 Ya puedes consultar el estado de tu proceso de selección usando tu folio.', 'success', 5000);
+            try {
+                showNotification('¡Tutorial completado exitosamente! 🎉', 'success', 5000);
+            } catch (e) {
+                console.warn('Error mostrando notificación:', e.message);
+                this._fallbackMessage();
+            }
         } else {
-            alert('¡Bienvenido al Portal de Seguimiento! 🎉\n\nYa puedes consultar el estado de tu proceso de selección usando tu folio.');
+            this._fallbackMessage();
         }
+    },
+
+    _fallbackMessage() {
+        alert('¡Tutorial completado exitosamente! 🎉\n\nYa conoces las funciones principales del sistema.');
     },
 
     // ⌨️ MANEJAR TECLAS
     handleKeyPress(event) {
         if (!this.config.isActive) return;
-        switch(event.key) {
-            case 'Escape': this.skip(); break;
-            case 'ArrowRight':
-            case 'Enter':
-                event.preventDefault();
-                this.nextStep();
-                break;
-            case 'ArrowLeft':
-                event.preventDefault();
-                this.prevStep();
-                break;
+        try {
+            switch(event.key) {
+                case 'Escape': 
+                    this.skip(); 
+                    break;
+                case 'ArrowRight':
+                case 'Enter':
+                    event.preventDefault();
+                    this.nextStep();
+                    break;
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    this.prevStep();
+                    break;
+            }
+        } catch (e) {
+            console.warn('Error manejando tecla:', e.message);
         }
     },
 
     // 📜 SCROLL AL ELEMENTO
     scrollToElement(element) {
-        const rect = element.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        if (rect.top < 0 || rect.bottom > viewportHeight) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+        try {
+            const rect = element.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+            if (rect.top < 0 || rect.bottom > viewportHeight) {
+                element.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center', 
+                    inline: 'nearest' 
+                });
+            }
+        } catch (e) {
+            console.warn('Error haciendo scroll al elemento:', e.message);
         }
     },
 
@@ -782,64 +1442,164 @@ const Tutorial = {
         `;
 
         helpButton.addEventListener('click', () => {
-            const wasCompleted = localStorage.getItem(this.config.storageKey);
-            localStorage.removeItem(this.config.storageKey);
-            this.start();
-            if (wasCompleted) {
-                this._setTimeout(() => localStorage.setItem(this.config.storageKey, 'true'), 1000);
+            try {
+                const wasCompleted = localStorage.getItem(this.config.storageKey);
+                localStorage.removeItem(this.config.storageKey);
+                this.start();
+                if (wasCompleted) {
+                    this._setTimeout(() => {
+                        try {
+                            localStorage.setItem(this.config.storageKey, 'true');
+                        } catch (e) {
+                            console.warn('Error restaurando estado del tutorial:', e.message);
+                        }
+                    }, 1000);
+                }
+            } catch (e) {
+                console.warn('Error en botón de ayuda:', e.message);
             }
         });
 
-        helpButton.addEventListener('mouseenter', () => { helpButton.style.transform = 'scale(1.1)'; });
-        helpButton.addEventListener('mouseleave', () => { helpButton.style.transform = 'scale(1)'; });
+        helpButton.addEventListener('mouseenter', () => { 
+            helpButton.style.transform = 'scale(1.1)'; 
+        });
+        helpButton.addEventListener('mouseleave', () => { 
+            helpButton.style.transform = 'scale(1)'; 
+        });
 
         document.body.appendChild(helpButton);
     },
 
-    // 🔄 REINICIAR TUTORIAL (FUNCIÓN PÚBLICA)
+    // 🔄 REINICIAR TUTORIAL
     restart() {
-        localStorage.removeItem(this.config.storageKey);
-        if (this.config.isActive) this.cleanup();
-        this._setTimeout(() => this.start(), 100);
+        try {
+            localStorage.removeItem(this.config.storageKey);
+            if (this.config.isActive) this.cleanup();
+            this._setTimeout(() => this.start(), 100);
+        } catch (e) {
+            console.warn('Error reiniciando tutorial:', e.message);
+        }
     },
 
-    // 🗑️ RESET TUTORIAL (FUNCIÓN PARA DESARROLLO)
+    // 🗑️ RESET TUTORIAL
     reset() {
-        localStorage.removeItem(this.config.storageKey);
-        console.log('🗑️ Tutorial reseteado - se mostrará en próxima visita');
+        try {
+            localStorage.removeItem(this.config.storageKey);
+            console.log('🗑️ Tutorial reseteado - se mostrará en próxima visita');
+        } catch (e) {
+            console.warn('Error reseteando tutorial:', e.message);
+        }
     },
 
-    // Helpers para controlar timers/observers y facilitar limpieza
-    _setInterval(fn, ms) { const id = setInterval(fn, ms); this._activeIntervals.push(id); return id; },
-    _clearInterval(id) { clearInterval(id); this._activeIntervals = this._activeIntervals.filter(x => x !== id); },
-    _setTimeout(fn, ms) { const id = setTimeout(fn, ms); this._activeTimeouts.push(id); return id; }
+    // Helpers para controlar timers/observers
+    _setInterval(fn, ms) { 
+        const id = setInterval(fn, ms); 
+        this._activeIntervals.push(id); 
+        return id; 
+    },
+    _clearInterval(id) { 
+        clearInterval(id); 
+        this._activeIntervals = this._activeIntervals.filter(x => x !== id); 
+    },
+    _setTimeout(fn, ms) { 
+        const id = setTimeout(fn, ms); 
+        this._activeTimeouts.push(id); 
+        return id; 
+    },
+
+    // ✅ FUNCIÓN DE DEBUG HABILITADA POR DEFECTO EN DESARROLLO
+    enableDebugMode() {
+        this.config.debugMode = true;
+        console.log('🐛 Modo debug del tutorial habilitado');
+        console.log('🎯 Estado actual:', {
+            isActive: this.config.isActive,
+            currentStep: this.config.currentStep,
+            totalSteps: this.config.totalSteps,
+            isLocked: this.config.isLocked,
+            waitForCallbacks: this.config.waitForCallbacks.size
+        });
+    },
+
+    // ✅ FUNCIÓN PARA FORZAR REINICIO DEL TUTORIAL
+    forceRestart() {
+        console.log('🔄 Forzando reinicio del tutorial...');
+        
+        this.config.isActive = false;
+        this.config.isLocked = false;
+        this.config.autoCleanupDisabled = false;
+        this.cleanup();
+        
+        setTimeout(() => {
+            this.start();
+        }, 500);
+    }
 };
 
-// 🚀 AUTO-INICIALIZACIÓN (ruta de seguimiento)
-document.addEventListener('DOMContentLoaded', function(){
-    try {
-        if (window.location.pathname.includes('/seguimiento')) {
-            window.Tutorial?.init?.();
-        }
-    } catch (err) {
-        console.warn('⚠️ Error iniciando tutorial público:', err);
+// Tutorial para distribución Excel
+Tutorial.startDistributionTutorial = function() {
+    const distribuirBtn = document.querySelector('#distribuir-excel-btn');
+    if (!distribuirBtn) {
+        console.warn('Botón de distribución no encontrado. Tutorial no disponible.');
+        return false;
     }
-});
 
-// 🌍 EXPORTAR PARA USO GLOBAL (ESM)
-export default Tutorial;
+    console.log('Iniciando tutorial de distribución Excel...');
+
+    try {
+        localStorage.removeItem('sistema_reclutas_tutorial_completed_admin_distribute_excel');
+    } catch (e) {
+        console.warn('Error reseteando tutorial de distribución:', e.message);
+    }
+    
+    this.config.tutorialType = 'admin_distribute_excel';
+    this.steps = this.distribuirReclutasExcelSteps;
+    this.config.storageKey = 'sistema_reclutas_tutorial_completed_admin_distribute_excel';
+    
+    if (this.config.isActive) {
+        this.cleanup();
+    }
+    
+    this._setTimeout(() => {
+        this.start();
+    }, 100);
+    
+    return true;
+};
+
+// Función de conveniencia para testing
+Tutorial.testDistributionTutorial = function() {
+    console.log('Iniciando tutorial de distribución Excel en modo test...');
+    return this.startDistributionTutorial();
+};
+
+// Función para resetear completamente el sistema de primera visita
+Tutorial.resetFirstVisit = function() {
+    try {
+        localStorage.removeItem('sistema_reclutas_first_visit_completed');
+        localStorage.removeItem('sistema_reclutas_tutorial_completed_public');
+        localStorage.removeItem('sistema_reclutas_tutorial_completed_admin_add_button');
+        localStorage.removeItem('sistema_reclutas_tutorial_completed_admin_distribute_excel');
+        console.log('Sistema de primera visita reseteado completamente');
+    } catch (e) {
+        console.warn('Error reseteando primera visita:', e.message);
+    }
+};
 
 // 🚀 FUNCIÓN PARA INICIAR UN TUTORIAL ESPECÍFICO
 Tutorial.startTutorial = function(tutorialConfig) {
-    console.log(`🎓 Iniciando tutorial: ${tutorialConfig.type}...`);
-    this.config.tutorialType = tutorialConfig.type;
-    this.steps = tutorialConfig.steps;
-    this.config.storageKey = tutorialConfig.storageKey;
-    if (this.shouldShowTutorial() || tutorialConfig.force) {
-        console.log(`✅ Iniciando tutorial ${tutorialConfig.type}`);
-        this.restart();
-    } else {
-        console.log(`ℹ️ Tutorial ${tutorialConfig.type} ya completado anteriormente`);
+    try {
+        console.log(`🎓 Iniciando tutorial: ${tutorialConfig.type}...`);
+        this.config.tutorialType = tutorialConfig.type;
+        this.steps = tutorialConfig.steps;
+        this.config.storageKey = tutorialConfig.storageKey;
+        if (this.shouldShowTutorial() || tutorialConfig.force) {
+            console.log(`✅ Iniciando tutorial ${tutorialConfig.type}`);
+            this.restart();
+        } else {
+            console.log(`ℹ️ Tutorial ${tutorialConfig.type} ya completado anteriormente`);
+        }
+    } catch (e) {
+        console.warn('Error iniciando tutorial específico:', e.message);
     }
 };
 
@@ -852,54 +1612,123 @@ Tutorial.startAdminRecruitTutorial = function() {
     });
 };
 
-// === JARVIS PATCH: Tutorial de PRIMERA SESIÓN (one-shot por usuario/rol) ===
-(function () {
-  const T = window.Tutorial || (window.Tutorial = {});
-  T.config = {
-    storageKey: 'sistema_reclutas_tutorial_completed',
-    currentStep: 0,
-    totalSteps: 0,
-    isActive: false,
-    canSkip: true,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    highlightColor: '#007bff',
-    zIndex: 10000,
-    tutorialType: null,
-    ...T.config || {}
-  };
+// ============================================================================
+// 🐛 HERRAMIENTAS DE DEBUGGING INTEGRADAS
+// ============================================================================
 
-  T.firstSessionSteps = [
-    { id: 'fs-0', target: '#sidebar-nav', title: '🧭 Navegación principal', description: 'Cambia entre secciones: Reclutas, Calendario, Métricas y más.', position: 'right', action: 'highlight', nextButton: 'Siguiente' },
-    { id: 'fs-1', target: '#open-add-recluta-modal', title: '➕ Agregar recluta', description: 'Crea un nuevo registro de recluta desde este botón.', position: 'bottom', action: 'highlight', nextButton: 'Siguiente' },
-    { id: 'fs-2', target: '#calendar-section, #calendar-container', title: '🗓️ Calendario', description: 'Consulta eventos, citas y recordatorios del proceso.', position: 'top', action: 'highlight', nextButton: 'Siguiente' },
-    { id: 'fs-3', target: '#metrics-panel, #metricas-admin-container', title: '📊 Métricas', description: 'Indicadores clave para seguimiento y control.', position: 'left', action: 'highlight', nextButton: 'Siguiente' },
-    { id: 'fs-4', target: '#user-menu, #profile-dropdown', title: '👤 Perfil y sesión', description: 'Edita tu perfil o cierra sesión desde aquí.', position: 'bottom', action: 'highlight', nextButton: 'Finalizar' }
-  ];
-
-  T.startFirstSessionTutorial = function (usuario) {
-    try {
-      if (!usuario || (!usuario.id && !usuario.email)) return;
-      const role = usuario.rol || 'user';
-      const uid = usuario.id || usuario.email;
-
-      T.config.tutorialType = 'first_session';
-      T.config.storageKey = `tutorial_first_session_${role}_${uid}`;
-      T.steps = T.firstSessionSteps;
-
-      if (typeof T.shouldShowTutorial === 'function' ? T.shouldShowTutorial() : true) {
-        setTimeout(() => {
-          if (typeof T.start === 'function') T.start();
-          else console.warn('Tutorial.start() no existe. Verifique el motor del tutorial.');
-        }, 700);
-      }
-    } catch (e) {
-      console.warn('No se pudo iniciar tutorial de primera sesión:', e);
+// 🔍 DIAGNÓSTICO COMPLETO DEL ESTADO DEL TUTORIAL
+Tutorial.diagnose = function() {
+    console.log('🏥 === DIAGNÓSTICO DEL TUTORIAL ===');
+    console.log('📊 Estado actual:', {
+        isActive: this.config.isActive,
+        currentStep: this.config.currentStep,
+        totalSteps: this.config.totalSteps,
+        isLocked: this.config.isLocked,
+        tutorialType: this.config.tutorialType,
+        storageKey: this.config.storageKey
+    });
+    
+    console.log('🕐 Timers activos:', {
+        intervals: this._activeIntervals.length,
+        timeouts: this._activeTimeouts.length,
+        observers: this._activeObservers.length,
+        waitForCallbacks: this.config.waitForCallbacks.size
+    });
+    
+    console.log('🎯 Elementos DOM:', {
+        overlay: !!document.getElementById('tutorial-overlay'),
+        highlight: !!document.getElementById('tutorial-highlight'),
+        tooltip: !!document.getElementById('tutorial-tooltip')
+    });
+    
+    console.log('💾 LocalStorage:', {
+        completed: localStorage.getItem(this.config.storageKey),
+        firstVisit: localStorage.getItem('sistema_reclutas_first_visit_completed')
+    });
+    
+    if (this.steps && this.steps[this.config.currentStep]) {
+        const currentStep = this.steps[this.config.currentStep];
+        const targetExists = !!document.querySelector(currentStep.target);
+        console.log('🎯 Paso actual:', {
+            id: currentStep.id,
+            title: currentStep.title,
+            target: currentStep.target,
+            targetExists: targetExists
+        });
     }
-  };
+};
 
-  T.firstSessionTest = function (usuario) {
-    localStorage.removeItem(`tutorial_first_session_${(usuario?.rol || 'user')}_${(usuario?.id || usuario?.email || 'unknown')}`);
-    T.startFirstSessionTutorial(usuario || { id: 'debug', rol: 'user', email: 'debug@example.com' });
-  };
-})();
-// === FIN DEL PATCH ===
+// 🔧 REPARACIÓN AUTOMÁTICA
+Tutorial.autoFix = function() {
+    console.log('🔧 Iniciando reparación automática...');
+    
+    this.config.isLocked = false;
+    this.config.autoCleanupDisabled = false;
+    this.config.waitForCallbacks.clear();
+    
+    if (this.config.isActive && !document.getElementById('tutorial-tooltip')) {
+        console.log('🏗️ Recreando elementos perdidos...');
+        this.createOverlay();
+        
+        if (this.steps && this.steps[this.config.currentStep]) {
+            this.showStep(this.config.currentStep);
+        }
+    }
+    
+    if (!this.config.isActive && document.getElementById('tutorial-tooltip')) {
+        console.log('🧹 Limpiando elementos huérfanos...');
+        this.cleanup();
+    }
+    
+    console.log('✅ Reparación completada');
+    this.diagnose();
+};
+
+// 🎮 CONTROLES MANUALES DE PASOS
+Tutorial.goToStep = function(stepIndex) {
+    if (!this.steps || stepIndex < 0 || stepIndex >= this.steps.length) {
+        console.error('❌ Índice de paso inválido:', stepIndex);
+        return;
+    }
+    
+    console.log(`🎯 Yendo manualmente al paso ${stepIndex + 1}`);
+    this.config.currentStep = stepIndex;
+    this.showStep(stepIndex);
+};
+
+Tutorial.quickCommands = function() {
+    console.log('🎮 === COMANDOS RÁPIDOS DEL TUTORIAL ===');
+    console.log('Tutorial.diagnose()         - Diagnóstico completo');
+    console.log('Tutorial.enableDebugMode()  - Activar logs detallados');  
+    console.log('Tutorial.autoFix()          - Reparación automática');
+    console.log('Tutorial.forceRestart()     - Reiniciar tutorial');
+    console.log('Tutorial.goToStep(n)        - Ir al paso n');
+    console.log('Tutorial.resetFirstVisit()  - Reset completo primera visita');
+};
+
+// 🚀 AUTO-INICIALIZACIÓN SEGURA
+document.addEventListener('DOMContentLoaded', function(){
+    try {
+        if (window.location.pathname.includes('/seguimiento')) {
+            window.Tutorial = Tutorial;
+            Tutorial.init();
+        }
+    } catch (err) {
+        console.warn('⚠️ Error iniciando tutorial público:', err.message);
+    }
+});
+
+// 🌍 EXPORTAR PARA USO GLOBAL
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Tutorial;
+} else if (typeof window !== 'undefined') {
+    window.Tutorial = Tutorial;
+    
+    // Inicializar herramientas de debug en desarrollo
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        Tutorial.enableDebugMode();
+        Tutorial.quickCommands();
+    }
+}
+
+export default Tutorial;

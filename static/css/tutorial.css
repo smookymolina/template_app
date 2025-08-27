@@ -1,9 +1,10 @@
 /* ============================================================================ */
-/* 🎓 ESTILOS PARA SISTEMA DE TUTORIAL INTERACTIVO */
+/* 🎓 ESTILOS COMPLETOS CORREGIDOS PARA SISTEMA DE TUTORIAL INTERACTIVO */
 /* Archivo: static/css/tutorial.css */
+/* Versión: 3.2 - Código Completo con Fixes de Estabilidad */
 /* ============================================================================ */
 
-/* 🎭 OVERLAY BASE */
+/* ✅ OVERLAY BASE - MEJORADO PARA MODALES Y ESTABILIDAD */
 .tutorial-overlay {
     position: fixed;
     top: 0;
@@ -13,68 +14,78 @@
     background: rgba(0, 0, 0, 0.8);
     z-index: 10000;
     transition: opacity 0.3s ease;
+    pointer-events: none; /* Permitir clicks en elementos resaltados */
+    opacity: 1;
 }
 
-/* 🎯 HIGHLIGHT DEL ELEMENTO */
+/* ✅ HIGHLIGHT DEL ELEMENTO - MEJORADO PARA MODALES Y VISIBILIDAD */
 .tutorial-highlight {
     position: fixed;
     border: 3px solid #007bff;
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.1);
-    z-index: 10001;
+    z-index: 10001; /* Ajustado dinámicamente por JS para modales */
     transition: all 0.3s ease;
     box-shadow: 0 0 20px rgba(0, 123, 255, 0.5);
     animation: tutorial-pulse 2s infinite;
+    pointer-events: none; /* No interferir con interacciones */
+    display: block;
 }
 
-/* 📋 TOOLTIP PRINCIPAL */
+/* ✅ TOOLTIP PRINCIPAL - REDISEÑADO PARA MEJOR POSICIONAMIENTO Y ESTABILIDAD */
 .tutorial-tooltip {
     position: fixed;
     background: white;
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     z-index: 10002;
-    max-width: 90vw;
-    max-height: 90vh; /* Ensure this is respected */
-    overflow: hidden; /* Hide overflow of the tooltip itself */
+    width: 350px; /* FIJO: Ancho consistente */
+    max-width: min(350px, 90vw);
+    max-height: calc(90vh - 40px);
+    overflow: hidden;
     transition: opacity 0.3s ease;
     animation: tutorial-fadeIn 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    opacity: 1;
+    /* ✅ PREVENIR COLAPSO INESPERADO */
+    min-width: 300px;
+    min-height: 200px;
 }
 
+/* ✅ CONTENIDO DEL TOOLTIP - ESTRUCTURA FLEX MEJORADA Y ESTABLE */
 .tutorial-tooltip-content {
     padding: 0;
     display: flex;
     flex-direction: column;
-    min-height: 200px;
-    height: 100%; /* Make content take full height of tooltip */
-}
-
-/* 📝 BODY DEL TOOLTIP (ÚNICO BLOQUE) */
-.tutorial-body {
-    padding: 20px;
+    height: 100%; /* Tomar altura completa disponible */
+    min-height: 200px; /* Altura mínima razonable */
+    max-height: inherit; /* Heredar del padre */
+    /* ✅ ASEGURAR QUE NO SE COLAPSA */
     flex: 1;
-    font-size: 1em;
-    line-height: 1.6;
-    color: #333;
-    overflow-y: auto; /* Add scroll for overflowing content */
 }
 
-.tutorial-body p {
-    margin: 0;
-}
-
-/* 📊 HEADER DEL TOOLTIP */
+/* ✅ HEADER DEL TOOLTIP - ESTABLE Y VISIBLE */
 .tutorial-header {
     background: linear-gradient(135deg, #007bff, #0056b3);
     color: white;
     padding: 20px;
     border-radius: 12px 12px 0 0;
+    flex-shrink: 0; /* CRÍTICO: No contraer */
+    /* ✅ ASEGURAR VISIBILIDAD */
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .tutorial-header h3 {
     margin: 0 0 10px 0;
     font-size: 1.3em;
     font-weight: 600;
+    /* ✅ PREVENIR OVERFLOW */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .tutorial-progress {
@@ -83,6 +94,9 @@
     justify-content: space-between;
     font-size: 0.9em;
     opacity: 0.9;
+    /* ✅ RESPONSIVE */
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .progress-bar {
@@ -91,6 +105,8 @@
     background: rgba(255, 255, 255, 0.3);
     border-radius: 2px;
     overflow: hidden;
+    /* ✅ MÍNIMO PARA VISIBILIDAD */
+    min-width: 80px;
 }
 
 .progress-fill {
@@ -98,18 +114,94 @@
     background: white;
     border-radius: 2px;
     transition: width 0.3s ease;
+    /* ✅ ASEGURAR MÍNIMO VISIBLE */
+    min-width: 2px;
 }
 
-/* 🎮 FOOTER CON CONTROLES */
+/* ✅ BODY DEL TOOLTIP - MEJORADO PARA OVERFLOW Y ESTABILIDAD */
+.tutorial-body {
+    padding: 20px;
+    flex: 1; /* Expandir para llenar espacio disponible */
+    font-size: 1em;
+    line-height: 1.6;
+    color: #333;
+    overflow-y: auto; /* Scroll interno si es necesario */
+    overflow-x: hidden; /* Evitar scroll horizontal */
+    min-height: 0; /* Permitir contraer si es necesario */
+    /* ✅ ASEGURAR ALTURA MÍNIMA */
+    min-height: 60px;
+    /* ✅ MEJORES SCROLLBARS */
+    scrollbar-width: thin;
+    scrollbar-color: #ccc transparent;
+}
+
+.tutorial-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tutorial-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tutorial-body::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+
+.tutorial-body::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+.tutorial-body p {
+    margin: 0;
+    word-wrap: break-word; /* Evitar overflow de texto largo */
+    overflow-wrap: break-word;
+    hyphens: auto; /* Guiones automáticos para texto largo */
+}
+
+/* ✅ MENSAJES DE ERROR/ADVERTENCIA EN EL BODY */
+.tutorial-body .error-message {
+    border: 2px solid #ffc107;
+    padding: 10px;
+    border-radius: 6px;
+    background: #fff3cd;
+    margin-bottom: 15px;
+    font-size: 0.9em;
+}
+
+.tutorial-body .error-message strong {
+    color: #856404;
+}
+
+.tutorial-body .error-message code {
+    background: rgba(0, 0, 0, 0.1);
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 0.85em;
+}
+
+/* ✅ FOOTER CON CONTROLES - POSICIONAMIENTO FIJO Y ESTABLE */
 .tutorial-footer {
     padding: 20px;
     border-top: 1px solid #eee;
     background: #f8f9fa;
     border-radius: 0 0 12px 12px;
+    flex-shrink: 0; /* CRÍTICO: No permitir que se contraiga */
+    width: 100%; /* Asegurar anchura completa */
+    box-sizing: border-box; /* Incluir padding en width */
+    /* ✅ ASEGURAR ALTURA MÍNIMA */
+    min-height: 90px;
+    /* ✅ PREVENIR COLAPSO */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .tutorial-controls {
     margin-bottom: 15px;
+    /* ✅ ASEGURAR VISIBILIDAD */
+    min-height: 24px;
 }
 
 .tutorial-checkbox {
@@ -118,21 +210,35 @@
     cursor: pointer;
     font-size: 0.9em;
     color: #666;
+    /* ✅ PREVENIR WRAP INESPERADO */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .tutorial-checkbox input {
     margin-right: 8px;
     transform: scale(1.1);
+    /* ✅ ASEGURAR VISIBILIDAD */
+    flex-shrink: 0;
 }
 
+/* ✅ BOTONES - LAYOUT MEJORADO PARA EVITAR OVERFLOW Y DESAPARICIÓN */
 .tutorial-buttons {
     display: flex;
     justify-content: flex-end;
+    align-items: center;
     gap: 10px;
-    flex-wrap: wrap;
+    flex-wrap: wrap; /* Permitir wrap en pantallas pequeñas */
+    width: 100%;
+    box-sizing: border-box;
+    /* ✅ ASEGURAR ALTURA MÍNIMA */
+    min-height: 40px;
+    /* ✅ PREVENIR COLAPSO */
+    flex-shrink: 0;
 }
 
-/* 🔘 BOTONES DEL TUTORIAL */
+/* ✅ BOTONES DEL TUTORIAL - TAMAÑOS OPTIMIZADOS Y ESTABLES */
 .tutorial-tooltip .btn {
     padding: 8px 16px;
     border: none;
@@ -143,19 +249,40 @@
     transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 5px;
+    min-width: 80px; /* Ancho mínimo para consistencia */
+    height: 36px; /* Altura fija para alineación */
+    box-sizing: border-box;
+    white-space: nowrap; /* Evitar salto de línea en botones */
+    /* ✅ PREVENIR DESAPARICIÓN */
+    flex-shrink: 0;
+    /* ✅ ASEGURAR VISIBILIDAD */
+    position: relative;
+    z-index: 1;
 }
 
+/* ✅ ESTILOS DE BOTÓN PRIMARIO - MEJORADOS */
 .tutorial-tooltip .btn-primary {
     background: #007bff;
     color: white;
+    /* ✅ DESTACAR BOTÓN PRINCIPAL */
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
 }
 
 .tutorial-tooltip .btn-primary:hover {
     background: #0056b3;
     transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.4);
 }
 
+.tutorial-tooltip .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+/* ✅ ESTILOS DE BOTÓN SECUNDARIO */
 .tutorial-tooltip .btn-secondary {
     background: #6c757d;
     color: white;
@@ -166,6 +293,11 @@
     transform: translateY(-1px);
 }
 
+.tutorial-tooltip .btn-secondary:active {
+    transform: translateY(0);
+}
+
+/* ✅ ESTILOS DE BOTÓN OUTLINE */
 .tutorial-tooltip .btn-outline {
     background: transparent;
     color: #6c757d;
@@ -175,92 +307,165 @@
 .tutorial-tooltip .btn-outline:hover {
     background: #f8f9fa;
     border-color: #6c757d;
+    color: #495057;
 }
 
-/* ✨ ANIMACIONES */
+.tutorial-tooltip .btn-outline:active {
+    background: #e9ecef;
+}
+
+/* ✅ ESTADOS DE FOCO PARA ACCESIBILIDAD */
+.tutorial-tooltip .btn:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+.tutorial-tooltip .btn:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* ✅ ANIMACIONES - MEJORADAS Y ESTABLES */
 @keyframes tutorial-pulse {
     0%, 100% {
         box-shadow: 0 0 20px rgba(0, 123, 255, 0.5);
+        transform: scale(1);
     }
     50% {
         box-shadow: 0 0 30px rgba(0, 123, 255, 0.8);
+        transform: scale(1.02); /* Pulsado más sutil */
     }
 }
 
 @keyframes tutorial-fadeIn {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ✅ ANIMACIÓN DE APARICIÓN SUAVE */
+@keyframes tutorial-slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
     }
     to {
         opacity: 1;
         transform: translateY(0);
     }
 }
-/* Removed duplicate .tutorial-tooltip selector with animation property */
 
-/* 📱 RESPONSIVE */
+.tutorial-tooltip {
+    animation: tutorial-slideIn 0.3s ease-out;
+}
+
+/* ✅ RESPONSIVE - MEJORAS PARA MÓVILES Y TABLETS */
 @media (max-width: 768px) {
     .tutorial-tooltip {
         width: 95vw !important;
+        max-width: 95vw !important;
         left: 2.5vw !important;
-        max-width: none;
+        max-height: 70vh !important; /* REDUCIDO: Menos altura en móviles */
+        min-width: unset;
+        position: fixed !important;
+        /* NUEVO: Posición más conservadora */
+        top: 10vh !important;
     }
 
     .tutorial-header {
-        padding: 15px;
+        padding: 12px; /* REDUCIDO */
+    }
+
+    .tutorial-header h3 {
+        font-size: 1.1em; /* REDUCIDO */
     }
 
     .tutorial-body {
-        padding: 15px;
+        padding: 12px; /* REDUCIDO */
+        font-size: 0.9em; /* REDUCIDO */
+        max-height: 40vh; /* NUEVO: Límite de altura */
+        overflow-y: auto;
     }
 
     .tutorial-footer {
-        padding: 15px;
+        padding: 12px; /* REDUCIDO */
     }
 
     .tutorial-buttons {
         flex-direction: column;
+        gap: 6px; /* REDUCIDO */
     }
 
     .tutorial-tooltip .btn {
         width: 100%;
         justify-content: center;
+        min-width: unset;
+        height: 40px; /* REDUCIDO */
+        font-size: 0.85em; /* REDUCIDO */
+    }
+
+    .tutorial-buttons {
+        flex-direction: column-reverse;
     }
 }
 
-/* 🆘 BOTÓN DE AYUDA FLOTANTE */
-#tutorial-help-btn {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: #007bff;
-    color: white;
-    border: none;
-    font-size: 20px;
-    cursor: pointer;
-    z-index: 1000;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
+@media (max-width: 480px) {
+    .tutorial-tooltip {
+        max-height: 80vh !important;
+        width: 98vw !important;
+        left: 1vw !important;
+    }
+    
+    .tutorial-header {
+        padding: 12px;
+    }
+    
+    .tutorial-body {
+        padding: 12px;
+        font-size: 0.9em;
+    }
+    
+    .tutorial-footer {
+        padding: 12px;
+    }
+
+    .tutorial-checkbox {
+        font-size: 0.8em;
+    }
+
+    .tutorial-tooltip .btn {
+        height: 44px; /* Más alto para toque en móvil */
+        font-size: 0.9em;
+    }
 }
 
-#tutorial-help-btn:hover {
-    transform: scale(1.1);
-    background: #0056b3;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+/* ✅ MEJORAS PARA MODALES ESPECÍFICAMENTE */
+.tutorial-tooltip.modal-tutorial {
+    /* Clase especial para tooltips en modales */
+    border: 2px solid #007bff;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
+    z-index: 10060; /* Sobre modales Bootstrap */
 }
 
-#tutorial-help-btn:active {
-    transform: scale(0.95);
+.tutorial-tooltip.modal-tutorial .tutorial-header {
+    background: linear-gradient(135deg, #28a745, #20c997);
 }
 
-/* 🌙 MODO OSCURO */
+/* ✅ OVERLAY ESPECIAL PARA MODALES */
+.tutorial-overlay.modal-overlay {
+    background: rgba(0, 0, 0, 0.6); /* Menos opaco para no ocultar el modal */
+    z-index: 1055; /* Entre modal y modal-backdrop */
+}
+
+/* ✅ MODO OSCURO - MANTENIDO Y MEJORADO */
 [data-theme="dark"] .tutorial-tooltip {
     background: #2c3e50;
     color: white;
+    border: 1px solid #4a5f7a;
 }
 
 [data-theme="dark"] .tutorial-body {
@@ -284,4 +489,239 @@
 [data-theme="dark"] .tutorial-tooltip .btn-outline:hover {
     background: #4a5f7a;
     color: white;
+}
+
+[data-theme="dark"] .tutorial-body .error-message {
+    background: #3d4926;
+    border-color: #d39e00;
+    color: #fff3cd;
+}
+
+/* ✅ BOTÓN DE AYUDA FLOTANTE - MEJORADO Y ESTABLE */
+#tutorial-help-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #007bff;
+    color: white;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* ✅ ASEGURAR VISIBILIDAD */
+    opacity: 1;
+    /* ✅ PREVENIR INTERFERENCIA */
+    pointer-events: auto;
+}
+
+#tutorial-help-btn:hover {
+    transform: scale(1.1);
+    background: #0056b3;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+#tutorial-help-btn:active {
+    transform: scale(0.95);
+}
+
+#tutorial-help-btn:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+/* ✅ RESPONSIVE PARA BOTÓN DE AYUDA */
+@media (max-width: 768px) {
+    #tutorial-help-btn {
+        bottom: 15px;
+        right: 15px;
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+    }
+}
+
+/* ✅ ESTADOS DE CARGA Y TRANSICIÓN */
+.tutorial-tooltip.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.tutorial-tooltip.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #007bff;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: tutorial-spin 1s linear infinite;
+}
+
+@keyframes tutorial-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ✅ ESTADOS DE DEPURACIÓN (REMOVER EN PRODUCCIÓN) */
+.tutorial-debug .tutorial-tooltip {
+    border: 2px dashed red;
+}
+
+.tutorial-debug .tutorial-footer {
+    border: 1px dashed blue;
+}
+
+.tutorial-debug .tutorial-buttons {
+    border: 1px dashed green;
+}
+
+/* ✅ MEJORAS DE ACCESIBILIDAD */
+@media (prefers-reduced-motion: reduce) {
+    .tutorial-tooltip,
+    .tutorial-highlight,
+    .tutorial-tooltip .btn,
+    #tutorial-help-btn {
+        animation: none;
+        transition: none;
+    }
+    
+    .tutorial-tooltip .btn:hover {
+        transform: none;
+    }
+    
+    #tutorial-help-btn:hover {
+        transform: none;
+    }
+}
+
+/* ✅ CONTRAST ALTO PARA ACCESIBILIDAD */
+@media (prefers-contrast: high) {
+    .tutorial-tooltip {
+        border: 2px solid #000;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.8);
+    }
+    
+    .tutorial-header {
+        background: #000;
+        color: #fff;
+    }
+    
+    .tutorial-tooltip .btn-primary {
+        background: #000;
+        color: #fff;
+        border: 2px solid #000;
+    }
+    
+    .tutorial-tooltip .btn-outline {
+        border: 2px solid #000;
+        color: #000;
+    }
+}
+
+/* ✅ PRINT STYLES - OCULTAR TUTORIAL EN IMPRESIÓN */
+@media print {
+    .tutorial-overlay,
+    .tutorial-highlight,
+    .tutorial-tooltip,
+    #tutorial-help-btn {
+        display: none !important;
+    }
+}
+
+/* ✅ ESTADOS DE ERROR ESPECÍFICOS */
+.tutorial-tooltip.error {
+    border-color: #dc3545;
+    box-shadow: 0 8px 32px rgba(220, 53, 69, 0.3);
+}
+
+.tutorial-tooltip.error .tutorial-header {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+}
+
+/* ✅ MEJORAS PARA PANTALLAS PEQUEÑAS ADICIONALES */
+@media (max-height: 600px) {
+    .tutorial-tooltip {
+        max-height: 90vh !important;
+    }
+    
+    .tutorial-header {
+        padding: 10px 15px;
+    }
+    
+    .tutorial-body {
+        padding: 10px 15px;
+    }
+    
+    .tutorial-footer {
+        padding: 10px 15px;
+    }
+    
+    .tutorial-controls {
+        margin-bottom: 10px;
+    }
+}
+
+/* ✅ EFECTOS SUTILES PARA INTERACCIÓN */
+.tutorial-tooltip:hover {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.tutorial-highlight:hover {
+    border-width: 4px;
+}
+
+/* ✅ TRANSICIONES SUAVES PARA CAMBIOS DE ESTADO */
+.tutorial-tooltip,
+.tutorial-highlight,
+.tutorial-overlay {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ✅ ASEGURAR JERARQUÍA Z-INDEX CORRECTA */
+.tutorial-overlay { z-index: 10000; }
+.tutorial-highlight { z-index: 10001; }
+.tutorial-tooltip { z-index: 10002; }
+.tutorial-tooltip.modal-tutorial { z-index: 10060; }
+
+/* ✅ ESTILOS FINALES PARA GARANTIZAR ESTABILIDAD */
+.tutorial-tooltip * {
+    box-sizing: border-box;
+}
+
+.tutorial-tooltip,
+.tutorial-tooltip * {
+    /* Prevenir selección accidental */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+.tutorial-tooltip .tutorial-body {
+    /* Permitir selección en el contenido */
+    user-select: text;
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+}
+
+/* ✅ ASEGURAR QUE LOS ELEMENTOS NO SE COLAPSEN */
+.tutorial-tooltip > *,
+.tutorial-tooltip-content > * {
+    flex-shrink: 0;
+}
+
+.tutorial-body {
+    flex-shrink: 1; /* Solo el body puede contraerse */
 }
