@@ -5,7 +5,7 @@ import os
 from config import config
 from models import db
 from models.usuario import Usuario
-from flask_cors import CORS  # Importar CORS
+from flask_cors import CORS
 
 def create_app(config_name='default'):
     """
@@ -109,14 +109,20 @@ def register_blueprints(app):
     from routes.api import api_bp
     from routes.auth import auth_bp
     from routes.admin import admin_bp
-    from routes.tutorial import tutorial_bp
     
-    # Registrar blueprints
+    # Registrar blueprints principales
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(admin_bp, url_prefix='/admin')
-    app.register_blueprint(tutorial_bp, url_prefix='/tutorial')
+    
+    # Tutorial blueprint (opcional, solo si existe el archivo)
+    try:
+        from routes.tutorial import tutorial_bp
+        app.register_blueprint(tutorial_bp, url_prefix='/tutorial')
+        app.logger.info('Blueprint tutorial registrado')
+    except ImportError:
+        app.logger.debug('Blueprint tutorial no encontrado, omitiendo...')
 
 def register_shell_context(app):
     """Registra variables para el contexto del shell"""
@@ -137,6 +143,7 @@ def register_commands(app):
         
         email = input("Email del administrador: ")
         password = input("Contraseña: ")
+        nombre = input("Nombre completo: ")
         
         # Verificar si ya existe
         usuario = Usuario.query.filter_by(email=email).first()
@@ -145,7 +152,12 @@ def register_commands(app):
             return
         
         # Crear nuevo usuario
-        usuario = Usuario(email=email)
+        usuario = Usuario(
+            email=email,
+            nombre=nombre,
+            rol='admin',
+            is_active=True
+        )
         usuario.password = password
         db.session.add(usuario)
         db.session.commit()
@@ -229,7 +241,7 @@ def initialize_database(app):
             db.session.commit()
             app.logger.info(f'Rol admin asignado a usuario existente: {admin2_email}')
     
-    # ✅ AGREGAR: Crear asesores de prueba
+    # Crear asesores de prueba
     asesores_prueba = [
         {
             'email': 'asesor1@example.com',
