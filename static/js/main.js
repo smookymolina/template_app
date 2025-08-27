@@ -684,17 +684,19 @@ async function setupAdminModules() {
 
     await loadMetricasAdminModule();
 
-    setTimeout(() => {
-        const estadisticasSection = document.getElementById('estadisticas-section');
-        if (estadisticasSection && window.initializeMetricasAdmin) {
-            console.log('📈 Inicializando métricas administrativas...');
-            window.initializeMetricasAdmin();
-        }
-        // Iniciar tutorial para administradores si es la primera vez
-        if (Tutorial && typeof Tutorial.startAdminRecruitTutorial === 'function') {
-            Tutorial.startAdminRecruitTutorial();
-        }
-    }, 800);
+    // Se elimina el setTimeout para una inicialización más robusta y directa
+    const estadisticasSection = document.getElementById('estadisticas-section');
+    if (estadisticasSection && window.initializeMetricasAdmin) {
+        console.log('📈 Inicializando métricas administrativas directamente...');
+        window.initializeMetricasAdmin();
+    } else {
+        console.warn('⚠️ No se pudo inicializar métricas: sección o función no encontrada.');
+    }
+
+    // Iniciar tutorial para administradores si es la primera vez
+    if (Tutorial && typeof Tutorial.startAdminRecruitTutorial === 'function') {
+        Tutorial.startAdminRecruitTutorial();
+    }
 }
 
 /**

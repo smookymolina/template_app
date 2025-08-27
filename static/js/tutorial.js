@@ -987,7 +987,6 @@ highlight.style.cssText = `
         opacity: 0; 
         transition: opacity 0.3s ease;
         display: block;
-        overflow: hidden;
     `;
 
     console.log(`📍 Tooltip posicionado: ${finalPosition} en (${Math.round(top)}, ${Math.round(left)}) - Sin superposición`);
