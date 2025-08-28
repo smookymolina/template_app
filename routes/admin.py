@@ -4,6 +4,7 @@ from sqlalchemy import func, case
 from flask_login import login_required, current_user
 from models.usuario import Usuario
 from models.recluta import Recluta
+from models.entrevista import Entrevista
 from collections import defaultdict
 from models.user_session import UserSession
 from models import db, DatabaseError
@@ -344,6 +345,9 @@ def invalidate_session(id):
             "success": False,
             "message": f"Error al invalidar sesión: {str(e)}"
         }), 500
+
+
+
 
 @admin_bp.route('/dashboard', methods=['GET'])
 @admin_required

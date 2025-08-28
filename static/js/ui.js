@@ -723,31 +723,13 @@ initDarkModeToggles: function() {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 const targetSection = link.getAttribute('data-section');
-                this.changeActiveSection(targetSection);
-
-                // Check if the target section is the calendar and initialize tutorial
-                if (targetSection === 'calendario-section') {
-                    if (typeof Tutorial !== 'undefined' && Tutorial && typeof Tutorial.startTutorial === 'function') {
-                        Tutorial.startTutorial({
-                            type: 'calendar_onboarding',
-                            steps: Tutorial.calendarSteps,
-                            storageKey: 'sistema_reclutas_tutorial_completed_calendar',
-                            force: false // Only show if not completed
-                        });
-                    } else {
-                        console.warn('⚠️ Tutorial module not available or startTutorial function missing.');
-                    }
-                } else if (targetSection === 'configuracion-section') { // Add this block for configuracion tutorial
-                    if (typeof Tutorial !== 'undefined' && Tutorial && typeof Tutorial.startTutorial === 'function') {
-                        Tutorial.startTutorial({
-                            type: 'configuracion_onboarding',
-                            steps: Tutorial.configuracionTutorialSteps,
-                            storageKey: 'sistema_reclutas_tutorial_completed_configuracion',
-                            force: false // Only show if not completed
-                        });
-                    } else {
-                        console.warn('⚠️ Tutorial module not available or startTutorial function missing.');
-                    }
+                // LLAMAR A LA FUNCIÓN GLOBAL DE MAIN.JS QUE CONTROLA LAS SECCIONES Y TUTORIALES
+                if (window.showSection) {
+                    window.showSection(targetSection);
+                } else {
+                    // Fallback por si main.js no está cargado o showSection no está disponible
+                    console.warn('Función window.showSection no encontrada, usando fallback de UI.');
+                    this.changeActiveSection(targetSection);
                 }
             });
         });

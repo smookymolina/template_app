@@ -407,6 +407,82 @@ action: 'highlight',
         }
     ],
 
+    // 📚 PASOS DEL TUTORIAL PARA MÉTRICAS DE ADMINISTRADOR
+    adminMetricsTutorialSteps: [
+        {
+            id: 'metrics-step-1',
+            target: '#estadisticas-section .section-header h3',
+            title: '📊 Bienvenido a las Métricas Avanzadas',
+            description: 'Este es tu panel de control para analizar el rendimiento. Aquí puedes ver un resumen global, el desempeño de tus asesores y tendencias clave.',
+            position: 'bottom',
+            action: 'highlight',
+            nextButton: 'Comenzar'
+        },
+        {
+            id: 'metrics-step-2',
+            target: '#resumen-global',
+            title: '🌍 Resumen Global del Sistema',
+            description: 'Estos cards te dan una vista rápida de los indicadores más importantes: total de asesores, total de reclutas y la tasa de éxito general.',
+            position: 'bottom',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'metrics-step-3',
+            target: '#refresh-metricas-btn',
+            title: '🔄 Actualizar Datos',
+            description: 'Haz clic en este botón en cualquier momento para recargar los datos y ver la información más reciente.',
+            position: 'left',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'metrics-step-4',
+            target: '#metricas-asesores-section',
+            title: '👥 Rendimiento por Asesor',
+            description: 'Aquí puedes ver el desempeño de cada asesor, incluyendo sus reclutas asignados, tasas de conversión y nivel de performance.',
+            position: 'top',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'metrics-step-5',
+            target: '.subsection-filters',
+            title: '🔍 Filtrar y Ordenar',
+            description: 'Usa estos controles para filtrar la lista de asesores por su nivel de performance o para ordenarlos por diferentes criterios como nombre o total de reclutas.',
+            position: 'bottom',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'metrics-step-6',
+            target: '.charts-grid',
+            title: '📈 Gráficos Visuales',
+            description: 'Estos gráficos te ofrecen un análisis visual de la distribución de reclutas por estado y las tendencias de reclutamiento a lo largo del tiempo.',
+            position: 'top',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'metrics-step-7',
+            target: '#tabla-detallada-section',
+            title: '📋 Tabla Detallada',
+            description: 'Para un análisis más profundo, esta tabla te muestra todas las métricas de los asesores en un formato comparable. Puedes expandirla y exportarla.',
+            position: 'top',
+            action: 'highlight',
+            nextButton: 'Casi listo...'
+        },
+        {
+            id: 'metrics-step-8',
+            target: '#export-metricas-btn',
+            title: '📥 Exportar Datos',
+            description: 'Con este botón puedes exportar todas las métricas que ves en esta sección a un archivo Excel o CSV para tus propios reportes.',
+            position: 'left',
+            action: 'highlight',
+            nextButton: '¡Entendido!'
+        }
+    ],
+
     // ✅ FUNCIÓN DE DEBUG MEJORADA
     _debug(message, data = null) {
         if (this.config.debugMode) {

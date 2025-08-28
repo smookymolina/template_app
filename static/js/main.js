@@ -1260,6 +1260,26 @@ function setupEstadisticasForAdmin() {
         await loadMetricasAdminModule();
         window.initializeMetricasAdmin?.();
         console.log('📈 Inicializando métricas admin para la sección');
+
+        // Iniciar tutorial de métricas para admin
+        const metricsTutorialCompleted = localStorage.getItem('admin_metrics_tutorial_completed');
+        if (!metricsTutorialCompleted && window.Tutorial && typeof window.Tutorial.startTutorial === 'function') {
+            console.log('🚀 Lanzando tutorial de métricas para admin...');
+            window.Tutorial.startTutorial({
+                type: 'admin_metrics',
+                steps: window.Tutorial.adminMetricsTutorialSteps,
+                storageKey: 'admin_metrics_tutorial_completed',
+                force: true,
+                onComplete: () => {
+                    try {
+                        localStorage.setItem('admin_metrics_tutorial_completed', 'true');
+                        console.log('✅ Tutorial de métricas para admin marcado como completado.');
+                    } catch (e) {
+                        console.error('Error al marcar el tutorial de métricas como completado:', e);
+                    }
+                }
+            });
+        }
     }, 200);
 }
 
