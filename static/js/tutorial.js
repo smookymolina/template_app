@@ -264,9 +264,9 @@ action: 'highlight',
         },
         {
             id: 'admin-onboarding-10',
-            target: '.pagination-controls',
+            target: '#reclutas-table',
             title: '🔢 Navegación de Páginas',
-            description: 'Si tienes muchos reclutas, la lista se dividirá en varias páginas. Usa estos controles para navegar entre ellas.',
+            description: 'Si tienes muchos reclutas, la lista se dividirá en varias páginas. En ese caso, aparecerán controles de navegación aquí abajo para que puedas moverte entre ellas.',
             position: 'top',
             action: 'highlight',
             nextButton: '¡Entendido!'
