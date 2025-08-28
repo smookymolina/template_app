@@ -322,6 +322,91 @@ action: 'highlight',
         }
     ],
 
+    // 📚 PASOS DEL TUTORIAL PARA LA SECCIÓN DE CONFIGURACIÓN
+    configuracionTutorialSteps: [
+        {
+            id: 'config-step-1',
+            target: '#configuracion-section',
+            title: '⚙️ Bienvenido a Configuración',
+            description: 'Aquí puedes gestionar tu información de usuario, cambiar tu contraseña y ajustar las preferencias de la aplicación.',
+            position: 'bottom',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'config-step-2',
+            target: '#username-input',
+            title: '👤 Nombre de Usuario',
+            description: 'Este es tu nombre de usuario actual. Puedes modificarlo aquí.',
+            position: 'right',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'config-step-3',
+            target: '#email-input',
+            title: '📧 Correo Electrónico',
+            description: 'Tu dirección de correo electrónico. Asegúrate de que sea correcta para recibir notificaciones importantes.',
+            position: 'right',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'config-step-4',
+            target: '#current-password-input',
+            title: '🔒 Cambiar Contraseña',
+            description: 'Para cambiar tu contraseña, primero ingresa tu contraseña actual y luego la nueva contraseña.',
+            position: 'right',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'config-step-5',
+            target: '#new-password-input',
+            title: '🔑 Nueva Contraseña',
+            description: 'Ingresa tu nueva contraseña aquí. Asegúrate de que sea segura y fácil de recordar para ti.',
+            position: 'right',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'config-step-6',
+            target: '#confirm-new-password-input',
+            title: '✅ Confirmar Nueva Contraseña',
+            description: 'Vuelve a escribir tu nueva contraseña para confirmarla.',
+            position: 'right',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'config-step-7',
+            target: '#save-changes-btn',
+            title: '💾 Guardar Cambios',
+            description: 'Una vez que hayas realizado todos los cambios deseados, haz clic aquí para guardarlos. ¡No olvides este paso!',
+            position: 'top',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'config-step-8',
+            target: '#dark-mode-toggle',
+            title: '🌙 Modo Oscuro',
+            description: 'Activa o desactiva el modo oscuro para cambiar la apariencia de la aplicación.',
+            position: 'left',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'config-step-9',
+            target: '#email-notifications-toggle',
+            title: '🔔 Notificaciones por Correo',
+            description: 'Controla si deseas recibir notificaciones importantes por correo electrónico.',
+            position: 'left',
+            action: 'highlight',
+            nextButton: 'Finalizar Tutorial'
+        }
+    ],
+
     // ✅ FUNCIÓN DE DEBUG MEJORADA
     _debug(message, data = null) {
         if (this.config.debugMode) {
@@ -360,6 +445,11 @@ action: 'highlight',
             this.steps = this.adminRecruitSteps;
             this.config.storageKey = 'sistema_reclutas_tutorial_completed_admin_recluta';
             console.log('✅ Tutorial de añadir recluta (admin) detectado');
+        } else if (this.isConfiguracionPage()) {
+            this.config.tutorialType = 'configuracion';
+            this.steps = this.configuracionTutorialSteps;
+            this.config.storageKey = 'sistema_reclutas_tutorial_completed_configuracion';
+            console.log('✅ Tutorial de configuración detectado');
         } else {
             console.log('⚠️ Página no reconocida para tutorial, tutorial no disponible');
             return;
@@ -403,6 +493,17 @@ isTrackingPage() {
                    document.getElementById('add-recluta-modal') !== null;
         } catch (e) {
             console.warn('Error checking admin recruit page:', e.message);
+            return false;
+        }
+    },
+
+    // 🔍 VERIFICAR SI ES PÁGINA DE CONFIGURACIÓN
+    isConfiguracionPage() {
+        try {
+            return window.location.pathname.includes('/configuracion') ||
+                   document.getElementById('configuracion-section') !== null;
+        } catch (e) {
+            console.warn('Error checking configuracion page:', e.message);
             return false;
         }
     },
@@ -1809,6 +1910,15 @@ Tutorial.startAdminRecruitTutorial = function() {
         type: 'admin_add_button',
         steps: this.addButtonTutorialSteps,
         storageKey: 'sistema_reclutas_tutorial_completed_admin_add_button'
+    });
+};
+
+// 🚀 FUNCIÓN PARA INICIAR EL TUTORIAL DE CONFIGURACIÓN
+Tutorial.startConfiguracionTutorial = function() {
+    this.startTutorial({
+        type: 'configuracion',
+        steps: this.configuracionTutorialSteps,
+        storageKey: 'sistema_reclutas_tutorial_completed_configuracion'
     });
 };
 

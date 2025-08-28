@@ -737,6 +737,17 @@ initDarkModeToggles: function() {
                     } else {
                         console.warn('⚠️ Tutorial module not available or startTutorial function missing.');
                     }
+                } else if (targetSection === 'configuracion-section') { // Add this block for configuracion tutorial
+                    if (typeof Tutorial !== 'undefined' && Tutorial && typeof Tutorial.startTutorial === 'function') {
+                        Tutorial.startTutorial({
+                            type: 'configuracion_onboarding',
+                            steps: Tutorial.configuracionTutorialSteps,
+                            storageKey: 'sistema_reclutas_tutorial_completed_configuracion',
+                            force: false // Only show if not completed
+                        });
+                    } else {
+                        console.warn('⚠️ Tutorial module not available or startTutorial function missing.');
+                    }
                 }
             });
         });
