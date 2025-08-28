@@ -183,7 +183,7 @@ const Tutorial = {
     calendarSteps: [
         {
             id: 'calendar-step-1',
-            target: '#calendar-section', // Assuming an ID for the calendar section
+            target: '#calendario-section',
             title: '📅 Bienvenido al Calendario',
             description: 'Aquí puedes ver todas las entrevistas programadas. Los eventos se muestran por día, semana o mes.',
             position: 'top',
@@ -192,7 +192,7 @@ const Tutorial = {
         },
         {
             id: 'calendar-step-2',
-            target: '#add-event-button', // Assuming an ID for an add event button
+            target: '#add-event-button',
             title: '➕ Añadir Nueva Entrevista',
             description: 'Haz clic aquí para programar una nueva entrevista con un candidato.',
             position: 'left',
@@ -201,18 +201,18 @@ const Tutorial = {
         },
         {
             id: 'calendar-step-3',
-            target: '.fc-toolbar-chunk', // Assuming a class for calendar navigation (prev/next/today)
+            target: '#current-month',
             title: '🗓️ Navegación del Calendario',
-            description: 'Usa estos botones para navegar entre diferentes vistas (día, semana, mes) y fechas.',
+            description: 'Usa los botones de flecha y el título del mes para navegar entre diferentes vistas y fechas.',
             position: 'bottom',
             action: 'highlight',
             nextButton: 'Entendido'
         },
         {
             id: 'calendar-step-4',
-            target: '.fc-event', // Assuming a class for a calendar event
-            title: 'ℹ️ Detalles de la Entrevista',
-            description: 'Haz clic en cualquier evento del calendario para ver los detalles completos de la entrevista y del candidato.',
+            target: '#calendar-grid',
+            title: 'ℹ️ Días del Calendario',
+            description: 'Esta es la cuadrícula donde se muestran los días. Haz clic en un día para ver o añadir eventos.',
             position: 'right',
             action: 'highlight',
             nextButton: 'Finalizar Tutorial'
