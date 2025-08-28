@@ -527,6 +527,7 @@ function setupProfileEvents() {
  * ✅ FUNCIÓN DE LOGIN (Simplificada)
  */
 async function login() {
+    showLoginScreen(true);
     const credentials = getLoginCredentials();
     if (!credentials) return;
 
@@ -782,8 +783,9 @@ async function logout() {
     try {
         console.log('🚪 Iniciando logout desde main.js...');
         
-        await performCleanup();
-        await performLogout();
+        if (Auth?.logout) {
+            await Auth.logout();
+        }
         
         showLoginScreen(true);
         clearFormFields();
@@ -794,33 +796,6 @@ async function logout() {
     } catch (error) {
         console.error('❌ Error durante logout:', error);
         forceCleanupAndShowLogin();
-    }
-}
-
-/**
- * ✅ REALIZAR LIMPIEZA
- */
-async function performCleanup() {
-    // Limpiar métricas admin si está inicializado
-    window.cleanupMetricasAdmin?.();
-    
-    // Limpiar todas las variables globales
-    window.currentGerente = null;
-    localStorage.removeItem('user_data');
-    
-    // Limpiar clases del body
-    document.body.classList.remove('admin-view', 'asesor-view');
-    
-    // Resetear visibilidad de elementos
-    resetElementVisibility();
-}
-
-/**
- * ✅ REALIZAR LOGOUT
- */
-async function performLogout() {
-    if (Auth?.logout) {
-        await Auth.logout();
     }
 }
 
