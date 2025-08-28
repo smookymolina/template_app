@@ -3,6 +3,7 @@
  */
 import CONFIG from './config.js';
 import { showNotification } from './notifications.js';
+import Tutorial from './tutorial.js';
 
 const UI = {
     /**
@@ -723,6 +724,20 @@ initDarkModeToggles: function() {
                 e.preventDefault();
                 const targetSection = link.getAttribute('data-section');
                 this.changeActiveSection(targetSection);
+
+                // Check if the target section is the calendar and initialize tutorial
+                if (targetSection === 'calendario-section') {
+                    if (typeof Tutorial !== 'undefined' && Tutorial && typeof Tutorial.startTutorial === 'function') {
+                        Tutorial.startTutorial({
+                            type: 'calendar_onboarding',
+                            steps: Tutorial.calendarSteps,
+                            storageKey: 'sistema_reclutas_tutorial_completed_calendar',
+                            force: false // Only show if not completed
+                        });
+                    } else {
+                        console.warn('⚠️ Tutorial module not available or startTutorial function missing.');
+                    }
+                }
             });
         });
     },

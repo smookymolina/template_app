@@ -179,6 +179,46 @@ const Tutorial = {
         }
     ],
 
+    // 📚 PASOS DEL TUTORIAL PARA EL CALENDARIO
+    calendarSteps: [
+        {
+            id: 'calendar-step-1',
+            target: '#calendar-section', // Assuming an ID for the calendar section
+            title: '📅 Bienvenido al Calendario',
+            description: 'Aquí puedes ver todas las entrevistas programadas. Los eventos se muestran por día, semana o mes.',
+            position: 'top',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'calendar-step-2',
+            target: '#add-event-button', // Assuming an ID for an add event button
+            title: '➕ Añadir Nueva Entrevista',
+            description: 'Haz clic aquí para programar una nueva entrevista con un candidato.',
+            position: 'left',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'calendar-step-3',
+            target: '.fc-toolbar-chunk', // Assuming a class for calendar navigation (prev/next/today)
+            title: '🗓️ Navegación del Calendario',
+            description: 'Usa estos botones para navegar entre diferentes vistas (día, semana, mes) y fechas.',
+            position: 'bottom',
+            action: 'highlight',
+            nextButton: 'Entendido'
+        },
+        {
+            id: 'calendar-step-4',
+            target: '.fc-event', // Assuming a class for a calendar event
+            title: 'ℹ️ Detalles de la Entrevista',
+            description: 'Haz clic en cualquier evento del calendario para ver los detalles completos de la entrevista y del candidato.',
+            position: 'right',
+            action: 'highlight',
+            nextButton: 'Finalizar Tutorial'
+        }
+    ],
+
     // 📚 NUEVO TUTORIAL ONBOARDING PARA ADMINISTRADORES
     adminFirstVisitTutorialSteps: [
         {
