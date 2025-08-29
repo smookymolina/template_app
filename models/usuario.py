@@ -1,5 +1,5 @@
 from flask_login import UserMixin
-from datetime import datetime
+from datetime import datetime, timezone
 import bcrypt
 from models import db, DatabaseError
 
@@ -15,7 +15,7 @@ class Usuario(db.Model, UserMixin):
     foto_url = db.Column(db.String(255), nullable=True)
     rol = db.Column(db.String(20), default='asesor', nullable=False)  # ✅ CAMBIO: Default 'asesor' en lugar de 'admin'
     is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     last_login = db.Column(db.DateTime, nullable=True)
     
     # Relación con sesiones de usuario
@@ -114,7 +114,7 @@ class Usuario(db.Model, UserMixin):
     def update_last_login(self):
         """Actualiza la fecha del último inicio de sesión"""
         try:
-            self.last_login = datetime.utcnow()
+            self.last_login = datetime.now(timezone.utc)
             db.session.commit()
             return True
         except Exception as e:

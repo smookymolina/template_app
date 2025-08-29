@@ -335,11 +335,10 @@ def delete_recluta(id):
         
         # Verificar permisos según rol
         if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
-            if recluta.asesor_id != current_user.id:
-                return jsonify({
-                    "success": False, 
-                    "message": "No tienes permisos para eliminar este recluta"
-                }), 403
+            return jsonify({
+                "success": False,
+                "message": "Los asesores no tienen permisos para eliminar reclutas."
+            }), 403
         
         # Guardar información antes de eliminar para el log
         recluta_info = f"ID: {recluta.id}, Nombre: {recluta.nombre}, Email: {recluta.email}"

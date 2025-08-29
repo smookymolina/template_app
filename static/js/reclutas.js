@@ -1344,9 +1344,11 @@ renderReclutasTable: function(container) {
                 <button class="action-btn edit-btn" title="Editar" data-id="${recluta.id}">
                     <i class="fas fa-edit"></i>
                 </button>
+                ${this.userRole === 'admin' ? `
                 <button class="action-btn delete-btn" title="Eliminar" data-id="${recluta.id}">
                     <i class="fas fa-trash-alt"></i>
                 </button>
+                ` : ''}
             </td>
         `;
         
