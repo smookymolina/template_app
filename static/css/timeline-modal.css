@@ -1,0 +1,427 @@
+/* ===========================================
+   🎯 ESTILOS ESPECÍFICOS PARA SUBMODAL TIMELINE
+   Archivo: static/css/timeline-modal.css
+=========================================== */
+
+/* Variables CSS específicas para timeline */
+:root {
+    --timeline-primary: #667eea;
+    --timeline-secondary: #764ba2;
+    --timeline-success: #10b981;
+    --timeline-warning: #f59e0b;
+    --timeline-danger: #ef4444;
+    --timeline-info: #06b6d4;
+}
+
+/* ===========================================
+   🪟 SUBMODAL BASE
+=========================================== */
+.submodal {
+    z-index: 1100 !important;
+}
+
+.timeline-modal-content {
+    max-width: 900px !important;
+    max-height: 90vh !important;
+    width: 95% !important;
+}
+
+.timeline-modal-body {
+    max-height: 70vh !important;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* ===========================================
+   📊 ESTADÍSTICAS DE TIMELINE
+=========================================== */
+.timeline-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.timeline-stat {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    text-align: center;
+    border: 1px solid #e2e8f0;
+    transition: var(--transition);
+}
+
+.timeline-stat:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.timeline-stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--timeline-primary);
+    margin-bottom: 5px;
+}
+
+.timeline-stat-label {
+    font-size: 12px;
+    color: var(--secondary-color);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+/* ===========================================
+   🎛️ CONTROLES DE TIMELINE HEADER
+=========================================== */
+.timeline-header-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px 0;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.timeline-header-controls h4 {
+    color: var(--dark-color);
+    margin: 0;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.timeline-add-btn {
+    background: linear-gradient(135deg, var(--timeline-success) 0%, #059669 100%) !important;
+    border: none !important;
+    padding: 10px 20px;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.timeline-add-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+}
+
+/* ===========================================
+   📋 LISTA DE EVENTOS TIMELINE
+=========================================== */
+.timeline-list {
+    max-height: 450px;
+    overflow-y: auto;
+    padding-right: 10px;
+    margin-bottom: 20px;
+}
+
+.timeline-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.timeline-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.timeline-list::-webkit-scrollbar-thumb {
+    background: var(--timeline-primary);
+    border-radius: 3px;
+}
+
+.timeline-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--border-radius);
+    padding: 18px;
+    margin-bottom: 15px;
+    position: relative;
+    transition: var(--transition);
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.timeline-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    border-color: var(--timeline-primary);
+}
+
+.timeline-item.active {
+    border-color: var(--timeline-primary);
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
+}
+
+/* ===========================================
+   🏷️ HEADER DE TIMELINE ITEM
+=========================================== */
+.timeline-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.timeline-item-date {
+    background: linear-gradient(135deg, var(--timeline-primary) 0%, var(--timeline-secondary) 100%);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.timeline-item-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+}
+
+.timeline-item-status.completed {
+    color: var(--timeline-success);
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.timeline-item-status.pending {
+    color: var(--timeline-warning);
+    background: rgba(245, 158, 11, 0.1);
+}
+
+.timeline-item-status.cancelled {
+    color: var(--timeline-danger);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* ===========================================
+   📝 CONTENIDO DE TIMELINE ITEM
+=========================================== */
+.timeline-item-title {
+    font-weight: 700;
+    color: var(--dark-color);
+    margin-bottom: 8px;
+    font-size: 16px;
+    line-height: 1.3;
+}
+
+.timeline-item-description {
+    color: var(--secondary-color);
+    font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+/* ===========================================
+   🔧 ACCIONES DE TIMELINE ITEM
+=========================================== */
+.timeline-item-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.timeline-item-actions .btn {
+    padding: 6px 12px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+}
+
+.timeline-item-actions .btn-outline {
+    background: transparent !important;
+    border: 1.5px solid var(--timeline-primary) !important;
+    color: var(--timeline-primary) !important;
+}
+
+.timeline-item-actions .btn-outline:hover {
+    background: var(--timeline-primary) !important;
+    color: white !important;
+    transform: translateY(-1px);
+}
+
+.timeline-item-actions .btn-danger:hover {
+    background: var(--timeline-danger) !important;
+    transform: translateY(-1px);
+}
+
+/* ===========================================
+   📝 FORMULARIO DE TIMELINE
+=========================================== */
+.timeline-form {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    margin-top: 25px;
+    border: 2px dashed var(--timeline-primary);
+    animation: timeline-form-appear 0.3s ease-out;
+}
+
+@keyframes timeline-form-appear {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.timeline-input {
+    transition: var(--transition) !important;
+    border: 1.5px solid #d1d5db !important;
+}
+
+.timeline-input:focus {
+    border-color: var(--timeline-primary) !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+    outline: none !important;
+}
+
+.timeline-form-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* ===========================================
+   🚫 ESTADO VACÍO
+=========================================== */
+.empty-timeline {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--secondary-color);
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: var(--border-radius);
+    border: 2px dashed #d1d5db;
+}
+
+.empty-timeline i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.4;
+    color: var(--timeline-primary);
+}
+
+.empty-timeline h5 {
+    margin-bottom: 8px;
+    color: var(--dark-color);
+}
+
+.empty-timeline p {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* ===========================================
+   📱 RESPONSIVE DESIGN
+=========================================== */
+@media (max-width: 768px) {
+    .timeline-modal-content {
+        width: 98% !important;
+        margin: 10px !important;
+    }
+
+    .timeline-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .timeline-header-controls {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+
+    .timeline-item-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .timeline-item-actions {
+        flex-wrap: wrap;
+    }
+
+    .timeline-form-buttons {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .timeline-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .timeline-modal-body {
+        padding: 15px;
+    }
+
+    .timeline-stat {
+        padding: 15px;
+    }
+
+    .timeline-stat-number {
+        font-size: 1.5rem;
+    }
+}
+
+/* ===========================================
+   🎨 MODO OSCURO (si está implementado)
+=========================================== */
+.dark-mode .timeline-stat {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    border-color: #4b5563;
+    color: white;
+}
+
+.dark-mode .timeline-item {
+    background: #374151;
+    border-color: #4b5563;
+}
+
+.dark-mode .timeline-form {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    border-color: var(--timeline-primary);
+}
+
+.dark-mode .empty-timeline {
+    background: linear-gradient(135deg, #374151 0%, #4b5563 100%);
+    border-color: #6b7280;
+}
+
+/* ===========================================
+   ✨ ANIMACIONES Y EFECTOS
+=========================================== */
+@keyframes timeline-pulse {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 30px rgba(102, 126, 234, 0.6);
+    }
+}
+
+.timeline-item.new-item {
+    animation: timeline-new-item 0.5s ease-out;
+}
+
+@keyframes timeline-new-item {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}

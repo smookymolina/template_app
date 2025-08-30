@@ -171,6 +171,14 @@
                         <div class="detail-value" id="detail-recluta-notas">Notas sobre el candidato...</div>
                     </div>
                 </div>
+
+                <!-- 🎯 NUEVO BOTÓN PARA GESTIONAR TIMELINE -->
+                <div style="margin-top: 20px; text-align: center; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                    <button class="btn btn-primary" onclick="reclutaManager.openTimelineModal()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 12px 24px; font-weight: 600;">
+                        <i class="fas fa-route"></i>
+                        Gestionar Línea de Seguimiento
+                    </button>
+                </div>
             </div>
 
             <div class="view-mode-buttons" id="view-mode-buttons">
@@ -363,6 +371,106 @@
             </button>
             <button type="button" class="btn-primary">
                 <i class="fas fa-calendar-check"></i> Programar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ===========================================
+     🎯 SUBMODAL - GESTIÓN DE TIMELINE
+=========================================== -->
+<div id="timeline-management-modal" class="modal submodal" style="display: none;">
+    <div class="modal-content timeline-modal-content">
+        <div class="modal-header timeline-header">
+            <h3><i class="fas fa-route"></i> Gestión de Línea de Seguimiento</h3>
+            <button class="close-modal" onclick="reclutaManager.closeTimelineModal()">&times;</button>
+        </div>
+
+        <div class="modal-body timeline-modal-body">
+            <!-- Estadísticas de timeline -->
+            <div class="timeline-stats">
+                <div class="timeline-stat">
+                    <div class="timeline-stat-number" id="total-eventos">0</div>
+                    <div class="timeline-stat-label">Total Eventos</div>
+                </div>
+                <div class="timeline-stat">
+                    <div class="timeline-stat-number" id="eventos-completados">0</div>
+                    <div class="timeline-stat-label">Completados</div>
+                </div>
+                <div class="timeline-stat">
+                    <div class="timeline-stat-number" id="eventos-pendientes">0</div>
+                    <div class="timeline-stat-label">Pendientes</div>
+                </div>
+            </div>
+
+            <!-- Header de timeline -->
+            <div class="timeline-header-controls">
+                <h4><i class="fas fa-list-ol"></i> Eventos de Timeline</h4>
+                <button class="btn btn-success timeline-add-btn" onclick="reclutaManager.addTimelineItem()">
+                    <i class="fas fa-plus"></i> Agregar Evento
+                </button>
+            </div>
+
+            <!-- Lista de eventos de timeline -->
+            <div class="timeline-list" id="timeline-list">
+                <div class="empty-timeline" id="empty-timeline">
+                    <i class="fas fa-route"></i>
+                    <h5>No hay eventos en la línea de tiempo</h5>
+                    <p>Agrega el primer evento para comenzar el seguimiento del candidato</p>
+                </div>
+            </div>
+
+            <!-- Formulario para agregar/editar eventos -->
+            <div class="timeline-form" id="timeline-form" style="display: none;">
+                <h5 style="margin-bottom: 15px; color: var(--dark-color);">
+                    <i class="fas fa-plus-circle"></i> <span id="form-title">Agregar Evento de Timeline</span>
+                </h5>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="event-date">Fecha del Evento *</label>
+                        <input type="date" id="event-date" class="form-control timeline-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-status">Estado *</label>
+                        <select id="event-status" class="form-control timeline-input" required>
+                            <option value="pending">Pendiente</option>
+                            <option value="completed">Completado</option>
+                            <option value="cancelled">Cancelado</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="event-title">Título del Evento *</label>
+                    <input type="text" id="event-title" class="form-control timeline-input" 
+                           placeholder="Ej: Primera entrevista, Revisión técnica, etc." required>
+                </div>
+
+                <div class="form-group">
+                    <label for="event-description">Descripción Detallada</label>
+                    <textarea id="event-description" class="form-control timeline-input" 
+                              placeholder="Describe lo que ocurrió o lo que está programado para este evento..."
+                              rows="3"></textarea>
+                </div>
+
+                <div class="timeline-form-buttons">
+                    <button class="btn btn-secondary" onclick="reclutaManager.cancelTimelineForm()" type="button">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button class="btn btn-success" onclick="reclutaManager.saveTimelineItem()" type="button">
+                        <i class="fas fa-save"></i> Guardar Evento
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer timeline-footer">
+            <button class="btn btn-secondary" onclick="reclutaManager.closeTimelineModal()">
+                <i class="fas fa-times"></i> Cerrar
+            </button>
+            <button class="btn btn-primary" onclick="reclutaManager.previewTimeline()">
+                <i class="fas fa-eye"></i> Vista Previa Portal
             </button>
         </div>
     </div>
