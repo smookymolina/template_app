@@ -85,6 +85,10 @@ def validate_usuario_data(data, is_update=False):
     if telefono and not validate_phone(telefono):
         errors['telefono'] = 'El formato del teléfono no es válido'
     
+    rol = data.get('rol', '').strip()
+    if rol and rol not in ['user', 'admin', 'gerente', 'asesor']:
+        errors['rol'] = 'El rol especificado no es válido'
+
     if errors:
         raise ValidationError(errors)
     
@@ -99,6 +103,9 @@ def validate_usuario_data(data, is_update=False):
     
     if telefono:
         validated_data['telefono'] = telefono
+
+    if rol:
+        validated_data['rol'] = rol
     
     return validated_data
 

@@ -33,8 +33,8 @@ def admin_required(f):
         #         "message": "Acceso no autorizado desde esta IP"
         #     }), 403
         
-        # Aquí podríamos verificar si el usuario tiene rol de admin
-        # Por ahora, todos los usuarios autenticados son considerados admin
+        if not current_user.is_authenticated or not current_user.is_admin():
+            return jsonify({"success": False, "message": "Acceso no autorizado"}), 403
         
         return f(*args, **kwargs)
     return login_required(decorated_function)
@@ -111,7 +111,12 @@ def add_usuario():
             }), 400
         
         # Crear nuevo usuario
-        nuevo = Usuario(**validated_data)
+        nuevo = Usuario(
+            nombre=validated_data['nombre'],
+            email=validated_data['email'],
+            rol=validated_data.get('rol', 'user')
+        )
+        nuevo.password = data['password']
         
         # Guardar en base de datos
         try:
@@ -649,6 +654,64 @@ def get_detalle_asesor(asesor_id):
             "success": False,
             "message": f"Error al obtener detalle: {str(e)}"
         }), 500
+
+
+@admin_bp.route('/test-user-creation', methods=['GET'])
+@admin_required
+def test_user_creation():
+    """
+    Temporal: Crea un usuario de prueba y verifica el login.
+    """
+    test_email = "test_user@example.com"
+    test_password = "test_password_123"
+    
+    # 1. Eliminar usuario de prueba si ya existe
+    existing_user = Usuario.query.filter_by(email=test_email).first()
+    if existing_user:
+        try:
+            db.session.delete(existing_user)
+            db.session.commit()
+            current_app.logger.info(f"Usuario de prueba existente {test_email} eliminado.")
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"success": False, "message": f"Error al eliminar usuario de prueba existente: {str(e)}"}), 500
+
+    # 2. Crear nuevo usuario de prueba
+    try:
+        new_user = Usuario(nombre="Test User", email=test_email, rol="user")
+        new_user.password = test_password
+        new_user.save()
+        current_app.logger.info(f"Usuario de prueba {test_email} creado exitosamente.")
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": f"Error al crear usuario de prueba: {str(e)}"}), 500
+
+    # 3. Intentar iniciar sesión con el nuevo usuario
+    try:
+        user_to_login = Usuario.query.filter_by(email=test_email).first()
+        if user_to_login and user_to_login.check_password(test_password):
+            # No llamamos a login_user aquí para no afectar la sesión actual del admin
+            # Solo verificamos que las credenciales son correctas
+            current_app.logger.info(f"Login de prueba para {test_email} exitoso (credenciales válidas).")
+            return jsonify({
+                "success": True,
+                "message": "Usuario de prueba creado y credenciales verificadas exitosamente.",
+                "user_created": True,
+                "login_verified": True,
+                "user_email": test_email
+            }), 200
+        else:
+            current_app.logger.warning(f"Login de prueba para {test_email} fallido (credenciales inválidas).")
+            return jsonify({
+                "success": False,
+                "message": "Usuario de prueba creado pero el login de prueba falló.",
+                "user_created": True,
+                "login_verified": False,
+                "user_email": test_email
+            }), 401
+    except Exception as e:
+        current_app.logger.error(f"Error durante la verificación de login de prueba: {str(e)}")
+        return jsonify({"success": False, "message": f"Error interno durante la verificación de login: {str(e)}"}), 500
 
 
 @admin_bp.route('/metricas/exportar', methods=['POST'])
