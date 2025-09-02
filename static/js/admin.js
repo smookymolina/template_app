@@ -1,41 +1,538 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const createUserForm = document.getElementById('create-user-form');
+/**
+ * ✅ MÓDULO DE ADMINISTRACIÓN - GESTIÓN DE USUARIOS
+ * Maneja la funcionalidad de creación de cuentas de usuarios para administradores
+ */
 
-    if (createUserForm) {
-        createUserForm.addEventListener('submit', async function(event) {
-            event.preventDefault();
+class UserAccountManager {
+    constructor() {
+        this.form = null;
+        this.submitBtn = null;
+        this.modal = null;
+        this.isSubmitting = false;
+        this.init();
+    }
 
-            const nombre = document.getElementById('user-nombre').value;
-            const email = document.getElementById('user-email').value;
-            const password = document.getElementById('user-password').value;
-            const role = document.getElementById('user-role').value;
+    init() {
+        console.log('🔧 Inicializando UserAccountManager...');
+        this.bindElements();
+        this.bindEvents();
+        this.setupValidation();
+        console.log('✅ UserAccountManager inicializado correctamente');
+        
+        // Cargar lista inicial de usuarios
+        this.loadInitialUsersList();
+    }
 
-            if (!nombre || !email || !password || !role) {
-                alert('Por favor, completa todos los campos.');
-                return;
-            }
+    bindElements() {
+        this.form = document.getElementById('create-user-form');
+        this.submitBtn = document.getElementById('create-user-submit-btn');
+        this.modal = document.getElementById('create-user-account-modal');
+        
+        // Campos del formulario
+        this.fields = {
+            nombre: document.getElementById('user-nombre'),
+            email: document.getElementById('user-email'),
+            password: document.getElementById('user-password'),
+            passwordConfirm: document.getElementById('user-password-confirm'),
+            role: document.getElementById('user-role')
+        };
 
-            try {
-                const response = await fetch('/admin/usuarios', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ nombre, email, password, rol: role }),
-                });
+        // Elementos de error
+        this.errorElements = {
+            nombre: document.getElementById('user-nombre-error'),
+            email: document.getElementById('user-email-error'),
+            password: document.getElementById('user-password-error'),
+            passwordConfirm: document.getElementById('user-password-confirm-error'),
+            role: document.getElementById('user-role-error')
+        };
+    }
 
-                const result = await response.json();
+    bindEvents() {
+        if (this.submitBtn) {
+            this.submitBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.handleSubmit();
+            });
+        }
 
-                if (result.success) {
-                    alert('Usuario creado exitosamente.');
-                    UI.closeModal('create-user-account-modal');
-                    // Optionally, refresh the user list
-                } else {
-                    alert(result.message || 'Error al crear el usuario.');
+        if (this.form) {
+            this.form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.handleSubmit();
+            });
+        }
+
+        // Eventos de validación en tiempo real
+        this.setupRealTimeValidation();
+
+        // Configurar botón de actualizar usuarios
+        this.setupRefreshButton();
+    }
+
+    setupRealTimeValidation() {
+        // Validación de nombre
+        if (this.fields.nombre) {
+            this.fields.nombre.addEventListener('blur', () => {
+                this.validateField('nombre');
+            });
+        }
+
+        // Validación de email
+        if (this.fields.email) {
+            this.fields.email.addEventListener('blur', () => {
+                this.validateField('email');
+            });
+        }
+
+        // Validación de contraseña
+        if (this.fields.password) {
+            this.fields.password.addEventListener('input', () => {
+                this.validateField('password');
+                // Re-validar confirmación si ya se llenó
+                if (this.fields.passwordConfirm.value) {
+                    this.validateField('passwordConfirm');
                 }
-            } catch (error) {
-                alert('Error de red al crear el usuario.');
+            });
+        }
+
+        // Validación de confirmación de contraseña
+        if (this.fields.passwordConfirm) {
+            this.fields.passwordConfirm.addEventListener('input', () => {
+                this.validateField('passwordConfirm');
+            });
+        }
+    }
+
+    setupValidation() {
+        this.validators = {
+            nombre: (value) => {
+                if (!value || value.trim().length < 2) {
+                    return 'El nombre debe tener al menos 2 caracteres';
+                }
+                return null;
+            },
+            email: (value) => {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!value) {
+                    return 'El correo electrónico es requerido';
+                }
+                if (!emailRegex.test(value)) {
+                    return 'El formato del correo no es válido';
+                }
+                return null;
+            },
+            password: (value) => {
+                if (!value) {
+                    return 'La contraseña es requerida';
+                }
+                if (value.length < 6) {
+                    return 'La contraseña debe tener al menos 6 caracteres';
+                }
+                return null;
+            },
+            passwordConfirm: (value) => {
+                const password = this.fields.password.value;
+                if (!value) {
+                    return 'Confirma la contraseña';
+                }
+                if (value !== password) {
+                    return 'Las contraseñas no coinciden';
+                }
+                return null;
+            },
+            role: (value) => {
+                if (!value) {
+                    return 'Selecciona un rol';
+                }
+                if (!['user', 'admin', 'gerente', 'asesor'].includes(value)) {
+                    return 'Rol no válido';
+                }
+                return null;
             }
+        };
+    }
+
+    validateField(fieldName) {
+        const field = this.fields[fieldName];
+        const errorElement = this.errorElements[fieldName];
+        const validator = this.validators[fieldName];
+
+        if (!field || !errorElement || !validator) return true;
+
+        const value = field.value.trim();
+        const error = validator(value);
+
+        if (error) {
+            this.showFieldError(field, errorElement, error);
+            return false;
+        } else {
+            this.clearFieldError(field, errorElement);
+            return true;
+        }
+    }
+
+    validateAllFields() {
+        let isValid = true;
+        
+        for (const fieldName of Object.keys(this.fields)) {
+            if (!this.validateField(fieldName)) {
+                isValid = false;
+            }
+        }
+
+        return isValid;
+    }
+
+    showFieldError(field, errorElement, message) {
+        field.classList.add('error');
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+    }
+
+    clearFieldError(field, errorElement) {
+        field.classList.remove('error');
+        errorElement.textContent = '';
+        errorElement.style.display = 'none';
+    }
+
+    clearAllErrors() {
+        for (const fieldName of Object.keys(this.fields)) {
+            const field = this.fields[fieldName];
+            const errorElement = this.errorElements[fieldName];
+            if (field && errorElement) {
+                this.clearFieldError(field, errorElement);
+            }
+        }
+    }
+
+    async handleSubmit() {
+        if (this.isSubmitting) return;
+
+        console.log('📝 Iniciando proceso de creación de usuario...');
+
+        // Limpiar errores previos
+        this.clearAllErrors();
+
+        // Validar formulario
+        if (!this.validateAllFields()) {
+            this.showNotification('Por favor, corrige los errores en el formulario', 'error');
+            return;
+        }
+
+        // Recopilar datos
+        const formData = this.getFormData();
+        
+        this.isSubmitting = true;
+        this.updateSubmitButton(true);
+
+        try {
+            const response = await this.submitUserData(formData);
+            await this.handleResponse(response);
+        } catch (error) {
+            console.error('❌ Error durante la creación de usuario:', error);
+            this.showNotification('Error de conexión al crear el usuario', 'error');
+        } finally {
+            this.isSubmitting = false;
+            this.updateSubmitButton(false);
+        }
+    }
+
+    getFormData() {
+        return {
+            nombre: this.fields.nombre.value.trim(),
+            email: this.fields.email.value.trim(),
+            password: this.fields.password.value,
+            rol: this.fields.role.value
+        };
+    }
+
+    async submitUserData(data) {
+        return await fetch('/admin/usuarios', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
         });
     }
+
+    async handleResponse(response) {
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            this.handleSuccess(result);
+        } else {
+            this.handleError(result, response.status);
+        }
+    }
+
+    handleSuccess(result) {
+        console.log('✅ Usuario creado exitosamente:', result);
+        
+        this.showNotification(
+            `Usuario ${result.usuario?.email || 'nuevo'} creado exitosamente`, 
+            'success'
+        );
+
+        this.resetForm();
+        this.closeModal();
+
+        // Opcional: Recargar lista de usuarios si existe
+        this.refreshUserList();
+    }
+
+    handleError(result, statusCode) {
+        console.error('❌ Error al crear usuario:', result);
+
+        if (result.errors && typeof result.errors === 'object') {
+            // Errores de validación específicos
+            this.handleValidationErrors(result.errors);
+        } else if (result.message) {
+            // Error general del servidor
+            this.showNotification(result.message, 'error');
+        } else {
+            // Error genérico
+            const message = statusCode === 400 ? 
+                'Error de validación. Verifica los datos ingresados' :
+                'Error interno del servidor';
+            this.showNotification(message, 'error');
+        }
+    }
+
+    handleValidationErrors(errors) {
+        let hasErrors = false;
+
+        for (const [fieldName, message] of Object.entries(errors)) {
+            const field = this.fields[fieldName];
+            const errorElement = this.errorElements[fieldName];
+
+            if (field && errorElement) {
+                this.showFieldError(field, errorElement, message);
+                hasErrors = true;
+            }
+        }
+
+        if (hasErrors) {
+            this.showNotification('Corrige los errores marcados en el formulario', 'error');
+        }
+    }
+
+    updateSubmitButton(loading) {
+        if (!this.submitBtn) return;
+
+        if (loading) {
+            this.submitBtn.disabled = true;
+            this.submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+        } else {
+            this.submitBtn.disabled = false;
+            this.submitBtn.innerHTML = '<i class="fas fa-save"></i> Crear Cuenta';
+        }
+    }
+
+    resetForm() {
+        if (this.form) {
+            this.form.reset();
+        }
+        this.clearAllErrors();
+        console.log('🧹 Formulario limpiado');
+    }
+
+    closeModal() {
+        // Usar el sistema UI existente
+        if (window.UI && window.UI.closeModal) {
+            window.UI.closeModal('create-user-account-modal');
+        } else if (this.modal) {
+            // Fallback manual
+            this.modal.style.display = 'none';
+        }
+        console.log('❌ Modal cerrado');
+    }
+
+    async refreshUserList() {
+        console.log('🔄 Actualizando lista de usuarios...');
+        
+        const loadingElement = document.getElementById('loading-users');
+        const listElement = document.getElementById('users-list');
+        const noUsersElement = document.getElementById('no-users');
+
+        if (!loadingElement || !listElement || !noUsersElement) {
+            console.warn('⚠️ Elementos de lista de usuarios no encontrados');
+            return;
+        }
+
+        // Mostrar loading
+        loadingElement.style.display = 'block';
+        listElement.style.display = 'none';
+        noUsersElement.style.display = 'none';
+
+        try {
+            const response = await fetch('/admin/usuarios', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                this.displayUsersList(result.usuarios || []);
+            } else {
+                throw new Error(result.message || 'Error al cargar usuarios');
+            }
+        } catch (error) {
+            console.error('❌ Error cargando usuarios:', error);
+            this.showNotification('Error al cargar la lista de usuarios', 'error');
+            noUsersElement.innerHTML = '<p>Error al cargar usuarios. Intenta nuevamente.</p>';
+            noUsersElement.style.display = 'block';
+        } finally {
+            loadingElement.style.display = 'none';
+        }
+    }
+
+    displayUsersList(usuarios) {
+        const listElement = document.getElementById('users-list');
+        const noUsersElement = document.getElementById('no-users');
+
+        if (usuarios.length === 0) {
+            noUsersElement.style.display = 'block';
+            listElement.style.display = 'none';
+            return;
+        }
+
+        listElement.innerHTML = this.generateUsersListHTML(usuarios);
+        listElement.style.display = 'block';
+        noUsersElement.style.display = 'none';
+
+        console.log(`✅ Lista de usuarios actualizada: ${usuarios.length} usuarios`);
+    }
+
+    generateUsersListHTML(usuarios) {
+        return `
+            <div class="users-table">
+                <div class="users-table-header">
+                    <div class="user-info-col">Usuario</div>
+                    <div class="user-role-col">Rol</div>
+                    <div class="user-created-col">Creado</div>
+                    <div class="user-actions-col">Acciones</div>
+                </div>
+                ${usuarios.map(user => this.generateUserRowHTML(user)).join('')}
+            </div>
+        `;
+    }
+
+    generateUserRowHTML(user) {
+        const roleBadgeClass = this.getRoleBadgeClass(user.rol);
+        const createdDate = user.created_at ? 
+            new Date(user.created_at).toLocaleDateString('es-ES') : 
+            'N/A';
+
+        return `
+            <div class="users-table-row" data-user-id="${user.id}">
+                <div class="user-info-col">
+                    <div class="user-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name">${user.nombre || 'Sin nombre'}</div>
+                        <div class="user-email">${user.email}</div>
+                    </div>
+                </div>
+                <div class="user-role-col">
+                    <span class="role-badge ${roleBadgeClass}">${this.getRoleDisplayName(user.rol)}</span>
+                </div>
+                <div class="user-created-col">
+                    ${createdDate}
+                </div>
+                <div class="user-actions-col">
+                    <button class="btn-sm btn-secondary" onclick="window.userAccountManager?.viewUser(${user.id})" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn-sm btn-warning" onclick="window.userAccountManager?.editUser(${user.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    getRoleBadgeClass(rol) {
+        const classes = {
+            'admin': 'badge-danger',
+            'gerente': 'badge-warning',
+            'asesor': 'badge-info',
+            'user': 'badge-secondary'
+        };
+        return classes[rol] || 'badge-secondary';
+    }
+
+    getRoleDisplayName(rol) {
+        const names = {
+            'admin': 'Administrador',
+            'gerente': 'Gerente',
+            'asesor': 'Asesor',
+            'user': 'Usuario'
+        };
+        return names[rol] || 'Usuario';
+    }
+
+    viewUser(userId) {
+        console.log(`👁️ Ver detalles del usuario ${userId}`);
+        this.showNotification('Función de ver usuario próximamente disponible', 'info');
+    }
+
+    editUser(userId) {
+        console.log(`✏️ Editar usuario ${userId}`);
+        this.showNotification('Función de editar usuario próximamente disponible', 'info');
+    }
+
+    showNotification(message, type = 'info') {
+        // Usar el sistema de notificaciones existente
+        if (window.showNotification) {
+            window.showNotification(message, type);
+        } else if (window.showSuccess && type === 'success') {
+            window.showSuccess(message);
+        } else if (window.showError && type === 'error') {
+            window.showError(message);
+        } else {
+            // Fallback a alert (solo como último recurso)
+            alert(message);
+        }
+    }
+
+    setupRefreshButton() {
+        const refreshBtn = document.getElementById('refresh-users-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                this.refreshUserList();
+            });
+        }
+    }
+
+    loadInitialUsersList() {
+        // Cargar lista solo si los elementos existen (estamos en la sección correcta)
+        const container = document.getElementById('users-list-container');
+        if (container) {
+            console.log('📋 Cargando lista inicial de usuarios...');
+            this.refreshUserList();
+        }
+    }
+}
+
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar si estamos en una página con elementos de administración
+    const createUserForm = document.getElementById('create-user-form');
+    
+    if (createUserForm) {
+        console.log('🎯 Detectado formulario de creación de usuarios, inicializando...');
+        window.userAccountManager = new UserAccountManager();
+    } else {
+        console.log('ℹ️ No se encontró formulario de usuarios - admin.js en standby');
+    }
 });
+
+// Exponer globalmente para debugging
+window.UserAccountManager = UserAccountManager;
+
+console.log('✅ admin.js cargado - Módulo de gestión de usuarios listo');

@@ -495,6 +495,7 @@
                             <i class="fas fa-user"></i>
                             <input type="text" id="user-nombre" placeholder="Nombre y apellidos" required>
                         </div>
+                        <small class="field-error" id="user-nombre-error"></small>
                     </div>
                 </div>
 
@@ -505,6 +506,7 @@
                             <i class="fas fa-envelope"></i>
                             <input type="email" id="user-email" placeholder="Correo electrónico" required>
                         </div>
+                        <small class="field-error" id="user-email-error"></small>
                     </div>
                 </div>
 
@@ -513,8 +515,20 @@
                         <label for="user-password">Contraseña</label>
                         <div class="input-icon-wrapper">
                             <i class="fas fa-lock"></i>
-                            <input type="password" id="user-password" placeholder="Contraseña" required>
+                            <input type="password" id="user-password" placeholder="Contraseña (mín. 6 caracteres)" required minlength="6">
                         </div>
+                        <small class="field-error" id="user-password-error"></small>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="user-password-confirm">Confirmar contraseña</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="user-password-confirm" placeholder="Confirmar contraseña" required>
+                        </div>
+                        <small class="field-error" id="user-password-confirm-error"></small>
                     </div>
                 </div>
 
@@ -524,12 +538,14 @@
                         <div class="input-icon-wrapper">
                             <i class="fas fa-user-tag"></i>
                             <select id="user-role" required>
+                                <option value="">-- Seleccionar rol --</option>
                                 <option value="user">Usuario</option>
                                 <option value="admin">Administrador</option>
                                 <option value="gerente">Gerente</option>
                                 <option value="asesor">Asesor</option>
                             </select>
                         </div>
+                        <small class="field-error" id="user-role-error"></small>
                     </div>
                 </div>
             </form>
@@ -539,8 +555,8 @@
             <button type="button" class="btn-secondary close-modal">
                 <i class="fas fa-times"></i> Cancelar
             </button>
-            <button type="submit" form="create-user-form" class="btn-primary">
-                <i class="fas fa-save"></i> Guardar Cuenta
+            <button type="button" id="create-user-submit-btn" class="btn-primary">
+                <i class="fas fa-save"></i> Crear Cuenta
             </button>
         </div>
     </div>

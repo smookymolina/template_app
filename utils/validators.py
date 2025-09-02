@@ -78,15 +78,22 @@ def validate_usuario_data(data, is_update=False):
             if not valid:
                 errors['password'] = message
     
-    # Validación opcional de otros campos
+    # Validar nombre (requerido para nuevos usuarios)
     nombre = data.get('nombre', '').strip()
-    telefono = data.get('telefono', '').strip()
+    if not is_update and not nombre:
+        errors['nombre'] = 'El nombre es requerido'
+    elif nombre and len(nombre) < 2:
+        errors['nombre'] = 'El nombre debe tener al menos 2 caracteres'
     
+    # Validar teléfono (opcional)
+    telefono = data.get('telefono', '').strip()
     if telefono and not validate_phone(telefono):
         errors['telefono'] = 'El formato del teléfono no es válido'
     
     rol = data.get('rol', '').strip()
-    if rol and rol not in ['user', 'admin', 'gerente', 'asesor']:
+    if not is_update and not rol:
+        errors['rol'] = 'El rol es requerido'
+    elif rol and rol not in ['user', 'admin', 'gerente', 'asesor']:
         errors['rol'] = 'El rol especificado no es válido'
 
     if errors:

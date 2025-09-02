@@ -133,11 +133,29 @@
         </div>
         <div class="card-content">
             <div class="config-section">
-                <h5>Crear Nueva Cuenta de Usuario</h5>
+                <h5>Gestión de Usuarios</h5>
                 <p>Crea cuentas para nuevos miembros del equipo y asignarles roles.</p>
-                <button class="btn-primary" id="create-user-account-btn" data-modal-target="create-user-account-modal">
-                    <i class="fas fa-user-plus"></i> Crear Cuenta
-                </button>
+                
+                <div class="user-management-actions">
+                    <button class="btn-primary" id="create-user-account-btn" data-modal-target="create-user-account-modal">
+                        <i class="fas fa-user-plus"></i> Crear Nueva Cuenta
+                    </button>
+                    <button class="btn-secondary" id="refresh-users-btn">
+                        <i class="fas fa-sync-alt"></i> Actualizar Lista
+                    </button>
+                </div>
+
+                <div class="users-list-container" id="users-list-container" style="margin-top: 20px;">
+                    <div class="loading-users" id="loading-users">
+                        <i class="fas fa-spinner fa-spin"></i> Cargando usuarios...
+                    </div>
+                    <div class="users-list" id="users-list" style="display: none;">
+                        <!-- Lista de usuarios se carga aquí dinámicamente -->
+                    </div>
+                    <div class="no-users" id="no-users" style="display: none;">
+                        <p>No hay usuarios disponibles para mostrar.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
