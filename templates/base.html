@@ -69,9 +69,7 @@
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/configuracion.js') }}"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/metricas-admin.css') }}">
-    {% if g.user and g.user.rol == 'admin' %}
     <script type="module" src="{{ url_for('static', filename='js/admin.js') }}"></script>
-    {% endif %}
     {% endblock %}
 </body>
 </html>

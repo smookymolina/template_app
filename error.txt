@@ -83,3 +83,20 @@ To run this application, one would typically:
 1. Install Python dependencies from `requirements.txt`.
 2. Set up environment variables (e.g., database connection string, secret key) as defined in `config.py`.
 3. Run `app.py` (e.g., `python app.py`).
+
+---
+
+Issue: Modal de crear usuario no guarda y la lista queda en “Cargando usuarios…”
+
+Síntomas
+- Al abrir el modal “Crear Nueva Cuenta”, el botón guardar no crea la cuenta.
+- La sección “Administración de Usuarios” muestra “Cargando usuarios…” de forma permanente.
+
+Causa raíz
+- El archivo `static/js/admin.js` se cargaba condicionalmente en `templates/base.html` usando el estado del usuario en tiempo de render del servidor. Cuando el usuario inicia sesión vía AJAX (sin recargar la página), el script de administración nunca se incluye, por lo que:
+  - No se inicializan los listeners del formulario (no guarda).
+  - No se ejecuta la carga/actualización de la lista de usuarios (queda en loading).
+
+Solución aplicada
+- Incluir `static/js/admin.js` siempre en `templates/base.html` (sin condicional). El script es seguro: auto‑verifica la existencia de elementos y maneja respuestas 401/403 sin romper la UI.
+- Resultado: tras iniciar sesión como administrador, el modal guarda correctamente (POST /admin/usuarios) y la lista se carga/actualiza (GET /admin/usuarios).
