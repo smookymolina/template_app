@@ -2073,6 +2073,29 @@ window.getCurrentUser = getCurrentUser;
 window.showSection = showSection;
 window.configureDashboardForRole = configureDashboardForRole;
 
+// Exponer changeActiveSection también globalmente
+window.changeActiveSection = function(targetSection) {
+    if (window.UI && window.UI.changeActiveSection) {
+        window.UI.changeActiveSection(targetSection);
+    } else {
+        // Fallback directo
+        console.log('🔄 Fallback: Cambiando a sección:', targetSection);
+        const sections = document.querySelectorAll('.dashboard-content-section');
+        sections.forEach(section => section.style.display = 'none');
+        
+        const targetElement = document.getElementById(targetSection);
+        if (targetElement) {
+            targetElement.style.display = 'block';
+            
+            // Disparar evento personalizado
+            const event = new CustomEvent('sectionChanged', { 
+                detail: { section: targetSection } 
+            });
+            document.dispatchEvent(event);
+        }
+    }
+};
+
 // Módulos
 window.Reclutas = Reclutas;
 window.Client = Client;
@@ -2115,6 +2138,95 @@ window.deleteRecluta = function(id) {
 function showModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) modal.style.display = 'block';
+}
+
+/**
+ * ✅ FUNCIÓN HELPER PARA CERRAR MODALES
+ */
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'none';
+}
+
+/**
+ * ✅ CREAR OBJETO UI SI NO EXISTE (FALLBACK)
+ */
+if (typeof UI === 'undefined' || !UI) {
+    console.log('⚠️ Objeto UI no encontrado, creando fallback...');
+    window.UI = {
+        showModal: showModal,
+        closeModal: closeModal,
+        resetUIToDefault: function() {
+            console.log('🔄 UI reset fallback');
+            document.body.classList.remove('admin-view', 'asesor-view');
+        },
+        loadSavedTheme: function() {
+            console.log('🎨 Load theme fallback');
+        },
+        initCommonEvents: function() {
+            console.log('📋 Init events fallback');
+        },
+        initNavigation: function() {
+            console.log('🧭 Init navigation fallback - configurando eventos...');
+            const navLinks = document.querySelectorAll('.dashboard-nav a, [data-section]');
+            navLinks.forEach(link => {
+                if (link.getAttribute('data-section')) {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const targetSection = link.getAttribute('data-section');
+                        console.log('📄 Navegando a sección:', targetSection);
+                        if (window.showSection) {
+                            window.showSection(targetSection);
+                        } else {
+                            // Fallback directo si showSection no existe
+                            this.changeActiveSection(targetSection);
+                        }
+                    });
+                }
+            });
+            console.log(`✅ ${navLinks.length} enlaces de navegación configurados`);
+        },
+        changeActiveSection: function(targetSection) {
+            if (!targetSection) return;
+            
+            console.log('🔄 Cambiando a sección:', targetSection);
+            
+            // Actualizar tab activa
+            const navItems = document.querySelectorAll('.dashboard-nav li');
+            navItems.forEach(li => {
+                li.classList.remove('active');
+                const link = li.querySelector(`[data-section="${targetSection}"]`);
+                if (link) {
+                    li.classList.add('active');
+                }
+            });
+            
+            // Actualizar sección visible
+            const sections = document.querySelectorAll('.dashboard-content-section');
+            sections.forEach(section => {
+                section.classList.remove('active');
+                section.style.display = 'none';
+            });
+            
+            const targetElement = document.getElementById(targetSection);
+            if (targetElement) {
+                targetElement.classList.add('active');
+                targetElement.style.display = 'block';
+                
+                // Disparar evento personalizado
+                const event = new CustomEvent('sectionChanged', { 
+                    detail: { section: targetSection } 
+                });
+                document.dispatchEvent(event);
+                console.log('✅ Sección cambiada a:', targetSection);
+            } else {
+                console.warn('⚠️ Sección no encontrada:', targetSection);
+            }
+        },
+        initColorSelectors: function() {
+            console.log('🎨 Init colors fallback');
+        }
+    };
 }
 
 /**

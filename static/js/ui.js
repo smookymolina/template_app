@@ -13,6 +13,8 @@ const UI = {
     changeActiveSection: function(targetSection) {
         if (!targetSection) return;
         
+        console.log('🔄 UI: Cambiando a sección:', targetSection);
+        
         // Actualizar tab activa
         const navItems = document.querySelectorAll('.dashboard-nav li');
         navItems.forEach(li => {
@@ -27,16 +29,22 @@ const UI = {
         const sections = document.querySelectorAll('.dashboard-content-section');
         sections.forEach(section => {
             section.classList.remove('active');
+            section.style.display = 'none';
         });
         
         const targetElement = document.getElementById(targetSection);
         if (targetElement) {
             targetElement.classList.add('active');
+            targetElement.style.display = 'block';
+            
             // Disparar evento personalizado
             const event = new CustomEvent('sectionChanged', { 
                 detail: { section: targetSection } 
             });
             document.dispatchEvent(event);
+            console.log('✅ UI: Sección cambiada a:', targetSection);
+        } else {
+            console.warn('⚠️ UI: Sección no encontrada:', targetSection);
         }
     },
     
@@ -718,21 +726,32 @@ initDarkModeToggles: function() {
      * Inicializa eventos para navegación entre secciones
      */
     initNavigation: function() {
-        const navLinks = document.querySelectorAll('.dashboard-nav a');
-        navLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const targetSection = link.getAttribute('data-section');
-                // LLAMAR A LA FUNCIÓN GLOBAL DE MAIN.JS QUE CONTROLA LAS SECCIONES Y TUTORIALES
-                if (window.showSection) {
-                    window.showSection(targetSection);
-                } else {
-                    // Fallback por si main.js no está cargado o showSection no está disponible
-                    console.warn('Función window.showSection no encontrada, usando fallback de UI.');
-                    this.changeActiveSection(targetSection);
-                }
-            });
+        console.log('🧭 UI: Inicializando navegación...');
+        const navLinks = document.querySelectorAll('.dashboard-nav a, [data-section]');
+        console.log(`📋 UI: Encontrados ${navLinks.length} enlaces de navegación`);
+        
+        navLinks.forEach((link, index) => {
+            const targetSection = link.getAttribute('data-section');
+            if (targetSection) {
+                console.log(`📋 UI: Configurando enlace ${index + 1}: ${targetSection}`);
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    console.log('🖱️ UI: Click detectado en enlace:', targetSection);
+                    
+                    // LLAMAR A LA FUNCIÓN GLOBAL DE MAIN.JS QUE CONTROLA LAS SECCIONES Y TUTORIALES
+                    if (window.showSection) {
+                        console.log('✅ UI: Usando window.showSection');
+                        window.showSection(targetSection);
+                    } else {
+                        // Fallback por si main.js no está cargado o showSection no está disponible
+                        console.warn('⚠️ UI: window.showSection no encontrada, usando fallback');
+                        this.changeActiveSection(targetSection);
+                    }
+                });
+            }
         });
+        
+        console.log('✅ UI: Navegación inicializada correctamente');
     },
     
     /**
@@ -785,6 +804,9 @@ initDarkModeToggles: function() {
     console.log('✅ Selectores de colores inicializados');
 }
 };
+
+// Exponer globalmente para compatibilidad
+window.UI = UI;
 
 export default UI;
 

@@ -24,9 +24,17 @@ class UserAccountManager {
     }
 
     bindElements() {
+        // Elementos principales
         this.form = document.getElementById('create-user-form');
         this.submitBtn = document.getElementById('create-user-submit-btn');
         this.modal = document.getElementById('create-user-account-modal');
+        
+        // Log de debugging
+        console.log('🔍 Binding elements:', {
+            form: !!this.form,
+            submitBtn: !!this.submitBtn, 
+            modal: !!this.modal
+        });
         
         // Campos del formulario
         this.fields = {
@@ -45,21 +53,41 @@ class UserAccountManager {
             passwordConfirm: document.getElementById('user-password-confirm-error'),
             role: document.getElementById('user-role-error')
         };
+        
+        // Verificar elementos críticos
+        const missingElements = [];
+        if (!this.submitBtn) missingElements.push('create-user-submit-btn');
+        if (!this.form) missingElements.push('create-user-form');
+        if (!this.modal) missingElements.push('create-user-account-modal');
+        
+        if (missingElements.length > 0) {
+            console.warn('⚠️ Elementos faltantes:', missingElements);
+        }
     }
 
     bindEvents() {
+        console.log('🔗 Binding events...');
+        
         if (this.submitBtn) {
+            console.log('✅ Botón submit encontrado, agregando evento');
             this.submitBtn.addEventListener('click', (e) => {
+                console.log('🖱️ Click en botón crear usuario detectado');
                 e.preventDefault();
                 this.handleSubmit();
             });
+        } else {
+            console.warn('❌ Botón submit no encontrado');
         }
 
         if (this.form) {
+            console.log('✅ Formulario encontrado, agregando evento');
             this.form.addEventListener('submit', (e) => {
+                console.log('📋 Submit del formulario detectado');
                 e.preventDefault();
                 this.handleSubmit();
             });
+        } else {
+            console.warn('❌ Formulario no encontrado');
         }
 
         // Eventos de validación en tiempo real
@@ -247,17 +275,52 @@ class UserAccountManager {
     }
 
     async submitUserData(data) {
-        return await fetch('/admin/usuarios', {
+        console.log('🌐 Enviando datos al servidor:', data);
+        
+        const response = await fetch('/admin/usuarios', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify(data)
         });
+        
+        console.log('📡 Respuesta del servidor:', {
+            status: response.status,
+            statusText: response.statusText,
+            contentType: response.headers.get('content-type'),
+            ok: response.ok
+        });
+        
+        return response;
     }
 
     async handleResponse(response) {
-        const result = await response.json();
+        let result;
+        
+        try {
+            // Verificar si la respuesta es JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                result = await response.json();
+            } else {
+                // Si no es JSON, obtener el texto de la respuesta
+                const textResponse = await response.text();
+                console.error('❌ Respuesta no-JSON recibida:', textResponse);
+                
+                result = {
+                    success: false,
+                    message: `Error del servidor (${response.status}): Respuesta no válida`
+                };
+            }
+        } catch (jsonError) {
+            console.error('❌ Error al parsear JSON:', jsonError);
+            result = {
+                success: false,
+                message: `Error de formato en respuesta del servidor`
+            };
+        }
 
         if (response.ok && result.success) {
             this.handleSuccess(result);
@@ -495,8 +558,12 @@ class UserAccountManager {
         } else if (window.showError && type === 'error') {
             window.showError(message);
         } else {
-            // Fallback a alert (solo como último recurso)
-            alert(message);
+            // Fallback mejorado con console en desarrollo
+            console.log(`🔔 NOTIFICACIÓN [${type.toUpperCase()}]: ${message}`);
+            // Solo usar alert en producción si no hay sistema de notificaciones
+            if (typeof window.console === 'undefined') {
+                alert(message);
+            }
         }
     }
 
@@ -517,20 +584,68 @@ class UserAccountManager {
             this.refreshUserList();
         }
     }
+    
+    // MÉTODO ADICIONAL: Re-inicializar si es necesario
+    reinitialize() {
+        console.log('🔄 Re-inicializando UserAccountManager...');
+        this.bindElements();
+        this.bindEvents();
+        this.setupValidation();
+        console.log('✅ Re-inicialización completada');
+    }
+    
+    // MÉTODO DE DEBUG: Verificar estado actual
+    debugStatus() {
+        return {
+            form: !!this.form,
+            submitBtn: !!this.submitBtn,
+            modal: !!this.modal,
+            fieldsCount: Object.keys(this.fields).length,
+            errorElementsCount: Object.keys(this.errorElements).length,
+            isSubmitting: this.isSubmitting
+        };
+    }
 }
 
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
     // Verificar si estamos en una página con elementos de administración
     const createUserForm = document.getElementById('create-user-form');
+    const createUserBtn = document.getElementById('create-user-account-btn');
+    const createUserModal = document.getElementById('create-user-account-modal');
     
-    if (createUserForm) {
-        console.log('🎯 Detectado formulario de creación de usuarios, inicializando...');
+    // Inicializar si existe el formulario OR el botón OR el modal
+    if (createUserForm || createUserBtn || createUserModal) {
+        console.log('🎯 Detectado elementos de administración de usuarios, inicializando...');
         window.userAccountManager = new UserAccountManager();
     } else {
-        console.log('ℹ️ No se encontró formulario de usuarios - admin.js en standby');
+        console.log('ℹ️ No se encontraron elementos de usuarios - admin.js en standby');
     }
 });
+
+// Listener adicional para cuando se cambia a la sección de configuración
+document.addEventListener('sectionChanged', function(event) {
+    if (event.detail && event.detail.section === 'configuracion-section') {
+        console.log('📍 Cambiando a sección configuración');
+        
+        // Re-inicializar si no existe o si faltan elementos
+        if (!window.userAccountManager || !window.userAccountManager.submitBtn) {
+            console.log('🔄 Re-inicializando UserAccountManager para sección configuración');
+            window.userAccountManager = new UserAccountManager();
+        }
+    }
+});
+
+// Función global para debugging
+window.debugUserManager = function() {
+    if (window.userAccountManager) {
+        console.log('Debug UserAccountManager:', window.userAccountManager.debugStatus());
+        return window.userAccountManager.debugStatus();
+    } else {
+        console.log('UserAccountManager no inicializado');
+        return null;
+    }
+};
 
 // Exponer globalmente para debugging
 window.UserAccountManager = UserAccountManager;
