@@ -16,6 +16,39 @@ import calendar
 
 api_bp = Blueprint('api', __name__)
 
+@api_bp.route('/users', methods=['POST'])
+@admin_required
+def create_user():
+    """
+    Crea un nuevo usuario.
+    Solo disponible para administradores.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"success": False, "message": "No se enviaron datos"}), 400
+
+        nombre = data.get('nombre')
+        email = data.get('email')
+        password = data.get('password')
+        rol = data.get('rol')
+
+        if not all([nombre, email, password, rol]):
+            return jsonify({"success": False, "message": "Todos los campos son requeridos"}), 400
+
+        if Usuario.query.filter_by(email=email).first():
+            return jsonify({"success": False, "message": "El correo electrónico ya está en uso"}), 409
+
+        nuevo_usuario = Usuario(email=email, nombre=nombre, rol=rol)
+        nuevo_usuario.set_password(password)
+        nuevo_usuario.save()
+
+        return jsonify({"success": True, "message": "Usuario creado exitosamente", "usuario": nuevo_usuario.serialize()}), 201
+
+    except Exception as e:
+        current_app.logger.error(f"Error al crear usuario: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al crear usuario: {str(e)}"}), 500
+
 # ----- API DE RECLUTAS -----
 
 @api_bp.route('/asesores', methods=['GET'])

@@ -61,9 +61,22 @@ async function initializeBasicComponents() {
     UI?.initCommonEvents?.();
     UI?.initNavigation?.();
     UI?.initColorSelectors?.();
+    initModalTriggers();
     
     // Agregar estilos básicos para gráficos
     addBasicChartStyles();
+}
+
+function initModalTriggers() {
+    document.body.addEventListener('click', function(event) {
+        const modalTrigger = event.target.closest('[data-modal-target]');
+        if (modalTrigger) {
+            const modalId = modalTrigger.getAttribute('data-modal-target');
+            if (modalId) {
+                UI.showModal(modalId);
+            }
+        }
+    });
 }
 
 /**

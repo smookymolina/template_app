@@ -476,6 +476,76 @@
     </div>
 </div>
 
+<!-- ===========================================
+     Modal para Crear Cuenta de Usuario
+=========================================== -->
+<div id="create-user-account-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Crear Nueva Cuenta de Usuario</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+
+        <div class="modal-body">
+            <form id="create-user-account-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="user-nombre">Nombre completo</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="user-nombre" placeholder="Nombre y apellidos" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="user-email">Correo electrónico</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="user-email" placeholder="Correo electrónico" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="user-password">Contraseña</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="user-password" placeholder="Contraseña" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="user-role">Rol</label>
+                        <div class="input-icon-wrapper">
+                            <i class="fas fa-user-tag"></i>
+                            <select id="user-role" required>
+                                <option value="user">Usuario</option>
+                                <option value="admin">Administrador</option>
+                                <option value="gerente">Gerente</option>
+                                <option value="asesor">Asesor</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary close-modal">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button type="button" class="btn-primary" id="save-user-account-btn">
+                <i class="fas fa-save"></i> Guardar Cuenta
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 // Event listeners para los modales de reclutas
 document.addEventListener('DOMContentLoaded', function() {
