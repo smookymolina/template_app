@@ -3,7 +3,7 @@
 {% block title %}Seguimiento de Proceso | Sistema de Gestión de Reclutas{% endblock %}
 
 {% block extra_css %}
-
+<style>
 /* Botón con apariencia de enlace */
 .link-button {
     background: none;
@@ -27,7 +27,6 @@
     outline: 2px solid var(--primary-color);
     outline-offset: 2px;
 }
-<style>
     .hero-section {
         background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
         color: white;
@@ -739,7 +738,7 @@
                     </div>
                 </div>
                 
-                <button class="btn-secondary new-query-btn">
+                <button id="new-query-btn" class="btn-secondary new-query-btn">
                     <i class="fas fa-arrow-left"></i> Realizar otra consulta
                 </button>
                 
