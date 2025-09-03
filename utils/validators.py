@@ -2,6 +2,7 @@ import re
 from flask import request
 from models.usuario import Usuario
 from models.recluta import Recluta
+from datetime import datetime
 
 class ValidationError(Exception):
     """Excepción para errores de validación"""
@@ -256,6 +257,74 @@ def validate_entrevista_data(data, is_update=False):
             validated_data[field] = data[field]
     
     return validated_data
+
+
+def validate_evento_timeline_data(data, is_update=False):
+    """
+    Valida los datos de un evento de timeline personalizado para un recluta.
+
+    Args:
+        data: Diccionario con los datos del evento
+        is_update: Indica si es una actualización
+
+    Returns:
+        Datos validados
+
+    Raises:
+        ValidationError: Si hay errores de validación
+    """
+    errors = {}
+
+    # Campos requeridos si no es actualización
+    required_fields = ['recluta_id', 'date', 'status', 'title'] if not is_update else []
+
+    for field in required_fields:
+        if field not in data or not data[field]:
+            errors[field] = f'El campo {field} es requerido'
+
+    # Valida recluta_id
+    if 'recluta_id' in data and data['recluta_id'] is not None:
+        try:
+            recluta_id = int(data['recluta_id'])
+        except (ValueError, TypeError):
+            errors['recluta_id'] = 'ID de recluta inválido'
+        else:
+            if not Recluta.query.get(recluta_id):
+                errors['recluta_id'] = 'El recluta especificado no existe'
+
+    # Valida date (YYYY-MM-DD)
+    if 'date' in data and data['date']:
+        date_str = data['date']
+        if not validate_date_format(date_str):
+            errors['date'] = 'Formato de fecha inválido. Use YYYY-MM-DD'
+
+    # Valida status
+    if 'status' in data and data['status']:
+        if data['status'] not in ['pending', 'completed', 'cancelled']:
+            errors['status'] = 'El estado debe ser pending, completed o cancelled'
+
+    # Valida title
+    if 'title' in data and data['title']:
+        title = data['title'].strip()
+        if len(title) < 3:
+            errors['title'] = 'El título debe tener al menos 3 caracteres'
+
+    if errors:
+        raise ValidationError(errors)
+
+    validated = {}
+    for src, dst in [('recluta_id', 'recluta_id'), ('date', 'date'), ('status', 'status'), ('title', 'title'), ('description', 'description')]:
+        if src in data and data[src] is not None:
+            validated[dst] = data[src]
+
+    # Normaliza fecha a objeto date
+    if 'date' in validated and isinstance(validated['date'], str):
+        try:
+            validated['date'] = datetime.strptime(validated['date'], '%Y-%m-%d').date()
+        except ValueError:
+            raise ValidationError({'date': 'Formato de fecha inválido. Use YYYY-MM-DD'})
+
+    return validated
 
 def validate_email(email):
     """

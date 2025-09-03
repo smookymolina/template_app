@@ -2468,8 +2468,34 @@ const Reclutas = {
         // Mostrar modal
         modal.style.display = 'flex';
         
-        // Cargar datos de timeline (por ahora simulados)
-        this.loadTimelineData();
+        // Cargar datos de timeline desde backend
+        this.fetchAndRenderTimeline();
+    },
+
+    /**
+     * Obtiene del backend los eventos de timeline y renderiza la lista/estadísticas
+     */
+    fetchAndRenderTimeline: async function() {
+        try {
+            const resp = await fetch(`${CONFIG.API_URL}/reclutas/${this.currentReclutaId}/timeline`);
+            const data = await resp.json();
+            if (resp.ok && data.success) {
+                this.currentTimelineData = (data.items || []).map(e => ({
+                    id: e.id,
+                    date: e.date,
+                    status: e.status,
+                    title: e.title,
+                    description: e.description || ''
+                }));
+            } else {
+                this.currentTimelineData = [];
+            }
+        } catch (e) {
+            console.error('Error cargando timeline:', e);
+            this.currentTimelineData = [];
+        }
+        this.renderTimelineList();
+        this.updateTimelineStats();
     },
 
     /**
@@ -2566,7 +2592,7 @@ const Reclutas = {
                         <button class="btn btn-outline" onclick="reclutaManager.editTimelineItem(${item.id})">
                             <i class="fas fa-edit"></i> Editar
                         </button>
-                        <button class="btn btn-danger" onclick="reclutaManager.deleteTimelineItem(${item.id})">
+                        <button class="btn btn-danger" onclick="reclutaManager.deleteTimelineItemApi(${item.id})">
                             <i class="fas fa-trash"></i> Eliminar
                         </button>
                     </div>
@@ -2750,6 +2776,50 @@ window.addRecluta = function() {
 };
 
 // Exponer reclutaManager para uso en onclick del HTML
+// Métodos API para persistir eventos (nuevos, no invasivos)
+Reclutas.saveTimelineItemApi = async function() {
+    const date = document.getElementById('event-date').value;
+    const status = document.getElementById('event-status').value;
+    const title = document.getElementById('event-title').value;
+    const description = document.getElementById('event-description').value;
+    if (!date || !status || !title) { showError('Por favor completa todos los campos obligatorios'); return; }
+    const payload = { date, status, title, description: description || '' };
+    try {
+        let url = `${CONFIG.API_URL}/reclutas/${Reclutas.currentReclutaId}/timeline`;
+        let method = 'POST';
+        if (Reclutas.currentEditingTimelineId) {
+            url = `${url}/${Reclutas.currentEditingTimelineId}`;
+            method = 'PUT';
+        }
+        const resp = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const data = await resp.json();
+        if (!resp.ok || !data.success) throw new Error(data.message || 'No se pudo guardar el evento');
+        showSuccess(Reclutas.currentEditingTimelineId ? 'Evento actualizado correctamente' : 'Evento creado correctamente');
+        await Reclutas.fetchAndRenderTimeline();
+        Reclutas.cancelTimelineForm();
+    } catch (e) {
+        console.error('Error guardando evento:', e);
+        showError(e.message || 'Error al guardar el evento');
+    }
+};
+
+Reclutas.deleteTimelineItemApi = async function(id) {
+    if (!confirm('¿Estás seguro de que deseas eliminar este evento?')) return;
+    try {
+        const resp = await fetch(`${CONFIG.API_URL}/reclutas/${Reclutas.currentReclutaId}/timeline/${id}`, { method: 'DELETE' });
+        const data = await resp.json();
+        if (!resp.ok || !data.success) throw new Error(data.message || 'No se pudo eliminar el evento');
+        showSuccess('Evento eliminado correctamente');
+        await Reclutas.fetchAndRenderTimeline();
+    } catch (e) {
+        console.error('Error eliminando evento:', e);
+        showError(e.message || 'Error al eliminar el evento');
+    }
+};
+
 window.reclutaManager = Reclutas;
 
 export default Reclutas;
+
+
+

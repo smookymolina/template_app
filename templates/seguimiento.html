@@ -681,6 +681,32 @@
             
             return timelineHTML;
         }
+
+        // Renderiza una timeline personalizada con eventos
+        function renderCustomTimeline(items) {
+            const container = document.getElementById('timeline-container');
+            if (!container) return;
+            if (!items || !items.length) return;
+            const sorted = [...items].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const statusToClass = (st) => {
+                if (st === 'completed') return 'completed';
+                if (st === 'pending') return 'active';
+                return '';
+            };
+            const html = `
+                <div class="timeline">
+                    ${sorted.map(it => `
+                        <div class="timeline-item ${statusToClass(it.status)}">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h4>${it.title}</h4>
+                                <p>${(new Date(it.date)).toLocaleDateString('es-ES')}${it.description ? ' — ' + it.description : ''}</p>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>`;
+            container.innerHTML = html;
+        }
         
         // Función para mostrar los resultados del seguimiento
         function displayTrackingResults(info) {
@@ -777,9 +803,18 @@
                     }
                     return response.json();
                 })
-                .then(data => {
+                .then(async data => {
                     if (data.success) {
-                        displayTrackingResults(data.tracking_info);
+                        try {
+                            const tlResp = await fetch(`/api/tracking/${folio}/timeline`);
+                            const tl = await tlResp.json();
+                            displayTrackingResults(data.tracking_info);
+                            if (tlResp.ok && tl.success && tl.custom_events && tl.custom_events.length) {
+                                renderCustomTimeline(tl.custom_events);
+                            }
+                        } catch (_) {
+                            displayTrackingResults(data.tracking_info);
+                        }
                         showNotification('Información obtenida correctamente', 'success');
                     } else {
                         showNotification(data.message || 'No se encontró información para este folio', 'error');

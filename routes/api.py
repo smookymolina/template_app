@@ -6,8 +6,14 @@ from models.recluta import Recluta
 from models.usuario import Usuario
 from utils.decorators import admin_required, role_required
 from models.entrevista import Entrevista  # Importación específica desde el módulo
+from models.evento_recluta import EventoRecluta
 from utils.helpers import guardar_archivo, eliminar_archivo
-from utils.validators import validate_recluta_data, validate_entrevista_data, ValidationError
+from utils.validators import (
+    validate_recluta_data,
+    validate_entrevista_data,
+    validate_evento_timeline_data,
+    ValidationError,
+)
 from sqlalchemy import func, case, extract, desc
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -580,6 +586,120 @@ def delete_entrevista(id):
     except Exception as e:
         current_app.logger.error(f"Error al eliminar entrevista {id}: {str(e)}")
         return jsonify({"success": False, "message": f"Error al eliminar entrevista: {str(e)}"}), 500
+
+# ----- API DE TIMELINE PERSONALIZADO POR RECLUTA -----
+
+@api_bp.route('/reclutas/<int:recluta_id>/timeline', methods=['GET'])
+@login_required
+def get_timeline_recluta(recluta_id):
+    """
+    Lista los eventos de timeline personalizados de un recluta.
+    """
+    try:
+        recluta = Recluta.get_by_id(recluta_id, current_user=current_user)
+        if not recluta:
+            return jsonify({"success": False, "message": "Recluta no encontrado o sin permisos"}), 404
+
+        eventos = EventoRecluta.get_for_recluta(recluta_id)
+        return jsonify({"success": True, "items": [e.serialize() for e in eventos]})
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener timeline de recluta {recluta_id}: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
+
+@api_bp.route('/reclutas/<int:recluta_id>/timeline', methods=['POST'])
+@login_required
+def create_timeline_event(recluta_id):
+    """
+    Crea un evento de timeline para un recluta.
+    """
+    try:
+        recluta = Recluta.get_by_id(recluta_id, current_user=current_user)
+        if not recluta:
+            return jsonify({"success": False, "message": "Recluta no encontrado o sin permisos"}), 404
+
+        data = request.get_json() or {}
+        data['recluta_id'] = recluta_id
+
+        try:
+            validated = validate_evento_timeline_data(data)
+        except ValidationError as e:
+            return jsonify({"success": False, "message": "Error de validación", "errors": e.args[0]}), 400
+
+        ev = EventoRecluta(
+            recluta_id=validated['recluta_id'],
+            fecha=validated['date'],
+            estado=validated['status'],
+            titulo=validated['title'],
+            descripcion=validated.get('description'),
+        )
+        ev.save()
+        return jsonify({"success": True, "item": ev.serialize()}), 201
+    except Exception as e:
+        current_app.logger.error(f"Error al crear evento timeline para recluta {recluta_id}: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
+
+@api_bp.route('/reclutas/<int:recluta_id>/timeline/<int:event_id>', methods=['PUT'])
+@login_required
+def update_timeline_event(recluta_id, event_id):
+    """
+    Actualiza un evento de timeline para un recluta.
+    """
+    try:
+        recluta = Recluta.get_by_id(recluta_id, current_user=current_user)
+        if not recluta:
+            return jsonify({"success": False, "message": "Recluta no encontrado o sin permisos"}), 404
+
+        ev = EventoRecluta.get_by_id(event_id)
+        if not ev or ev.recluta_id != recluta_id:
+            return jsonify({"success": False, "message": "Evento no encontrado"}), 404
+
+        data = request.get_json() or {}
+        # No permitimos cambiar recluta_id por seguridad
+        data['recluta_id'] = recluta_id
+
+        try:
+            validated = validate_evento_timeline_data(data, is_update=True)
+        except ValidationError as e:
+            return jsonify({"success": False, "message": "Error de validación", "errors": e.args[0]}), 400
+
+        if 'date' in validated:
+            ev.fecha = validated['date']
+        if 'status' in validated:
+            ev.estado = validated['status']
+        if 'title' in validated:
+            ev.titulo = validated['title']
+        if 'description' in validated:
+            ev.descripcion = validated['description']
+
+        ev.save()
+        return jsonify({"success": True, "item": ev.serialize()})
+    except Exception as e:
+        current_app.logger.error(f"Error al actualizar evento {event_id} del recluta {recluta_id}: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
+
+
+@api_bp.route('/reclutas/<int:recluta_id>/timeline/<int:event_id>', methods=['DELETE'])
+@login_required
+def delete_timeline_event(recluta_id, event_id):
+    """
+    Elimina un evento de timeline para un recluta.
+    """
+    try:
+        recluta = Recluta.get_by_id(recluta_id, current_user=current_user)
+        if not recluta:
+            return jsonify({"success": False, "message": "Recluta no encontrado o sin permisos"}), 404
+
+        ev = EventoRecluta.get_by_id(event_id)
+        if not ev or ev.recluta_id != recluta_id:
+            return jsonify({"success": False, "message": "Evento no encontrado"}), 404
+
+        ev.delete()
+        return jsonify({"success": True, "message": "Evento eliminado"})
+    except Exception as e:
+        current_app.logger.error(f"Error al eliminar evento {event_id} del recluta {recluta_id}: {str(e)}")
+        return jsonify({"success": False, "message": f"Error: {str(e)}"}), 500
 
 @api_bp.route('/documentos/<int:id>', methods=['DELETE'])
 @login_required
@@ -1300,7 +1420,11 @@ def get_timeline_folio(folio):
         if not recluta:
             return jsonify({"success": False, "message": "Folio no encontrado"}), 404
         
-        # Mapear estado del sistema a estado de la timeline
+        # Si existen eventos personalizados, devolverlos primero
+        personalizados = EventoRecluta.get_for_recluta(recluta.id)
+        custom_events = [e.serialize() for e in personalizados]
+
+        # Mapear estado del sistema a estado de la timeline (fallback/compat)
         estados_timeline = {
             'En proceso': 'revision',
             'Activo': 'finalizada',
@@ -1376,7 +1500,8 @@ def get_timeline_folio(folio):
             "nombre_candidato": recluta.nombre,
             "estado_actual": recluta.estado,
             "estado_timeline": estado_timeline,
-            "timeline_items": timeline_items
+            "timeline_items": timeline_items,
+            "custom_events": custom_events,
         })
     except Exception as e:
         current_app.logger.error(f"Error al obtener timeline del folio: {str(e)}")
