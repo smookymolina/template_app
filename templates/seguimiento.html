@@ -378,6 +378,96 @@
         color: var(--success-color);
     }
     
+    /* Estilos para badges de estado en timeline personalizada */
+    .timeline-meta {
+        margin-top: 10px;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+    }
+    
+    .status-completed {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .status-pending {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .status-cancelled {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    /* Estilos para mensaje de sin eventos */
+    .no-events-message {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-color);
+        max-width: 500px;
+        margin: 0 auto;
+    }
+    
+    .no-events-icon {
+        font-size: 3rem;
+        color: var(--accent-color);
+        margin-bottom: 20px;
+        opacity: 0.6;
+    }
+    
+    .no-events-message h4 {
+        font-size: 1.3rem;
+        margin-bottom: 15px;
+        color: var(--primary-color);
+        font-weight: 600;
+    }
+    
+    .no-events-message p {
+        font-size: 1rem;
+        line-height: 1.6;
+        margin-bottom: 20px;
+        opacity: 0.8;
+    }
+    
+    .help-note {
+        background-color: rgba(0, 123, 255, 0.1);
+        border-left: 4px solid var(--primary-color);
+        padding: 15px;
+        border-radius: 4px;
+        margin-top: 20px;
+    }
+    
+    .help-note small {
+        color: var(--text-color);
+        font-style: italic;
+    }
+    
+    .dark-mode .status-completed {
+        background-color: rgba(212, 237, 218, 0.2);
+        color: #4caf50;
+    }
+    
+    .dark-mode .status-pending {
+        background-color: rgba(255, 243, 205, 0.2);
+        color: #ff9800;
+    }
+    
+    .dark-mode .status-cancelled {
+        background-color: rgba(248, 215, 218, 0.2);
+        color: #f44336;
+    }
+
     /* Adaptación responsive */
     @media (max-width: 576px) {
         .tracking-row {
@@ -682,30 +772,130 @@
             return timelineHTML;
         }
 
+        // Renderiza timeline devuelta por el servidor (timeline_items)
+        function renderServerTimeline(items) {
+            const container = document.getElementById('timeline-container');
+            if (!container || !items || !items.length) return;
+
+            const toClass = (it) => [it.completed ? 'completed' : '', it.active ? 'active' : ''].join(' ').trim();
+            const html = `
+                <div class="timeline">
+                    ${items.map(it => `
+                        <div class="timeline-item ${toClass(it)}">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h4>${it.title || 'Estado'}</h4>
+                                <p>${it.description || ''}</p>
+                                <div class="timeline-meta">
+                                    ${it.date ? `<span>${it.date}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        // Muestra un mensaje cuando no hay eventos asignados por el asesor
+        function renderNoEventsMessage() {
+            const container = document.getElementById('timeline-container');
+            if (!container) {
+                console.error('[ERROR] Container timeline-container no encontrado');
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="no-events-message">
+                    <div class="no-events-icon">
+                        <i class="fas fa-calendar-times"></i>
+                    </div>
+                    <h4>Aún no hay eventos de seguimiento</h4>
+                    <p>Tu asesor no ha asignado eventos específicos para tu proceso. 
+                       Los eventos de seguimiento aparecerán aquí cuando sean programados.</p>
+                    <div class="help-note">
+                        <small>Si tienes dudas sobre el estado de tu proceso, puedes contactar directamente a tu asesor.</small>
+                    </div>
+                </div>
+            `;
+            console.log('[INFO] Mensaje de "sin eventos" mostrado');
+        }
+
         // Renderiza una timeline personalizada con eventos
         function renderCustomTimeline(items) {
+            console.log('[RENDER] Iniciando renderCustomTimeline con items:', items);
+            
             const container = document.getElementById('timeline-container');
-            if (!container) return;
-            if (!items || !items.length) return;
-            const sorted = [...items].sort((a, b) => new Date(a.date) - new Date(b.date));
+            if (!container) {
+                console.error('[ERROR] Container timeline-container no encontrado');
+                return;
+            }
+            if (!items || !items.length) {
+                console.log('[WARNING] No hay items para renderizar en timeline personalizada');
+                renderNoEventsMessage();
+                return;
+            }
+            
+            console.log('[SUCCESS] Renderizando timeline personalizada con', items.length, 'eventos');
+            
+            // Asegurar que items es array y tiene datos válidos
+            const validItems = items.filter(item => item && item.date && item.title);
+            if (validItems.length === 0) {
+                console.log('[WARNING] No hay items válidos después de filtrado');
+                renderNoEventsMessage();
+                return;
+            }
+            
+            const sorted = [...validItems].sort((a, b) => new Date(a.date || a.fecha) - new Date(b.date || b.fecha));
             const statusToClass = (st) => {
                 if (st === 'completed') return 'completed';
                 if (st === 'pending') return 'active';
+                if (st === 'cancelled') return 'cancelled';
                 return '';
             };
+            
+            const formatDate = (dateStr) => {
+                try {
+                    return new Date(dateStr).toLocaleDateString('es-ES', {
+                        year: 'numeric',
+                        month: 'long', 
+                        day: 'numeric'
+                    });
+                } catch (e) {
+                    console.warn('[WARNING] Error formateando fecha:', dateStr);
+                    return dateStr;
+                }
+            };
+            
             const html = `
                 <div class="timeline">
-                    ${sorted.map(it => `
-                        <div class="timeline-item ${statusToClass(it.status)}">
+                    ${sorted.map((it, index) => `
+                        <div class="timeline-item ${statusToClass(it.status || it.estado)}" data-event-id="${it.id}">
                             <div class="timeline-marker"></div>
                             <div class="timeline-content">
-                                <h4>${it.title}</h4>
-                                <p>${(new Date(it.date)).toLocaleDateString('es-ES')}${it.description ? ' — ' + it.description : ''}</p>
+                                <h4>${it.title || it.titulo}</h4>
+                                <p><strong>${formatDate(it.date || it.fecha)}</strong></p>
+                                ${(it.description || it.descripcion) ? `<p>${it.description || it.descripcion}</p>` : ''}
+                                <div class="timeline-meta">
+                                    <span class="status-badge status-${it.status || it.estado}">
+                                        ${(it.status || it.estado) === 'completed' ? 'Completado' : 
+                                          (it.status || it.estado) === 'pending' ? 'Pendiente' : 
+                                          (it.status || it.estado) === 'cancelled' ? 'Cancelado' : (it.status || it.estado)}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     `).join('')}
                 </div>`;
+            
             container.innerHTML = html;
+            console.log('[SUCCESS] Timeline personalizada renderizada exitosamente con', validItems.length, 'eventos');
+            console.log('[DEBUG] Primer evento:', sorted[0]);
+            console.log('[DEBUG] Container actualizado correctamente');
+            
+            // Ocultar mensaje de carga si existe
+            const loadingMsg = document.getElementById('timeline-loading');
+            if (loadingMsg) loadingMsg.style.display = 'none';
         }
         
         // Función para mostrar los resultados del seguimiento
@@ -759,8 +949,12 @@
                 </div>
                 
                 <div id="timeline-container" class="timeline-container">
-                    <div class="timeline">
-                        ${renderTimelineItems(info.estado)}
+                    <div class="no-events-message" id="timeline-loading">
+                        <div class="no-events-icon">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <h4>Cargando eventos...</h4>
+                        <p>Buscando eventos asignados por tu asesor.</p>
                     </div>
                 </div>
                 
@@ -805,16 +999,43 @@
                 })
                 .then(async data => {
                     if (data.success) {
+                        let timelineRendered = false;
+                        
                         try {
                             const tlResp = await fetch(`/api/tracking/${folio}/timeline`);
                             const tl = await tlResp.json();
                             displayTrackingResults(data.tracking_info);
-                            if (tlResp.ok && tl.success && tl.custom_events && tl.custom_events.length) {
-                                renderCustomTimeline(tl.custom_events);
+                            
+                            console.log('[DEBUG] Respuesta completa de timeline API:', tl);
+                            
+                            // Solo mostrar eventos personalizados asignados por el asesor
+                            if (tlResp.ok && tl.success) {
+                                // Verificar múltiples formas de acceso a eventos
+                                const events = tl.custom_events || tl.items || [];
+                                console.log('[DEBUG] Eventos encontrados:', events, 'Cantidad:', events.length);
+                                
+                                if (events.length > 0) {
+                                    console.log('[SUCCESS] Mostrando eventos asignados por el asesor:', events);
+                                    renderCustomTimeline(events);
+                                    timelineRendered = true;
+                                } else {
+                                    console.log('[INFO] No hay eventos asignados por el asesor');
+                                    renderNoEventsMessage();
+                                    timelineRendered = true;
+                                }
+                            } else {
+                                console.log('[WARNING] Timeline API falló o devolvió success=false');
+                                renderNoEventsMessage();
+                                timelineRendered = true;
                             }
-                        } catch (_) {
+                            
+                        } catch (error) {
+                            console.error('Error obteniendo timeline:', error);
                             displayTrackingResults(data.tracking_info);
+                            // Mostrar mensaje de sin eventos en caso de error también
+                            renderNoEventsMessage();
                         }
+                        
                         showNotification('Información obtenida correctamente', 'success');
                     } else {
                         showNotification(data.message || 'No se encontró información para este folio', 'error');

@@ -86,11 +86,11 @@ To run this application, one would typically:
 
 ---
 
-Issue: Modal de crear usuario no guarda y la lista queda en “Cargando usuarios…”
+Issue: Modal de crear usuario no guarda y la lista queda en "Cargando usuarios…"
 
 Síntomas
-- Al abrir el modal “Crear Nueva Cuenta”, el botón guardar no crea la cuenta.
-- La sección “Administración de Usuarios” muestra “Cargando usuarios…” de forma permanente.
+- Al abrir el modal "Crear Nueva Cuenta", el botón guardar no crea la cuenta.
+- La sección "Administración de Usuarios" muestra "Cargando usuarios…" de forma permanente.
 
 Causa raíz
 - El archivo `static/js/admin.js` se cargaba condicionalmente en `templates/base.html` usando el estado del usuario en tiempo de render del servidor. Cuando el usuario inicia sesión vía AJAX (sin recargar la página), el script de administración nunca se incluye, por lo que:
@@ -100,3 +100,286 @@ Causa raíz
 Solución aplicada
 - Incluir `static/js/admin.js` siempre en `templates/base.html` (sin condicional). El script es seguro: auto‑verifica la existencia de elementos y maneja respuestas 401/403 sin romper la UI.
 - Resultado: tras iniciar sesión como administrador, el modal guarda correctamente (POST /admin/usuarios) y la lista se carga/actualiza (GET /admin/usuarios).
+
+---
+
+# ANÁLISIS DE PROBLEMAS EN SEGUIMIENTO CON FOLIO - LÍNEA DE EVENTOS
+
+## FECHA: 2025-09-04  
+## ESTADO: ANÁLISIS COMPLETO ACTUALIZADO - PROBLEMA REAL IDENTIFICADO
+
+---
+
+## 1. ARQUITECTURA DEL SISTEMA DE SEGUIMIENTO
+
+### 1.1 Estructura General
+El sistema tiene tres componentes principales para el seguimiento con folio:
+
+**Frontend (seguimiento.html):**
+- Formulario de consulta de folio (línea 553-574)
+- Container para resultados de timeline (línea 936-944)
+- Funciones JavaScript para renderizar eventos (línea 824-884)
+
+**Backend (routes/api.py):**
+- API para tracking por folio: `/api/tracking/<folio>` (línea 1455-1491)
+- API para timeline del folio: `/api/tracking/<folio>/timeline` (línea 1493-1520)
+- APIs CRUD para eventos de recluta: `/api/reclutas/<int:recluta_id>/timeline` (líneas 636-784)
+
+**Gestión de Eventos (modals.html):**
+- Modal de gestión de timeline (línea 382-477)
+- Botón para abrir gestión desde detalles del recluta (línea 175-181)
+
+---
+
+## 2. PROBLEMAS IDENTIFICADOS
+
+### 2.1 PROBLEMA PRINCIPAL: Desconexión entre gestión y visualización
+
+**Descripción:**
+Los eventos creados en el modal de gestión de eventos NO aparecen en el seguimiento público porque operan en contextos diferentes:
+
+- **Modal de gestión:** Utiliza `reclutaManager` y el contexto administrativo con autenticación
+- **Seguimiento público:** Utiliza APIs públicas sin autenticación que filtran solo eventos "asignados por asesor"
+
+### 2.2 PROBLEMAS ESPECÍFICOS ENCONTRADOS:
+
+#### A) Flujo de datos inconsistente (seguimiento.html línea 994-1003):
+```javascript
+if (tlResp.ok && tl.success && tl.custom_events && tl.custom_events.length > 0) {
+    console.log('Mostrando eventos asignados por el asesor:', tl.custom_events);
+    renderCustomTimeline(tl.custom_events);
+    timelineRendered = true;
+} else {
+    console.log('No hay eventos asignados por el asesor');
+    renderNoEventsMessage();
+    timelineRendered = true;
+}
+```
+
+**PROBLEMA:** La lógica siempre muestra "sin eventos" porque la API `/api/tracking/<folio>/timeline` devuelve una estructura diferente a la que espera el frontend.
+
+#### B) API inconsistente (routes/api.py línea 1505-1507):
+```python
+personalizados = EventoRecluta.get_for_recluta(recluta.id)
+custom_events = [e.serialize() for e in personalizados]
+```
+
+**PROBLEMA:** La API devuelve `custom_events` pero el frontend espera verificar `tl.custom_events` y su longitud, causando fallo en la condición.
+
+#### C) Renderizador confuso (seguimiento.html línea 825-884):
+```javascript
+function renderCustomTimeline(items) {
+    console.log('[RENDER] Iniciando renderCustomTimeline con items:', items);
+    // ... lógica de renderizado
+}
+```
+
+**PROBLEMA:** La función recibe items pero nunca se ejecuta porque la condición en línea 995 siempre falla.
+
+### 2.3 PROBLEMAS TÉCNICOS ADICIONALES:
+
+#### D) Referencias cruzadas en modals.html (línea 573-577):
+```javascript
+if (window.Reclutas && typeof window.Reclutas.openTimelineModal === 'function') {
+    targetObject = window.Reclutas;
+} else if (window.reclutaManager && typeof window.reclutaManager.openTimelineModal === 'function') {
+    targetObject = window.reclutaManager;
+}
+```
+
+**PROBLEMA:** Inconsistencia en nombres de objetos globales entre `Reclutas` y `reclutaManager`.
+
+#### E) Manejo de errores en API (routes/api.py línea 647-658):
+```python
+try:
+    eventos = EventoRecluta.get_for_recluta(recluta_id)
+    return jsonify({"success": True, "items": [e.serialize() for e in eventos]})
+except Exception as db_error:
+    current_app.logger.error(f"Error de BD en timeline: {str(db_error)}")
+    # Devolver lista vacía como fallback para permitir que funcione la UI
+    return jsonify({"success": True, "items": []})
+```
+
+**PROBLEMA:** El fallback de lista vacía oculta errores reales de base de datos.
+
+---
+
+## 3. FLUJO ACTUAL (PROBLEMÁTICO)
+
+### Paso 1: Usuario ingresa folio
+- Formulario en seguimiento.html llama a `/api/tracking/<folio>`
+- Obtiene información básica del recluta
+
+### Paso 2: Carga de timeline
+- JavaScript hace segunda llamada a `/api/tracking/<folio>/timeline` 
+- API busca eventos con `EventoRecluta.get_for_recluta(recluta_id)`
+
+### Paso 3: Renderizado
+- Frontend verifica `tl.custom_events && tl.custom_events.length > 0`
+- **FALLA AQUÍ** porque la estructura no coincide
+- Siempre muestra mensaje "sin eventos"
+
+### Paso 4: Gestión de eventos (separado)
+- Asesor abre modal desde detalles del recluta
+- Usa `reclutaManager.openTimelineModal()`
+- Guarda eventos en EventoRecluta con APIs autenticadas
+- **NUNCA SE VEN EN SEGUIMIENTO PÚBLICO**
+
+---
+
+## 4. CAUSA RAÍZ
+
+**El problema principal es arquitectural:** Hay dos sistemas separados que no se comunican correctamente:
+
+1. **Sistema administrativo** (modal + APIs autenticadas)
+2. **Sistema público** (seguimiento por folio + APIs públicas)
+
+Los eventos se crean correctamente en el sistema administrativo pero la API pública no los encuentra o no los renderiza por:
+- Estructuras de datos inconsistentes
+- Condiciones de verificación incorrectas  
+- Manejo de errores que oculta problemas
+
+---
+
+## 5. EVIDENCIA DE PROBLEMAS EN CÓDIGO
+
+### API Response vs Frontend Expectation:
+**API devuelve:**
+```json
+{
+  "success": true,
+  "custom_events": [...],
+  "has_custom_events": true,
+  "custom_events_count": 2
+}
+```
+
+**Frontend verifica:**
+```javascript
+if (tlResp.ok && tl.success && tl.custom_events && tl.custom_events.length > 0)
+```
+
+### Logs en seguimiento.html confirman el problema:
+- Línea 996: `console.log('Mostrando eventos asignados por el asesor:', tl.custom_events);`
+- Línea 1000: `console.log('No hay eventos asignados por el asesor');`
+
+El segundo siempre se ejecuta, indicando que la condición falla.
+
+---
+
+## 6. CONCLUSIÓN
+
+El sistema de seguimiento con folio NO funciona correctamente porque:
+
+1. **Hay desconexión entre la gestión y visualización de eventos**
+2. **Las APIs devuelven estructuras inconsistentes**
+3. **El frontend tiene condiciones que nunca se cumplen**
+4. **Los errores de base de datos están siendo ocultados**
+
+La funcionalidad de gestión de eventos existe y probablemente funciona, pero los eventos creados nunca aparecen en el seguimiento público debido a estos problemas de integración.
+
+---
+
+## ARCHIVOS ANALIZADOS:
+- `templates/seguimiento.html` - Frontend de seguimiento público
+- `routes/api.py` - APIs de backend  
+- `templates/components/modals.html` - Modal de gestión de eventos
+- `static/js/reclutas.js` - Gestión administrativa de timeline
+
+## PRÓXIMOS PASOS RECOMENDADOS:
+1. Corregir inconsistencias en estructura de respuesta de APIs
+2. Unificar referencias de objetos JavaScript (Reclutas vs reclutaManager)  
+3. Mejorar manejo de errores para identificar problemas reales
+4. Sincronizar flujos entre gestión administrativa y seguimiento público
+
+---
+
+# ACTUALIZACIÓN - PROBLEMA REAL IDENTIFICADO
+
+## FECHA: 2025-09-04
+## ESTADO: CAUSA RAÍZ ENCONTRADA
+
+### RESUMEN DEL PROBLEMA REAL:
+Después de verificación exhaustiva, el problema NO está en:
+- ❌ Guardado de eventos (eventos se guardan correctamente en BD)
+- ❌ APIs de backend (devuelven datos correctos)  
+- ❌ Estructura de respuestas (JSON bien formado)
+
+**EL PROBLEMA REAL está en el frontend:**
+
+### CAUSA RAÍZ CONFIRMADA:
+**En `static/js/client.js` línea 502**, se renderiza SIEMPRE la timeline genérica sin verificar eventos personalizados.
+
+```javascript
+// LÍNEA PROBLEMÁTICA en client.js:502
+${this.renderTimelineItems(info.estado || 'Desconocido')}
+```
+
+Esta línea ignora completamente los eventos personalizados y siempre muestra la timeline predeterminada basada en el estado del recluta.
+
+### EVIDENCIA VERIFICADA:
+
+#### 1. **Base de datos confirma eventos guardados:**
+```sql
+Evento 5: Recluta 1 (Folio: REC-AC9B6491, Ana López) - 2025-09-05 - completed - n
+```
+
+#### 2. **API funciona correctamente:**
+```bash
+curl /api/tracking/REC-AC9B6491/timeline
+{
+    "custom_events": [
+        {
+            "date": "2025-09-05",
+            "status": "completed", 
+            "title": "n",
+            "description": "n"
+        }
+    ],
+    "success": true
+}
+```
+
+#### 3. **Frontend ignora eventos personalizados:**
+En lugar de usar `custom_events`, **client.js** llama directamente:
+```javascript
+renderTimelineItems(info.estado)  // Renderiza timeline genérica
+```
+
+### FLUJO PROBLEMÁTICO ACTUAL:
+1. Usuario ingresa folio → ✅ API obtiene info básica
+2. Frontend carga timeline → ❌ **IGNORA** eventos personalizados
+3. Renderiza timeline genérica → ❌ Muestra "Recibida", "En revisión", etc.
+4. Eventos personalizados nunca se procesan → ❌ **SE PIERDEN**
+
+### ARCHIVOS PROBLEMÁTICOS ESPECÍFICOS:
+- **`static/js/client.js:502`** - Línea que causa el problema
+- **`templates/seguimiento.html`** - Tiene lógica correcta pero NO se usa
+- **Desconexión**: Hay DOS sistemas de renderizado, se usa el incorrecto
+
+### COMPARACIÓN - LO QUE DEBERÍA PASAR vs LO QUE PASA:
+
+#### ✅ **CÓDIGO CORRECTO** (en seguimiento.html):
+```javascript
+const events = tl.custom_events || tl.items || [];
+if (events.length > 0) {
+    renderCustomTimeline(events);  // USA eventos personalizados
+}
+```
+
+#### ❌ **CÓDIGO PROBLEMÁTICO** (en client.js):
+```javascript
+${this.renderTimelineItems(info.estado)}  // IGNORA eventos personalizados
+```
+
+### SOLUCIÓN REQUERIDA:
+Modificar `client.js` para que:
+1. Llame a la API `/api/tracking/{folio}/timeline`
+2. Verifique si hay `custom_events`
+3. Si hay eventos → use `renderCustomTimeline(events)`
+4. Si no hay eventos → use timeline genérica como fallback
+
+### IMPACTO:
+- **Severidad**: ALTA - Funcionalidad principal no funciona
+- **Alcance**: Todos los usuarios que buscan seguimiento por folio
+- **Datos**: Los eventos se guardan pero nunca se muestran

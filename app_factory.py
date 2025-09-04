@@ -128,9 +128,17 @@ def register_shell_context(app):
     """Registra variables para el contexto del shell"""
     @app.shell_context_processor
     def make_shell_context():
+        # Importar modelos para asegurar que las tablas se creen
+        from models.evento_recluta import EventoRecluta
+        from models.recluta import Recluta
+        from models.entrevista import Entrevista
+        
         return {
             'db': db, 
             'Usuario': Usuario,
+            'EventoRecluta': EventoRecluta,
+            'Recluta': Recluta,
+            'Entrevista': Entrevista,
             'app': app
         }
 
@@ -202,8 +210,15 @@ def register_request_hooks(app):
 
 def initialize_database(app):
     """Inicializa la base de datos y crea datos iniciales"""
+    # Importar todos los modelos para asegurar que las tablas se creen
+    from models.usuario import Usuario
+    from models.recluta import Recluta
+    from models.entrevista import Entrevista
+    from models.evento_recluta import EventoRecluta
+    
     # Crear tablas
     db.create_all()
+    app.logger.info('Tablas de base de datos creadas/verificadas')
     
     # Crear usuario admin por defecto si no existe
     admin_email = 'admin@example.com'

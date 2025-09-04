@@ -174,7 +174,7 @@
 
                 <!-- 🎯 NUEVO BOTÓN PARA GESTIONAR TIMELINE -->
                 <div style="margin-top: 20px; text-align: center; padding-top: 15px; border-top: 1px solid var(--border-color);">
-                    <button class="btn btn-primary" onclick="reclutaManager.openTimelineModal()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 12px 24px; font-weight: 600;">
+                    <button id="btn-gestionar-timeline" class="btn btn-primary" onclick="openTimelineModalSafely()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 12px 24px; font-weight: 600;">
                         <i class="fas fa-route"></i>
                         Gestionar Línea de Seguimiento
                     </button>
@@ -383,7 +383,7 @@
     <div class="modal-content timeline-modal-content">
         <div class="modal-header timeline-header">
             <h3><i class="fas fa-route"></i> Gestión de Línea de Seguimiento</h3>
-            <button class="close-modal" onclick="reclutaManager.closeTimelineModal()">&times;</button>
+            <button class="close-modal" onclick="(window.reclutaManager || window.Reclutas).closeTimelineModal()">&times;</button>
         </div>
 
         <div class="modal-body timeline-modal-body">
@@ -406,7 +406,7 @@
             <!-- Header de timeline -->
             <div class="timeline-header-controls">
                 <h4><i class="fas fa-list-ol"></i> Eventos de Timeline</h4>
-                <button class="btn btn-success timeline-add-btn" onclick="reclutaManager.addTimelineItem()">
+                <button class="btn btn-success timeline-add-btn" onclick="(window.reclutaManager || window.Reclutas).addTimelineItem()">
                     <i class="fas fa-plus"></i> Agregar Evento
                 </button>
             </div>
@@ -455,10 +455,10 @@
                 </div>
 
                 <div class="timeline-form-buttons">
-                    <button class="btn btn-secondary" onclick="reclutaManager.cancelTimelineForm()" type="button">
+                    <button class="btn btn-secondary" onclick="(window.reclutaManager || window.Reclutas).cancelTimelineForm()" type="button">
                         <i class="fas fa-times"></i> Cancelar
                     </button>
-                    <button class="btn btn-success" onclick="reclutaManager.saveTimelineItem()" type="button">
+                    <button class="btn btn-success" onclick="(window.reclutaManager || window.Reclutas).saveTimelineItemApi()" type="button">
                         <i class="fas fa-save"></i> Guardar Evento
                     </button>
                 </div>
@@ -466,10 +466,10 @@
         </div>
 
         <div class="modal-footer timeline-footer">
-            <button class="btn btn-secondary" onclick="reclutaManager.closeTimelineModal()">
+            <button class="btn btn-secondary" onclick="(window.reclutaManager || window.Reclutas).closeTimelineModal()">
                 <i class="fas fa-times"></i> Cerrar
             </button>
-            <button class="btn btn-primary" onclick="reclutaManager.previewTimeline()">
+            <button class="btn btn-primary" onclick="(window.reclutaManager || window.Reclutas).previewTimeline()">
                 <i class="fas fa-eye"></i> Vista Previa Portal
             </button>
         </div>
@@ -564,7 +564,65 @@
 
 <script>
 // Event listeners para los modales de reclutas
+// Función unificada para abrir el modal de timeline
+function openTimelineModalSafely() {
+    try {
+        // Definir reclutaManager global si no existe (compatibilidad)
+        if (!window.reclutaManager && window.Reclutas) {
+            window.reclutaManager = window.Reclutas;
+            console.log('[COMPAT] Creando referencia reclutaManager -> Reclutas');
+        }
+        
+        // Verificar referencias unificadas
+        const manager = window.reclutaManager || window.Reclutas;
+        
+        if (manager && typeof manager.openTimelineModal === 'function') {
+            // Verificar que hay un recluta seleccionado
+            if (!manager.currentReclutaId) {
+                alert('Por favor, selecciona un recluta antes de gestionar su línea de seguimiento.');
+                return;
+            }
+            
+            console.log('[SUCCESS] Abriendo timeline modal para recluta:', manager.currentReclutaId);
+            manager.openTimelineModal();
+        } else {
+            console.error('[ERROR] No se encontró el gestor de reclutas');
+            console.log('[DEBUG] window.reclutaManager:', window.reclutaManager);
+            console.log('[DEBUG] window.Reclutas:', window.Reclutas);
+            alert('Error: No se pudo cargar la funcionalidad de gestión de timeline. Por favor, recarga la página.');
+        }
+    } catch (error) {
+        console.error('[ERROR] Al abrir modal de timeline:', error);
+        alert('Ocurrió un error al intentar abrir la gestión de timeline. Por favor, intenta de nuevo.');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Verificar que los objetos necesarios estén disponibles
+    function checkRecrutasAvailability() {
+        const maxAttempts = 10;
+        let attempts = 0;
+        
+        const checkInterval = setInterval(() => {
+            attempts++;
+            
+            if ((window.Reclutas && window.Reclutas.openTimelineModal) || 
+                (window.reclutaManager && window.reclutaManager.openTimelineModal)) {
+                console.log('Objeto Reclutas/reclutaManager disponible');
+                clearInterval(checkInterval);
+                return;
+            }
+            
+            if (attempts >= maxAttempts) {
+                console.warn('No se pudo encontrar el objeto Reclutas/reclutaManager después de varios intentos');
+                clearInterval(checkInterval);
+            }
+        }, 500);
+    }
+    
+    // Iniciar verificación
+    checkRecrutasAvailability();
+    
     // Modal de ver recluta - eventos de botones
     const viewModal = document.getElementById('view-recluta-modal');
     if (viewModal) {

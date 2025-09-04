@@ -2589,10 +2589,10 @@ const Reclutas = {
                     <div class="timeline-item-title">${item.title}</div>
                     <div class="timeline-item-description">${item.description || 'Sin descripción'}</div>
                     <div class="timeline-item-actions">
-                        <button class="btn btn-outline" onclick="reclutaManager.editTimelineItem(${item.id})">
+                        <button class="btn btn-outline" onclick="(window.reclutaManager || window.Reclutas).editTimelineItem(${item.id})">
                             <i class="fas fa-edit"></i> Editar
                         </button>
-                        <button class="btn btn-danger" onclick="reclutaManager.deleteTimelineItemApi(${item.id})">
+                        <button class="btn btn-danger" onclick="(window.reclutaManager || window.Reclutas).deleteTimelineItemApi(${item.id})">
                             <i class="fas fa-trash"></i> Eliminar
                         </button>
                     </div>
@@ -2818,6 +2818,10 @@ Reclutas.deleteTimelineItemApi = async function(id) {
 };
 
 window.reclutaManager = Reclutas;
+
+// Exportar y registrar globalmente para compatibilidad
+window.Reclutas = Reclutas;
+window.reclutaManager = Reclutas; // Alias unificado
 
 export default Reclutas;
 

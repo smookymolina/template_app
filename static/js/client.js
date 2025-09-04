@@ -164,7 +164,7 @@ const Client = {
         this.setFormState('success', 'Información obtenida correctamente');
         
         // Mostrar resultados
-        this.displayTrackingResults(data.tracking_info, isInModal);
+        this.displayTrackingResults(data.tracking_info, isInModal, folio);
         
         // Si no es modal, hacer scroll hacia arriba
         if (!isInModal) {
@@ -441,8 +441,9 @@ const Client = {
      * Muestra los resultados del seguimiento
      * @param {Object} info - Información del seguimiento
      * @param {boolean} isInModal - Indica si se muestra en el modal o en la página principal
+     * @param {string} folio - Folio del recluta
      */
-    displayTrackingResults: function(info, isInModal = true) {
+    displayTrackingResults: function(info, isInModal = true, folio = null) {
         // Verificar que la información existe y es válida
         if (!info) {
             this.setFormState('error', 'No se encontró información para este folio');
@@ -497,9 +498,12 @@ const Client = {
                 </div>
             </div>
             
-            <div class="timeline-container">
-                <div class="timeline">
-                    ${this.renderTimelineItems(info.estado || 'Desconocido')}
+            <div class="timeline-container" id="client-timeline-container">
+                <div class="timeline" id="client-timeline">
+                    <div class="loading-timeline">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>Cargando línea de tiempo...</span>
+                    </div>
                 </div>
             </div>
             
@@ -510,6 +514,132 @@ const Client = {
         
         // Mostrar el contenedor de resultados
         resultsContainer.style.display = 'block';
+        
+        // Cargar eventos personalizados de forma asíncrona
+        this.loadCustomTimelineForTracking(folio, info.estado);
+    },
+
+    /**
+     * Carga y renderiza la timeline personalizada con eventos del asesor
+     * @param {string} folio - Folio del recluta
+     * @param {string} estadoRecluta - Estado actual del recluta para fallback
+     */
+    loadCustomTimelineForTracking: async function(folio, estadoRecluta) {
+        const timelineContainer = document.getElementById('client-timeline');
+        if (!timelineContainer) {
+            console.error('[CLIENT] Timeline container no encontrado');
+            return;
+        }
+
+        try {
+            console.log(`[CLIENT] Cargando eventos personalizados para folio: ${folio}`);
+            
+            // Llamar a la API de timeline
+            const response = await fetch(`/api/tracking/${folio}/timeline`);
+            const data = await response.json();
+            
+            console.log('[CLIENT] Respuesta de API timeline:', data);
+            
+            if (response.ok && data.success) {
+                const customEvents = data.custom_events || [];
+                
+                if (customEvents.length > 0) {
+                    console.log(`[CLIENT] ${customEvents.length} eventos personalizados encontrados`);
+                    this.renderCustomTimelineEvents(customEvents);
+                } else {
+                    console.log('[CLIENT] No hay eventos personalizados, usando timeline genérica');
+                    this.renderGenericTimeline(estadoRecluta);
+                }
+            } else {
+                console.warn('[CLIENT] API timeline falló, usando timeline genérica');
+                this.renderGenericTimeline(estadoRecluta);
+            }
+            
+        } catch (error) {
+            console.error('[CLIENT] Error cargando timeline personalizada:', error);
+            this.renderGenericTimeline(estadoRecluta);
+        }
+    },
+
+    /**
+     * Renderiza eventos personalizados en la timeline
+     * @param {Array} events - Array de eventos personalizados
+     */
+    renderCustomTimelineEvents: function(events) {
+        const timelineContainer = document.getElementById('client-timeline');
+        if (!timelineContainer) return;
+
+        console.log('[CLIENT] Renderizando eventos personalizados:', events);
+
+        // Ordenar eventos por fecha
+        const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // Función para obtener clase CSS según estado
+        const getStatusClass = (status) => {
+            switch(status) {
+                case 'completed': return 'completed';
+                case 'pending': return 'active';  
+                case 'cancelled': return 'cancelled';
+                default: return '';
+            }
+        };
+
+        // Función para formatear fecha
+        const formatDate = (dateStr) => {
+            try {
+                return new Date(dateStr).toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            } catch (e) {
+                return dateStr;
+            }
+        };
+
+        // Función para obtener texto de estado
+        const getStatusText = (status) => {
+            switch(status) {
+                case 'completed': return 'Completado';
+                case 'pending': return 'Pendiente';
+                case 'cancelled': return 'Cancelado';
+                default: return status;
+            }
+        };
+
+        // Generar HTML
+        const timelineHTML = sortedEvents.map((event, index) => `
+            <div class="timeline-item ${getStatusClass(event.status)}" data-event-id="${event.id}">
+                <div class="timeline-marker"></div>
+                <div class="timeline-content">
+                    <h4>${event.title}</h4>
+                    <p><strong>${formatDate(event.date)}</strong></p>
+                    ${event.description ? `<p>${event.description}</p>` : ''}
+                    <div class="timeline-meta">
+                        <span class="status-badge status-${event.status}">
+                            ${getStatusText(event.status)}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        timelineContainer.innerHTML = timelineHTML;
+        console.log('[CLIENT] Timeline personalizada renderizada exitosamente');
+    },
+
+    /**
+     * Renderiza la timeline genérica cuando no hay eventos personalizados
+     * @param {string} estadoRecluta - Estado actual del recluta
+     */
+    renderGenericTimeline: function(estadoRecluta) {
+        const timelineContainer = document.getElementById('client-timeline');
+        if (!timelineContainer) return;
+
+        console.log(`[CLIENT] Renderizando timeline genérica para estado: ${estadoRecluta}`);
+        
+        // Usar la función existente
+        timelineContainer.innerHTML = this.renderTimelineItems(estadoRecluta || 'Desconocido');
     },
     
     /**
