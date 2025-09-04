@@ -1,0 +1,29 @@
+## Problemas de Diseño y Arquitectura en la Sección de Seguimiento
+
+### 1. Implementación Duplicada y Conflictiva de la Timeline
+- **Problema:** Existen al menos dos implementaciones de la "línea de tiempo" (timeline) en el proyecto. Una es un componente reutilizable (`templates/components/seccion_timeline.html` con su `static/js/timeline.js`), y la otra está implementada desde cero y de forma aislada dentro de `templates/seguimiento.html`.
+- **Impacto:** Esto genera inconsistencia visual y funcional en la aplicación. El mantenimiento se duplica, ya que cualquier cambio de diseño debe aplicarse en dos lugares diferentes, y el código es más difícil de entender y depurar.
+
+### 2. CSS Incrustado y Redundante
+- **Problema:** El archivo `templates/seguimiento.html` contiene una etiqueta `<style>` con más de 200 líneas de CSS que son una copia directa del archivo `static/css/timeline.css`.
+- **Impacto:** Esta práctica es muy ineficiente. Impide que el navegador almacene en caché el CSS, lo que aumenta los tiempos de carga de la página. Además, hace que el archivo HTML sea innecesariamente grande y difícil de mantener. Cualquier cambio en `timeline.css` no se reflejará aquí, causando más inconsistencias.
+
+### 3. Diseño Visual Genérico y Poco Integrado
+- **Problema:** El diseño actual de la timeline es muy básico: una línea vertical con círculos. No aprovecha la paleta de colores, las sombras, los bordes redondeados y otros elementos de diseño definidos en el resto de la aplicación (visibles en `static/css/fixes.css` y `static/css/styles.css`).
+- **Impacto:** La sección de seguimiento se siente desconectada del resto de la aplicación, dando una impresión de baja calidad y falta de atención al detalle.
+
+### 4. Falta de Interactividad y Retroalimentación Visual
+- **Problema:** Los elementos de la timeline son estáticos. No hay efectos visuales al pasar el cursor sobre ellos (hover), ni transiciones suaves que mejoren la experiencia de usuario.
+- **Impacto:** La interfaz se percibe como "plana" y poco atractiva. Pequeños detalles interactivos podrían hacerla mucho más agradable de usar.
+
+### 5. Jerarquía de Información Mejorable
+- **Problema:** Dentro de cada evento de la timeline, la información (título, fecha, descripción, estado) se presenta sin una estructura clara. Aunque se usan badges para el estado, el diseño general del contenido podría organizarse mejor para facilitar la lectura rápida.
+- **Impacto:** El usuario puede tardar más en encontrar la información que busca, especialmente en timelines con muchos eventos.
+
+### 6. Código de Baja Calidad en `seguimiento.html`
+- **Problema:** El archivo `seguimiento.html` mezcla HTML, CSS y JavaScript de forma masiva. La lógica de la aplicación (llamadas a la API, renderizado dinámico) está escrita en un bloque `<script>` de más de 300 líneas directamente en el HTML. Además, contiene múltiples funciones de renderizado de timelines que parecen redundantes (`renderTimelineItems`, `renderServerTimeline`, `renderCustomTimeline`) y código de depuración (`console.log`) expuesto al cliente.
+- **Impacto:** Esto es una mala práctica de desarrollo (falta de separación de conceptos) que hace que el código sea extremadamente difícil de leer, mantener, probar y reutilizar. Aumenta la probabilidad de introducir errores.
+
+### 7. Problemas de Responsividad
+- **Problema:** Aunque existen algunas reglas básicas de responsividad, el diseño de la timeline no se adapta de forma óptima a pantallas pequeñas, pudiendo verse apretado o desalineado.
+- **Impacto:** La experiencia de usuario en dispositivos móviles es deficiente.

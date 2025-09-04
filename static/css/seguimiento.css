@@ -1,0 +1,275 @@
+/* Botón con apariencia de enlace */
+.link-button {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: inherit;
+    font-family: inherit;
+    padding: 0;
+    margin: 0;
+    display: inline;
+}
+
+.link-button:hover {
+    color: var(--primary-dark);
+    text-decoration: none;
+}
+
+.link-button:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.hero-section {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    padding: 60px 0;
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.hero-section h1 {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+}
+
+.hero-section p {
+    font-size: 1.2rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.tracking-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+}
+
+.dark-mode .tracking-container {
+    background-color: var(--light-color);
+}
+
+.tracking-form {
+    margin-bottom: 30px;
+}
+
+.tracking-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.tracking-header h2 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.tracking-header p {
+    color: var(--text-light);
+}
+
+/* Estilos para las instrucciones del folio */
+.folio-guide {
+    background-color: rgba(0, 123, 255, 0.05);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin-bottom: 30px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.dark-mode .folio-guide {
+    background-color: rgba(0, 123, 255, 0.03);
+}
+
+.folio-guide h3 {
+    font-size: 18px;
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+}
+
+.folio-guide h3 i {
+    margin-right: 10px;
+}
+
+.folio-guide h4 {
+    font-size: 16px;
+    margin: 20px 0 10px;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+}
+
+.folio-guide h4 i {
+    margin-right: 8px;
+    color: var(--primary-color);
+}
+
+.folio-guide p {
+    margin-bottom: 10px;
+}
+
+.folio-guide ul {
+    padding-left: 20px;
+    margin-bottom: 15px;
+}
+
+.folio-guide li {
+    margin-bottom: 8px;
+    position: relative;
+    padding-left: 5px;
+}
+
+.folio-guide .folio-example {
+    font-family: monospace;
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.folio-guide .contact-info {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.help-text {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: rgba(0, 123, 255, 0.1);
+    border-left: 4px solid var(--primary-color);
+    border-radius: 4px;
+}
+
+.tracking-contact {
+    margin-top: 40px;
+    text-align: center;
+}
+
+.dark-mode .help-text {
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Botón del formulario centrado */
+.form-button {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.form-button .btn-primary {
+    min-width: 180px;
+}
+
+/* Estilos para la mini FAQ */
+.faq-section {
+    margin-top: 40px;
+}
+
+.faq-item {
+    margin-bottom: 20px;
+}
+
+.faq-question {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 8px;
+}
+
+.faq-answer {
+    color: var(--text-color);
+}
+
+/* Estado inactivo de la navegación */
+.header-nav {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.header-nav a {
+    color: white;
+    opacity: 0.8;
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.header-nav a:hover, .header-nav a.active {
+    opacity: 1;
+}
+
+/* Footer simple */
+.simple-footer {
+    margin-top: 60px;
+    text-align: center;
+    padding: 20px;
+    color: var(--text-light);
+    border-top: 1px solid var(--border-color);
+}
+
+/* Estilos para resultados y timeline */
+.tracking-result-card {
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: var(--transition);
+}
+
+.dark-mode .tracking-result-card {
+    background-color: var(--light-color);
+}
+
+.tracking-result-card h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+    font-weight: 600;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tracking-row {
+    display: flex;
+    margin-bottom: 12px;
+}
+
+.tracking-label {
+    width: 140px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.tracking-value {
+    flex: 1;
+}
+
+.tracking-section {
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+.hidden {
+    display: none;
+}
+
+/* Adaptación responsive */
+@media (max-width: 576px) {
+    .tracking-row {
+        flex-direction: column;
+    }
+    
+    .tracking-label {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+}

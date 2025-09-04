@@ -4,7 +4,12 @@
       "Bash(node:*)",
       "Bash(python:*)",
       "Bash(find:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\templates/**)",
+      "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\templates/**)",
+      "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app/**)",
+      "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\css/**)",
+      "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\css/**)"
     ],
     "deny": [],
     "ask": []
