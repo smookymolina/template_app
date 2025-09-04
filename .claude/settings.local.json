@@ -9,7 +9,11 @@
       "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\templates/**)",
       "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app/**)",
       "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\css/**)",
-      "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\css/**)"
+      "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\css/**)",
+      "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\js/**)",
+      "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\templates\\components/**)",
+      "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\js/**)",
+      "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\js/**)"
     ],
     "deny": [],
     "ask": []

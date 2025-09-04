@@ -1998,6 +1998,24 @@ Tutorial.startConfiguracionTutorial = function() {
     });
 };
 
+// 🚀 FUNCIÓN PARA INICIAR EL TUTORIAL DEL CALENDARIO
+Tutorial.startCalendarTutorial = function() {
+    this.startTutorial({
+        type: 'admin_calendar',
+        steps: this.calendarSteps,
+        storageKey: 'admin_calendar_tutorial_completed',
+        force: true,
+        onComplete: () => {
+            try {
+                localStorage.setItem('admin_calendar_tutorial_completed', 'true');
+                console.log('✅ Tutorial del calendario marcado como completado.');
+            } catch (e) {
+                console.error('Error al marcar el tutorial del calendario como completado:', e);
+            }
+        }
+    });
+};
+
 // ============================================================================
 // 🐛 HERRAMIENTAS DE DEBUGGING INTEGRADAS
 // ============================================================================

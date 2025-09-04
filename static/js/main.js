@@ -1223,6 +1223,8 @@ function showTargetSection(sectionId) {
 function handleSpecialSections(sectionId) {
     if (sectionId === 'estadisticas-section') {
         handleEstadisticasSection();
+    } else if (sectionId === 'calendario-section') {
+        handleCalendarioSection();
     }
 }
 
@@ -1279,6 +1281,48 @@ function setupEstadisticasForAsesor() {
         await loadMetricasAdminModule();
         window.MetricasAdmin?.setupContainer?.();
     }, 200);
+}
+
+/**
+ * ✅ MANEJAR SECCIÓN DE CALENDARIO
+ */
+function handleCalendarioSection() {
+    const currentUser = getCurrentUser();
+    console.log('📅 Accediendo a calendario, usuario:', currentUser?.rol);
+    
+    if (currentUser?.rol === 'admin') {
+        setupCalendarioForAdmin();
+    } else if (currentUser?.rol === 'asesor') {
+        setupCalendarioForAsesor();
+    }
+}
+
+/**
+ * ✅ CONFIGURAR CALENDARIO PARA ADMIN
+ */
+function setupCalendarioForAdmin() {
+    setTimeout(() => {
+        console.log('📅 Inicializando calendario para admin');
+
+        // Iniciar tutorial de calendario para admin si es la primera vez
+        const calendarTutorialCompleted = localStorage.getItem('admin_calendar_tutorial_completed');
+        if (!calendarTutorialCompleted && window.Tutorial && typeof window.Tutorial.startCalendarTutorial === 'function') {
+            console.log('🚀 Lanzando tutorial de calendario para admin...');
+            window.Tutorial.startCalendarTutorial();
+        } else {
+            console.log('ℹ️ Tutorial del calendario ya completado anteriormente');
+        }
+    }, 200);
+}
+
+/**
+ * ✅ CONFIGURAR CALENDARIO PARA ASESOR
+ */
+function setupCalendarioForAsesor() {
+    setTimeout(() => {
+        console.log('📅 Configurando calendario básico para asesor');
+        // Los asesores pueden ver el calendario sin tutorial por ahora
+    }, 150);
 }
 
 /**
