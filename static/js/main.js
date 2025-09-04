@@ -1225,6 +1225,8 @@ function handleSpecialSections(sectionId) {
         handleEstadisticasSection();
     } else if (sectionId === 'calendario-section') {
         handleCalendarioSection();
+    } else if (sectionId === 'configuracion-section') {
+        handleConfiguracionSection();
     }
 }
 
@@ -1322,6 +1324,56 @@ function setupCalendarioForAsesor() {
     setTimeout(() => {
         console.log('📅 Configurando calendario básico para asesor');
         // Los asesores pueden ver el calendario sin tutorial por ahora
+    }, 150);
+}
+
+/**
+ * ✅ MANEJAR SECCIÓN DE CONFIGURACIÓN
+ */
+function handleConfiguracionSection() {
+    const currentUser = getCurrentUser();
+    console.log('⚙️ Accediendo a configuración, usuario:', currentUser?.rol);
+    
+    if (currentUser?.rol === 'admin') {
+        setupConfiguracionForAdmin();
+    } else if (currentUser?.rol === 'asesor') {
+        setupConfiguracionForAsesor();
+    }
+}
+
+/**
+ * ✅ CONFIGURAR CONFIGURACIÓN PARA ADMIN
+ */
+function setupConfiguracionForAdmin() {
+    setTimeout(() => {
+        console.log('⚙️ Inicializando configuración para admin');
+
+        // Iniciar tutorial de configuración para admin si es la primera vez
+        const configTutorialCompleted = localStorage.getItem('admin_configuracion_tutorial_completed');
+        if (!configTutorialCompleted && window.Tutorial && typeof window.Tutorial.startConfiguracionTutorial === 'function') {
+            console.log('🚀 Lanzando tutorial de configuración para admin...');
+            window.Tutorial.startConfiguracionTutorial();
+        } else {
+            console.log('ℹ️ Tutorial de configuración ya completado anteriormente');
+        }
+    }, 200);
+}
+
+/**
+ * ✅ CONFIGURAR CONFIGURACIÓN PARA ASESOR
+ */
+function setupConfiguracionForAsesor() {
+    setTimeout(() => {
+        console.log('⚙️ Configurando configuración básica para asesor');
+        
+        // Iniciar tutorial de configuración para asesor si es la primera vez
+        const configTutorialCompleted = localStorage.getItem('admin_configuracion_tutorial_completed');
+        if (!configTutorialCompleted && window.Tutorial && typeof window.Tutorial.startConfiguracionTutorial === 'function') {
+            console.log('🚀 Lanzando tutorial de configuración para asesor...');
+            window.Tutorial.startConfiguracionTutorial();
+        } else {
+            console.log('ℹ️ Tutorial de configuración ya completado anteriormente');
+        }
     }, 150);
 }
 

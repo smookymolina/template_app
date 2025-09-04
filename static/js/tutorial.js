@@ -1994,7 +1994,16 @@ Tutorial.startConfiguracionTutorial = function() {
     this.startTutorial({
         type: 'configuracion',
         steps: this.configuracionTutorialSteps,
-        storageKey: 'sistema_reclutas_tutorial_completed_configuracion'
+        storageKey: 'admin_configuracion_tutorial_completed',
+        force: true,
+        onComplete: () => {
+            try {
+                localStorage.setItem('admin_configuracion_tutorial_completed', 'true');
+                console.log('✅ Tutorial de configuración marcado como completado.');
+            } catch (e) {
+                console.error('Error al marcar el tutorial de configuración como completado:', e);
+            }
+        }
     });
 };
 
