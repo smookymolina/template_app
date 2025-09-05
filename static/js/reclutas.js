@@ -125,14 +125,18 @@ const Reclutas = {
         
         console.log('Configurando UI de reclutas para rol:', role);
         
-        // Añadir clase CSS al body según el rol
-        document.body.classList.remove('admin-view', 'asesor-view');
-        document.body.classList.add(role === 'admin' ? 'admin-view' : 'asesor-view');
+        // Actualizar clases CSS según jerarquía: Admin > Gerente > Asesor
+        document.body.classList.remove('admin-view', 'gerente-view', 'asesor-view');
+        document.body.classList.add(`${role}-view`);
         
         if (role === 'admin') {
             this.showAsesorColumn();
             this.showAdminWelcome();
             this.setupAdminFeatures();
+        } else if (role === 'gerente') {
+            this.showAsesorColumn();
+            this.showGerenteWelcome();
+            this.setupGerenteFeatures();
         } else {
             this.hideAdminElements();
             this.hideAsesorColumn();
@@ -215,6 +219,31 @@ const Reclutas = {
         }
     },
 
+    showGerenteWelcome: function() {
+        const reclutasSection = document.getElementById('reclutas-section');
+        if (reclutasSection && !reclutasSection.querySelector('.gerente-welcome')) {
+            const welcomeDiv = document.createElement('div');
+            welcomeDiv.className = 'gerente-welcome';
+            welcomeDiv.style.cssText = `
+                background: linear-gradient(135deg, #f59e0b, #d97706);
+                color: white;
+                padding: 15px;
+                border-radius: var(--border-radius);
+                margin-bottom: 20px;
+                text-align: center;
+            `;
+            welcomeDiv.innerHTML = `
+                <h4><i class="fas fa-user-tie"></i> Panel de Gerente</h4>
+                <p>Supervisa el proceso completo de reclutamiento y gestiona asesores. Tienes acceso a métricas globales y distribución.</p>
+            `;
+            
+            const sectionHeader = reclutasSection.querySelector('.section-header');
+            if (sectionHeader && sectionHeader.nextSibling) {
+                reclutasSection.insertBefore(welcomeDiv, sectionHeader.nextSibling);
+            }
+        }
+    },
+
     showAsesorWelcome: function() {
         const reclutasSection = document.getElementById('reclutas-section');
         if (reclutasSection && !reclutasSection.querySelector('.asesor-welcome')) {
@@ -229,7 +258,7 @@ const Reclutas = {
                 text-align: center;
             `;
             welcomeDiv.innerHTML = `
-                <h4><i class="fas fa-handshake"></i> Panel de Gerente</h4>
+                <h4><i class="fas fa-handshake"></i> Panel de Asesor</h4>
                 <p>Gestiona tus reclutas asignados y programa entrevistas para tus candidatos.</p>
             `;
             
@@ -943,6 +972,36 @@ const Reclutas = {
     },
 
     /**
+     * Configura características para gerentes
+     */
+    setupGerenteFeatures: function() {
+        console.log('Configurando características de gerente');
+        
+        // Mostrar columna de asesor (como admin)
+        this.showAsesorColumn();
+        this.showAsesorSelectors();
+        this.setupAsesorFilter();
+
+        // Configurar botón de distribución Excel (gerentes también pueden)
+        this.setupDistribucionExcelButton();
+
+        // Configurar filtro por asesor
+        this.setupAsesorFilter();
+        
+        // Mostrar selectores de asesor en formularios
+        this.showAsesorSelectors();
+        
+        // Cargar asesores disponibles
+        this.loadAsesores().then(() => {
+            this.populateAsesorSelectors();
+            this.populateAsesorFilter();
+        });
+
+        // Mensaje de bienvenida
+        this.showGerenteWelcome();
+    },
+
+    /**
      * Configura características para asesores
      */
     setupAsesorFeatures: function() {
@@ -1354,7 +1413,7 @@ const Reclutas = {
                     <button class="action-btn edit-btn" title="Editar" data-id="${recluta.id}">
                         <i class="fas fa-edit"></i>
                     </button>
-                    ${this.userRole === 'admin' ? `
+                    ${['admin', 'gerente'].includes(this.userRole) ? `
                     <button class="action-btn delete-btn" title="Eliminar" data-id="${recluta.id}">
                         <i class="fas fa-trash-alt"></i>
                     </button>
@@ -1405,13 +1464,16 @@ const Reclutas = {
         
         console.log('🔧 Configurando UI de reclutas para rol:', role);
         
-        // Añadir clase CSS al body según el rol
-        document.body.classList.remove('admin-view', 'asesor-view');
-        document.body.classList.add(role === 'admin' ? 'admin-view' : 'asesor-view');
+        // Añadir clase CSS al body según el rol (Jerarquía: Admin > Gerente > Asesor)
+        document.body.classList.remove('admin-view', 'gerente-view', 'asesor-view');
+        document.body.classList.add(`${role}-view`);
         
         if (role === 'admin') {
             this.setupAdminFeatures();
             console.log('✅ Modo ADMIN activado - Botones de acción visibles');
+        } else if (role === 'gerente') {
+            this.setupGerenteFeatures();
+            console.log('✅ Modo GERENTE activado - Botones de acción visibles');
         } else {
             this.setupAsesorFeatures();
             console.log('✅ Modo ASESOR activado - Botones de acción visibles');

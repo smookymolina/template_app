@@ -1172,8 +1172,9 @@
     transform: translateY(-1px);
 }
 
-/* 🎭 Mejoras de visibilidad */
-body.admin-view .admin-only {
+/* 🎭 Mejoras de visibilidad (Jerarquía: Admin > Gerente > Asesor) */
+body.admin-view .admin-only,
+body.gerente-view .admin-only {
     display: block !important;
 }
 
@@ -1182,6 +1183,11 @@ body.asesor-view .admin-only {
 }
 
 body.asesor-view .asesor-only-message {
+    display: block !important;
+}
+
+/* Gerentes tienen acceso a elementos administrativos */
+body.gerente-view .gerente-only {
     display: block !important;
 }
 

@@ -1735,6 +1735,7 @@ body.admin-view #reclutas-table td:last-child {
 @media (prefers-reduced-motion: reduce) {
     .action-btn,
     .admin-welcome,
+    .gerente-welcome,
     .asesor-welcome,
     #reclutas-table tbody tr {
         transition: none;
@@ -1775,6 +1776,7 @@ body.admin-view #reclutas-table td:last-child {
     }
     
     .admin-welcome,
+    .gerente-welcome,
     .asesor-welcome {
         background: none !important;
         color: black !important;

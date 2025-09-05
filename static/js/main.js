@@ -1125,13 +1125,13 @@ function performForcedCleanup() {
     console.log('🧹 Realizando limpieza forzada antes de mostrar login...');
     
     // Limpiar elementos dinámicos
-    const dynamicElements = document.querySelectorAll('.admin-welcome, .asesor-welcome, .role-specific-element');
+    const dynamicElements = document.querySelectorAll('.admin-welcome, .gerente-welcome, .asesor-welcome, .role-specific-element');
     for (const el of dynamicElements) {
         el.remove();
     }
     
-    // Remover clases de rol
-    document.body.classList.remove('admin-view', 'asesor-view');
+    // Remover clases de rol (Jerarquía: Admin > Gerente > Asesor)
+    document.body.classList.remove('admin-view', 'gerente-view', 'asesor-view');
     
     // Resetear UI básica
     UI?.resetUIToDefault?.();
@@ -2005,7 +2005,7 @@ function validatePermissionsFunctions() {
  */
 function validateDOMCleanup() {
     console.log('4️⃣ Validando limpieza de DOM...');
-    const problematicElements = document.querySelectorAll('.admin-welcome, .asesor-welcome, [style*="background-color"]');
+    const problematicElements = document.querySelectorAll('.admin-welcome, .gerente-welcome, .asesor-welcome, [style*="background-color"]');
     if (problematicElements.length === 0) {
         console.log('✅ DOM limpio sin elementos problemáticos');
         return true;

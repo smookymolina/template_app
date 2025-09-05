@@ -38,16 +38,16 @@ def metricas_admin_required(f):
                     "error_code": "AUTH_REQUIRED"
                 }), 401
             
-            # 👑 VERIFICAR ROL DE ADMINISTRADOR
-            if not hasattr(current_user, 'rol') or current_user.rol != 'admin':
+            # 👑 VERIFICAR ROL DE ADMINISTRADOR O GERENTE
+            if not hasattr(current_user, 'rol') or current_user.rol not in ['admin', 'gerente']:
                 current_app.logger.warning(
                     f"🚫 Acceso denegado a métricas: Usuario {current_user.email} "
                     f"(rol: {getattr(current_user, 'rol', 'None')}) desde IP: {request.remote_addr}"
                 )
                 return jsonify({
                     "success": False,
-                    "message": "Solo los administradores pueden acceder a métricas avanzadas",
-                    "error_code": "ADMIN_REQUIRED"
+                    "message": "Solo los administradores y gerentes pueden acceder a métricas avanzadas",
+                    "error_code": "ADMIN_OR_GERENTE_REQUIRED"
                 }), 403
             
             # 🌐 VERIFICAR IP AUTORIZADA (OPCIONAL)
@@ -387,6 +387,7 @@ def admin_metricas_endpoint(cache_timeout=300):
 def is_metricas_admin(user):
     """
     🔍 VERIFICAR: Si un usuario puede acceder a métricas administrativas
+    JERARQUÍA: Admin > Gerente > Asesor
     
     Args:
         user: Objeto usuario
@@ -398,13 +399,14 @@ def is_metricas_admin(user):
         user and 
         user.is_authenticated and 
         hasattr(user, 'rol') and 
-        user.rol == 'admin'
+        user.rol in ['admin', 'gerente']
     )
 
 
 def get_metricas_permissions(user):
     """
     📋 OBTENER: Permisos específicos de métricas para un usuario
+    JERARQUÍA: Admin > Gerente > Asesor
     
     Args:
         user: Objeto usuario
@@ -420,6 +422,7 @@ def get_metricas_permissions(user):
             "can_view_detailed_metrics": False
         }
     
+    # ADMIN: Máximos permisos
     if user.rol == 'admin':
         return {
             "can_view_global_metrics": True,
@@ -427,7 +430,16 @@ def get_metricas_permissions(user):
             "can_export_metrics": True,
             "can_view_detailed_metrics": True
         }
-    elif user.rol in ['asesor', 'gerente']:
+    # GERENTE: Permisos intermedios
+    elif user.rol == 'gerente':
+        return {
+            "can_view_global_metrics": True,
+            "can_view_asesor_metrics": True,  # Puede ver métricas de asesores
+            "can_export_metrics": True,
+            "can_view_detailed_metrics": True
+        }
+    # ASESOR: Permisos mínimos
+    elif user.rol == 'asesor':
         return {
             "can_view_global_metrics": False,
             "can_view_asesor_metrics": False,  # Solo sus propias métricas
@@ -466,7 +478,8 @@ def admin_required(f):
 
 def asesor_or_admin_required(f):
     """
-    Decorador que requiere que el usuario sea asesor o administrador
+    Decorador que requiere que el usuario sea asesor, gerente o administrador
+    JERARQUÍA: Admin > Gerente > Asesor
     """
     @wraps(f)
     @login_required
@@ -477,10 +490,55 @@ def asesor_or_admin_required(f):
                 "message": "Autenticación requerida"
             }), 401
             
-        if not hasattr(current_user, 'rol') or current_user.rol not in ['admin', 'asesor', 'gerente']:
+        if not hasattr(current_user, 'rol') or current_user.rol not in ['admin', 'gerente', 'asesor']:
             return jsonify({
                 "success": False,
-                "message": "Acceso denegado. Se requieren permisos de asesor o administrador."
+                "message": "Acceso denegado. Se requieren permisos de asesor, gerente o administrador."
+            }), 403
+            
+        return f(*args, **kwargs)
+    return decorated_function
+
+def gerente_or_admin_required(f):
+    """
+    Decorador que requiere que el usuario sea gerente o administrador
+    JERARQUÍA: Admin > Gerente
+    """
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return jsonify({
+                "success": False,
+                "message": "Autenticación requerida"
+            }), 401
+            
+        if not hasattr(current_user, 'rol') or current_user.rol not in ['admin', 'gerente']:
+            return jsonify({
+                "success": False,
+                "message": "Acceso denegado. Se requieren permisos de gerente o administrador."
+            }), 403
+            
+        return f(*args, **kwargs)
+    return decorated_function
+
+def gerente_required(f):
+    """
+    Decorador que requiere que el usuario sea específicamente gerente
+    """
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return jsonify({
+                "success": False,
+                "message": "Autenticación requerida"
+            }), 401
+            
+        if not hasattr(current_user, 'rol') or current_user.rol != 'gerente':
+            return jsonify({
+                "success": False,
+                "message": "Acceso denegado. Se requieren permisos de gerente."
             }), 403
             
         return f(*args, **kwargs)

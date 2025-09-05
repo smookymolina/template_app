@@ -16,11 +16,28 @@ const Auth = {
     },
     
     /**
+     * Verifica si el usuario tiene rol de gerente
+     * @returns {boolean} True si es gerente, False en caso contrario
+     */
+    isGerente: function() {
+        return this.currentUser && this.currentUser.rol === 'gerente';
+    },
+    
+    /**
      * Verifica si el usuario tiene rol de asesor
      * @returns {boolean} True si es asesor, False en caso contrario
      */
     isAsesor: function() {
         return this.currentUser && this.currentUser.rol === 'asesor';
+    },
+    
+    /**
+     * Verifica si el usuario tiene permisos de administrador o gerente
+     * JERARQUÍA: Admin > Gerente > Asesor
+     * @returns {boolean} True si es admin o gerente, False en caso contrario
+     */
+    isGerenteOrAdmin: function() {
+        return this.currentUser && ['admin', 'gerente'].includes(this.currentUser.rol);
     },
     
     /**
@@ -37,9 +54,10 @@ const Auth = {
      * @returns {boolean} - True si tiene el permiso, False en caso contrario
      */
     hasPermission: function(permission) {
-        // Lista de permisos básicos por rol
+        // Lista de permisos básicos por rol (JERARQUÍA: Admin > Gerente > Asesor)
         const permisos = {
-            'admin': ['ver_todos_reclutas', 'asignar_asesores', 'eliminar_usuarios'],
+            'admin': ['ver_todos_reclutas', 'asignar_asesores', 'eliminar_usuarios', 'distribuir_excel', 'ver_metricas_globales'],
+            'gerente': ['ver_todos_reclutas', 'asignar_asesores', 'distribuir_excel', 'ver_metricas_globales'],
             'asesor': ['ver_mis_reclutas']
         };
         
@@ -295,11 +313,11 @@ resetUIToDefault: function() {
 cleanupDynamicElements: function() {
     console.log('🧽 Limpiando elementos DOM dinámicos...');
     
-    // Remover clases de rol del body
-    document.body.classList.remove('admin-view', 'asesor-view');
+    // Remover clases de rol del body (Jerarquía: Admin > Gerente > Asesor)
+    document.body.classList.remove('admin-view', 'gerente-view', 'asesor-view');
     
     // Remover elementos de bienvenida dinámicos
-    const welcomeElements = document.querySelectorAll('.admin-welcome, .asesor-welcome, .role-specific-element');
+    const welcomeElements = document.querySelectorAll('.admin-welcome, .gerente-welcome, .asesor-welcome, .role-specific-element');
     welcomeElements.forEach(element => {
         console.log('🗑️ Removiendo elemento:', element.className);
         element.remove();

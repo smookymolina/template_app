@@ -145,6 +145,7 @@ validateCleanState: function() {
     
     const problematicElements = document.querySelectorAll(`
         .admin-welcome,
+        .gerente-welcome,
         .asesor-welcome,
         .role-specific-element,
         [style*="background-color"],
@@ -202,6 +203,7 @@ cleanupPreviousRoleElements: function() {
         // 1. Remover elementos dinámicos de rol
         const roleElements = document.querySelectorAll(`
             .admin-welcome,
+            .gerente-welcome,
             .asesor-welcome,
             .role-specific-element,
             .admin-only,

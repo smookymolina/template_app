@@ -4,7 +4,7 @@ from werkzeug.utils import secure_filename
 from models import db, DatabaseError
 from models.recluta import Recluta
 from models.usuario import Usuario
-from utils.decorators import admin_required, role_required
+from utils.decorators import admin_required, role_required, gerente_or_admin_required
 from models.entrevista import Entrevista  # Importación específica desde el módulo
 from models.evento_recluta import EventoRecluta
 from utils.helpers import guardar_archivo, eliminar_archivo
@@ -99,12 +99,12 @@ def get_reclutas():
         # Construir query base
         query = Recluta.query
         
-        # 🆕 NUEVO: Filtrar por rol del usuario actual
+        # 🆕 NUEVO: Filtrar por rol del usuario actual (JERARQUÍA: Admin > Gerente > Asesor)
         if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
             # Si es asesor, solo sus reclutas
             query = query.filter_by(asesor_id=current_user.id)
-        elif hasattr(current_user, 'rol') and current_user.rol == 'admin' and asesor_id:
-            # Si es admin y especifica un asesor, filtrar por ese asesor
+        elif hasattr(current_user, 'rol') and current_user.rol in ['admin', 'gerente'] and asesor_id:
+            # Si es admin/gerente y especifica un asesor, filtrar por ese asesor
             if asesor_id == 'sin_asignar':
                 query = query.filter(Recluta.asesor_id.is_(None))
             elif asesor_id.isdigit():
@@ -875,8 +875,8 @@ def get_estadisticas():
         fecha_fin = datetime.utcnow()
         fecha_inicio = fecha_fin - timedelta(days=dias)
         
-        # ✅ GENERAR estadísticas según rol
-        if user_rol == 'admin':
+        # ✅ GENERAR estadísticas según rol (JERARQUÍA: Admin > Gerente > Asesor)
+        if user_rol in ['admin', 'gerente']:
             estadisticas = get_estadisticas_admin(
                 fecha_inicio, fecha_fin, incluir_tendencias, incluir_comparativas
             )
@@ -1322,7 +1322,7 @@ def get_estadisticas_tiempo_real():
     Versión ligera para actualizaciones frecuentes
     """
     try:
-        if current_user.rol == 'admin':
+        if current_user.rol in ['admin', 'gerente']:
             # Estadísticas globales básicas
             estadisticas = {
                 'timestamp': datetime.utcnow().isoformat(),
@@ -1905,11 +1905,11 @@ def download_documentos_by_folio(folio):
         }), 500
 
 @api_bp.route('/reclutas/distribuir-excel', methods=['POST'])
-@admin_required
+@gerente_or_admin_required
 def distribuir_reclutas_excel():
     """
     Distribuye reclutas desde Excel automáticamente entre asesores activos.
-    Solo disponible para administradores.
+    Disponible para administradores y gerentes.
     """
     try:
         # Verificar que se subió un archivo
@@ -1955,11 +1955,11 @@ def distribuir_reclutas_excel():
 
 
 @api_bp.route('/reclutas/redistribuir-manual', methods=['POST'])
-@admin_required
+@gerente_or_admin_required
 def redistribuir_reclutas_manual():
     """
     🔄 NUEVA RUTA: Redistribuye reclutas existentes según cantidades manuales.
-    Implementación completa y funcional.
+    Disponible para administradores y gerentes.
     """
     try:
         # Importar dependencias necesarias
@@ -2191,11 +2191,11 @@ def obtener_lote_reciente():
 
 
 @api_bp.route('/usuarios/asesores-info', methods=['GET'])
-@admin_required  
+@gerente_or_admin_required
 def obtener_asesores_info():
     """
     🔍 NUEVA RUTA: Obtiene información básica de todos los asesores activos.
-    Corrige el error 500 en /api/usuarios/asesores-info
+    Disponible para administradores y gerentes.
     """
     try:
         # Importar modelos necesarios
