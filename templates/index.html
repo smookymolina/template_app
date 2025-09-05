@@ -265,6 +265,36 @@
                     console.warn('⚠️ Error cargando tutorial:', err);
                 });
             });
+
+            // ✅ VERIFICAR PARÁMETROS URL PARA ACTIVAR PESTAÑA AUTOMÁTICAMENTE
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabParam = urlParams.get('tab');
+            const folioParam = urlParams.get('folio');
+            const autoConsulta = urlParams.get('auto_consulta');
+
+            if (tabParam === 'seguimiento') {
+                // Activar pestaña de seguimiento
+                trackingTab.click();
+                
+                // Si hay folio, pre-llenarlo
+                if (folioParam) {
+                    setTimeout(() => {
+                        const folioInput = document.getElementById('folio-input');
+                        if (folioInput) {
+                            folioInput.value = folioParam;
+                            
+                            // Si auto_consulta está activado, hacer la consulta automáticamente
+                            if (autoConsulta === 'true') {
+                                setTimeout(() => {
+                                    if (Client && typeof Client.processFolioValue === 'function') {
+                                        Client.processFolioValue(folioParam);
+                                    }
+                                }, 500);
+                            }
+                        }
+                    }, 200);
+                }
+            }
         }
 
         // ✅ EVENTOS DE TRACKING EN LA PESTAÑA

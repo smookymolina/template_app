@@ -510,10 +510,17 @@ const Client = {
             <button class="btn-secondary new-query-btn">
                 <i class="fas fa-arrow-left"></i> Realizar otra consulta
             </button>
+
+            <button class="btn-primary download-docs-btn" data-folio="${folio}">
+                <i class="fas fa-download"></i> Descargar documentos
+            </button>
         `;
         
         // Mostrar el contenedor de resultados
         resultsContainer.style.display = 'block';
+        
+        // Configurar evento del botón de descarga
+        this.setupDownloadButton(folio);
         
         // Cargar eventos personalizados de forma asíncrona
         this.loadCustomTimelineForTracking(folio, info.estado);
@@ -768,6 +775,69 @@ const Client = {
                 submitButton.innerHTML = '<i class="fas fa-search"></i> Recuperar Folio';
                 submitButton.disabled = false;
             }
+        }
+    },
+
+    /**
+     * Configura el evento del botón de descarga de documentos
+     * @param {string} folio - Folio del recluta
+     */
+    setupDownloadButton: function(folio) {
+        const downloadBtn = document.querySelector('.download-docs-btn');
+        if (!downloadBtn) return;
+
+        downloadBtn.addEventListener('click', () => {
+            this.downloadDocuments(folio);
+        });
+    },
+
+    /**
+     * Descarga los documentos del recluta
+     * @param {string} folio - Folio del recluta
+     */
+    downloadDocuments: async function(folio) {
+        if (!folio) {
+            showError('Error: No se encontró el folio para la descarga');
+            return;
+        }
+
+        const downloadBtn = document.querySelector('.download-docs-btn');
+        if (!downloadBtn) return;
+
+        // Cambiar estado del botón
+        const originalHTML = downloadBtn.innerHTML;
+        downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Descargando...';
+        downloadBtn.disabled = true;
+
+        try {
+            const response = await fetch(`/api/tracking/${folio}/documents`);
+            
+            if (!response.ok) {
+                throw new Error('No se pudieron obtener los documentos');
+            }
+
+            const blob = await response.blob();
+            
+            // Crear enlace de descarga
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `documentos_${folio}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Limpiar
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            showSuccess('Documentos descargados correctamente');
+        } catch (error) {
+            console.error('Error al descargar documentos:', error);
+            showError(error.message || 'Error al descargar documentos');
+        } finally {
+            // Restaurar estado del botón
+            downloadBtn.innerHTML = originalHTML;
+            downloadBtn.disabled = false;
         }
     },
     

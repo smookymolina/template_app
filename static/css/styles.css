@@ -10,6 +10,7 @@
     --color-option-purple: #6f42c1;
     --color-option-orange: #fd7e14;
     --secondary-color: #6c757d;
+    --secondary-dark: #5a6268;
     --success-color: #28a745;
     --warning-color: #ffc107;
     --danger-color: #dc3545;
@@ -2529,6 +2530,128 @@ body::after {
     margin-right: 10px;
 }
 
+/* ===== ESTILOS PARA BOTONES DE SEGUIMIENTO ===== */
+.download-docs-btn {
+    display: block !important;
+    width: 100%;
+    margin-top: 15px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+    text-decoration: none;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.download-docs-btn:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+.download-docs-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.download-docs-btn i {
+    margin-right: 8px;
+}
+
+.new-query-btn {
+    display: block !important;
+    width: 100%;
+    margin-top: 20px;
+    padding: 12px 20px;
+    background: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-family: inherit;
+    font-size: 14px;
+}
+
+.new-query-btn:hover {
+    background: var(--secondary-dark);
+    transform: translateY(-1px);
+    color: white;
+    text-decoration: none;
+}
+
+.new-query-btn i {
+    margin-right: 8px;
+}
+
+/* ===== ESTILOS PARA ESTADOS DE TRACKING ===== */
+.tracking-result-card {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+}
+
+.dark-mode .tracking-result-card {
+    background: var(--light-color);
+    border-color: var(--border-color);
+}
+
+.tracking-result-card h3 {
+    margin: 0 0 15px 0;
+    color: var(--primary-color);
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+.tracking-info {
+    margin-bottom: 15px;
+}
+
+.tracking-row {
+    display: flex;
+    margin-bottom: 12px;
+    align-items: flex-start;
+}
+
+.tracking-label {
+    min-width: 140px;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.tracking-value {
+    flex: 1;
+    color: var(--text-color);
+}
+
+.tracking-section {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+}
+
+.tracking-section h4 {
+    margin: 0 0 10px 0;
+    color: var(--primary-color);
+    font-size: 16px;
+}
+
 @media (max-width: 768px) {
     .users-table-header,
     .users-table-row {
@@ -2545,5 +2668,21 @@ body::after {
     .user-actions-col {
         justify-content: flex-start;
         margin-top: 5px;
+    }
+
+    .download-docs-btn,
+    .new-query-btn {
+        padding: 15px 20px;
+        font-size: 16px;
+    }
+
+    .tracking-row {
+        flex-direction: column;
+        margin-bottom: 15px;
+    }
+    
+    .tracking-label {
+        min-width: unset;
+        margin-bottom: 5px;
     }
 }

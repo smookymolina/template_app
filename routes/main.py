@@ -50,13 +50,12 @@ def perfil():
 @main_bp.route('/seguimiento')
 def seguimiento():
     """
-    Página pública para que los candidatos consulten su estado.
-    No requiere autenticación.
+    Redirige a la página principal con la pestaña de seguimiento activada.
     
     Returns:
-        Template HTML renderizado
+        Redirección a la página principal
     """
-    return render_template('seguimiento.html')
+    return redirect(url_for('main.index') + '?tab=seguimiento')
 
 @main_bp.route('/consulta')
 def consulta_folio():
@@ -80,15 +79,15 @@ def estado_folio(folio):
         folio: Número de folio del candidato
         
     Returns:
-        Template HTML renderizado con información prellenada
+        Redirección a la página principal con folio preseleccionado
     """
     # Verificar si el folio existe
     recluta = Recluta.query.filter_by(folio=folio).first()
     if not recluta:
-        return render_template('seguimiento.html', error="El folio proporcionado no existe")
+        return redirect(url_for('main.index') + f'?tab=seguimiento&error=folio_no_existe')
     
-    # Renderizar template con el folio preseleccionado
-    return render_template('seguimiento.html', folio=folio, auto_consulta=True)
+    # Redirigir con el folio preseleccionado
+    return redirect(url_for('main.index') + f'?tab=seguimiento&folio={folio}&auto_consulta=true')
 
 @main_bp.route('/cliente')
 def portal_cliente():
