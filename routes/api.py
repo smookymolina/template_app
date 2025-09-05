@@ -1812,6 +1812,98 @@ def recuperar_folio():
             "message": "Error al procesar la solicitud. Inténtelo más tarde."
         }), 500
 
+@api_bp.route('/tracking/<folio>/documents', methods=['GET'])
+def download_documentos_by_folio(folio):
+    """
+    Descarga todos los documentos de un recluta por su folio.
+    Esta ruta es pública y no requiere autenticación.
+    Devuelve un ZIP con todos los documentos del recluta.
+    """
+    try:
+        import os
+        import zipfile
+        from io import BytesIO
+        from flask import send_file
+        from models.documento import Documento
+        
+        # Buscar recluta por folio
+        recluta = Recluta.get_by_folio(folio)
+        if not recluta:
+            return jsonify({
+                "success": False,
+                "message": "Folio no encontrado"
+            }), 404
+        
+        # Obtener todos los documentos del recluta
+        documentos = Documento.query.filter_by(recluta_id=recluta.id).all()
+        
+        if not documentos:
+            return jsonify({
+                "success": False,
+                "message": "No hay documentos disponibles para este folio"
+            }), 404
+        
+        # Crear ZIP en memoria
+        zip_buffer = BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            documentos_agregados = 0
+            
+            for documento in documentos:
+                try:
+                    # Construir la ruta completa del archivo
+                    if documento.url.startswith('uploads/'):
+                        # Ruta relativa desde la raíz del proyecto
+                        ruta_archivo = os.path.join(current_app.root_path, documento.url)
+                    else:
+                        # Ruta dentro de uploads
+                        ruta_archivo = os.path.join(current_app.config['UPLOAD_FOLDER'], documento.url)
+                    
+                    # Verificar que el archivo existe
+                    if os.path.exists(ruta_archivo):
+                        # Crear nombre limpio para el archivo en el ZIP
+                        nombre_limpio = f"{documento.id}_{documento.nombre}"
+                        
+                        # Agregar archivo al ZIP
+                        zip_file.write(ruta_archivo, nombre_limpio)
+                        documentos_agregados += 1
+                        
+                        current_app.logger.info(f"Documento agregado al ZIP: {nombre_limpio}")
+                    else:
+                        current_app.logger.warning(f"Archivo no encontrado: {ruta_archivo}")
+                        
+                except Exception as e:
+                    current_app.logger.error(f"Error procesando documento {documento.id}: {str(e)}")
+                    continue
+        
+        if documentos_agregados == 0:
+            return jsonify({
+                "success": False,
+                "message": "No se pudieron encontrar los archivos de documentos"
+            }), 404
+        
+        # Preparar el buffer para envío
+        zip_buffer.seek(0)
+        
+        # Crear nombre del archivo ZIP
+        nombre_zip = f"documentos_{folio}_{recluta.nombre.replace(' ', '_')}.zip"
+        
+        current_app.logger.info(f"Enviando ZIP con {documentos_agregados} documentos para folio {folio}")
+        
+        return send_file(
+            zip_buffer,
+            as_attachment=True,
+            download_name=nombre_zip,
+            mimetype='application/zip'
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al descargar documentos por folio {folio}: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": "Error interno al procesar la descarga"
+        }), 500
+
 @api_bp.route('/reclutas/distribuir-excel', methods=['POST'])
 @admin_required
 def distribuir_reclutas_excel():
