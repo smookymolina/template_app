@@ -49,6 +49,9 @@ def create_app(config_name='default'):
     # Registrar blueprints
     register_blueprints(app)
     
+    # Configurar ruta estática para archivos subidos
+    configure_static_uploads(app)
+    
     # Crear contexto de shell
     register_shell_context(app)
     
@@ -299,5 +302,15 @@ def initialize_database(app):
     
     # Commit de cambios
     db.session.commit()
+
+def configure_static_uploads(app):
+    """Configurar ruta estática para servir archivos subidos"""
+    from flask import send_from_directory
+    
+    @app.route('/uploads/<path:filename>')
+    def uploaded_file(filename):
+        """Sirve archivos desde la carpeta de uploads"""
+        upload_folder = app.config.get('UPLOAD_FOLDER', 'static/uploads')
+        return send_from_directory(upload_folder, filename)
     
     app.logger.info('Base de datos inicializada correctamente')

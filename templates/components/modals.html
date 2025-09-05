@@ -479,9 +479,34 @@
 =========================================== -->
 <div id="documents-management-modal" class="modal submodal" style="display: none;">
     <div class="modal-content timeline-modal-content">
-        <div class="modal-header timeline-header">
-            <h3><i class="fas fa-folder-open"></i> Gestión de Documentos</h3>
-            <button class="close-modal" onclick="(window.reclutaManager || window.Reclutas).closeDocumentsModal()">&times;</button>
+        <div class="modal-header timeline-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px 12px 0 0; padding: 24px 32px;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div style="width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-folder-open" style="font-size: 24px;"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 24px; font-weight: 700;">Gestión de Documentos</h3>
+                        <p style="margin: 0; opacity: 0.9; font-size: 14px;">Administra documentos PDF del candidato</p>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button onclick="(window.reclutaManager || window.Reclutas).exportAllDocuments()" 
+                            title="Exportar todos los documentos"
+                            style="padding: 8px 16px; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 8px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.3)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                        <i class="fas fa-download"></i>
+                        <span>Exportar Todo</span>
+                    </button>
+                    <button class="close-modal" onclick="(window.reclutaManager || window.Reclutas).closeDocumentsModal()" 
+                            style="width: 40px; height: 40px; background: rgba(255,255,255,0.2); color: white; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.2s;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.3)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.2)'">
+                        &times;
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="modal-body timeline-modal-body">
@@ -510,7 +535,7 @@
             <!-- Área de carga de documentos -->
             <div class="document-upload-area" style="margin-bottom: 32px;">
                 <div class="upload-zone" id="upload-zone" style="border: 2px dashed #cbd5e0; border-radius: 12px; padding: 40px; text-align: center; background: #f7fafc; transition: all 0.3s ease; position: relative; cursor: pointer;" 
-                     onclick="document.getElementById('recluta-documento').click()"
+                     onclick="clickUploadZone()"
                      ondragover="event.preventDefault(); this.style.borderColor='#667eea'; this.style.background='#edf2f7';" 
                      ondragleave="this.style.borderColor='#cbd5e0'; this.style.background='#f7fafc';"
                      ondrop="event.preventDefault(); this.style.borderColor='#cbd5e0'; this.style.background='#f7fafc'; handleFileDrop(event);">
@@ -522,7 +547,10 @@
                             <small style="color: #a0aec0;"><i class="fas fa-info-circle"></i> Solo archivos PDF, máximo 10MB</small>
                         </div>
                     </div>
-                    <input type="file" id="recluta-documento" accept="application/pdf,.pdf" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;" onchange="validatePDFFile(this)">
+                    <!-- Input file LIMITADO solo a la zona de upload -->
+                    <input type="file" id="recluta-documento" accept="application/pdf,.pdf" 
+                           style="position: absolute; top: 0; left: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; z-index: 1; pointer-events: none;" 
+                           onchange="validatePDFFile(this)">
                 </div>
                 <div class="upload-controls" style="margin-top: 16px; text-align: center;">
                     <button class="btn btn-success upload-btn" id="upload-btn" onclick="(window.reclutaManager || window.Reclutas).uploadDocumento()" disabled style="min-width: 150px;">

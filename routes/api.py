@@ -1730,7 +1730,7 @@ def upload_documento_recluta(id):
             return jsonify({"success": False, "message": "Solo se permiten archivos PDF"}), 400
         
         # Guardar archivo
-        ruta_relativa = guardar_archivo(archivo, f'reclutas/{id}/documentos', tipos_permitidos=['pdf'])
+        ruta_relativa = guardar_archivo(archivo, 'docs', tipos_permitidos=['pdf'])
         
         if ruta_relativa:
             # Crear registro en base de datos

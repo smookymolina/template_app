@@ -2869,23 +2869,64 @@ Reclutas.renderDocumentosList = function(items) {
     if (empty) empty.style.display = 'none';
     
     const html = items.map(d => `
-        <div class="document-item" data-id="${d.id}" style="display: flex; align-items: center; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; background: white; transition: all 0.2s ease;">
-            <div class="document-icon" style="width: 48px; height: 48px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 16px;">
-                <i class="fas fa-file-pdf" style="color: white; font-size: 20px;"></i>
+        <div class="document-item" data-id="${d.id}" style="display: flex; align-items: center; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 16px; background: white; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.05);" 
+             onmouseover="this.style.boxShadow='0 8px 25px rgba(0,0,0,0.1)'; this.style.transform='translateY(-2px)';" 
+             onmouseout="this.style.boxShadow='0 2px 4px rgba(0,0,0,0.05)'; this.style.transform='translateY(0)';">
+            
+            <div class="document-icon" style="width: 56px; height: 56px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-right: 20px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);">
+                <i class="fas fa-file-pdf" style="color: white; font-size: 24px;"></i>
             </div>
-            <div class="document-info" style="flex: 1; min-width: 0;">
-                <div class="document-name" style="font-weight: 600; color: #2d3748; margin-bottom: 4px; word-break: break-word;">${d.nombre || 'Documento sin nombre'}</div>
-                <div class="document-meta" style="font-size: 14px; color: #718096;">
-                    <span><i class="fas fa-calendar" style="margin-right: 4px;"></i> ${d.fecha_subida ? new Date(d.fecha_subida).toLocaleDateString('es-ES') : 'Fecha desconocida'}</span>
-                    ${d.tamano ? ` • <span><i class="fas fa-weight" style="margin-right: 4px;"></i> ${Reclutas.formatFileSize(d.tamano)}</span>` : ''}
+            
+            <div class="document-info" style="flex: 1; min-width: 0; margin-right: 20px;">
+                <div class="document-name" style="font-weight: 700; color: #1a202c; margin-bottom: 6px; word-break: break-word; font-size: 16px;">${d.nombre || 'Documento sin nombre'}</div>
+                <div class="document-meta" style="font-size: 13px; color: #718096; display: flex; align-items: center; gap: 16px;">
+                    <span style="display: flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-calendar-alt" style="color: #4299e1;"></i> 
+                        ${d.fecha_subida ? new Date(d.fecha_subida).toLocaleDateString('es-ES') : 'Fecha desconocida'}
+                    </span>
+                    ${d.tamano ? `<span style="display: flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-hdd" style="color: #38b2ac;"></i> 
+                        ${Reclutas.formatFileSize(d.tamano)}
+                    </span>` : ''}
+                    <span style="display: flex; align-items: center; gap: 4px;">
+                        <i class="fas fa-shield-alt" style="color: #48bb78;"></i> 
+                        PDF Seguro
+                    </span>
                 </div>
             </div>
-            <div class="document-actions" style="display: flex; gap: 8px; align-items: center;">
-                <a class="btn btn-outline-primary btn-sm" href="/static/uploads/${d.url}" target="_blank" style="padding: 6px 12px; display: flex; align-items: center; gap: 4px; text-decoration: none;">
-                    <i class="fas fa-eye"></i> Ver
-                </a>
-                <button class="btn btn-outline-danger btn-sm" onclick="(window.reclutaManager || window.Reclutas).deleteDocumento(${d.id})" style="padding: 6px 12px;">
-                    <i class="fas fa-trash"></i> Eliminar
+            
+            <div class="document-actions" style="display: flex; gap: 12px; align-items: center;">
+                <!-- Botón Vista Previa -->
+                <button class="doc-btn doc-btn-preview" 
+                        onclick="event.stopPropagation(); Reclutas.previewDocument('${d.url}', '${d.nombre}')" 
+                        title="Vista previa del documento" 
+                        style="padding: 10px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); z-index: 10; position: relative;"
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)';"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(102, 126, 234, 0.3)';">
+                    <i class="fas fa-eye"></i>
+                    <span>Vista Previa</span>
+                </button>
+                
+                <!-- Botón Descargar -->
+                <button class="doc-btn doc-btn-download" 
+                        onclick="event.stopPropagation(); Reclutas.downloadDocument('${d.url}', '${d.nombre}')" 
+                        title="Descargar documento" 
+                        style="padding: 10px 16px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; border: none; border-radius: 8px; display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(72, 187, 120, 0.3); z-index: 10; position: relative;"
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(72, 187, 120, 0.4)';"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(72, 187, 120, 0.3)';">
+                    <i class="fas fa-download"></i>
+                    <span>Descargar</span>
+                </button>
+                
+                <!-- Botón Eliminar -->
+                <button class="doc-btn doc-btn-delete" 
+                        onclick="event.stopPropagation(); Reclutas.deleteDocumentoWithConfirmation(${d.id}, '${d.nombre}')" 
+                        title="Eliminar documento permanentemente" 
+                        style="padding: 10px 16px; background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%); color: white; border: none; border-radius: 8px; display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(245, 101, 101, 0.3); z-index: 10; position: relative;"
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(245, 101, 101, 0.4)';"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(245, 101, 101, 0.3)';">
+                    <i class="fas fa-trash-alt"></i>
+                    <span>Eliminar</span>
                 </button>
             </div>
         </div>
@@ -3010,8 +3051,103 @@ Reclutas.resetUploadState = function() {
     }
 };
 
-Reclutas.deleteDocumento = async function(id) {
-    if (!confirm('¿Estás seguro de eliminar este documento?')) return;
+// Función mejorada para vista previa de documentos
+Reclutas.previewDocument = function(url, nombre) {
+    try {
+        // Abrir en nueva ventana con características específicas para PDF
+        const previewWindow = window.open(
+            `/uploads/${url}`, 
+            'document-preview', 
+            'width=1000,height=800,scrollbars=yes,resizable=yes,toolbar=no,location=no,status=no'
+        );
+        
+        if (!previewWindow) {
+            // Fallback si se bloquea popup
+            const link = document.createElement('a');
+            link.href = `/uploads/${url}`;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.click();
+        } else {
+            previewWindow.document.title = `Vista Previa: ${nombre}`;
+        }
+        
+        // Mostrar notificación de éxito
+        showSuccess(`Abriendo vista previa de "${nombre}"`);
+    } catch (e) {
+        console.error('Error al abrir vista previa:', e);
+        showError('No se pudo abrir la vista previa del documento');
+    }
+};
+
+// Función mejorada para descarga directa
+Reclutas.downloadDocument = function(url, nombre) {
+    try {
+        // Crear elemento de descarga temporal
+        const link = document.createElement('a');
+        link.href = `/uploads/${url}`;
+        link.download = nombre || 'documento.pdf';
+        link.style.display = 'none';
+        
+        // Agregar al DOM, hacer clic y remover
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Mostrar notificación de éxito
+        showSuccess(`Descargando "${nombre}"`);
+    } catch (e) {
+        console.error('Error al descargar documento:', e);
+        showError('No se pudo descargar el documento');
+    }
+};
+
+// Función mejorada para eliminar con confirmación avanzada
+Reclutas.deleteDocumentoWithConfirmation = async function(id, nombre) {
+    // Crear modal de confirmación personalizado
+    const confirmModal = `
+        <div id="delete-confirm-modal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+            <div style="background: white; padding: 32px; border-radius: 16px; max-width: 500px; margin: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto;">
+                        <i class="fas fa-exclamation-triangle" style="color: white; font-size: 28px;"></i>
+                    </div>
+                    <h3 style="color: #2d3748; margin-bottom: 8px; font-weight: 700;">¿Eliminar Documento?</h3>
+                    <p style="color: #718096; margin: 0; font-size: 14px;">Esta acción no se puede deshacer</p>
+                </div>
+                
+                <div style="background: #f7fafc; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-file-pdf" style="color: #ef4444; font-size: 20px;"></i>
+                        <div>
+                            <div style="font-weight: 600; color: #2d3748; font-size: 14px;">${nombre}</div>
+                            <div style="font-size: 12px; color: #718096;">Documento PDF</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                    <button onclick="document.getElementById('delete-confirm-modal').remove()" style="padding: 12px 24px; background: #e2e8f0; color: #4a5568; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                        Cancelar
+                    </button>
+                    <button onclick="Reclutas.confirmDeleteDocument(${id})" style="padding: 12px 24px; background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+                        Sí, Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Insertar modal en el DOM
+    document.body.insertAdjacentHTML('beforeend', confirmModal);
+};
+
+// Función para confirmar eliminación
+Reclutas.confirmDeleteDocument = async function(id) {
+    // Cerrar modal
+    const modal = document.getElementById('delete-confirm-modal');
+    if (modal) modal.remove();
+    
     try {
         const resp = await fetch(`${CONFIG.API_URL}/documentos/${id}`, { method: 'DELETE' });
         const data = await resp.json();
@@ -3022,6 +3158,43 @@ Reclutas.deleteDocumento = async function(id) {
         console.error('Error eliminando documento:', e);
         showError(e.message || 'Error al eliminar documento');
     }
+};
+
+// Función para exportar todos los documentos
+Reclutas.exportAllDocuments = async function() {
+    if (!Reclutas.currentReclutaId) {
+        showError('No hay un recluta seleccionado');
+        return;
+    }
+    
+    try {
+        // Obtener datos del recluta actual para el nombre
+        const resp = await fetch(`${CONFIG.API_URL}/reclutas/${Reclutas.currentReclutaId}/documentos`);
+        const data = await resp.json();
+        
+        if (!data.success || !data.documentos || data.documentos.length === 0) {
+            showError('No hay documentos para exportar');
+            return;
+        }
+        
+        showSuccess(`Preparando descarga de ${data.documentos.length} documentos...`);
+        
+        // Descargar cada documento con un pequeño delay
+        data.documentos.forEach((doc, index) => {
+            setTimeout(() => {
+                Reclutas.downloadDocument(doc.url, doc.nombre);
+            }, index * 500); // 500ms entre cada descarga
+        });
+        
+    } catch (e) {
+        console.error('Error al exportar documentos:', e);
+        showError('Error al exportar los documentos');
+    }
+};
+
+// Función original para compatibilidad
+Reclutas.deleteDocumento = async function(id) {
+    return Reclutas.deleteDocumentoWithConfirmation(id, 'Documento');
 };
 
 // Función global para validar archivos PDF
@@ -3077,13 +3250,31 @@ window.validatePDFFile = function(input) {
 
 // Función global para manejar drag & drop
 window.handleFileDrop = function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    
     const files = event.dataTransfer.files;
     if (files.length > 0) {
         const input = document.getElementById('recluta-documento');
         if (input) {
-            input.files = files;
+            // Crear un nuevo objeto FileList
+            const dt = new DataTransfer();
+            dt.items.add(files[0]);
+            input.files = dt.files;
             validatePDFFile(input);
         }
+    }
+};
+
+// Mejorar la función de hacer clic en la zona de upload
+window.clickUploadZone = function() {
+    const input = document.getElementById('recluta-documento');
+    if (input) {
+        input.style.pointerEvents = 'auto';
+        input.click();
+        setTimeout(() => {
+            input.style.pointerEvents = 'none';
+        }, 100);
     }
 };
 
