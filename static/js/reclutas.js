@@ -2817,6 +2817,276 @@ Reclutas.deleteTimelineItemApi = async function(id) {
     }
 };
 
+// ==============================
+// Gestión de Documentos (submodal)
+// ==============================
+Reclutas.openDocumentsModal = function() {
+    if (!Reclutas.currentReclutaId) { showError('No hay un recluta seleccionado'); return; }
+    const modal = document.getElementById('documents-management-modal');
+    if (!modal) { showError('El modal de documentos no está disponible'); return; }
+    modal.style.display = 'flex';
+    Reclutas.fetchAndRenderDocumentos();
+};
+
+Reclutas.closeDocumentsModal = function() {
+    const modal = document.getElementById('documents-management-modal');
+    if (modal) modal.style.display = 'none';
+};
+
+Reclutas.fetchAndRenderDocumentos = async function() {
+    try {
+        const resp = await fetch(`${CONFIG.API_URL}/reclutas/${Reclutas.currentReclutaId}/documentos`);
+        const data = await resp.json();
+        if (!resp.ok || !data.success) throw new Error(data.message || 'No se pudieron cargar los documentos');
+        Reclutas.renderDocumentosList(data.documentos || []);
+    } catch (e) {
+        console.error('Error cargando documentos:', e);
+        showError(e.message || 'Error al cargar documentos');
+        Reclutas.renderDocumentosList([]);
+    }
+};
+
+Reclutas.renderDocumentosList = function(items) {
+    const list = document.getElementById('recluta-documentos-list');
+    const empty = document.getElementById('empty-documentos');
+    if (!list) return;
+    
+    // Actualizar estadísticas
+    const totalDocs = items ? items.length : 0;
+    const totalSize = items ? items.reduce((sum, d) => sum + (d.tamano || 0), 0) : 0;
+    const sizeFormatted = Reclutas.formatFileSize(totalSize);
+    
+    const totalDocsEl = document.getElementById('total-documentos');
+    const sizeDocsEl = document.getElementById('size-documentos');
+    if (totalDocsEl) totalDocsEl.textContent = totalDocs;
+    if (sizeDocsEl) sizeDocsEl.textContent = sizeFormatted;
+    
+    if (!items || items.length === 0) {
+        if (empty) empty.style.display = 'block';
+        list.innerHTML = empty ? empty.outerHTML : '<div class="empty-documents">No hay documentos</div>';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+    
+    const html = items.map(d => `
+        <div class="document-item" data-id="${d.id}" style="display: flex; align-items: center; padding: 16px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 12px; background: white; transition: all 0.2s ease;">
+            <div class="document-icon" style="width: 48px; height: 48px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 16px;">
+                <i class="fas fa-file-pdf" style="color: white; font-size: 20px;"></i>
+            </div>
+            <div class="document-info" style="flex: 1; min-width: 0;">
+                <div class="document-name" style="font-weight: 600; color: #2d3748; margin-bottom: 4px; word-break: break-word;">${d.nombre || 'Documento sin nombre'}</div>
+                <div class="document-meta" style="font-size: 14px; color: #718096;">
+                    <span><i class="fas fa-calendar" style="margin-right: 4px;"></i> ${d.fecha_subida ? new Date(d.fecha_subida).toLocaleDateString('es-ES') : 'Fecha desconocida'}</span>
+                    ${d.tamano ? ` • <span><i class="fas fa-weight" style="margin-right: 4px;"></i> ${Reclutas.formatFileSize(d.tamano)}</span>` : ''}
+                </div>
+            </div>
+            <div class="document-actions" style="display: flex; gap: 8px; align-items: center;">
+                <a class="btn btn-outline-primary btn-sm" href="/static/uploads/${d.url}" target="_blank" style="padding: 6px 12px; display: flex; align-items: center; gap: 4px; text-decoration: none;">
+                    <i class="fas fa-eye"></i> Ver
+                </a>
+                <button class="btn btn-outline-danger btn-sm" onclick="(window.reclutaManager || window.Reclutas).deleteDocumento(${d.id})" style="padding: 6px 12px;">
+                    <i class="fas fa-trash"></i> Eliminar
+                </button>
+            </div>
+        </div>
+    `).join('');
+    list.innerHTML = html;
+};
+
+// Función auxiliar para formatear tamaño de archivos
+Reclutas.formatFileSize = function(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+};
+
+Reclutas.uploadDocumento = async function() {
+    if (!Reclutas.currentReclutaId) { showError('No hay un recluta seleccionado'); return; }
+    const input = document.getElementById('recluta-documento');
+    if (!input || !input.files || !input.files[0]) { showError('Selecciona un archivo PDF'); return; }
+    const file = input.files[0];
+    
+    // Validación final
+    if (!file.name.toLowerCase().endsWith('.pdf') || file.type !== 'application/pdf') { 
+        showError('Solo se permiten archivos PDF válidos'); 
+        Reclutas.resetUploadState(); 
+        return; 
+    }
+    if (file.size > 10 * 1024 * 1024) { // 10MB límite
+        showError('El archivo no puede ser mayor a 10MB'); 
+        Reclutas.resetUploadState();
+        return; 
+    }
+    
+    // Mostrar progreso
+    const uploadBtn = document.getElementById('upload-btn');
+    const uploadProgress = document.getElementById('upload-progress');
+    const uploadProgressFill = document.querySelector('.upload-progress-fill');
+    const uploadProgressText = document.querySelector('.upload-progress-text');
+    
+    try {
+        // Deshabilitar botón y mostrar progreso
+        if (uploadBtn) {
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...';
+        }
+        if (uploadProgress) uploadProgress.style.display = 'block';
+        if (uploadProgressText) uploadProgressText.textContent = 'Subiendo documento...';
+        
+        // Simular progreso
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 30;
+            if (progress > 90) progress = 90;
+            if (uploadProgressFill) uploadProgressFill.style.width = `${progress}%`;
+        }, 100);
+        
+        const fd = new FormData();
+        fd.append('documento', file);
+        
+        const resp = await fetch(`${CONFIG.API_URL}/reclutas/${Reclutas.currentReclutaId}/documentos`, { 
+            method: 'POST', 
+            body: fd 
+        });
+        const data = await resp.json();
+        
+        clearInterval(progressInterval);
+        if (uploadProgressFill) uploadProgressFill.style.width = '100%';
+        if (uploadProgressText) uploadProgressText.textContent = 'Completado';
+        
+        if (!resp.ok || !data.success) throw new Error(data.message || 'No se pudo subir el documento');
+        
+        showSuccess('Documento subido correctamente');
+        await Reclutas.fetchAndRenderDocumentos();
+        
+        // Reset después de éxito
+        setTimeout(() => {
+            Reclutas.resetUploadState();
+        }, 1000);
+        
+    } catch (e) {
+        console.error('Error subiendo documento:', e);
+        showError(e.message || 'Error al subir el documento');
+        Reclutas.resetUploadState();
+    }
+};
+
+// Función para resetear el estado de upload
+Reclutas.resetUploadState = function() {
+    const input = document.getElementById('recluta-documento');
+    const uploadBtn = document.getElementById('upload-btn');
+    const uploadProgress = document.getElementById('upload-progress');
+    const uploadZone = document.getElementById('upload-zone');
+    
+    // Resetear input
+    if (input) input.value = '';
+    
+    // Resetear botón
+    if (uploadBtn) {
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i class="fas fa-upload"></i> Subir Documento';
+    }
+    
+    // Ocultar progreso
+    if (uploadProgress) uploadProgress.style.display = 'none';
+    
+    // Resetear zona de upload
+    if (uploadZone) {
+        uploadZone.style.borderColor = '#cbd5e0';
+        uploadZone.style.background = '#f7fafc';
+        const content = uploadZone.querySelector('.upload-zone-content');
+        if (content) {
+            content.innerHTML = `
+                <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #667eea; margin-bottom: 16px;"></i>
+                <h4 style="color: #2d3748; margin: 0 0 8px 0; font-weight: 600;">Arrastra tu archivo PDF aquí</h4>
+                <p style="color: #718096; margin: 0 0 16px 0;">o haz clic para seleccionar un archivo</p>
+                <div class="upload-file-info">
+                    <small style="color: #a0aec0;"><i class="fas fa-info-circle"></i> Solo archivos PDF, máximo 10MB</small>
+                </div>
+            `;
+        }
+    }
+};
+
+Reclutas.deleteDocumento = async function(id) {
+    if (!confirm('¿Estás seguro de eliminar este documento?')) return;
+    try {
+        const resp = await fetch(`${CONFIG.API_URL}/documentos/${id}`, { method: 'DELETE' });
+        const data = await resp.json();
+        if (!resp.ok || !data.success) throw new Error(data.message || 'No se pudo eliminar el documento');
+        showSuccess('Documento eliminado correctamente');
+        await Reclutas.fetchAndRenderDocumentos();
+    } catch (e) {
+        console.error('Error eliminando documento:', e);
+        showError(e.message || 'Error al eliminar documento');
+    }
+};
+
+// Función global para validar archivos PDF
+window.validatePDFFile = function(input) {
+    if (!input.files || !input.files[0]) {
+        const uploadBtn = document.getElementById('upload-btn');
+        if (uploadBtn) uploadBtn.disabled = true;
+        return false;
+    }
+    const file = input.files[0];
+    
+    if (!file.name.toLowerCase().endsWith('.pdf') || file.type !== 'application/pdf') {
+        showError('Solo se permiten archivos PDF válidos');
+        input.value = '';
+        const uploadBtn = document.getElementById('upload-btn');
+        if (uploadBtn) uploadBtn.disabled = true;
+        return false;
+    }
+    
+    if (file.size > 10 * 1024 * 1024) { // 10MB límite
+        showError('El archivo no puede ser mayor a 10MB');
+        input.value = '';
+        const uploadBtn = document.getElementById('upload-btn');
+        if (uploadBtn) uploadBtn.disabled = true;
+        return false;
+    }
+    
+    // Activar botón de subida
+    const uploadBtn = document.getElementById('upload-btn');
+    if (uploadBtn) {
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = `<i class="fas fa-upload"></i> Subir "${file.name}"`;
+    }
+    
+    // Actualizar zona de upload
+    const uploadZone = document.getElementById('upload-zone');
+    if (uploadZone) {
+        uploadZone.style.borderColor = '#48bb78';
+        uploadZone.style.background = '#f0fff4';
+        const content = uploadZone.querySelector('.upload-zone-content');
+        if (content) {
+            content.innerHTML = `
+                <i class="fas fa-check-circle" style="font-size: 48px; color: #48bb78; margin-bottom: 16px;"></i>
+                <h4 style="color: #2d3748; margin: 0 0 8px 0; font-weight: 600;">Archivo seleccionado</h4>
+                <p style="color: #718096; margin: 0 0 16px 0;">${file.name} (${Reclutas.formatFileSize(file.size)})</p>
+                <small style="color: #48bb78;"><i class="fas fa-info-circle"></i> Listo para subir</small>
+            `;
+        }
+    }
+    
+    return true;
+};
+
+// Función global para manejar drag & drop
+window.handleFileDrop = function(event) {
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+        const input = document.getElementById('recluta-documento');
+        if (input) {
+            input.files = files;
+            validatePDFFile(input);
+        }
+    }
+};
+
 window.reclutaManager = Reclutas;
 
 // Exportar y registrar globalmente para compatibilidad

@@ -29,22 +29,41 @@ def validate_file_extension(filename, file_type):
     extension = filename.rsplit('.', 1)[1].lower()
     return extension in ALLOWED_EXTENSIONS.get(file_type, set())
 
-def guardar_archivo(archivo, tipo):
+def guardar_archivo(archivo, subcarpeta, tipos_permitidos=None):
+    """
+    Guarda un archivo en la carpeta de uploads con la estructura especificada.
+    
+    Args:
+        archivo: Archivo a guardar (werkzeug FileStorage)
+        subcarpeta: Subcarpeta dentro de uploads (ej: 'reclutas/123/documentos')
+        tipos_permitidos: Lista de extensiones permitidas (ej: ['pdf'])
+    
+    Returns:
+        str: Ruta relativa del archivo guardado o None si hay error
+    """
     if not archivo:
         return None
     try:
         filename = secure_filename(archivo.filename)
         nombre_base, extension = os.path.splitext(filename)
         nombre_unico = f'{nombre_base}_{uuid.uuid4().hex}{extension}'
+
+        # Validación de extensión si se especifica
+        if tipos_permitidos is not None:
+            ext = extension.lower().lstrip('.')
+            if ext not in [e.lower().lstrip('.') for e in tipos_permitidos]:
+                raise ValueError('Extensión de archivo no permitida')
         
-        directorio = os.path.join(current_app.config['UPLOAD_FOLDER'], tipo)
+        # Crear el directorio completo dentro de UPLOAD_FOLDER
+        directorio = os.path.join(current_app.config['UPLOAD_FOLDER'], subcarpeta)
         if not os.path.exists(directorio):
-            os.makedirs(directorio)
+            os.makedirs(directorio, exist_ok=True)
         
         ruta_completa = os.path.join(directorio, nombre_unico)
         archivo.save(ruta_completa)
-        
-        return os.path.join(f'static/uploads/{tipo}', nombre_unico)
+
+        # Retornar la ruta relativa desde la raíz del proyecto
+        return os.path.join(subcarpeta, nombre_unico).replace('\\', '/')
     except Exception as e:
         current_app.logger.error(f'Error al guardar archivo: {str(e)}')
         return None

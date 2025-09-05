@@ -1739,7 +1739,7 @@ def upload_documento_recluta(id):
                 nombre=secure_filename(archivo.filename),
                 url=ruta_relativa,
                 tipo='pdf',
-                tamaño=archivo.content_length
+                tamano=getattr(archivo, 'content_length', None)
             )
             
             db.session.add(nuevo_documento)
@@ -2139,5 +2139,6 @@ def obtener_asesores_info():
             "success": False,
             "message": f"Error: {str(e)}"
         }), 500
+
 
 

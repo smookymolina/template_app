@@ -13,7 +13,8 @@
       "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\js/**)",
       "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\templates\\components/**)",
       "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\js/**)",
-      "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\js/**)"
+      "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\js/**)",
+      "Bash(sed:*)"
     ],
     "deny": [],
     "ask": []

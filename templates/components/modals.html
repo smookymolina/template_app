@@ -406,9 +406,14 @@
             <!-- Header de timeline -->
             <div class="timeline-header-controls">
                 <h4><i class="fas fa-list-ol"></i> Eventos de Timeline</h4>
-                <button class="btn btn-success timeline-add-btn" onclick="(window.reclutaManager || window.Reclutas).addTimelineItem()">
-                    <i class="fas fa-plus"></i> Agregar Evento
-                </button>
+                <div>
+                    <button class="btn btn-success timeline-add-btn" onclick="(window.reclutaManager || window.Reclutas).addTimelineItem()" style="margin-right:8px;">
+                        <i class="fas fa-plus"></i> Agregar Evento
+                    </button>
+                    <button class="btn btn-primary" onclick="(window.reclutaManager || window.Reclutas).openDocumentsModal()">
+                        <i class="fas fa-folder-open"></i> Gestión de Documentos
+                    </button>
+                </div>
             </div>
 
             <!-- Lista de eventos de timeline -->
@@ -465,15 +470,97 @@
             </div>
         </div>
 
-        <div class="modal-footer timeline-footer">
-            <button class="btn btn-secondary" onclick="(window.reclutaManager || window.Reclutas).closeTimelineModal()">
-                <i class="fas fa-times"></i> Cerrar
-            </button>
-            <button class="btn btn-primary" onclick="(window.reclutaManager || window.Reclutas).previewTimeline()">
-                <i class="fas fa-eye"></i> Vista Previa Portal
-            </button>
+        
+    </div>
+</div>
+
+<!-- ===========================================
+     SUBMODAL - GESTIN DE DOCUMENTOS DEL RECLUTA
+=========================================== -->
+<div id="documents-management-modal" class="modal submodal" style="display: none;">
+    <div class="modal-content timeline-modal-content">
+        <div class="modal-header timeline-header">
+            <h3><i class="fas fa-folder-open"></i> Gestión de Documentos</h3>
+            <button class="close-modal" onclick="(window.reclutaManager || window.Reclutas).closeDocumentsModal()">&times;</button>
+        </div>
+
+        <div class="modal-body timeline-modal-body">
+            <!-- Estadísticas de documentos -->
+            <div class="documents-stats" style="display: flex; gap: 20px; margin-bottom: 24px; padding: 20px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 12px;">
+                <div class="document-stat" style="flex: 1; display: flex; align-items: center; gap: 12px;">
+                    <div class="document-stat-icon" style="width: 48px; height: 48px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px;">
+                        <i class="fas fa-file-pdf"></i>
+                    </div>
+                    <div class="document-stat-info">
+                        <div class="document-stat-number" id="total-documentos" style="font-size: 24px; font-weight: 700; color: #2d3748; margin: 0;">0</div>
+                        <div class="document-stat-label" style="font-size: 14px; color: #718096; margin: 0;">Total Documentos</div>
+                    </div>
+                </div>
+                <div class="document-stat" style="flex: 1; display: flex; align-items: center; gap: 12px;">
+                    <div class="document-stat-icon" style="width: 48px; height: 48px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px;">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <div class="document-stat-info">
+                        <div class="document-stat-number" id="size-documentos" style="font-size: 24px; font-weight: 700; color: #2d3748; margin: 0;">0 KB</div>
+                        <div class="document-stat-label" style="font-size: 14px; color: #718096; margin: 0;">Espacio Utilizado</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Área de carga de documentos -->
+            <div class="document-upload-area" style="margin-bottom: 32px;">
+                <div class="upload-zone" id="upload-zone" style="border: 2px dashed #cbd5e0; border-radius: 12px; padding: 40px; text-align: center; background: #f7fafc; transition: all 0.3s ease; position: relative; cursor: pointer;" 
+                     onclick="document.getElementById('recluta-documento').click()"
+                     ondragover="event.preventDefault(); this.style.borderColor='#667eea'; this.style.background='#edf2f7';" 
+                     ondragleave="this.style.borderColor='#cbd5e0'; this.style.background='#f7fafc';"
+                     ondrop="event.preventDefault(); this.style.borderColor='#cbd5e0'; this.style.background='#f7fafc'; handleFileDrop(event);">
+                    <div class="upload-zone-content">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 48px; color: #667eea; margin-bottom: 16px;"></i>
+                        <h4 style="color: #2d3748; margin: 0 0 8px 0; font-weight: 600;">Arrastra tu archivo PDF aquí</h4>
+                        <p style="color: #718096; margin: 0 0 16px 0;">o haz clic para seleccionar un archivo</p>
+                        <div class="upload-file-info">
+                            <small style="color: #a0aec0;"><i class="fas fa-info-circle"></i> Solo archivos PDF, máximo 10MB</small>
+                        </div>
+                    </div>
+                    <input type="file" id="recluta-documento" accept="application/pdf,.pdf" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer;" onchange="validatePDFFile(this)">
+                </div>
+                <div class="upload-controls" style="margin-top: 16px; text-align: center;">
+                    <button class="btn btn-success upload-btn" id="upload-btn" onclick="(window.reclutaManager || window.Reclutas).uploadDocumento()" disabled style="min-width: 150px;">
+                        <i class="fas fa-upload"></i> Subir Documento
+                    </button>
+                    <div class="upload-progress" id="upload-progress" style="display: none; margin-top: 12px;">
+                        <div class="upload-progress-bar" style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                            <div class="upload-progress-fill" style="height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <span class="upload-progress-text" style="font-size: 14px; color: #718096; margin-top: 4px; display: block;">Subiendo...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de documentos -->
+            <div class="documents-section">
+                <div class="documents-section-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0;">
+                    <h4 style="margin: 0; color: #2d3748; font-weight: 600;"><i class="fas fa-file-archive" style="margin-right: 8px; color: #667eea;"></i> Documentos del Candidato</h4>
+                    <div class="documents-actions">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="(window.reclutaManager || window.Reclutas).fetchAndRenderDocumentos()" style="padding: 6px 12px;">
+                            <i class="fas fa-sync"></i> Actualizar
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="recluta-documentos-list" class="documents-list">
+                    <div class="empty-documents" id="empty-documentos" style="text-align: center; padding: 40px; color: #a0aec0;">
+                        <div class="empty-documents-icon" style="margin-bottom: 16px;">
+                            <i class="fas fa-folder-open" style="font-size: 64px; color: #cbd5e0;"></i>
+                        </div>
+                        <h5 style="color: #718096; margin-bottom: 8px;">No hay documentos</h5>
+                        <p style="margin: 0; font-size: 14px;">Los documentos que subas aparecerán aquí</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+    
 </div>
 
 <!-- ===========================================
