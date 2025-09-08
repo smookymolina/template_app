@@ -1051,7 +1051,7 @@ const Calendar = {
         }
         
         // Obtener ID y nombre del recluta
-        const reclutaId = formElements.saveButton ? formElements.saveElements.saveButton.dataset.reclutaId : null;
+        const reclutaId = formElements.saveButton ? formElements.saveButton.dataset.reclutaId : null;
         const reclutaName = formElements.saveButton ? formElements.saveButton.dataset.reclutaName : 'Candidato';
         
         if (!reclutaId) {

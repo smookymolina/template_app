@@ -2,7 +2,9 @@ from flask import Blueprint, jsonify, request, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from models.usuario import Usuario
 from models.user_session import UserSession
+from models.user_settings import UserSettings
 from utils.validators import validate_login_data, ValidationError
+from utils.helpers import guardar_archivo, eliminar_archivo
 from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__)
@@ -271,3 +273,278 @@ def delete_session(id):
             "success": False,
             "message": f"Error al cerrar sesión: {str(e)}"
         }), 500
+
+@auth_bp.route('/profile', methods=['PUT'])
+@login_required
+def update_profile():
+    """
+    Actualiza el perfil del usuario actual.
+    """
+    try:
+        data = request.get_json()
+        
+        # Campos permitidos para actualizar
+        allowed_fields = ['nombre', 'email', 'telefono']
+        
+        # Validar que al menos un campo esté presente
+        if not any(field in data for field in allowed_fields):
+            return jsonify({
+                "success": False,
+                "message": "No hay campos para actualizar"
+            }), 400
+        
+        # Validar email si está presente
+        if 'email' in data and data['email']:
+            from utils.validators import validate_email
+            if not validate_email(data['email']):
+                return jsonify({
+                    "success": False,
+                    "message": "Formato de email inválido"
+                }), 400
+            
+            # Verificar que el email no esté en uso por otro usuario
+            existing_user = Usuario.query.filter(
+                Usuario.email == data['email'],
+                Usuario.id != current_user.id
+            ).first()
+            
+            if existing_user:
+                return jsonify({
+                    "success": False,
+                    "message": "El email ya está en uso por otro usuario"
+                }), 400
+        
+        # Validar teléfono si está presente
+        if 'telefono' in data and data['telefono']:
+            from utils.validators import validate_phone
+            if not validate_phone(data['telefono']):
+                return jsonify({
+                    "success": False,
+                    "message": "Formato de teléfono inválido"
+                }), 400
+        
+        # Actualizar campos
+        updated_fields = []
+        for field in allowed_fields:
+            if field in data and data[field] is not None:
+                setattr(current_user, field, data[field])
+                updated_fields.append(field)
+        
+        # Guardar cambios
+        current_user.save()
+        
+        current_app.logger.info(f"Perfil actualizado para: {current_user.email} - Campos: {updated_fields}")
+        
+        return jsonify({
+            "success": True,
+            "message": "Perfil actualizado correctamente",
+            "user": current_user.serialize()
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al actualizar perfil: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al actualizar perfil: {str(e)}"
+        }), 500
+
+@auth_bp.route('/user-settings', methods=['GET'])
+@login_required
+def get_user_settings():
+    """
+    Obtiene la configuración y datos del usuario actual.
+    """
+    try:
+        # Obtener configuraciones del usuario desde la base de datos
+        settings = UserSettings.get_user_settings(current_user.id)
+        
+        return jsonify({
+            "success": True,
+            "user": current_user.serialize(),
+            "settings": settings
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener configuración: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al obtener configuración: {str(e)}"
+        }), 500
+
+@auth_bp.route('/user-sessions', methods=['GET'])
+@login_required
+def get_user_sessions():
+    """
+    Obtiene las sesiones del usuario actual.
+    """
+    try:
+        sessions = UserSession.get_for_user(current_user.id)
+        
+        return jsonify({
+            "success": True,
+            "sessions": [s.serialize() for s in sessions]
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener sesiones de usuario: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al obtener sesiones: {str(e)}"
+        }), 500
+
+@auth_bp.route('/terminate-session/<int:session_id>', methods=['POST'])
+@login_required
+def terminate_session(session_id):
+    """
+    Termina una sesión específica del usuario actual.
+    """
+    try:
+        session = UserSession.query.get(session_id)
+        
+        if not session:
+            return jsonify({
+                "success": False,
+                "message": "Sesión no encontrada"
+            }), 404
+        
+        if session.usuario_id != current_user.id:
+            return jsonify({
+                "success": False,
+                "message": "No tienes permisos para terminar esta sesión"
+            }), 403
+        
+        session.invalidate()
+        
+        return jsonify({
+            "success": True,
+            "message": "Sesión terminada correctamente"
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al terminar sesión {session_id}: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al terminar sesión: {str(e)}"
+        }), 500
+
+@auth_bp.route('/save-setting', methods=['POST'])
+@login_required
+def save_setting():
+    """
+    Guarda una configuración específica del usuario.
+    """
+    try:
+        data = request.get_json()
+        key = data.get('key')
+        value = data.get('value')
+        
+        if not key:
+            return jsonify({
+                "success": False,
+                "message": "La clave de configuración es requerida"
+            }), 400
+        
+        # Guardar configuración en la base de datos usando UserSettings
+        UserSettings.set_user_setting(current_user.id, key, value)
+        current_app.logger.info(f"Configuración guardada para {current_user.email}: {key} = {value}")
+        
+        return jsonify({
+            "success": True,
+            "message": "Configuración guardada correctamente"
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al guardar configuración: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al guardar configuración: {str(e)}"
+        }), 500
+
+@auth_bp.route('/upload-profile-photo', methods=['POST'])
+@login_required
+def upload_profile_photo():
+    """
+    Sube una foto de perfil para el usuario actual.
+    """
+    try:
+        if 'foto' not in request.files:
+            return jsonify({
+                "success": False,
+                "message": "No se encontró archivo de imagen"
+            }), 400
+        
+        archivo = request.files['foto']
+        if not archivo or not archivo.filename:
+            return jsonify({
+                "success": False,
+                "message": "No se seleccionó ningún archivo"
+            }), 400
+        
+        # Eliminar foto anterior si existe
+        if current_user.foto_url:
+            eliminar_archivo(current_user.foto_url)
+        
+        # Guardar nueva foto
+        ruta_relativa = guardar_archivo(archivo, 'usuario')
+        if not ruta_relativa:
+            return jsonify({
+                "success": False,
+                "message": "Error al guardar la imagen"
+            }), 500
+        
+        # Actualizar usuario
+        current_user.foto_url = ruta_relativa
+        current_user.save()
+        
+        return jsonify({
+            "success": True,
+            "message": "Foto de perfil actualizada correctamente",
+            "foto_url": f"/{ruta_relativa}"
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al subir foto de perfil: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al subir foto: {str(e)}"
+        }), 500
+
+@auth_bp.route('/remove-profile-photo', methods=['DELETE'])
+@login_required  
+def remove_profile_photo():
+    """
+    Elimina la foto de perfil del usuario actual.
+    """
+    try:
+        if not current_user.foto_url:
+            return jsonify({
+                "success": False,
+                "message": "No hay foto de perfil para eliminar"
+            }), 400
+        
+        # Eliminar archivo
+        eliminar_archivo(current_user.foto_url)
+        
+        # Actualizar usuario
+        current_user.foto_url = None
+        current_user.save()
+        
+        return jsonify({
+            "success": True,
+            "message": "Foto de perfil eliminada correctamente"
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al eliminar foto de perfil: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al eliminar foto: {str(e)}"
+        }), 500
+
+@auth_bp.route('/change-password', methods=['POST'])
+@login_required
+def change_password():
+    """
+    Cambia la contraseña del usuario actual (ruta alternativa).
+    """
+    return cambiar_password()

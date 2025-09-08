@@ -2688,3 +2688,96 @@ body::after {
         margin-bottom: 5px;
     }
 }
+
+/* ===== PROFILE PHOTO UPLOAD STYLES ===== */
+.profile-upload-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--background-color);
+}
+
+.profile-photo-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background-color: var(--primary-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 60px;
+    color: var(--primary-color);
+    overflow: hidden;
+    border: 3px solid var(--border-color);
+}
+
+.dark-mode .profile-photo-preview {
+    background-color: #2a2b3d;
+}
+
+.profile-upload-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.profile-upload-controls .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.3s ease;
+    font-size: 14px;
+}
+
+.profile-upload-controls .btn-secondary:hover {
+    background-color: var(--secondary-dark);
+}
+
+.profile-upload-controls .btn-sm.btn-danger {
+    padding: 6px 12px;
+    font-size: 12px;
+    background-color: var(--danger-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.profile-upload-controls .btn-sm.btn-danger:hover {
+    background-color: #c82333;
+}
+
+/* Responsive design for profile upload */
+@media (max-width: 768px) {
+    .profile-photo-preview {
+        width: 100px;
+        height: 100px;
+        font-size: 50px;
+    }
+    
+    .profile-upload-controls {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .profile-upload-container {
+        padding: 15px;
+    }
+}

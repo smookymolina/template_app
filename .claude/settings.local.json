@@ -15,7 +15,11 @@
       "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\js/**)",
       "Read(/C:\\Users\\GIRTEC\\Documents\\GitHub\\template_app\\static\\js/**)",
       "Bash(sed:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(taskkill:*)",
+      "Bash(dir C:UsersGIRTECDocumentsGitHubtemplate_appstatic)",
+      "Bash(dir C:UsersGIRTECDocumentsGitHubtemplate_app)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []
