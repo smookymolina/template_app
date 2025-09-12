@@ -34,7 +34,7 @@ class ConfigurationManager {
         this.confirmNewPasswordInput = document.getElementById('confirm-new-password-input');
         
         // Configuraciones de apariencia
-        this.darkModeToggle = document.getElementById('dark-mode-toggle');
+        
         this.primaryColorRadios = document.querySelectorAll('input[name="primary-color"]');
         this.customColorInput = document.getElementById('custom-primary-color');
         
@@ -63,10 +63,7 @@ class ConfigurationManager {
             this.changePasswordBtn.addEventListener('click', () => this.handleChangePassword());
         }
         
-        // Eventos de modo oscuro
-        if (this.darkModeToggle) {
-            this.darkModeToggle.addEventListener('change', () => this.handleDarkModeToggle());
-        }
+        
         
         // Eventos de color principal
         this.primaryColorRadios.forEach(radio => {
@@ -203,21 +200,7 @@ class ConfigurationManager {
         }
     }
 
-    handleDarkModeToggle() {
-        const isDarkMode = this.darkModeToggle.checked;
-        console.log('< Modo oscuro:', isDarkMode ? 'activado' : 'desactivado');
-        
-        // Aplicar tema
-        document.body.classList.toggle('dark-mode', isDarkMode);
-        
-        // Guardar preferencia
-        this.saveSetting('dark_mode', isDarkMode);
-        
-        this.showNotification(
-            `Modo ${isDarkMode ? 'oscuro' : 'claro'} activado`, 
-            'info'
-        );
-    }
+    
 
     handleColorChange(color) {
         console.log('<� Cambiando color principal a:', color);
@@ -275,47 +258,48 @@ class ConfigurationManager {
     async handlePhotoUpload() {
         const file = this.userPhotoFile.files[0];
         if (!file) return;
-        
-        // Validar tipo de archivo
+
         if (!file.type.startsWith('image/')) {
             this.showNotification('Por favor selecciona un archivo de imagen válido', 'error');
             return;
         }
-        
-        // Validar tamaño (5MB max)
-        if (file.size > 5 * 1024 * 1024) {
+
+        if (file.size > 5 * 1024 * 1024) { // 5MB max
             this.showNotification('La imagen no debe superar los 5MB', 'error');
             return;
         }
-        
+
         console.log('📸 Subiendo foto de perfil...');
         this.isLoading = true;
-        
+
         try {
             const formData = new FormData();
             formData.append('foto', file);
-            
+
             const response = await fetch('/auth/upload-profile-photo', {
                 method: 'POST',
                 body: formData
             });
-            
+
+            console.log('[handlePhotoUpload] Respuesta del servidor:', response);
             const result = await response.json();
-            
-            if (response.ok && result.success) {
-                // Mostrar preview de la imagen
+            console.log('[handlePhotoUpload] JSON de la respuesta:', result);
+
+            if (response.ok && result.success && result.foto_url) {
+                console.log('[handlePhotoUpload] Subida exitosa. URL recibida:', result.foto_url);
                 this.displayPhotoPreview(result.foto_url);
                 this.showNotification('Foto de perfil actualizada correctamente', 'success');
             } else {
+                console.error('[handlePhotoUpload] El servidor indicó un error:', result.message);
                 this.showNotification(result.message || 'Error al subir la foto', 'error');
             }
-            
+
         } catch (error) {
-            console.error('❌ Error al subir foto:', error);
+            console.error('❌ Error de red o de JSON en handlePhotoUpload:', error);
             this.showNotification('Error de conexión al subir la foto', 'error');
         } finally {
             this.isLoading = false;
-            this.userPhotoFile.value = ''; // Limpiar input
+            this.userPhotoFile.value = '';
         }
     }
 
@@ -323,25 +307,24 @@ class ConfigurationManager {
         if (!confirm('¿Estás seguro de que quieres eliminar tu foto de perfil?')) {
             return;
         }
-        
+
         console.log('🗑️ Eliminando foto de perfil...');
         this.isLoading = true;
-        
+
         try {
             const response = await fetch('/auth/remove-profile-photo', {
                 method: 'DELETE'
             });
-            
+
             const result = await response.json();
-            
+
             if (response.ok && result.success) {
-                // Resetear preview a ícono por defecto
                 this.resetPhotoPreview();
                 this.showNotification('Foto de perfil eliminada correctamente', 'success');
             } else {
                 this.showNotification(result.message || 'Error al eliminar la foto', 'error');
             }
-            
+
         } catch (error) {
             console.error('❌ Error al eliminar foto:', error);
             this.showNotification('Error de conexión al eliminar la foto', 'error');
@@ -351,17 +334,36 @@ class ConfigurationManager {
     }
 
     displayPhotoPreview(photoUrl) {
+        console.log(`[displayPhotoPreview] Recibida URL: ${photoUrl}`);
         if (this.userPhotoPreview && photoUrl) {
-            this.userPhotoPreview.innerHTML = `<img src="${photoUrl}" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+            // Añadir un "cache buster" para forzar la recarga de la imagen
+            const finalUrl = `${photoUrl}?t=${new Date().getTime()}`;
+            console.log(`[displayPhotoPreview] URL final a mostrar: ${finalUrl}`);
+
+            this.userPhotoPreview.innerHTML = `<img src="${finalUrl}" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+            
+            const label = document.getElementById('user-photo-label');
+            if (label) {
+                label.innerHTML = '<i class="fas fa-sync-alt"></i> Actualizar foto';
+            }
+
             if (this.removeUserPhoto) {
                 this.removeUserPhoto.style.display = 'inline-block';
             }
+        } else {
+            console.warn('[displayPhotoPreview] Llamado sin URL o sin elemento de preview.');
         }
     }
 
     resetPhotoPreview() {
         if (this.userPhotoPreview) {
             this.userPhotoPreview.innerHTML = '<i class="fas fa-user-circle"></i>';
+            
+            const label = document.getElementById('user-photo-label');
+            if (label) {
+                label.innerHTML = '<i class="fas fa-camera"></i> Subir foto';
+            }
+
             if (this.removeUserPhoto) {
                 this.removeUserPhoto.style.display = 'none';
             }
@@ -415,11 +417,7 @@ class ConfigurationManager {
             this.resetPhotoPreview();
         }
         
-        // Aplicar configuraciones guardadas
-        if (settings.dark_mode !== undefined && this.darkModeToggle) {
-            this.darkModeToggle.checked = settings.dark_mode;
-            document.body.classList.toggle('dark-mode', settings.dark_mode);
-        }
+        
         
         if (settings.primary_color && settings.primary_color !== 'default') {
             document.documentElement.style.setProperty('--primary-color', settings.primary_color);

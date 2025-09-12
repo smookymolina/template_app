@@ -184,3 +184,9 @@ def placeholder(width, height):
         img.save(img_io, 'PNG')
         img_io.seek(0)
         return send_file(img_io, mimetype='image/png')
+
+@main_bp.route('/media/profiles/<path:filename>')
+def serve_profile_image(filename):
+    """Sirve las imágenes de perfil de forma segura."""
+    from flask import send_from_directory
+    return send_from_directory(current_app.config['PROFILE_IMG_FOLDER'], filename)

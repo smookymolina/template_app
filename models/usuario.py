@@ -2,6 +2,7 @@ from flask_login import UserMixin
 from datetime import datetime, timezone
 import bcrypt
 from models import db, DatabaseError
+from flask import url_for
 
 class Usuario(db.Model, UserMixin):
     """
@@ -42,14 +43,22 @@ class Usuario(db.Model, UserMixin):
         )
 
     def serialize(self):
-        """Retorna una representación serializable del usuario"""
+        """Retorna una representación serializable del usuario con la URL completa de la foto."""
+        
+        # Construir la URL de la foto solo si existe el nombre del archivo
+        if self.foto_url:
+            # Usar url_for para generar la URL dinámicamente
+            foto_url_completa = url_for('main.serve_profile_image', filename=self.foto_url, _external=False)
+        else:
+            foto_url_completa = None
+
         return {
             "id": self.id,
             "email": self.email,
             "nombre": self.nombre,
             "telefono": self.telefono,
-            "foto_url": self.foto_url,
-            "rol": self.rol or 'asesor',  # ✅ CAMBIO: Asegurar rol por defecto
+            "foto_url": foto_url_completa, # Devolver la URL completa
+            "rol": self.rol or 'asesor',
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "last_login": self.last_login.isoformat() if self.last_login else None
         }

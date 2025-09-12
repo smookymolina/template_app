@@ -57,7 +57,6 @@ async function initializeApplication() {
  * ✅ INICIALIZAR COMPONENTES BÁSICOS
  */
 async function initializeBasicComponents() {
-    UI?.loadSavedTheme?.();
     UI?.initCommonEvents?.();
     UI?.initNavigation?.();
     UI?.initColorSelectors?.();

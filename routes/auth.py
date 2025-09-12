@@ -460,54 +460,57 @@ def save_setting():
             "message": f"Error al guardar configuración: {str(e)}"
         }), 500
 
+import os
+from werkzeug.utils import secure_filename
+
+from flask import url_for
+
 @auth_bp.route('/upload-profile-photo', methods=['POST'])
 @login_required
 def upload_profile_photo():
     """
-    Sube una foto de perfil para el usuario actual.
+    Sube o actualiza la foto de perfil para el usuario actual.
     """
-    try:
-        if 'foto' not in request.files:
+    if 'foto' not in request.files:
+        return jsonify({"success": False, "message": "No se encontró el archivo de imagen."}), 400
+
+    file = request.files['foto']
+
+    if file.filename == '':
+        return jsonify({"success": False, "message": "No se seleccionó ningún archivo."}), 400
+
+    if file:
+        filename = secure_filename(file.filename)
+        unique_filename = f"{current_user.id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{filename}"
+        upload_folder = current_app.config['PROFILE_IMG_FOLDER']
+        save_path = os.path.join(upload_folder, unique_filename)
+
+        try:
+            if current_user.foto_url:
+                old_photo_path = os.path.join(upload_folder, current_user.foto_url)
+                if os.path.exists(old_photo_path):
+                    os.remove(old_photo_path)
+
+            file.save(save_path)
+            current_user.foto_url = unique_filename
+            current_user.save()
+
+            # Construir la URL completa para devolver al frontend
+            photo_url = url_for('main.serve_profile_image', filename=unique_filename)
+
+            current_app.logger.info(f"Foto de perfil actualizada para {current_user.email}: {photo_url}")
+
             return jsonify({
-                "success": False,
-                "message": "No se encontró archivo de imagen"
-            }), 400
-        
-        archivo = request.files['foto']
-        if not archivo or not archivo.filename:
-            return jsonify({
-                "success": False,
-                "message": "No se seleccionó ningún archivo"
-            }), 400
-        
-        # Eliminar foto anterior si existe
-        if current_user.foto_url:
-            eliminar_archivo(current_user.foto_url)
-        
-        # Guardar nueva foto
-        ruta_relativa = guardar_archivo(archivo, 'usuario')
-        if not ruta_relativa:
-            return jsonify({
-                "success": False,
-                "message": "Error al guardar la imagen"
-            }), 500
-        
-        # Actualizar usuario
-        current_user.foto_url = ruta_relativa
-        current_user.save()
-        
-        return jsonify({
-            "success": True,
-            "message": "Foto de perfil actualizada correctamente",
-            "foto_url": f"/{ruta_relativa}"
-        }), 200
-        
-    except Exception as e:
-        current_app.logger.error(f"Error al subir foto de perfil: {str(e)}")
-        return jsonify({
-            "success": False,
-            "message": f"Error al subir foto: {str(e)}"
-        }), 500
+                "success": True, 
+                "message": "Foto de perfil actualizada correctamente",
+                "foto_url": photo_url
+            }), 200
+
+        except Exception as e:
+            current_app.logger.error(f"Error al guardar la foto de perfil: {str(e)}")
+            return jsonify({"success": False, "message": "Ocurrió un error en el servidor al guardar la imagen."}), 500
+
+    return jsonify({"success": False, "message": "Tipo de archivo no permitido."}), 400
 
 @auth_bp.route('/remove-profile-photo', methods=['DELETE'])
 @login_required  

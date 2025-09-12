@@ -49,79 +49,107 @@ const UI = {
     },
     
     /**
-     * Activa o desactiva el modo oscuro
-     * @param {boolean} [enabled] - Si se proporciona, establece el modo oscuro a este valor
-     * @returns {boolean} - Estado final del modo oscuro
+     * ===================================================================
+     * MÓDULO DE TEMA (MODO OSCURO)
+     * Centraliza toda la lógica para el manejo del tema de la aplicación.
+     * ===================================================================
      */
-    toggleDarkMode: function(enabled) {
-    // Determinar estado si no se especifica
-    if (enabled === undefined) {
-        enabled = !document.body.classList.contains('dark-mode');
-    }
-    
-    console.log(`🌙 Cambiando a modo ${enabled ? 'oscuro' : 'claro'}`);
-    
-    // Aplicar/remover clase CSS
-    if (enabled) {
-        document.body.classList.add('dark-mode');
-    } else {
-        document.body.classList.remove('dark-mode');
-    }
-    
-    // Sincronizar ambos controles
-    this.syncDarkModeControls(enabled);
-    
-    // Guardar preferencia
-    this.saveDarkModePreference(enabled);
-    
-    return enabled;
-},
+    theme: {
+        headerToggle: null,
+        settingsSlider: null,
 
-/**
- * ✅ NUEVA FUNCIÓN: Sincronizar ambos controles
- */
-syncDarkModeControls: function(enabled) {
-    // Actualizar checkbox en configuración
-    const configToggle = document.getElementById('dark-theme-toggle');
-    if (configToggle) {
-        configToggle.checked = enabled;
-    }
-    
-    // Actualizar icono del header
-    const headerToggle = document.getElementById('dark-mode-toggle');
-    if (headerToggle) {
-        const icon = headerToggle.querySelector('i');
-        if (icon) {
-            icon.className = enabled ? 'fas fa-sun' : 'fas fa-moon';
-        }
-    }
-    
-    console.log(`🔄 Controles sincronizados: ${enabled ? 'oscuro' : 'claro'}`);
-},
+        /**
+         * Inicializa el sistema de temas.
+         * Se llama una vez al cargar la página.
+         */
+        init: function() {
+            console.log('🌙 Inicializando sistema de temas...');
+            this.headerToggle = document.getElementById('dark-mode-toggle');
+            this.settingsSlider = document.getElementById('dark-theme-slider');
 
-/**
- * ✅ NUEVA FUNCIÓN: Guardar preferencia de forma inteligente
- */
-saveDarkModePreference: function(enabled) {
-    try {
-        // Verificar si Auth está disponible y hay usuario autenticado
-        const isAuthAvailable = typeof Auth !== 'undefined' && Auth !== null;
-        const currentUser = isAuthAvailable ? Auth.currentUser : null;
-        
-        if (currentUser && currentUser.email) {
-            // Usuario autenticado: guardar con su email
-            const userThemeKey = `${CONFIG.STORAGE_KEYS.THEME}_${currentUser.email}`;
-            localStorage.setItem(userThemeKey, enabled.toString());
-            console.log(`💾 Tema guardado para usuario: ${currentUser.email}`);
-        } else {
-            // Sin autenticación: guardar temporal
-            localStorage.setItem(CONFIG.STORAGE_KEYS.THEME, enabled.toString());
-            console.log(`💾 Tema guardado temporalmente`);
+            const savedTheme = this.load();
+            this.apply(savedTheme);
+            this.addEventListeners();
+            console.log('✅ Sistema de temas inicializado.');
+        },
+
+        /**
+         * Aplica el estado del tema (oscuro/claro) a la UI.
+         * @param {boolean} isDark - True si el modo oscuro debe estar activado.
+         */
+        apply: function(isDark) {
+            document.body.classList.toggle('dark-mode', isDark);
+            this.updateControls(isDark);
+        },
+
+        /**
+         * Actualiza el estado visual de ambos controles de tema.
+         * @param {boolean} isDark - El estado actual del tema.
+         */
+        updateControls: function(isDark) {
+            if (this.headerToggle) {
+                const icon = this.headerToggle.querySelector('i');
+                if (icon) {
+                    icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+                }
+            }
+            if (this.settingsSlider) {
+                this.settingsSlider.checked = isDark;
+            }
+        },
+
+        /**
+         * Alterna el tema actual, lo aplica y lo guarda.
+         * Esta es la función que llaman los eventos.
+         */
+        toggle: function() {
+            const isCurrentlyDark = document.body.classList.contains('dark-mode');
+            const newThemeState = !isCurrentlyDark;
+            
+            console.log(`🌙 Cambiando a modo ${newThemeState ? 'oscuro' : 'claro'}`);
+            this.apply(newThemeState);
+            this.save(newThemeState);
+        },
+
+        /**
+         * Guarda la preferencia del tema en localStorage.
+         * @param {boolean} isDark - El estado del tema a guardar.
+         */
+        save: function(isDark) {
+            try {
+                // La preferencia se guarda de forma general, no por usuario,
+                // para mantener la consistencia al iniciar sesión.
+                localStorage.setItem(CONFIG.STORAGE_KEYS.THEME, isDark.toString());
+            } catch (error) {
+                console.error('❌ Error al guardar preferencia de tema:', error);
+            }
+        },
+
+        /**
+         * Carga la preferencia de tema desde localStorage.
+         * @returns {boolean} - Devuelve true si el modo oscuro estaba guardado, de lo contrario false.
+         */
+        load: function() {
+            try {
+                return localStorage.getItem(CONFIG.STORAGE_KEYS.THEME) === 'true';
+            } catch (error) {
+                console.error('❌ Error al cargar preferencia de tema:', error);
+                return false; // Fallback a modo claro
+            }
+        },
+
+        /**
+         * Añade los event listeners a ambos controles.
+         */
+        addEventListeners: function() {
+            if (this.headerToggle) {
+                this.headerToggle.addEventListener('click', () => this.toggle());
+            }
+            if (this.settingsSlider) {
+                this.settingsSlider.addEventListener('change', () => this.toggle());
+            }
         }
-    } catch (error) {
-        console.error('❌ Error al guardar preferencia de tema:', error);
-    }
-},
+    },
     
     /**
      * Cambia el color primario de la interfaz
@@ -641,10 +669,10 @@ clearStoredConfigurations: function() {
      */
     initCommonEvents: function() {
     console.log('🔧 Inicializando eventos comunes de UI...');
-    
-    // ✅ CORRECCIÓN: Manejar AMBOS toggles de dark mode
-    this.initDarkModeToggles();
-    
+
+    // Inicializar el sistema de temas (modo oscuro)
+    this.theme.init();
+
     // Toggle dropdown de perfil
     const profileDropdownBtn = document.getElementById('profile-dropdown-button');
     if (profileDropdownBtn) {
@@ -656,10 +684,7 @@ clearStoredConfigurations: function() {
             }
         });
     }
-    
-    // Cerrar dropdowns al hacer clic fuera
-    
-    
+
     // Toggle visibilidad de contraseña
     const togglePasswordBtns = document.querySelectorAll('.toggle-password');
     togglePasswordBtns.forEach(btn => {
@@ -676,7 +701,7 @@ clearStoredConfigurations: function() {
             }
         });
     });
-    
+
     // Cerrar notificaciones
     const notificationCloseBtn = document.getElementById('notification-close');
     if (notificationCloseBtn) {
@@ -687,38 +712,8 @@ clearStoredConfigurations: function() {
             }
         });
     }
-    
-    console.log('✅ Eventos comunes de UI inicializados');
-},
 
-/**
- * ✅ NUEVA FUNCIÓN: Inicializar todos los toggles de dark mode
- */
-initDarkModeToggles: function() {
-    console.log('🌙 Inicializando toggles de dark mode...');
-    
-    // 1. Button del header (sin Auth requerida)
-    const headerToggle = document.getElementById('dark-mode-toggle');
-    if (headerToggle) {
-        headerToggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('🌙 Click en toggle header');
-            this.toggleDarkMode();
-        });
-        console.log('✅ Header dark mode toggle configurado');
-    }
-    
-    // 2. Checkbox de configuración (con Auth opcional)
-    const configToggle = document.getElementById('dark-theme-toggle');
-    if (configToggle) {
-        configToggle.addEventListener('change', (e) => {
-            console.log('🌙 Change en toggle config:', e.target.checked);
-            this.toggleDarkMode(e.target.checked);
-        });
-        console.log('✅ Config dark mode toggle configurado');
-    }
-    
-    console.log('✅ Todos los toggles de dark mode configurados');
+    console.log('✅ Eventos comunes de UI inicializados');
 },
 
     
