@@ -83,9 +83,14 @@ def get_asesores():
 @login_required
 def get_reclutas():
     try:
+        # Debug logging
+        current_app.logger.info(f"get_reclutas called - current_user: {current_user}")
+        current_app.logger.info(f"current_user type: {type(current_user)}")
+        current_app.logger.info(f"current_user.is_authenticated: {getattr(current_user, 'is_authenticated', 'No attribute')}")
+        
         # Parámetros existentes
         page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', current_app.config['DEFAULT_PAGE_SIZE'], type=int)
+        per_page = request.args.get('per_page', current_app.config.get('DEFAULT_PAGE_SIZE', 10), type=int)
         search = request.args.get('search', '')
         estado = request.args.get('estado', '')
         sort_by = request.args.get('sort_by', 'id')
@@ -94,16 +99,21 @@ def get_reclutas():
         # 🆕 NUEVO: Parámetro de filtro por asesor
         asesor_id = request.args.get('asesor_id', '')
         
-        per_page = min(per_page, current_app.config['MAX_PAGE_SIZE'])
+        per_page = min(per_page, current_app.config.get('MAX_PAGE_SIZE', 50))
         
         # Construir query base
         query = Recluta.query
         
         # 🆕 NUEVO: Filtrar por rol del usuario actual (JERARQUÍA: Admin > Gerente > Asesor)
-        if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+        user_role = getattr(current_user, 'rol', None)
+        user_id = getattr(current_user, 'id', None)
+        
+        current_app.logger.info(f"User role: {user_role}, User ID: {user_id}")
+        
+        if user_role == 'asesor':
             # Si es asesor, solo sus reclutas
-            query = query.filter_by(asesor_id=current_user.id)
-        elif hasattr(current_user, 'rol') and current_user.rol in ['admin', 'gerente'] and asesor_id:
+            query = query.filter_by(asesor_id=user_id)
+        elif user_role in ['admin', 'gerente'] and asesor_id:
             # Si es admin/gerente y especifica un asesor, filtrar por ese asesor
             if asesor_id == 'sin_asignar':
                 query = query.filter(Recluta.asesor_id.is_(None))
@@ -136,6 +146,8 @@ def get_reclutas():
         # Paginación
         pagination = query.paginate(page=page, per_page=per_page, error_out=False)
         
+        current_app.logger.info(f"Query executed successfully, found {pagination.total} total reclutas")
+        
         return jsonify({
             "success": True,
             "reclutas": [r.serialize() for r in pagination.items],
@@ -145,7 +157,7 @@ def get_reclutas():
             "per_page": per_page,
             "has_next": pagination.has_next,
             "has_prev": pagination.has_prev,
-            "user_role": getattr(current_user, 'rol', 'user'),
+            "user_role": user_role or 'user',
             "applied_filters": {  # 🆕 NUEVO: Información de filtros aplicados
                 "asesor_id": asesor_id,
                 "estado": estado,
@@ -1963,7 +1975,7 @@ def redistribuir_reclutas_manual():
     """
     try:
         # Importar dependencias necesarias
-        from models import Recluta, Usuario, db
+        from models import Usuario, db
         from datetime import datetime, date
         import random
         

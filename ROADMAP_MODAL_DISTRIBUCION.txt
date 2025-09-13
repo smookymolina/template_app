@@ -1,0 +1,206 @@
+===============================================================================
+🗺️ ROADMAP - MODAL DE DISTRIBUCIÓN DE RECLUTAS
+===============================================================================
+
+📋 FUNCIONALIDADES PRINCIPALES
+===============================================================================
+
+🎯 1. APERTURA DEL MODAL
+   - Función: openDistribucionExcelModal() (reclutas.js:359)
+   - Trigger: Botón "Distribución Excel"
+   - Creación: Modal dinámico con ID 'distribucion-excel-modal'
+
+📤 2. CARGA DE ARCHIVOS
+   - Drag & Drop Zone: Área de arrastre para archivos Excel
+   - Click to Upload: Selección manual de archivos
+   - Validación: Solo .xlsx y .xls, máximo 10MB
+   - Función: handleDistribucionExcelFile(file) (reclutas.js:510)
+
+⚙️ 3. PROCESAMIENTO Y DISTRIBUCIÓN
+   - Función Principal: executeDistribucionExcel() (reclutas.js:552)
+   - API Endpoint: POST /reclutas/distribuir-excel (api.py:1907)
+   - Backend Helper: procesar_y_distribuir_excel(archivo, asesores)
+
+📊 4. VISUALIZACIÓN DE RESULTADOS
+   - Función: showDistribucionResults(data) (reclutas.js:651)
+   - Estadísticas: Total procesados, exitosos, errores
+   - Tabla Interactiva: Distribución por asesor con inputs editables
+   - Checkbox "Fijo": Para marcar asesores con asignación fija
+
+💾 5. REDISTRIBUCIÓN MANUAL
+   - Función: saveAsesorDistribution() (reclutas.js:888)
+   - API Endpoint: POST /reclutas/redistribuir-manual (api.py:1957)
+   - Permite: Ajustar manualmente la cantidad de reclutas por asesor
+
+===============================================================================
+🏗️ ARQUITECTURA DEL SISTEMA
+===============================================================================
+
+FRONTEND (JavaScript - reclutas.js)
+├── openDistribucionExcelModal()      → Crea y abre modal
+├── setupDistribucionModalEvents()    → Configura eventos
+├── handleDistribucionExcelFile()     → Valida archivo
+├── executeDistribucionExcel()        → Envía al servidor
+├── showDistribucionProgress()        → Progress bar
+├── showDistribucionResults()         → Muestra resultados
+├── saveAsesorDistribution()          → Redistribuye manual
+└── resetDistribucionModal()          → Resetea modal
+
+BACKEND (Python Flask - api.py)
+├── /reclutas/distribuir-excel        → Procesa Excel inicial
+├── /reclutas/redistribuir-manual     → Redistribución manual
+└── /reclutas/lote-reciente          → Obtiene lote reciente
+
+HELPERS (Python - helpers.py)
+└── procesar_y_distribuir_excel()     → Lógica de procesamiento
+
+===============================================================================
+🎨 INTERFAZ DE USUARIO
+===============================================================================
+
+MODAL STRUCTURE
+- Header: Título con ícono
+- Body: 
+  * Información del proceso
+  * Drop zone para archivo
+  * Progress bar
+  * Resultados y estadísticas
+- Footer: Botones de acción
+
+ESTADOS DEL MODAL
+1. Inicial: Drop zone visible
+2. Archivo Seleccionado: Muestra info del archivo + botón "Confirmar"
+3. Procesando: Progress bar animado
+4. Resultados: Tabla editable + botón "Guardar Cambios"
+
+===============================================================================
+⚡ FLUJO DE TRABAJO
+===============================================================================
+
+DISTRIBUCIÓN AUTOMÁTICA
+1. Usuario selecciona archivo Excel
+2. Validación del archivo (formato, tamaño)
+3. Envío al backend con FormData
+4. Procesamiento y distribución equitativa
+5. Visualización de resultados
+
+REDISTRIBUCIÓN MANUAL
+1. Usuario modifica cantidades en la tabla
+2. Marca/desmarca asesores como "fijos"
+3. Clic en "Guardar Cambios"
+4. Recálculo y reasignación de reclutas
+5. Actualización de la vista
+
+===============================================================================
+🔧 VALIDACIONES Y CONTROLES
+===============================================================================
+
+VALIDACIONES FRONTEND
+- Formato de archivo (.xlsx, .xls)
+- Tamaño máximo (10MB)
+- Campos numéricos en inputs
+- Datos válidos para guardar
+
+VALIDACIONES BACKEND
+- Headers Excel requeridos
+- Duplicados de teléfono
+- Asesores activos disponibles
+- Permisos de usuario (admin/gerente)
+
+===============================================================================
+📈 MÉTRICAS Y ESTADÍSTICAS
+===============================================================================
+
+ESTADÍSTICAS MOSTRADAS
+- Total reclutas procesados
+- Reclutas exitosos
+- Errores encontrados
+- Distribución por asesor
+- Promedio de asignación
+
+ESTADOS DE ASESORES
+- Fijos: Mantienen su asignación
+- Flexibles: Se redistribuyen automáticamente
+- Activos: Disponibles para asignación
+
+===============================================================================
+🚀 APIs DISPONIBLES
+===============================================================================
+
+Endpoint                        | Método | Función              | Permisos
+/reclutas/distribuir-excel      | POST   | Distribución Excel   | Gerente/Admin
+/reclutas/redistribuir-manual   | POST   | Redistribución manual| Gerente/Admin
+/reclutas/lote-reciente        | GET    | Último lote          | Gerente/Admin
+
+===============================================================================
+🎯 CASOS DE USO
+===============================================================================
+
+1. CARGA MASIVA
+   - Importar cientos de reclutas desde Excel
+   - Procesamiento automático y distribución
+
+2. DISTRIBUCIÓN EQUITATIVA
+   - Repartir automáticamente entre asesores
+   - Balanceamiento de carga de trabajo
+
+3. AJUSTE MANUAL
+   - Rebalancear asignaciones según necesidades
+   - Marcar asesores como fijos o flexibles
+
+4. SEGUIMIENTO
+   - Ver estadísticas de distribución
+   - Monitorear errores y éxitos
+
+5. ERROR HANDLING
+   - Gestionar duplicados y errores de formato
+   - Mostrar detalles específicos de errores
+
+===============================================================================
+📁 ARCHIVOS INVOLUCRADOS
+===============================================================================
+
+FRONTEND
+- static/js/reclutas.js (líneas 335-950)
+- static/css/styles.css (estilos del modal)
+- templates/index.html (botón trigger)
+
+BACKEND
+- routes/api.py (endpoints de distribución)
+- utils/helpers.py (lógica de procesamiento)
+- models/recluta.py (modelo de datos)
+- models/usuario.py (modelo de asesores)
+
+===============================================================================
+🔍 FUNCIONES CLAVE POR ARCHIVO
+===============================================================================
+
+RECLUTAS.JS
+- openDistribucionExcelModal()     : Línea 359
+- setupDistribucionModalEvents()   : Línea 454
+- handleDistribucionExcelFile()    : Línea 510
+- executeDistribucionExcel()       : Línea 552
+- showDistribucionProgress()       : Línea 600
+- showDistribucionResults()        : Línea 651
+- saveAsesorDistribution()         : Línea 888
+
+API.PY
+- distribuir_reclutas_excel()      : Línea 1907
+- redistribuir_reclutas_manual()   : Línea 1957
+
+===============================================================================
+📝 NOTAS TÉCNICAS
+===============================================================================
+
+- Modal se crea dinámicamente en JavaScript
+- Usa FormData para envío de archivos
+- Progress bar animado durante procesamiento
+- Tabla de resultados completamente interactiva
+- Sistema de checkboxes para asesores fijos
+- Recálculo automático al cambiar valores
+- Notificaciones de éxito/error integradas
+- Actualización automática de listas tras cambios
+
+===============================================================================
+🔄 ÚLTIMA ACTUALIZACIÓN: 2025-09-12
+===============================================================================
