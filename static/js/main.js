@@ -1535,13 +1535,23 @@ function handleGestionGerentesSection() {
  * ✅ ACTUALIZAR NAVEGACIÓN ACTIVA
  */
 function updateActiveNavigation(sectionId) {
-    const navLinks = document.querySelectorAll('.nav-link');
-    for (const link of navLinks) {
-        link.classList.remove('active');
-    }
-    
-    const activeLink = document.querySelector(`[onclick*="${sectionId}"]`);
-    activeLink?.classList.add('active');
+    const navItems = document.querySelectorAll('.dashboard-nav li');
+    navItems.forEach((item) => {
+        const link = item.querySelector('a[data-section]');
+        const isActive = link && link.getAttribute('data-section') === sectionId;
+        item.classList.toggle('active', !!isActive);
+        if (link) {
+            link.classList.toggle('active', !!isActive);
+        }
+    });
+
+    const extraLinks = document.querySelectorAll('[data-section]');
+    extraLinks.forEach((link) => {
+        if (link.closest('.dashboard-nav')) {
+            return;
+        }
+        link.classList.toggle('active', link.getAttribute('data-section') === sectionId);
+    });
 }
 
 /**
