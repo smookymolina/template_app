@@ -198,10 +198,10 @@
                 <!-- Controles para Admin -->
                 <div id="admin-gerentes-controls" class="role-controls" style="display: none;">
                     <div class="gerentes-actions">
-                        <button class="btn-primary" onclick="mostrarAsignacionAsesores()">
+                        <button class="btn-primary" onclick="Jerarquia.mostrarAsignacionAsesores()">
                             <i class="fas fa-user-plus"></i> Asignar Asesores a Gerentes
                         </button>
-                        <button class="btn-secondary" onclick="mostrarJerarquiaCompleta()">
+                        <button class="btn-secondary" onclick="Jerarquia.mostrarJerarquiaCompleta()">
                             <i class="fas fa-sitemap"></i> Ver Jerarquía Completa
                         </button>
                     </div>
@@ -210,10 +210,10 @@
                 <!-- Controles para Gerente -->
                 <div id="gerente-gerentes-controls" class="role-controls" style="display: none;">
                     <div class="gerentes-actions">
-                        <button class="btn-primary" onclick="redistribuirReclutasGerente(getCurrentUser().id)">
+                        <button class="btn-primary" onclick="Jerarquia.redistribuirReclutasGerente()">
                             <i class="fas fa-share-alt"></i> Redistribuir Mis Reclutas
                         </button>
-                        <button class="btn-secondary" onclick="verMiEquipo()">
+                        <button class="btn-secondary" onclick="Jerarquia.verMiEquipo()">
                             <i class="fas fa-users"></i> Ver Mi Equipo
                         </button>
                     </div>

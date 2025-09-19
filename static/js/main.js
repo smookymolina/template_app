@@ -2311,6 +2311,13 @@ window.getCurrentUser = getCurrentUser;
 window.showSection = showSection;
 window.configureDashboardForRole = configureDashboardForRole;
 window.updateNavigationByRole = updateNavigationByRole;
+window.Jerarquia = Jerarquia;
+
+// Puente de compatibilidad para acciones inline existentes
+window.mostrarAsignacionAsesores = (gerenteId) => Jerarquia?.mostrarAsignacionAsesores?.(gerenteId);
+window.mostrarJerarquiaCompleta = (...args) => Jerarquia?.mostrarJerarquiaCompleta?.(...args);
+window.redistribuirReclutasGerente = (...args) => Jerarquia?.redistribuirReclutasGerente?.(...args);
+window.verMiEquipo = (...args) => Jerarquia?.verMiEquipo?.(...args);
 
 // Función específica para mostrar gestión de gerentes
 window.showGestionGerentes = function() {

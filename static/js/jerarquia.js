@@ -371,6 +371,9 @@ const Jerarquia = {
                         </div>
                     </div>
                     <div class="asesor-stats">
+                        <button class="btn-icon btn-sm" title="Reasignar Asesor" onclick="event.stopPropagation(); Jerarquia.reasignarAsesor(${asesor.id}, '${asesor.nombre || asesor.email}');">
+                            <i class="fas fa-random"></i>
+                        </button>
                         <span class="reclutas-count" title="Reclutas asignados">
                             <i class="fas fa-clipboard-list"></i> ${totalReclutas}
                         </span>
@@ -521,15 +524,92 @@ const Jerarquia = {
 
     abrirAsignacionAsesor: function(gerenteId) {
         console.log('Abriendo asignación de asesor para gerente:', gerenteId);
-        showNotification('Función de asignación de asesor en desarrollo', 'info');
+        // Reutilizar la función principal de asignación, pasando el ID del gerente
+        this.mostrarAsignacionAsesores(gerenteId);
     },
 
-    reasignarAsesor: function(asesorId) {
-        console.log('Reasignando asesor:', asesorId);
-        showNotification('Función de reasignación de asesor en desarrollo', 'info');
+    reasignarAsesor: async function(asesorId, asesorNombre) {
+        console.log(`Iniciando reasignación para asesor: ${asesorNombre} (ID: ${asesorId})`);
+        
+        try {
+            // 1. Obtener la lista de todos los gerentes
+            const response = await fetch('/api/asesores?rol=gerente');
+            const data = await response.json();
+
+            if (!data.success) {
+                showError(data.message || 'No se pudo cargar la lista de gerentes.');
+                return;
+            }
+
+            const gerentes = data.asesores;
+
+            // 2. Crear y mostrar un modal para la reasignación
+            const modalHtml = `
+                <div id="modalReasignarAsesor" class="modal" style="display: block;">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>Reasignar Asesor</h3>
+                            <span class="close-modal" onclick="this.closest('.modal').remove()">&times;</span>
+                        </div>
+                        <div class="modal-body">
+                            <p>Selecciona un nuevo gerente para el asesor <strong>${asesorNombre}</strong>.</p>
+                            <div class="form-group">
+                                <label for="selectNuevoGerente">Nuevo Gerente:</label>
+                                <select id="selectNuevoGerente" class="form-control">
+                                    <option value="">-- Selecciona un gerente --</option>
+                                    ${gerentes.map(g => `<option value="${g.id}">${g.nombre || g.email}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn-secondary" onclick="this.closest('.modal').remove()">Cancelar</button>
+                            <button type="button" class="btn-primary" onclick="Jerarquia.ejecutarReasignacion(${asesorId})">Reasignar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        } catch (error) {
+            console.error('Error en reasignarAsesor:', error);
+            showError('Error de conexión al intentar reasignar.');
+        }
     },
 
-    mostrarAsignacionAsesores: async function() {
+    ejecutarReasignacion: async function(asesorId) {
+        const nuevoGerenteId = document.getElementById('selectNuevoGerente').value;
+
+        if (!nuevoGerenteId) {
+            showNotification('Debes seleccionar un nuevo gerente.', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/gerentes/reasignar-asesor', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    asesor_id: parseInt(asesorId),
+                    nuevo_gerente_id: parseInt(nuevoGerenteId)
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showSuccess(data.message || 'Asesor reasignado con éxito.');
+                document.getElementById('modalReasignarAsesor').remove();
+                this.mostrarJerarquiaCompleta(); // Recargar la vista
+            } else {
+                showError(data.message || 'Ocurrió un error durante la reasignación.');
+            }
+        } catch (error) {
+            console.error('Error en ejecutarReasignacion:', error);
+            showError('Error de conexión al ejecutar la reasignación.');
+        }
+    },
+
+    mostrarAsignacionAsesores: async function(gerenteId = null) {
         try {
             console.log('Cargando modal de asignación de asesores...');
 
@@ -546,7 +626,7 @@ const Jerarquia = {
                 // Filtrar asesores sin gerente
                 const asesoresSinGerente = asesoresData.asesores.filter(asesor => !asesor.gerente_id);
 
-                this.mostrarModalAsignacionAsesores(gerentesData.asesores, asesoresSinGerente);
+                this.mostrarModalAsignacionAsesores(gerentesData.asesores, asesoresSinGerente, gerenteId);
             } else {
                 showError('Error al cargar datos para asignación');
             }
@@ -557,7 +637,7 @@ const Jerarquia = {
         }
     },
 
-    mostrarModalAsignacionAsesores: function(gerentes, asesoresSinGerente) {
+    mostrarModalAsignacionAsesores: function(gerentes, asesoresSinGerente, gerenteId = null) {
         const modalHtml = `
             <div id="modalAsignacionAsesores" class="modal">
                 <div class="modal-content modal-lg">
@@ -573,7 +653,7 @@ const Jerarquia = {
                                     <select id="selectGerente" class="form-control">
                                         <option value="">-- Selecciona un gerente --</option>
                                         ${gerentes.map(gerente =>
-                                            `<option value="${gerente.id}">${gerente.nombre || gerente.email}</option>`
+                                            `<option value="${gerente.id}" ${gerente.id === gerenteId ? 'selected' : ''}>${gerente.nombre || gerente.email}</option>`
                                         ).join('')}
                                     </select>
                                 </div>
@@ -816,6 +896,11 @@ const Jerarquia = {
             console.error('Error ejecutando redistribución:', error);
             showError('Error de conexión en la redistribución');
         }
+    },
+
+    verMiEquipo: function() {
+        console.log('Recargando la vista de jerarquía para reflejar cambios...');
+        this.mostrarJerarquiaCompleta();
     }
 };
 

@@ -2510,59 +2510,6 @@ def get_dashboard_gerente():
             "message": f"Error al obtener dashboard: {str(e)}"
         }), 500
 
-@api_bp.route('/usuarios/asignar-asesor', methods=['POST'])
-@admin_required  
-def asignar_asesor_a_gerente():
-    """
-    Asigna un asesor a un gerente (solo admin)
-    """
-    try:
-        data = request.get_json()
-        
-        if not data or 'gerente_id' not in data or 'asesor_id' not in data:
-            return jsonify({
-                "success": False,
-                "message": "gerente_id y asesor_id son requeridos"
-            }), 400
-        
-        gerente_id = data['gerente_id']
-        asesor_id = data['asesor_id']
-        
-        gerente = Usuario.query.get(gerente_id)
-        asesor = Usuario.query.get(asesor_id)
-        
-        if not gerente or gerente.rol != 'gerente':
-            return jsonify({
-                "success": False,
-                "message": "Gerente no válido"
-            }), 400
-        
-        if not asesor or asesor.rol != 'asesor':
-            return jsonify({
-                "success": False,
-                "message": "Asesor no válido"
-            }), 400
-        
-        # Asignar asesor al gerente
-        asesor.gerente_id = gerente_id
-        db.session.commit()
-        
-        current_app.logger.info(f"Admin asignó asesor {asesor_id} al gerente {gerente_id}")
-        
-        return jsonify({
-            "success": True,
-            "message": f"Asesor {asesor.nombre or asesor.email} asignado al gerente {gerente.nombre or gerente.email}",
-            "asesor": asesor.serialize(),
-            "gerente": gerente.serialize()
-        })
-        
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"Error asignando asesor a gerente: {str(e)}")
-        return jsonify({
-            "success": False,
-            "message": f"Error en asignación: {str(e)}"
-        }), 500
 
 # ===============================================================================
 # 🆕 NUEVOS ENDPOINTS PARA GESTIÓN JERÁRQUICA DE GERENTES
@@ -2827,38 +2774,8 @@ def redistribuir_reclutas_gerente():
         }), 500
 
 
-@api_bp.route('/api/gerentes/jerarquia', methods=['GET'])
-@admin_required
-def get_full_hierarchy():
-    """Devuelve la estructura jerárquica completa de gerentes y sus asesores."""
-    try:
-        gerentes = Usuario.query.filter_by(rol='gerente', is_active=True).all()
-        jerarquia = []
-        for gerente in gerentes:
-            asesores_data = []
-            for asesor in gerente.asesores:
-                if asesor.is_active:
-                    asesores_data.append({
-                        'id': asesor.id,
-                        'nombre': asesor.nombre,
-                        'email': asesor.email,
-                        'reclutas_count': len(asesor.reclutas_asignados)
-                    })
-            
-            jerarquia.append({
-                'id': gerente.id,
-                'nombre': gerente.nombre,
-                'email': gerente.email,
-                'asesores': asesores_data
-            })
-            
-        return jsonify({'success': True, 'jerarquia': jerarquia})
 
-    except Exception as e:
-        current_app.logger.error(f"Error al obtener jerarquía: {str(e)}")
-        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
-
-@api_bp.route('/api/gerentes/mis-asesores', methods=['GET'])
+@api_bp.route('/gerentes/mis-asesores', methods=['GET'])
 @gerente_required
 def get_my_asesores():
     """Devuelve los asesores asignados al gerente que realiza la petición."""
@@ -2872,4 +2789,45 @@ def get_my_asesores():
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 
+@api_bp.route('/gerentes/reasignar-asesor', methods=['POST'])
+@admin_required
+def reasignar_asesor_gerente():
+    """
+    Reasigna un asesor de un gerente a otro.
+    Solo para administradores.
+    Body: {"asesor_id": int, "nuevo_gerente_id": int}
+    """
+    try:
+        data = request.get_json()
+        asesor_id = data.get('asesor_id')
+        nuevo_gerente_id = data.get('nuevo_gerente_id')
 
+        if not asesor_id or not nuevo_gerente_id:
+            return jsonify({"success": False, "message": "asesor_id y nuevo_gerente_id son requeridos"}), 400
+
+        asesor = Usuario.query.get(asesor_id)
+        nuevo_gerente = Usuario.query.get(nuevo_gerente_id)
+
+        if not asesor or asesor.rol != 'asesor':
+            return jsonify({"success": False, "message": "Asesor no válido"}), 404
+        
+        if not nuevo_gerente or nuevo_gerente.rol != 'gerente':
+            return jsonify({"success": False, "message": "Nuevo gerente no válido"}), 404
+
+        gerente_anterior_id = asesor.gerente_id
+        asesor.gerente_id = nuevo_gerente_id
+        db.session.commit()
+
+        gerente_anterior = Usuario.query.get(gerente_anterior_id) if gerente_anterior_id else None
+        
+        current_app.logger.info(f"Admin {current_user.id} reasignó asesor {asesor_id} del gerente {gerente_anterior_id} al gerente {nuevo_gerente_id}")
+
+        return jsonify({
+            "success": True,
+            "message": f"Asesor {asesor.nombre} reasignado de {gerente_anterior.nombre if gerente_anterior else 'Sin Asignar'} a {nuevo_gerente.nombre}"
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error reasignando asesor: {str(e)}")
+        return jsonify({"success": False, "message": f"Error en reasignación: {str(e)}"}), 500
