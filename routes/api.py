@@ -119,6 +119,26 @@ def get_asesores():
         current_app.logger.error(f"Error al obtener asesores: {str(e)}")
         return jsonify({"success": False, "message": f"Error al obtener asesores: {str(e)}"}), 500
 
+
+@api_bp.route('/gerentes/mis-asesores', methods=['GET'])
+@gerente_required
+def get_mis_asesores():
+    """
+    Obtiene la lista de asesores asignados al gerente actual.
+    """
+    try:
+        # El decorador @gerente_required ya ha validado el rol del usuario.
+        # El método get_mis_asesores() se encuentra en el modelo Usuario.
+        asesores = current_user.get_mis_asesores()
+        return jsonify({
+            "success": True,
+            "asesores": [asesor.serialize() for asesor in asesores]
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener los asesores del gerente: {str(e)}")
+        return jsonify({"success": False, "message": "Error interno al obtener asesores"}), 500
+
+
 @api_bp.route('/reclutas', methods=['GET'])
 @login_required
 def get_reclutas():
@@ -166,7 +186,7 @@ def get_reclutas():
                     query = query.filter(
                         Recluta.asesor_id == user_id
                     )
-                elif asesor_id.isdigit() and int(asesor_id) in mis_asesores_ids:
+                elif asesor_id.isdigit() and (int(asesor_id) == user_id or int(asesor_id) in mis_asesores_ids):
                     query = query.filter_by(asesor_id=int(asesor_id))
                 else:
                     # No puede ver ese asesor, retornar vacío
@@ -2358,7 +2378,7 @@ def get_jerarquia_completa():
 
 @api_bp.route('/usuarios/mis-asesores', methods=['GET'])
 @role_required('gerente')
-def get_mis_asesores():
+def get_usuarios_mis_asesores():
     """
     Obtiene los asesores asignados al gerente actual
     """

@@ -88,21 +88,26 @@ const Reclutas = {
         if (!filterGerenteAsesores) return;
 
         try {
-            // Cargar asesores asignados al gerente actual
-            const currentUser = Auth.currentUser;
-            if (!currentUser || currentUser.rol !== 'gerente') {
-                console.warn('No hay gerente autenticado para cargar asesores');
-                return;
-            }
-
-            // Cargar asesores del gerente desde el backend
+            // Cargar asesores del gerente desde el backend, confiando en la sesión del servidor
             const response = await fetch(`${CONFIG.API_URL}/gerentes/mis-asesores`);
+            
             if (!response.ok) {
+                // Si el servidor responde con 403 (Forbidden), significa que el usuario no es gerente.
+                if (response.status === 403) {
+                    console.warn('Usuario no es gerente, no se puede cargar la lista de asesores.');
+                    const filterGroup = document.getElementById('filter-gerente-asesores-group');
+                    if (filterGroup) filterGroup.style.display = 'none'; // Ocultar el filtro
+                    return;
+                }
                 throw new Error(`Error al cargar asesores del gerente: ${response.status}`);
             }
 
             const data = await response.json();
-            const asesoriesAsignados = data.asesores || [];
+            if (!data.success) {
+                throw new Error(data.message || 'La respuesta del servidor no fue exitosa');
+            }
+            
+            const asesoresAsignados = data.asesores || [];
 
             // Limpiar opciones existentes
             filterGerenteAsesores.innerHTML = '';
@@ -110,31 +115,32 @@ const Reclutas = {
             // Añadir opciones por defecto
             const todosOption = document.createElement('option');
             todosOption.value = 'todos';
-            todosOption.textContent = 'Todos mis asesores';
+            todosOption.textContent = 'Todos (Mi Equipo)';
             filterGerenteAsesores.appendChild(todosOption);
 
-            const sinAsignarOption = document.createElement('option');
-            sinAsignarOption.value = 'sin_asignar';
-            sinAsignarOption.textContent = 'Sin asignar';
-            filterGerenteAsesores.appendChild(sinAsignarOption);
+            // Opción para el propio gerente
+            if (Auth.currentUser && Auth.currentUser.id) {
+                const gerenteOption = document.createElement('option');
+                gerenteOption.value = Auth.currentUser.id;
+                gerenteOption.textContent = 'Mis Reclutas Directos';
+                filterGerenteAsesores.appendChild(gerenteOption);
+            }
 
             // Agregar asesores asignados al gerente
-            asesoriesAsignados.forEach(asesor => {
+            asesoresAsignados.forEach(asesor => {
                 const option = document.createElement('option');
                 option.value = asesor.id;
                 option.textContent = asesor.nombre || asesor.email;
                 filterGerenteAsesores.appendChild(option);
             });
 
-            console.log(`Filtro de asesores de gerente poblado con ${asesoriesAsignados.length} asesores`);
+            console.log(`Filtro de asesores de gerente poblado con ${asesoresAsignados.length} asesores.`);
 
         } catch (error) {
             console.error('Error al poblar filtro de asesores del gerente:', error);
-            // En caso de error, al menos mostrar las opciones básicas
-            filterGerenteAsesores.innerHTML = `
-                <option value="todos">Todos mis asesores</option>
-                <option value="sin_asignar">Sin asignar</option>
-            `;
+            // En caso de error, ocultar el filtro para no confundir al usuario.
+            const filterGroup = document.getElementById('filter-gerente-asesores-group');
+            if (filterGroup) filterGroup.style.display = 'none';
         }
     },
 

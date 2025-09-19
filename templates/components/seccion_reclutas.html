@@ -30,7 +30,7 @@
 
                     <!-- Filtro por Asesor para Gerentes -->
                     {% if current_user.rol in ['admin', 'gerente'] %}
-                    <div class="filter-group gerente-only-filter" id="filter-gerente-asesores-group" style="display: none;">
+                    <div class="filter-group gerente-only-filter" id="filter-gerente-asesores-group">
                         <label for="filter-gerente-asesores">Asesores:</label>
                         <select id="filter-gerente-asesores">
                             <option value="todos">Todos mis asesores</option>

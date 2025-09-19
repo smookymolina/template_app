@@ -1293,15 +1293,21 @@ function updateNavigationByRole() {
     if (!currentUser) return;
     
     console.log('🔄 Actualizando navegación para rol:', currentUser.rol);
+    const normalizedRole = (currentUser.rol || '').toLowerCase();
+    const isAdmin = normalizedRole === 'admin' || normalizedRole === 'administrador';
+    const isGerente = normalizedRole === 'gerente';
     
-    // Controlar visibilidad de Gestión de Gerentes (Admin y Gerentes)
+    // Controlar visibilidad de Gestión de Gerentes (solo administradores visibles)
     const navGestionGerentes = document.getElementById('nav-gestion-gerentes');
     if (navGestionGerentes) {
-        if (currentUser.rol === 'admin') {
+        if (isAdmin) {
             navGestionGerentes.style.display = 'list-item';
             navGestionGerentes.classList.remove('nav-admin-hidden');
             navGestionGerentes.classList.add('nav-admin-visible');
             console.log('Gestión de Gerentes habilitada para administrador');
+        } else if (isGerente) {
+            navGestionGerentes.remove();
+            console.log('Gestión de Gerentes removida del menú para rol gerente');
         } else {
             navGestionGerentes.style.display = 'none';
             navGestionGerentes.classList.add('nav-admin-hidden');
@@ -1309,15 +1315,11 @@ function updateNavigationByRole() {
             console.log('Gestión de Gerentes oculta para rol:', currentUser.rol);
         }
     }
-    
+
     // Controlar otros elementos según rol
     const adminOnlyElements = document.querySelectorAll('.nav-admin-only');
     adminOnlyElements.forEach(element => {
-        if (currentUser.rol === 'admin') {
-            element.style.display = 'block';
-        } else {
-            element.style.display = 'none';
-        }
+        element.style.display = isAdmin ? 'block' : 'none';
     });
 }
 
