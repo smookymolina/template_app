@@ -53,6 +53,7 @@ body.admin-view .nav-admin-only {
 }
 
 body.gerente-view .gerente-only-filter,
+body.admin-view .gerente-only-filter {
     display: block !important;
 }
 
