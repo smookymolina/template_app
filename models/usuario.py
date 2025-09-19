@@ -187,42 +187,98 @@ class Usuario(db.Model, UserMixin):
             return asesor_id == self.id  # Asesor solo puede ver su propia info
 
     def get_jerarquia_completa(self):
-        """Para admin: obtiene la estructura jerárquica completa"""
+        """Para admin: obtiene la estructura jerárquica completa con detalle de equipo"""
         if self.rol != 'admin':
             return None
-        
-        gerentes = Usuario.query.filter_by(rol='gerente', is_active=True).all()
+
+        from models.recluta import Recluta
+
+        gerentes = (
+            Usuario.query
+            .filter_by(rol='gerente', is_active=True)
+            .order_by(Usuario.nombre.asc(), Usuario.email.asc())
+            .all()
+        )
+
         jerarquia = []
-        
+
         for gerente in gerentes:
-            asesores = gerente.get_mis_asesores()
+            asesores_activos = [
+                asesor
+                for asesor in gerente.get_mis_asesores()
+                if asesor.is_active and asesor.rol == 'asesor'
+            ]
+
+            equipo_ids = [gerente.id] + [asesor.id for asesor in asesores_activos]
+            reclutas_equipo = []
+            if equipo_ids:
+                reclutas_equipo = (
+                    Recluta.query
+                    .filter(Recluta.asesor_id.in_(equipo_ids))
+                    .order_by(Recluta.nombre.asc())
+                    .all()
+                )
+
+            reclutas_por_usuario = {}
+            for recluta in reclutas_equipo:
+                reclutas_por_usuario.setdefault(recluta.asesor_id, []).append(recluta)
+
+            reclutas_directos = reclutas_por_usuario.get(gerente.id, [])
+
+            asesores_data = []
+            for asesor in sorted(
+                asesores_activos,
+                key=lambda a: ((a.nombre or '').lower(), (a.email or '').lower())
+            ):
+                reclutas_asesor = reclutas_por_usuario.get(asesor.id, [])
+                asesores_data.append({
+                    **asesor.serialize(),
+                    'total_reclutas': len(reclutas_asesor),
+                    'reclutas': [recluta.serialize() for recluta in reclutas_asesor],
+                    'resumen_estados': self._build_recluta_status_summary(reclutas_asesor)
+                })
+
             jerarquia.append({
-                'gerente': gerente.serialize(),
-                'asesores': [asesor.serialize() for asesor in asesores],
-                'reclutas_gerente': self._count_reclutas_gerente(gerente.id),
-                'reclutas_total': self._count_reclutas_equipo(gerente.id)
+                'gerente': {
+                    **gerente.serialize(),
+                    'total_reclutas_directos': len(reclutas_directos),
+                    'resumen_estados': self._build_recluta_status_summary(reclutas_directos)
+                },
+                'asesores': asesores_data,
+                'reclutas_directos': [recluta.serialize() for recluta in reclutas_directos],
+                'resumen_equipo': self._build_recluta_status_summary(reclutas_equipo),
+                'reclutas_gerente': len(reclutas_directos),
+                'reclutas_total': len(reclutas_equipo)
             })
-        
+
         return jerarquia
-    
+
+    @staticmethod
+    def _build_recluta_status_summary(reclutas):
+        """Genera un resumen por estado para listas de reclutas"""
+        resumen = {}
+        for recluta in reclutas:
+            estado = (recluta.estado or 'Sin estado').strip()
+            resumen[estado] = resumen.get(estado, 0) + 1
+        return resumen
+
     def _count_reclutas_gerente(self, gerente_id):
         """Cuenta reclutas asignados directamente al gerente"""
         from models.recluta import Recluta
         return Recluta.query.filter_by(asesor_id=gerente_id).count()
-    
+
     def _count_reclutas_equipo(self, gerente_id):
         """Cuenta reclutas asignados al gerente y sus asesores"""
         from models.recluta import Recluta
         gerente = Usuario.query.get(gerente_id)
         if not gerente:
             return 0
-        
-        # Reclutas del gerente + reclutas de sus asesores
+
         asesores_ids = [asesor.id for asesor in gerente.get_mis_asesores()]
-        asesores_ids.append(gerente.id)  # Incluir al gerente mismo
-        
+        asesores_ids.append(gerente.id)
+
         return Recluta.query.filter(Recluta.asesor_id.in_(asesores_ids)).count()
-    
+
     def save(self):
         """Guarda el usuario en la base de datos de forma segura"""
         try:

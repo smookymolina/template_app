@@ -6,10 +6,14 @@ const Jerarquia = {
     
     init: function() {
         const currentUser = this.getCurrentUser();
-        if (!currentUser) return;
+        if (!currentUser || currentUser.rol !== 'admin') {
+            console.warn('Jerarquía: acceso restringido. Solo administradores pueden usar este módulo.');
+            return;
+        }
 
-        console.log('🏗️ Inicializando módulo de Jerarquía para rol:', currentUser.rol);
+        console.log('Jerarquía: inicializando módulo para administrador.');
         this.setupHierarchicalMetrics();
+        this.mostrarJerarquiaCompleta();
     },
 
     /**
@@ -220,7 +224,9 @@ const Jerarquia = {
             return;
         }
 
-        let html = `
+        const totalAsesores = jerarquia.reduce((sum, item) => sum + ((item.asesores || []).length), 0);
+
+        const headerHtml = `
             <div class="jerarquia-header">
                 <h3><i class="fas fa-sitemap"></i> Estructura Organizacional Completa</h3>
                 <div class="jerarquia-stats">
@@ -230,109 +236,213 @@ const Jerarquia = {
                     </span>
                     <span class="stat-item">
                         <i class="fas fa-users"></i>
-                        ${jerarquia.reduce((sum, g) => sum + (g.asesores?.length || 0), 0)} Asesores
+                        ${totalAsesores} Asesores
                     </span>
                 </div>
             </div>
-            <div class="jerarquia-tree">
         `;
 
-        jerarquia.forEach(item => {
-            const gerente = item.gerente || item;
-            const asesores = item.asesores || [];
-            const reclutasTotal = item.reclutas_total || 0;
+        const treeHtml = jerarquia.map(item => this.renderGerenteCard(item)).join('');
+        container.innerHTML = `${headerHtml}<div class="jerarquia-tree">${treeHtml}</div>`;
+    },
 
-            html += `
-                <div class="gerente-card" data-gerente-id="${gerente.id}">
-                    <div class="gerente-header" onclick="Jerarquia.toggleGerenteExpansion(${gerente.id})">
-                        <div class="gerente-info">
-                            <div class="gerente-avatar">
-                                <i class="fas fa-user-tie"></i>
-                            </div>
-                            <div class="gerente-details">
-                                <h4>${gerente.nombre || gerente.email}</h4>
-                                <p class="gerente-email">${gerente.email}</p>
-                            </div>
-                        </div>
-                        <div class="gerente-stats">
-                            <span class="stat-badge" title="Asesores">
-                                <i class="fas fa-users"></i> ${asesores.length}
-                            </span>
-                            <span class="stat-badge" title="Reclutas totales">
-                                <i class="fas fa-clipboard-list"></i> ${reclutasTotal}
-                            </span>
-                            <i class="fas fa-chevron-down expand-icon" id="expand-${gerente.id}"></i>
-                        </div>
+    renderGerenteCard: function(item) {
+        const gerente = item.gerente || item;
+        const asesores = item.asesores || [];
+        const resumenEquipoHtml = this.renderEstadoSummary(item.resumen_equipo);
+        const resumenGerenteHtml = this.renderEstadoSummary(gerente.resumen_estados);
+        const reclutasDirectos = item.reclutas_directos || [];
+
+        const directosHtml = reclutasDirectos.length
+            ? `
+                <div class="reclutas-section">
+                    <div class="section-subtitle">
+                        <h5><i class="fas fa-user-check"></i> Reclutas directos del gerente</h5>
+                        <span class="section-count">${reclutasDirectos.length}</span>
                     </div>
-
-                    <div class="asesores-container" id="asesores-${gerente.id}" style="display: none;">
-            `;
-
-            if (asesores.length > 0) {
-                asesores.forEach(asesor => {
-                    html += this.renderAsesorItem(asesor, gerente.id);
-                });
-            } else {
-                html += `
-                    <div class="empty-asesores">
-                        <i class="fas fa-info-circle"></i>
-                        <p>No hay asesores asignados a este gerente</p>
-                        <button class="btn-sm btn-primary" onclick="Jerarquia.abrirAsignacionAsesor(${gerente.id})">
-                            <i class="fas fa-plus"></i> Asignar Asesor
-                        </button>
-                    </div>
-                `;
-            }
-
-            html += `
+                    <div class="reclutas-cards">
+                        ${this.renderReclutasList(reclutasDirectos)}
                     </div>
                 </div>
-            `;
+            `
+            : '';
+
+        const asesoresHtml = asesores.length
+            ? asesores.map(asesor => this.renderAsesorItem(asesor, gerente.id)).join('')
+            : this.renderEmptyAsesores(gerente.id);
+
+        return `
+            <div class="gerente-card" data-gerente-id="${gerente.id}">
+                <div class="gerente-header" onclick="Jerarquia.toggleGerenteExpansion(${gerente.id})">
+                    <div class="gerente-info">
+                        <div class="gerente-avatar">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="gerente-details">
+                            <h4>${gerente.nombre || gerente.email}</h4>
+                            <p class="gerente-email">${gerente.email}</p>
+                        </div>
+                    </div>
+                    <div class="gerente-stats">
+                        <span class="stat-badge" title="Asesores">
+                            <i class="fas fa-users"></i> ${asesores.length}
+                        </span>
+                        <span class="stat-badge" title="Reclutas totales">
+                            <i class="fas fa-clipboard-list"></i> ${item.reclutas_total || 0}
+                        </span>
+                        <i class="fas fa-chevron-down expand-icon" id="expand-${gerente.id}"></i>
+                    </div>
+                </div>
+                <div class="gerente-body" id="gerente-body-${gerente.id}" style="display: none;">
+                    <div class="gerente-summaries">
+                        <div class="summary-block">
+                            <h5>Resumen del gerente</h5>
+                            ${resumenGerenteHtml}
+                        </div>
+                        <div class="summary-block">
+                            <h5>Resumen del equipo</h5>
+                            ${resumenEquipoHtml}
+                        </div>
+                    </div>
+                    ${directosHtml}
+                    <div class="asesores-list">
+                        <div class="section-subtitle">
+                            <h5><i class="fas fa-users"></i> Asesores asignados</h5>
+                            <span class="section-count">${asesores.length}</span>
+                        </div>
+                        ${asesoresHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    },
+
+    renderEstadoSummary: function(resumen) {
+        if (!resumen || Object.keys(resumen).length === 0) {
+            return '<div class="estado-summary empty"><span>Sin movimientos registrados</span></div>';
+        }
+
+        const order = ['activo', 'en proceso', 'rechazado'];
+        const entries = Object.entries(resumen).sort((a, b) => {
+            const estadoA = (a[0] || '').toLowerCase();
+            const estadoB = (b[0] || '').toLowerCase();
+            const idxA = order.indexOf(estadoA);
+            const idxB = order.indexOf(estadoB);
+            const weightA = idxA === -1 ? order.length : idxA;
+            const weightB = idxB === -1 ? order.length : idxB;
+            return weightA - weightB;
         });
 
-        html += '</div>';
-        container.innerHTML = html;
+        const badges = entries.map(([estado, total]) => {
+            const toneClass = this.getEstadoToneClass(estado);
+            return `<span class="estado-badge ${toneClass}">${this.formatEstado(estado)} (${total})</span>`;
+        }).join('');
+
+        return `<div class="estado-summary">${badges}</div>`;
+    },
+
+    renderEmptyAsesores: function(gerenteId) {
+        return `
+            <div class="empty-asesores">
+                <i class="fas fa-info-circle"></i>
+                <p>No hay asesores asignados a este gerente</p>
+                <button class="btn-sm btn-primary" onclick="event.stopPropagation(); Jerarquia.abrirAsignacionAsesor(${gerenteId});">
+                    <i class="fas fa-user-plus"></i> Asignar Asesor
+                </button>
+            </div>
+        `;
     },
 
     renderAsesorItem: function(asesor, gerenteId) {
-        const reclutasCount = asesor.total_reclutas || asesor.reclutas_count || 0;
+        const totalReclutas = asesor.total_reclutas || (Array.isArray(asesor.reclutas) ? asesor.reclutas.length : 0);
+        const resumenHtml = this.renderEstadoSummary(asesor.resumen_estados);
+        const reclutas = asesor.reclutas || [];
 
         return `
             <div class="asesor-item" data-asesor-id="${asesor.id}">
-                <div class="asesor-info">
-                    <div class="asesor-avatar">
-                        <i class="fas fa-user"></i>
+                <div class="asesor-header" onclick="Jerarquia.toggleAsesorExpansion(${gerenteId}, ${asesor.id})">
+                    <div class="asesor-info">
+                        <div class="asesor-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="asesor-details">
+                            <h5>${asesor.nombre || asesor.email}</h5>
+                            <p class="asesor-email">${asesor.email}</p>
+                        </div>
                     </div>
-                    <div class="asesor-details">
-                        <h5>${asesor.nombre || asesor.email}</h5>
-                        <p class="asesor-email">${asesor.email}</p>
+                    <div class="asesor-stats">
+                        <span class="reclutas-count" title="Reclutas asignados">
+                            <i class="fas fa-clipboard-list"></i> ${totalReclutas}
+                        </span>
+                        <i class="fas fa-chevron-down expand-icon" id="asesor-expand-${asesor.id}"></i>
                     </div>
                 </div>
-                <div class="asesor-stats">
-                    <span class="reclutas-count" title="Reclutas asignados">
-                        <i class="fas fa-clipboard-list"></i> ${reclutasCount}
-                    </span>
-                    <div class="asesor-actions">
-                        <button class="btn-sm btn-secondary" onclick="Jerarquia.verReclutasAsesor(${asesor.id})" title="Ver reclutas">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button class="btn-sm btn-warning" onclick="Jerarquia.reasignarAsesor(${asesor.id})" title="Reasignar">
-                            <i class="fas fa-exchange-alt"></i>
-                        </button>
-                    </div>
+                <div class="asesor-resumen">
+                    ${resumenHtml}
+                </div>
+                <div class="reclutas-list" id="asesor-reclutas-${asesor.id}" style="display: none;">
+                    ${this.renderReclutasList(reclutas)}
                 </div>
             </div>
         `;
     },
 
+    renderReclutasList: function(reclutas) {
+        if (!Array.isArray(reclutas) || reclutas.length === 0) {
+            return '<div class="empty-reclutas"><i class="fas fa-info-circle"></i> Sin reclutas asignados</div>';
+        }
+
+        return reclutas.map(recluta => {
+            const estadoClass = this.getEstadoToneClass(recluta.estado);
+            return `
+                <div class="recluta-item" data-recluta-id="${recluta.id}">
+                    <div class="recluta-info">
+                        <h5>${recluta.nombre || recluta.email || 'Recluta sin nombre'}</h5>
+                        <p>${recluta.email || 'Sin correo registrado'}</p>
+                        ${recluta.telefono ? `<p>${recluta.telefono}</p>` : ''}
+                    </div>
+                    <div class="recluta-meta">
+                        <span class="estado-badge ${estadoClass}">${this.formatEstado(recluta.estado)}</span>
+                        ${recluta.folio ? `<span class="recluta-folio">Folio: ${recluta.folio}</span>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    formatEstado: function(estado) {
+        if (!estado) return 'Sin estado';
+        const value = estado.toString().trim().toLowerCase();
+        return value.charAt(0).toUpperCase() + value.slice(1);
+    },
+
+    getEstadoToneClass: function(estado) {
+        const value = (estado || '').toString().toLowerCase();
+        if (value.includes('activo')) return 'estado-activo';
+        if (value.includes('proceso')) return 'estado-en-proceso';
+        if (value.includes('rechaz')) return 'estado-rechazado';
+        return '';
+    },
+
     toggleGerenteExpansion: function(gerenteId) {
-        const asesoresContainer = document.getElementById(`asesores-${gerenteId}`);
+        const body = document.getElementById(`gerente-body-${gerenteId}`);
         const expandIcon = document.getElementById(`expand-${gerenteId}`);
 
-        if (asesoresContainer && expandIcon) {
-            const isExpanded = asesoresContainer.style.display !== 'none';
+        if (body && expandIcon) {
+            const isExpanded = body.style.display !== 'none';
+            body.style.display = isExpanded ? 'none' : '';
+            expandIcon.classList.toggle('fa-chevron-down', isExpanded);
+            expandIcon.classList.toggle('fa-chevron-up', !isExpanded);
+        }
+    },
 
-            asesoresContainer.style.display = isExpanded ? 'none' : 'block';
+    toggleAsesorExpansion: function(gerenteId, asesorId) {
+        const list = document.getElementById(`asesor-reclutas-${asesorId}`);
+        const expandIcon = document.getElementById(`asesor-expand-${asesorId}`);
+
+        if (list && expandIcon) {
+            const isExpanded = list.style.display !== 'none';
+            list.style.display = isExpanded ? 'none' : '';
             expandIcon.classList.toggle('fa-chevron-down', isExpanded);
             expandIcon.classList.toggle('fa-chevron-up', !isExpanded);
         }

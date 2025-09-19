@@ -808,36 +808,39 @@ function setupHierarchicalNavigation(usuario) {
 }
 
 function setupNavigationElements(navJerarquia, jerarquiaSection, usuario) {
-    // ⚠️ PRUEBA TEMPORAL: Forzar mostrar siempre para debug
-    console.log('🚨 PRUEBA: Mostrando navegación jerárquica forzadamente');
-    navJerarquia.classList.remove('nav-jerarquia-hidden');
-    navJerarquia.classList.add('nav-jerarquia-visible');
-
-    // Mostrar/ocultar navegación según rol
     const rolLower = usuario.rol ? usuario.rol.toLowerCase() : '';
-    if (rolLower === 'admin' || rolLower === 'administrador' || rolLower === 'gerente') {
+
+    navJerarquia.classList.remove('nav-jerarquia-visible');
+    navJerarquia.classList.add('nav-jerarquia-hidden');
+
+    const adminControls = jerarquiaSection.querySelector('#admin-jerarquia-controls');
+    const gerenteControls = jerarquiaSection.querySelector('#gerente-jerarquia-controls');
+
+    if (adminControls) adminControls.style.display = 'none';
+    if (gerenteControls) gerenteControls.style.display = 'none';
+
+    if (rolLower === 'admin' || rolLower === 'administrador') {
         navJerarquia.classList.remove('nav-jerarquia-hidden');
         navJerarquia.classList.add('nav-jerarquia-visible');
-        
-        // Configurar controles específicos según rol
-        const adminControls = jerarquiaSection.querySelector('#admin-jerarquia-controls');
-        const gerenteControls = jerarquiaSection.querySelector('#gerente-jerarquia-controls');
-        
-        if (rolLower === 'admin' || rolLower === 'administrador') {
-            if (adminControls) adminControls.style.display = 'block';
-            if (gerenteControls) gerenteControls.style.display = 'none';
-            console.log('🔧 Navegación jerárquica habilitada para admin');
-        } else if (rolLower === 'gerente') {
-            if (adminControls) adminControls.style.display = 'none';
-            if (gerenteControls) gerenteControls.style.display = 'block';
-            console.log('🔧 Navegación jerárquica habilitada para gerente');
-        }
+        if (adminControls) adminControls.style.display = 'block';
+        console.log('Navegación jerárquica habilitada para administrador');
     } else {
-        navJerarquia.classList.remove('nav-jerarquia-visible');
-        navJerarquia.classList.add('nav-jerarquia-hidden');
-        console.log('🔧 Navegación jerárquica deshabilitada para rol:', usuario.rol);
+        console.log('Navegación jerárquica oculta para rol:', usuario.rol);
     }
 }
+function setupGestionGerentesControls(currentUser) {
+    const section = document.getElementById('gestion-gerentes-section');
+    if (!section) return;
+
+    section.classList.toggle('gerentes-admin-view', currentUser?.rol === 'admin');
+
+    const adminOnlyBlocks = section.querySelectorAll('[data-admin-only]');
+    adminOnlyBlocks.forEach(element => {
+        element.style.display = currentUser?.rol === 'admin' ? '' : 'none';
+    });
+}
+
+
 
 /**
  * ✅ MOSTRAR MENSAJE DE BIENVENIDA
@@ -1193,16 +1196,16 @@ function updateNavigationByRole() {
     // Controlar visibilidad de Gestión de Gerentes (Admin y Gerentes)
     const navGestionGerentes = document.getElementById('nav-gestion-gerentes');
     if (navGestionGerentes) {
-        if (currentUser.rol === 'admin' || currentUser.rol === 'gerente') {
+        if (currentUser.rol === 'admin') {
             navGestionGerentes.style.display = 'list-item';
             navGestionGerentes.classList.remove('nav-admin-hidden');
             navGestionGerentes.classList.add('nav-admin-visible');
-            console.log('✅ Pestaña Gestión de Gerentes habilitada para', currentUser.rol);
+            console.log('Gestión de Gerentes habilitada para administrador');
         } else {
             navGestionGerentes.style.display = 'none';
             navGestionGerentes.classList.add('nav-admin-hidden');
             navGestionGerentes.classList.remove('nav-admin-visible');
-            console.log('🔒 Pestaña Gestión de Gerentes oculta para rol:', currentUser.rol);
+            console.log('Gestión de Gerentes oculta para rol:', currentUser.rol);
         }
     }
     
@@ -1499,8 +1502,8 @@ function handleGestionGerentesSection() {
     const currentUser = getCurrentUser();
     console.log('🏗️ Accediendo a gestión de gerentes, usuario:', currentUser?.rol);
 
-    if (currentUser?.rol !== 'admin' && currentUser?.rol !== 'gerente') {
-        showNotification('Acceso denegado. Permisos insuficientes.', 'error');
+    if (currentUser?.rol !== 'admin') {
+        showNotification('Acceso denegado. Solo los administradores pueden gestionar gerentes.', 'error');
         showSection('reclutas-section');
         return;
     }

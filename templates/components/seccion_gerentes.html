@@ -1,14 +1,19 @@
-
 <div id="gestion-gerentes-section" class="content-section" style="display: none;">
     <div class="section-header">
         <h2><i class="fas fa-users-cog"></i> Gestión de Gerentes</h2>
-        <p>Administrar la jerarquía organizacional y asignación de equipos.</p>
+        <p>Supervisa la jerarquía de gerentes, asesores y reclutas desde un solo panel.</p>
     </div>
 
-    <!-- El contenedor de métricas será insertado aquí por jerarquia.js -->
+    <!-- El contenedor de métricas se inserta dinámicamente mediante jerarquia.js -->
 
-    <div id="jerarquia-container" class="card">
-        <!-- La visualización de la jerarquía se renderizará aquí -->
-        <p>La vista de jerarquía aparecerá aquí...</p>
+    <div class="jerarquia-hint" data-admin-only>
+        <i class="fas fa-info-circle"></i>
+        <span>Haz clic en un gerente para desplegar a sus asesores y luego en cada asesor para explorar sus reclutas y estados de proceso.</span>
+    </div>
+
+    <div id="jerarquia-container" class="jerarquia-container">
+        <div class="info-placeholder">
+            Selecciona un gerente para visualizar la estructura jerárquica.
+        </div>
     </div>
 </div>

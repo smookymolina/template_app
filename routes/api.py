@@ -61,19 +61,59 @@ def create_user():
 @login_required
 def get_asesores():
     """
-    Obtiene la lista de usuarios que pueden ser asesores.
-    Solo devuelve usuarios con rol 'asesor' o 'gerente', no administradores.
+    Obtiene la lista de usuarios según filtros jerárquicos.
+    Permite solicitar solo gerentes, asesores o ambos y filtrar por asignación.
     """
     try:
-        # Filtrar solo usuarios con rol de asesor o gerente
-        asesores = Usuario.query.filter(
-            Usuario.is_active == True,
-            Usuario.rol.in_(['asesor', 'gerente'])
-        ).all()
-        
+        roles_param = request.args.get('rol')
+        sin_gerente_param = request.args.get('sin_gerente', '')
+        gerente_id = request.args.get('gerente_id', type=int)
+
+        valid_roles = ['gerente', 'asesor']
+        if roles_param:
+            requested_roles = [role.strip().lower() for role in roles_param.split(',') if role.strip()]
+            filtered_roles = []
+            for role in requested_roles:
+                if role in valid_roles and role not in filtered_roles:
+                    filtered_roles.append(role)
+        else:
+            filtered_roles = valid_roles.copy()
+
+        sin_gerente_param = (sin_gerente_param or '').strip().lower()
+        sin_gerente_param = sin_gerente_param.replace('\u00ed', 'i')
+        sin_gerente = sin_gerente_param in {'1', 'true', 'yes', 'si'}
+
+        if not filtered_roles:
+            return jsonify({
+                "success": True,
+                "asesores": [],
+                "filters": {
+                    "roles": [],
+                    "sin_gerente": sin_gerente,
+                    "gerente_id": gerente_id
+                }
+            })
+
+        query = Usuario.query.filter(Usuario.rol.in_(filtered_roles))
+        query = query.filter(Usuario.is_active.is_(True))
+
+        if sin_gerente:
+            query = query.filter(Usuario.gerente_id.is_(None))
+        elif gerente_id is not None:
+            query = query.filter(Usuario.gerente_id == gerente_id)
+
+        query = query.order_by(Usuario.nombre.asc(), Usuario.email.asc())
+
+        usuarios = query.all()
         return jsonify({
             "success": True,
-            "asesores": [a.serialize() for a in asesores]
+            "asesores": [usuario.serialize() for usuario in usuarios],
+            "total": len(usuarios),
+            "filters": {
+                "roles": filtered_roles,
+                "sin_gerente": sin_gerente,
+                "gerente_id": gerente_id
+            }
         })
     except Exception as e:
         current_app.logger.error(f"Error al obtener asesores: {str(e)}")
