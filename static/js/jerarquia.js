@@ -220,40 +220,492 @@ const Jerarquia = {
             return;
         }
 
-        const html = jerarquia.map(gerente => `
-            <div class="card gerente-card">
-                <div class="card-header">
-                    <h4><i class="fas fa-user-tie"></i> ${gerente.nombre}</h4>
-                    <span class="badge badge-primary">${gerente.asesores.length} asesores</span>
-                </div>
-                <div class="card-body">
-                    ${gerente.asesores.length > 0 ? this.renderAsesores(gerente.asesores) : '<p>No tiene asesores asignados.</p>'}
+        let html = `
+            <div class="jerarquia-header">
+                <h3><i class="fas fa-sitemap"></i> Estructura Organizacional Completa</h3>
+                <div class="jerarquia-stats">
+                    <span class="stat-item">
+                        <i class="fas fa-user-tie"></i>
+                        ${jerarquia.length} Gerentes
+                    </span>
+                    <span class="stat-item">
+                        <i class="fas fa-users"></i>
+                        ${jerarquia.reduce((sum, g) => sum + (g.asesores?.length || 0), 0)} Asesores
+                    </span>
                 </div>
             </div>
-        `).join('');
+            <div class="jerarquia-tree">
+        `;
 
+        jerarquia.forEach(item => {
+            const gerente = item.gerente || item;
+            const asesores = item.asesores || [];
+            const reclutasTotal = item.reclutas_total || 0;
+
+            html += `
+                <div class="gerente-card" data-gerente-id="${gerente.id}">
+                    <div class="gerente-header" onclick="Jerarquia.toggleGerenteExpansion(${gerente.id})">
+                        <div class="gerente-info">
+                            <div class="gerente-avatar">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <div class="gerente-details">
+                                <h4>${gerente.nombre || gerente.email}</h4>
+                                <p class="gerente-email">${gerente.email}</p>
+                            </div>
+                        </div>
+                        <div class="gerente-stats">
+                            <span class="stat-badge" title="Asesores">
+                                <i class="fas fa-users"></i> ${asesores.length}
+                            </span>
+                            <span class="stat-badge" title="Reclutas totales">
+                                <i class="fas fa-clipboard-list"></i> ${reclutasTotal}
+                            </span>
+                            <i class="fas fa-chevron-down expand-icon" id="expand-${gerente.id}"></i>
+                        </div>
+                    </div>
+
+                    <div class="asesores-container" id="asesores-${gerente.id}" style="display: none;">
+            `;
+
+            if (asesores.length > 0) {
+                asesores.forEach(asesor => {
+                    html += this.renderAsesorItem(asesor, gerente.id);
+                });
+            } else {
+                html += `
+                    <div class="empty-asesores">
+                        <i class="fas fa-info-circle"></i>
+                        <p>No hay asesores asignados a este gerente</p>
+                        <button class="btn-sm btn-primary" onclick="Jerarquia.abrirAsignacionAsesor(${gerente.id})">
+                            <i class="fas fa-plus"></i> Asignar Asesor
+                        </button>
+                    </div>
+                `;
+            }
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+
+        html += '</div>';
         container.innerHTML = html;
     },
 
-    renderAsesores: function(asesores) {
-        return '<div class="asesores-grid">' + asesores.map(asesor => `
-            <div class="card asesor-card">
-                <p><i class="fas fa-user"></i> ${asesor.nombre}</p>
-                <p><i class="fas fa-users"></i> ${asesor.reclutas_count} reclutas</p>
+    renderAsesorItem: function(asesor, gerenteId) {
+        const reclutasCount = asesor.total_reclutas || asesor.reclutas_count || 0;
+
+        return `
+            <div class="asesor-item" data-asesor-id="${asesor.id}">
+                <div class="asesor-info">
+                    <div class="asesor-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="asesor-details">
+                        <h5>${asesor.nombre || asesor.email}</h5>
+                        <p class="asesor-email">${asesor.email}</p>
+                    </div>
+                </div>
+                <div class="asesor-stats">
+                    <span class="reclutas-count" title="Reclutas asignados">
+                        <i class="fas fa-clipboard-list"></i> ${reclutasCount}
+                    </span>
+                    <div class="asesor-actions">
+                        <button class="btn-sm btn-secondary" onclick="Jerarquia.verReclutasAsesor(${asesor.id})" title="Ver reclutas">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn-sm btn-warning" onclick="Jerarquia.reasignarAsesor(${asesor.id})" title="Reasignar">
+                            <i class="fas fa-exchange-alt"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
-        `).join('') + '</div>';
+        `;
+    },
+
+    toggleGerenteExpansion: function(gerenteId) {
+        const asesoresContainer = document.getElementById(`asesores-${gerenteId}`);
+        const expandIcon = document.getElementById(`expand-${gerenteId}`);
+
+        if (asesoresContainer && expandIcon) {
+            const isExpanded = asesoresContainer.style.display !== 'none';
+
+            asesoresContainer.style.display = isExpanded ? 'none' : 'block';
+            expandIcon.classList.toggle('fa-chevron-down', isExpanded);
+            expandIcon.classList.toggle('fa-chevron-up', !isExpanded);
+        }
+    },
+
+    verReclutasAsesor: async function(asesorId) {
+        try {
+            console.log('Viendo reclutas del asesor:', asesorId);
+
+            const response = await fetch(`/api/reclutas?asesor_id=${asesorId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.mostrarModalReclutasAsesor(asesorId, data.reclutas);
+            } else {
+                showError(data.message || 'Error al cargar reclutas del asesor');
+            }
+
+        } catch (error) {
+            console.error('Error cargando reclutas del asesor:', error);
+            showError('Error de conexión al cargar reclutas del asesor');
+        }
+    },
+
+    mostrarModalReclutasAsesor: function(asesorId, reclutas) {
+        // Crear modal dinámico para mostrar reclutas
+        const modalHtml = `
+            <div id="modalReclutasAsesor" class="modal">
+                <div class="modal-content modal-lg">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-clipboard-list"></i> Reclutas del Asesor</h3>
+                        <span class="close-modal" onclick="this.closest('.modal').remove()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="reclutas-list">
+                            ${reclutas.length > 0 ?
+                                reclutas.map(recluta => `
+                                    <div class="recluta-item">
+                                        <div class="recluta-info">
+                                            <h5>${recluta.nombre}</h5>
+                                            <p>${recluta.puesto || 'Sin puesto'}</p>
+                                            <span class="estado-badge estado-${(recluta.estado || 'activo').toLowerCase()}">
+                                                ${recluta.estado || 'Activo'}
+                                            </span>
+                                        </div>
+                                        <div class="recluta-meta">
+                                            <p><i class="fas fa-envelope"></i> ${recluta.email}</p>
+                                            <p><i class="fas fa-phone"></i> ${recluta.telefono}</p>
+                                            <p><i class="fas fa-calendar"></i> ${new Date(recluta.fecha_registro).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                `).join('')
+                                : '<div class="empty-state"><i class="fas fa-inbox"></i><p>No hay reclutas asignados</p></div>'
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Agregar modal al DOM
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Mostrar modal
+        const modal = document.getElementById('modalReclutasAsesor');
+        if (modal) {
+            modal.style.display = 'block';
+        }
+    },
+
+    abrirAsignacionAsesor: function(gerenteId) {
+        console.log('Abriendo asignación de asesor para gerente:', gerenteId);
+        showNotification('Función de asignación de asesor en desarrollo', 'info');
+    },
+
+    reasignarAsesor: function(asesorId) {
+        console.log('Reasignando asesor:', asesorId);
+        showNotification('Función de reasignación de asesor en desarrollo', 'info');
     },
 
     mostrarAsignacionAsesores: async function() {
-        showNotification('Función "Asignar Asesores a Gerentes" aún no implementada.', 'info');
-        console.log('TODO: Implementar mostrarAsignacionAsesores');
-        // Modal para asignar asesores sin gerente a gerentes existentes
+        try {
+            console.log('Cargando modal de asignación de asesores...');
+
+            // Obtener gerentes y asesores sin asignar
+            const [gerentesResponse, asesoresResponse] = await Promise.all([
+                fetch('/api/asesores?rol=gerente'),
+                fetch('/api/asesores?rol=asesor')
+            ]);
+
+            const gerentesData = await gerentesResponse.json();
+            const asesoresData = await asesoresResponse.json();
+
+            if (gerentesData.success && asesoresData.success) {
+                // Filtrar asesores sin gerente
+                const asesoresSinGerente = asesoresData.asesores.filter(asesor => !asesor.gerente_id);
+
+                this.mostrarModalAsignacionAsesores(gerentesData.asesores, asesoresSinGerente);
+            } else {
+                showError('Error al cargar datos para asignación');
+            }
+
+        } catch (error) {
+            console.error('Error cargando asignación:', error);
+            showError('Error de conexión al cargar asignación');
+        }
+    },
+
+    mostrarModalAsignacionAsesores: function(gerentes, asesoresSinGerente) {
+        const modalHtml = `
+            <div id="modalAsignacionAsesores" class="modal">
+                <div class="modal-content modal-lg">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-user-plus"></i> Asignar Asesores a Gerentes</h3>
+                        <span class="close-modal" onclick="this.closest('.modal').remove()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="asignacion-container">
+                            <div class="asignacion-form">
+                                <div class="form-group">
+                                    <label for="selectGerente">Seleccionar Gerente:</label>
+                                    <select id="selectGerente" class="form-control">
+                                        <option value="">-- Selecciona un gerente --</option>
+                                        ${gerentes.map(gerente =>
+                                            `<option value="${gerente.id}">${gerente.nombre || gerente.email}</option>`
+                                        ).join('')}
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="selectAsesor">Seleccionar Asesor:</label>
+                                    <select id="selectAsesor" class="form-control">
+                                        <option value="">-- Selecciona un asesor --</option>
+                                        ${asesoresSinGerente.map(asesor =>
+                                            `<option value="${asesor.id}">${asesor.nombre || asesor.email}</option>`
+                                        ).join('')}
+                                    </select>
+                                </div>
+                                <div class="form-actions">
+                                    <button class="btn-primary" onclick="Jerarquia.ejecutarAsignacionAsesor()">
+                                        <i class="fas fa-check"></i> Asignar Asesor
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="asignaciones-actuales">
+                                <h4>Asignaciones Actuales</h4>
+                                <div class="gerentes-asignados">
+                                    ${gerentes.map(gerente => `
+                                        <div class="gerente-asignacion">
+                                            <h5>${gerente.nombre || gerente.email}</h5>
+                                            <p>${gerente.total_asesores || 0} asesores asignados</p>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+
+                        ${asesoresSinGerente.length === 0 ?
+                            '<div class="info-message"><i class="fas fa-info-circle"></i> Todos los asesores ya están asignados</div>'
+                            : ''
+                        }
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        const modal = document.getElementById('modalAsignacionAsesores');
+        if (modal) {
+            modal.style.display = 'block';
+        }
+    },
+
+    ejecutarAsignacionAsesor: async function() {
+        const gerenteId = document.getElementById('selectGerente')?.value;
+        const asesorId = document.getElementById('selectAsesor')?.value;
+
+        if (!gerenteId || !asesorId) {
+            showNotification('Selecciona ambos: gerente y asesor', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/gerentes/asignar-asesor', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    gerente_id: parseInt(gerenteId),
+                    asesor_id: parseInt(asesorId)
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showNotification(data.message, 'success');
+                document.getElementById('modalAsignacionAsesores')?.remove();
+
+                // Recargar jerarquía si está visible
+                if (document.getElementById('jerarquia-container')?.innerHTML.includes('jerarquia-tree')) {
+                    this.mostrarJerarquiaCompleta();
+                }
+            } else {
+                showError(data.message || 'Error en la asignación');
+            }
+
+        } catch (error) {
+            console.error('Error ejecutando asignación:', error);
+            showError('Error de conexión en la asignación');
+        }
     },
 
     redistribuirReclutasGerente: async function() {
-        showNotification('Función "Redistribuir Reclutas" aún no implementada.', 'info');
-        console.log('TODO: Implementar redistribuirReclutasGerente');
-        // Modal específico para que gerente redistribuya SUS reclutas
+        try {
+            console.log('Cargando modal de redistribución para gerente...');
+
+            // Obtener información del dashboard del gerente
+            const response = await fetch('/api/reclutas/dashboard-gerente');
+            const data = await response.json();
+
+            if (data.success) {
+                this.mostrarModalRedistribucionGerente(data);
+            } else {
+                showError(data.message || 'Error al cargar información del gerente');
+            }
+
+        } catch (error) {
+            console.error('Error cargando redistribución:', error);
+            showError('Error de conexión al cargar redistribución');
+        }
+    },
+
+    mostrarModalRedistribucionGerente: function(dashboardData) {
+        const misReclutas = dashboardData.mis_reclutas || [];
+        const asesores = dashboardData.asesores || [];
+
+        const modalHtml = `
+            <div id="modalRedistribucionGerente" class="modal">
+                <div class="modal-content modal-lg">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-share-alt"></i> Redistribuir Mis Reclutas</h3>
+                        <span class="close-modal" onclick="this.closest('.modal').remove()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="redistribucion-info">
+                            <h4>Reclutas Disponibles para Redistribuir: <span class="badge">${misReclutas.length}</span></h4>
+                        </div>
+
+                        ${misReclutas.length === 0 ?
+                            '<div class="info-message"><i class="fas fa-info-circle"></i> No tienes reclutas para redistribuir</div>'
+                            : `
+                            <div class="redistribucion-container">
+                                <div class="reclutas-section">
+                                    <h5>Seleccionar Reclutas:</h5>
+                                    <div class="reclutas-checkbox-list">
+                                        ${misReclutas.map(recluta => `
+                                            <label class="checkbox-item">
+                                                <input type="checkbox" name="reclutaSelect" value="${recluta.id}">
+                                                <span class="checkbox-label">
+                                                    <strong>${recluta.nombre}</strong> - ${recluta.puesto || 'Sin puesto'}
+                                                    <small>(${recluta.estado || 'Activo'})</small>
+                                                </span>
+                                            </label>
+                                        `).join('')}
+                                    </div>
+                                    <div class="selection-controls">
+                                        <button type="button" class="btn-sm btn-secondary" onclick="Jerarquia.selectAllReclutas(true)">
+                                            Seleccionar Todos
+                                        </button>
+                                        <button type="button" class="btn-sm btn-secondary" onclick="Jerarquia.selectAllReclutas(false)">
+                                            Deseleccionar Todos
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="asesores-section">
+                                    <h5>Asignar a Asesor:</h5>
+                                    <select id="selectAsesorDestino" class="form-control">
+                                        <option value="">-- Selecciona un asesor --</option>
+                                        ${asesores.map(asesor => `
+                                            <option value="${asesor.id}">
+                                                ${asesor.nombre || asesor.email} (${asesor.total_reclutas || 0} reclutas)
+                                            </option>
+                                        `).join('')}
+                                    </select>
+                                </div>
+
+                                <div class="form-actions">
+                                    <button class="btn-primary" onclick="Jerarquia.ejecutarRedistribucionGerente()">
+                                        <i class="fas fa-share-alt"></i> Redistribuir Seleccionados
+                                    </button>
+                                </div>
+                            </div>
+                            `
+                        }
+
+                        ${asesores.length === 0 ?
+                            '<div class="warning-message"><i class="fas fa-exclamation-triangle"></i> No tienes asesores asignados para redistribuir</div>'
+                            : ''
+                        }
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        const modal = document.getElementById('modalRedistribucionGerente');
+        if (modal) {
+            modal.style.display = 'block';
+        }
+    },
+
+    selectAllReclutas: function(select) {
+        const checkboxes = document.querySelectorAll('input[name="reclutaSelect"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = select;
+        });
+    },
+
+    ejecutarRedistribucionGerente: async function() {
+        const selectedReclutas = Array.from(document.querySelectorAll('input[name="reclutaSelect"]:checked'))
+            .map(checkbox => parseInt(checkbox.value));
+
+        const asesorDestino = document.getElementById('selectAsesorDestino')?.value;
+
+        if (selectedReclutas.length === 0) {
+            showNotification('Selecciona al menos un recluta', 'warning');
+            return;
+        }
+
+        if (!asesorDestino) {
+            showNotification('Selecciona un asesor destino', 'warning');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/gerentes/redistribuir-reclutas', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    recluta_ids: selectedReclutas,
+                    asesor_id: parseInt(asesorDestino)
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showNotification(`${data.redistribuidos} reclutas redistribuidos exitosamente`, 'success');
+                document.getElementById('modalRedistribucionGerente')?.remove();
+
+                // Recargar vista del equipo
+                this.verMiEquipo();
+            } else {
+                showError(data.message || 'Error en la redistribución');
+            }
+
+        } catch (error) {
+            console.error('Error ejecutando redistribución:', error);
+            showError('Error de conexión en la redistribución');
+        }
     }
 };
 

@@ -216,93 +216,71 @@ def register_request_hooks(app):
         return response
 
 def initialize_database(app):
-    """Inicializa la base de datos y crea datos iniciales"""
-    # Importar todos los modelos para asegurar que las tablas se creen
+    """Inicializa la base de datos y crea datos iniciales si es entorno de desarrollo."""
+    # Importar modelos necesarios
     from models.usuario import Usuario
-    from models.recluta import Recluta
-    from models.entrevista import Entrevista
-    from models.evento_recluta import EventoRecluta
     
-    # Crear tablas
+    # Crear tablas de la base de datos
     db.create_all()
     app.logger.info('Tablas de base de datos creadas/verificadas')
-    
-    # Crear usuario admin por defecto si no existe
-    admin_email = 'admin@example.com'
-    admin_user = Usuario.query.filter_by(email=admin_email).first()
-    if not admin_user:
-        admin = Usuario(
-            email=admin_email,
-            nombre='Administrador Principal',
-            rol='admin'
-        )
-        admin.password = 'admin'
-        db.session.add(admin)
-        app.logger.info(f'Usuario admin creado: {admin_email}')
-    else:
-        if not admin_user.rol:
-            admin_user.rol = 'admin'
-            db.session.commit()
-            app.logger.info(f'Rol admin asignado a usuario existente: {admin_email}')
-    
-    # Crear segundo admin para pruebas
-    admin2_email = 'admin2@example.com'
-    admin2_user = Usuario.query.filter_by(email=admin2_email).first()
-    if not admin2_user:
-        admin2 = Usuario(
-            email=admin2_email,
-            nombre='Admin Secundario',
-            rol='admin'
-        )
-        admin2.password = 'admin2'
-        db.session.add(admin2)
-        app.logger.info(f'Usuario admin2 creado: {admin2_email}')
-    else:
-        if not admin2_user.rol:
-            admin2_user.rol = 'admin'
-            db.session.commit()
-            app.logger.info(f'Rol admin asignado a usuario existente: {admin2_email}')
-    
-    # Crear asesores de prueba
-    asesores_prueba = [
+
+    # Usar una variable de entorno o configuración para decidir si crear usuarios
+    # Aquí usamos FLASK_ENV que ya está configurado en la app
+    if app.config.get('FLASK_ENV') == 'development' and app.config.get('SEED_DEV_USERS'):
+        crear_usuarios_desarrollo(app)
+
+def crear_usuarios_desarrollo(app):
+    """Crea un conjunto de usuarios por defecto para el entorno de desarrollo."""
+    from models.usuario import Usuario
+
+    usuarios_desarrollo = [
+        {
+            'email': 'admin@example.com',
+            'nombre': 'Administrador Principal',
+            'rol': 'admin',
+            'password': 'admin'
+        },
+        {
+            'email': 'admin2@example.com',
+            'nombre': 'Admin Secundario',
+            'rol': 'admin',
+            'password': 'admin2'
+        },
         {
             'email': 'asesor1@example.com',
             'nombre': 'María García',
-            'password': 'asesor1',
-            'rol': 'asesor'
+            'rol': 'asesor',
+            'password': 'asesor1'
         },
         {
-            'email': 'asesor2@example.com', 
+            'email': 'asesor2@example.com',
             'nombre': 'Juan Rodríguez',
-            'password': 'asesor2',
-            'rol': 'asesor'
+            'rol': 'asesor',
+            'password': 'asesor2'
         },
         {
             'email': 'gerente1@example.com',
             'nombre': 'Ana López',
-            'password': 'gerente1',
-            'rol': 'gerente'
+            'rol': 'gerente',
+            'password': 'gerente1'
         }
     ]
-    
-    for asesor_data in asesores_prueba:
-        existing_asesor = Usuario.query.filter_by(email=asesor_data['email']).first()
-        if not existing_asesor:
-            nuevo_asesor = Usuario(
-                email=asesor_data['email'],
-                nombre=asesor_data['nombre'],
-                rol=asesor_data['rol']
+
+    for user_data in usuarios_desarrollo:
+        usuario_existente = Usuario.query.filter_by(email=user_data['email']).first()
+        if not usuario_existente:
+            nuevo_usuario = Usuario(
+                email=user_data['email'],
+                nombre=user_data['nombre'],
+                rol=user_data['rol']
             )
-            nuevo_asesor.password = asesor_data['password']
-            db.session.add(nuevo_asesor)
-            app.logger.info(f'Usuario {asesor_data["rol"]} creado: {asesor_data["email"]}')
+            nuevo_usuario.password = user_data['password']
+            db.session.add(nuevo_usuario)
+            app.logger.info(f'Usuario de desarrollo creado: {user_data["email"]}')
         else:
-            # Asegurar que tenga el rol correcto
-            if existing_asesor.rol != asesor_data['rol']:
-                existing_asesor.rol = asesor_data['rol']
-                existing_asesor.nombre = asesor_data['nombre']
-                db.session.commit()
-                app.logger.info(f'Rol {asesor_data["rol"]} asignado a usuario existente: {asesor_data["email"]}')
-    
-    # Commit de cambios
+            # Opcional: asegurar que el rol sea el correcto si el usuario ya existe
+            if usuario_existente.rol != user_data['rol']:
+                usuario_existente.rol = user_data['rol']
+                app.logger.info(f'Rol actualizado para usuario de desarrollo: {user_data["email"]}')
+
     db.session.commit()

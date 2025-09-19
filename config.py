@@ -6,6 +6,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     PROFILE_IMG_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'uploads', 'profile_images')
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
+    SEED_DEV_USERS = os.environ.get('SEED_DEV_USERS', 'false').lower() == 'true'
 
     @staticmethod
     def init_app(app):

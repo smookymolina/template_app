@@ -3951,3 +3951,369 @@ body.dark-mode .status-inactive {
         justify-content: center;
     }
 }
+
+/* =============================================================================== */
+/* 🆕 ESTILOS ADICIONALES PARA NUEVAS FUNCIONALIDADES */
+/* =============================================================================== */
+
+/* Iconos expandibles en jerarquía */
+.expand-icon {
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    color: var(--text-light);
+    font-size: 0.9rem;
+}
+
+.expand-icon:hover {
+    color: var(--primary-color);
+}
+
+.expand-icon.fa-chevron-up {
+    transform: rotate(180deg);
+}
+
+/* Estados de reclutas */
+.estado-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.estado-activo {
+    background: #e8f5e8;
+    color: var(--success-color);
+}
+
+.estado-en-proceso {
+    background: #fff3cd;
+    color: var(--warning-color);
+}
+
+.estado-rechazado {
+    background: #f8d7da;
+    color: var(--danger-color);
+}
+
+body.dark-mode .estado-activo {
+    background: #1b3a1b;
+    color: #4caf50;
+}
+
+body.dark-mode .estado-en-proceso {
+    background: #3a3520;
+    color: #ffb74d;
+}
+
+body.dark-mode .estado-rechazado {
+    background: #3a1e20;
+    color: #f48fb1;
+}
+
+/* Controles de selección de reclutas */
+.reclutas-checkbox-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 8px;
+    background: var(--light-color);
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    margin-bottom: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.checkbox-item:hover {
+    background: var(--primary-light);
+}
+
+.checkbox-item input[type="checkbox"] {
+    margin: 0;
+}
+
+.checkbox-label {
+    flex: 1;
+    font-size: 0.9rem;
+}
+
+.checkbox-label strong {
+    color: var(--text-color);
+}
+
+.checkbox-label small {
+    color: var(--text-light);
+    margin-left: 8px;
+}
+
+body.dark-mode .reclutas-checkbox-list {
+    background: #1e1e2c;
+    border-color: var(--border-color);
+}
+
+body.dark-mode .checkbox-item:hover {
+    background: #252836;
+}
+
+/* Controles de selección */
+.selection-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Información de asignación */
+.asignacion-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.asignacion-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.asignaciones-actuales {
+    background: var(--light-color);
+    padding: 16px;
+    border-radius: var(--border-radius);
+}
+
+.gerentes-asignados {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.gerente-asignacion {
+    background: white;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.gerente-asignacion h5 {
+    margin: 0 0 4px 0;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.gerente-asignacion p {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 0.8rem;
+}
+
+body.dark-mode .asignaciones-actuales {
+    background: #1e1e2c;
+}
+
+body.dark-mode .gerente-asignacion {
+    background: #252836;
+    border-color: var(--border-color);
+}
+
+/* Mensajes informativos y de advertencia */
+.info-message, .warning-message {
+    padding: 12px 16px;
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    margin: 16px 0;
+}
+
+.info-message {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    color: #1976d2;
+}
+
+.warning-message {
+    background: #fff8e1;
+    border: 1px solid #ffecb3;
+    color: #f57c00;
+}
+
+body.dark-mode .info-message {
+    background: #1a2332;
+    border-color: #2a3442;
+    color: #64b5f6;
+}
+
+body.dark-mode .warning-message {
+    background: #3a3520;
+    border-color: #4a4020;
+    color: #ffb74d;
+}
+
+/* Cards de reclutas en modales */
+.recluta-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--light-color);
+    margin-bottom: 8px;
+}
+
+.recluta-info h5 {
+    margin: 0 0 4px 0;
+    color: var(--text-color);
+    font-size: 1rem;
+}
+
+.recluta-info p {
+    margin: 2px 0;
+    color: var(--text-light);
+    font-size: 0.85rem;
+}
+
+.recluta-meta {
+    text-align: right;
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+
+.recluta-meta p {
+    margin: 2px 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    justify-content: flex-end;
+}
+
+body.dark-mode .recluta-item {
+    background: #252836;
+    border-color: var(--border-color);
+}
+
+/* Espaciado y distribución en redistribución */
+.redistribucion-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.reclutas-section,
+.asesores-section {
+    padding: 16px;
+    background: var(--light-color);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.reclutas-section h5,
+.asesores-section h5 {
+    margin: 0 0 12px 0;
+    color: var(--text-color);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+body.dark-mode .reclutas-section,
+body.dark-mode .asesores-section {
+    background: #1e1e2c;
+    border-color: var(--border-color);
+}
+
+/* Botones de tamaño específico */
+.btn-xs {
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    border-radius: 3px;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border-radius: 4px;
+}
+
+/* Loading containers específicos */
+.loading-container {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+}
+
+.loading-container i {
+    font-size: 2rem;
+    margin-bottom: 12px;
+    color: var(--primary-color);
+    animation: spin 1s linear infinite;
+}
+
+.loading-container p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Error containers */
+.error-container {
+    text-align: center;
+    padding: 40px;
+    color: var(--danger-color);
+}
+
+.error-container i {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.7;
+}
+
+.error-container h4 {
+    color: var(--danger-color);
+    margin-bottom: 8px;
+}
+
+.error-container p {
+    color: var(--text-light);
+    margin-bottom: 16px;
+}
+
+/* Responsive adicional para modales jerárquicos */
+@media (max-width: 768px) {
+    .asignacion-container {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .redistribucion-container {
+        gap: 16px;
+    }
+
+    .recluta-item {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .recluta-meta {
+        text-align: left;
+    }
+
+    .selection-controls {
+        flex-direction: column;
+        gap: 4px;
+    }
+}
