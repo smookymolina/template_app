@@ -1,4 +1,4 @@
-// ============================================================================
+﻿// ============================================================================
 // 🎓 SISTEMA DE TUTORIAL INTERACTIVO - PORTAL PÚBLICO DE SEGUIMIENTO
 // Archivo: static/js/tutorial.js
 // Versión: 3.2 - Código Completo con Fixes de Estabilidad
@@ -480,6 +480,55 @@ action: 'highlight',
             position: 'left',
             action: 'highlight',
             nextButton: '¡Entendido!'
+        }
+    ],
+
+    // Steps for gestion de gerentes
+    gestionGerentesTutorialSteps: [
+        {
+            id: 'gerentes-step-1',
+            target: '#gestion-gerentes-section .section-header h2',
+            title: 'Bienvenido a Gestion de Gerentes',
+            description: 'Administra la estructura de gerentes y asesores desde este panel centralizado.',
+            position: 'bottom',
+            action: 'highlight',
+            nextButton: 'Continuar'
+        },
+        {
+            id: 'gerentes-step-2',
+            target: '#metrics-gerentes-admin-container, .hierarchical-metrics-container',
+            title: 'Resumen de indicadores',
+            description: 'Revisa cuantos gerentes activos hay y detecta asesores sin asignar en un vistazo.',
+            position: 'bottom',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'gerentes-step-3',
+            target: '#metrics-gerentes-admin-container .action-card button, button[onclick*="mostrarJerarquiaCompleta"], button[onclick*="mostrarAsignacionAsesores"]',
+            title: 'Acciones rapidas',
+            description: 'Utiliza estos botones para asignar asesores o volver a mostrar toda la jerarquia cuando lo necesites.',
+            position: 'top',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'gerentes-step-4',
+            target: '.jerarquia-hint',
+            title: 'Consejo interactivo',
+            description: 'Conserva este recordatorio: primero abre un gerente y luego explora a sus asesores y reclutas.',
+            position: 'right',
+            action: 'highlight',
+            nextButton: 'Siguiente'
+        },
+        {
+            id: 'gerentes-step-5',
+            target: '.gerente-item, #jerarquia-container',
+            title: 'Arbol jerarquico',
+            description: 'Expande cada tarjeta de gerente para revisar su equipo, reasignar asesores y consultar los estados de los reclutas.',
+            position: 'left',
+            action: 'highlight',
+            nextButton: 'Listo'
         }
     ],
 
@@ -2020,6 +2069,23 @@ Tutorial.startCalendarTutorial = function() {
                 console.log('✅ Tutorial del calendario marcado como completado.');
             } catch (e) {
                 console.error('Error al marcar el tutorial del calendario como completado:', e);
+            }
+        }
+    });
+};
+
+Tutorial.startGestionGerentesTutorial = function() {
+    this.startTutorial({
+        type: 'admin_gerentes',
+        steps: this.gestionGerentesTutorialSteps,
+        storageKey: 'admin_gerentes_tutorial_completed',
+        force: true,
+        onComplete: () => {
+            try {
+                localStorage.setItem('admin_gerentes_tutorial_completed', 'true');
+                console.log('? Tutorial de gestion de gerentes marcado como completado.');
+            } catch (e) {
+                console.error('Error al marcar el tutorial de gerentes como completado:', e);
             }
         }
     });

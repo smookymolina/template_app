@@ -1517,6 +1517,18 @@ function handleGestionGerentesSection() {
 
     // Configurar controles específicos del rol
     setupGestionGerentesControls(currentUser);
+
+    setTimeout(() => {
+        try {
+            const tutorialCompleted = localStorage.getItem('admin_gerentes_tutorial_completed');
+            if (!tutorialCompleted && window.Tutorial && typeof window.Tutorial.startGestionGerentesTutorial === 'function') {
+                console.log('Lanzando tutorial de gestion de gerentes...');
+                window.Tutorial.startGestionGerentesTutorial();
+            }
+        } catch (error) {
+            console.error('Error al iniciar tutorial de gerentes:', error);
+        }
+    }, 500);
 }
 
 /**
