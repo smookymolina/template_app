@@ -23,14 +23,19 @@ let appState = {
 document.addEventListener('DOMContentLoaded', async function() {
     try {
         console.log('🚀 Iniciando sistema de gestión de reclutas...');
-        
+
+        // Asegurar que el dashboard esté oculto al inicio
+        ensureDashboardHidden();
+
         await initializeApplication();
-        
+
         console.log('✅ Sistema inicializado correctamente');
-        
+
     } catch (error) {
         console.error('❌ Error crítico en la inicialización:', error);
         showError('Error al cargar el sistema. Por favor, recarga la página.');
+        // En caso de error, asegurar que se muestre la pantalla de login
+        showLoginScreen(true);
     }
 });
 
@@ -543,7 +548,6 @@ function setupProfileEvents() {
  * ✅ FUNCIÓN DE LOGIN (Simplificada)
  */
 async function login() {
-    showLoginScreen(true);
     const credentials = getLoginCredentials();
     if (!credentials) return;
 
@@ -552,15 +556,28 @@ async function login() {
 
     try {
         console.log('🔐 Iniciando proceso de login...');
-        
+
+        // Validar que las credenciales no estén vacías
+        if (!credentials.email.trim() || !credentials.password.trim()) {
+            throw new Error('Por favor, completa todos los campos');
+        }
+
         const user = await Auth.login(credentials.email, credentials.password);
-        
+
         console.log('✅ Login exitoso, datos de usuario:', user);
         await loginSuccess(user);
-        
+
     } catch (error) {
         console.error('❌ Error de login:', error);
-        showError('Usuario o contraseña incorrectos');
+
+        // Mantener la pantalla de login visible y mostrar error específico
+        const errorMessage = error.message || 'Usuario o contraseña incorrectos';
+        showError(errorMessage);
+
+        // Limpiar campos de contraseña por seguridad
+        const passwordField = document.getElementById('password');
+        if (passwordField) passwordField.value = '';
+
     } finally {
         updateLoginButtonState(loginButton, false);
     }
@@ -666,13 +683,18 @@ async function processSuccessfulLogin(usuario) {
 async function setupUserInterface(usuario) {
     configureDashboardForRole(usuario.rol);
     updateUserInfo(usuario);
-    
-    // Mostrar dashboard
+
+    // Mostrar dashboard solo si el login fue exitoso
     const loginSection = document.getElementById('login-section');
     const dashboardSection = document.getElementById('dashboard-section');
-    
+
     if (loginSection) loginSection.style.display = 'none';
-    if (dashboardSection) dashboardSection.style.display = 'block';
+    if (dashboardSection) {
+        dashboardSection.classList.add('show-dashboard');
+        dashboardSection.style.visibility = 'visible';
+    }
+
+    console.log('✅ Interfaz de usuario configurada para:', usuario.rol);
 }
 
 /**
@@ -1225,14 +1247,16 @@ function updateNavigationByRole() {
  */
 function showLoginScreen(forceClean = false) {
     console.log('🔐 Mostrando pantalla de login...');
-    
+
     if (forceClean) {
         performForcedCleanup();
     }
-    
+
+    // Asegurar que el dashboard esté completamente oculto
+    ensureDashboardHidden();
     toggleLoginScreens();
     switchToAdminTab();
-    
+
     console.log('✅ Pantalla de login mostrada');
 }
 
@@ -1256,14 +1280,34 @@ function performForcedCleanup() {
 }
 
 /**
+ * ✅ ASEGURAR QUE EL DASHBOARD ESTÉ OCULTO
+ */
+function ensureDashboardHidden() {
+    const dashboardSection = document.getElementById('dashboard-section');
+    if (dashboardSection) {
+        dashboardSection.classList.remove('show-dashboard');
+        dashboardSection.style.visibility = 'hidden';
+    }
+
+    // Ocultar también las secciones internas del dashboard
+    const dashboardSections = document.querySelectorAll('.dashboard-content-section');
+    dashboardSections.forEach(section => {
+        if (section) section.style.display = 'none';
+    });
+}
+
+/**
  * ✅ ALTERNAR PANTALLAS DE LOGIN
  */
 function toggleLoginScreens() {
     const loginSection = document.getElementById('login-section');
     const dashboardSection = document.getElementById('dashboard-section');
-    
+
     if (loginSection) loginSection.style.display = 'block';
-    if (dashboardSection) dashboardSection.style.display = 'none';
+    if (dashboardSection) {
+        dashboardSection.classList.remove('show-dashboard');
+        dashboardSection.style.visibility = 'hidden';
+    }
 }
 
 /**

@@ -554,6 +554,12 @@ textarea {
 /* ===== DASHBOARD ===== */
 #dashboard-section {
     min-height: calc(100vh - 120px);
+    display: none !important; /* Oculto por defecto hasta autenticación */
+}
+
+/* Mostrar dashboard solo cuando se active */
+#dashboard-section.show-dashboard {
+    display: block !important;
 }
 
 .dashboard-header {

@@ -3,6 +3,9 @@
 import os
 import sys
 
+from sqlalchemy import inspect
+from sqlalchemy.exc import OperationalError
+
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
@@ -11,6 +14,7 @@ from app_factory import create_app
 from models import db
 from models.usuario import Usuario
 from models.recluta import Recluta
+
 
 def ensure_user(email, nombre, rol, password, telefono=None):
     user = Usuario.query.filter_by(email=email).first()
@@ -27,6 +31,7 @@ def ensure_user(email, nombre, rol, password, telefono=None):
         db.session.add(user)
         created = True
     return user, created
+
 
 def ensure_recluta(data, asesor):
     recluta = Recluta.query.filter_by(email=data['email']).first()
@@ -48,10 +53,30 @@ def ensure_recluta(data, asesor):
             recluta.asesor_id = asesor.id
     return recluta, created
 
+
+def ensure_schema_ready():
+    inspector = inspect(db.engine)
+    required_tables = (Usuario.__tablename__, Recluta.__tablename__)
+    missing_tables = [table for table in required_tables if not inspector.has_table(table)]
+    if missing_tables:
+        tables = ', '.join(missing_tables)
+        raise RuntimeError(
+            'Las tablas requeridas no están disponibles (' + tables + '). '
+            'Ejecuta las migraciones o inicializa la base de datos antes de usar este script.'
+        )
+
+
 def main():
     app = create_app()
     with app.app_context():
-        db.create_all()
+        try:
+            ensure_schema_ready()
+        except OperationalError as exc:
+            print('No se pudo conectar a la base de datos. Verifica la configuración y que la base exista antes de continuar.')
+            raise SystemExit(1) from exc
+        except RuntimeError as exc:
+            print(str(exc))
+            raise SystemExit(1)
 
         accounts = [
             {
@@ -165,6 +190,7 @@ def main():
             recluta = item['recluta']
             status = 'CREADO' if item['created'] else 'EXISTENTE'
             print(f" - {recluta.nombre} ({recluta.email}) [{status}] asignado a asesor_id={recluta.asesor_id}")
+
 
 if __name__ == '__main__':
     main()

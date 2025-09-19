@@ -577,11 +577,16 @@ class UserAccountManager {
     }
 
     loadInitialUsersList() {
-        // Cargar lista solo si los elementos existen (estamos en la sección correcta)
+        // Cargar lista solo si el usuario está autenticado y en la sección correcta
         const container = document.getElementById('users-list-container');
-        if (container) {
+        const dashboardSection = document.getElementById('dashboard-section');
+
+        // Verificar que el dashboard esté visible (usuario autenticado)
+        if (container && dashboardSection && dashboardSection.style.display !== 'none') {
             console.log('📋 Cargando lista inicial de usuarios...');
             this.refreshUserList();
+        } else {
+            console.log('⏭️ Saltando carga de usuarios - usuario no autenticado o sección no visible');
         }
     }
     
