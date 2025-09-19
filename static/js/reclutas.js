@@ -690,9 +690,33 @@ const Reclutas = {
                 </ul>
             </div>` : '';
         
-        resultsContainer.innerHTML = `
+        const summaryHtml = `
+            <div class="summary-stats-container">
+                <div class="stat-item">
+                    <span class="stat-label">Total reclutas</span>
+                    <span class="stat-value" id="total-reclutas-summary">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Reclutas fijos</span>
+                    <span class="stat-value" id="reclutas-fijos-summary">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Reclutas flexibles</span>
+                    <span class="stat-value" id="reclutas-flexibles-summary">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Asesores flexibles</span>
+                    <span class="stat-value" id="asesores-flexibles-summary">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Promedio flexible</span>
+                    <span class="stat-value" id="promedio-flexible-summary">0</span>
+                </div>
+            </div>`;
+
+        const resultsHtml = `
             <div class="results-summary">
-                <h4><i class="fas fa-check-circle"></i> Distribución Completada</h4>
+                <h4><i class="fas fa-check-circle"></i> Distribuci?n Completada</h4>
                 <div class="summary-stats">
                     <div class="stat-item">
                         <span class="stat-label">Total Procesados:</span>
@@ -709,9 +733,8 @@ const Reclutas = {
                     </div>` : ''}
                 </div>
             </div>
-            
             <div class="distribution-table">
-                <h5><i class="fas fa-users"></i> Distribución por Asesor</h5>
+                <h5><i class="fas fa-users"></i> Distribuci?n por Asesor</h5>
                 <table>
                     <thead>
                         <tr><th>Asesor</th><th>Reclutas Asignados</th></tr>
@@ -721,15 +744,17 @@ const Reclutas = {
                     </tbody>
                 </table>
             </div>
-            
             ${errorsHtml}
-            
             <div class="results-actions">
                 <button class="btn-primary" onclick="Reclutas.loadAndDisplayReclutas()">
                     <i class="fas fa-sync"></i> Actualizar Lista
                 </button>
-            </div>
-        `;
+            </div>`;
+
+        resultsContainer.innerHTML = `${summaryHtml}
+            <div class="distribution-results">
+                ${resultsHtml}
+            </div>`;
         
         resultsContainer.style.display = 'block';
 
@@ -786,19 +811,29 @@ const Reclutas = {
      * ✅ FUNCIÓN CORREGIDA: Recalcula la distribución de reclutas
      * @param {HTMLElement} [editedElement] - El elemento (input o checkbox) que disparó el evento.
      */
+
+
     recalculateDistribution: function(editedElement = null) {
-        console.log('🔄 Recalculando distribución...');
+        console.log('Recalculando distribucion...');
+
+        if (!this.currentDistributionData || typeof this.currentDistributionData.exitosos === 'undefined') {
+            console.warn('No hay datos de distribucion actuales para recalcular.');
+            return;
+        }
+
         const resultsContainer = document.getElementById('distribucion-results');
-        if (!resultsContainer) return;
+        if (!resultsContainer) {
+            console.warn('No se encontro el contenedor de resultados para recalcular distribucion.');
+            return;
+        }
 
         const reclutasInputs = Array.from(resultsContainer.querySelectorAll('.reclutas-input'));
-        const totalReclutasGeneral = this.currentDistributionData.exitosos; // Total de reclutas importados
+        const totalReclutasGeneral = Number(this.currentDistributionData.exitosos) || 0;
 
         let totalFixedReclutas = 0;
         const flexibleAsesoresInputs = [];
-        const manuallyEditedFlexibleInputs = new Map(); // Map to store manually edited flexible inputs
+        const manuallyEditedFlexibleInputs = new Map();
 
-        // --- PASO 1: Identificar asesores fijos y flexibles, y sumar reclutas fijos ---
         reclutasInputs.forEach(input => {
             const asesorId = input.dataset.asesorId;
             const checkbox = resultsContainer.querySelector(`.fixed-checkbox[data-asesor-id="${asesorId}"]`);
@@ -806,33 +841,29 @@ const Reclutas = {
 
             if (checkbox && checkbox.checked) {
                 totalFixedReclutas += count;
-                input.readOnly = true; // Ensure it's disabled
+                input.readOnly = true;
             } else {
-                input.readOnly = false; // Ensure it's enabled
+                input.readOnly = false;
                 flexibleAsesoresInputs.push(input);
-                // If this flexible input was manually edited, store its value
+
                 if (editedElement === input) {
                     manuallyEditedFlexibleInputs.set(asesorId, count);
                 }
             }
         });
 
-        // --- PASO 2: Calculate remaining recruits for flexible distribution ---
         let remainingFlexibleReclutas = totalReclutasGeneral - totalFixedReclutas;
 
-        // --- PASO 3: Account for manually edited flexible inputs ---
-        manuallyEditedFlexibleInputs.forEach((value, asesorId) => {
+        manuallyEditedFlexibleInputs.forEach(value => {
             remainingFlexibleReclutas -= value;
         });
 
-        // --- PASO 4: Distribute remaining flexible recruits among the *other* flexible advisors ---
         const targetFlexibleInputs = flexibleAsesoresInputs.filter(input => !manuallyEditedFlexibleInputs.has(input.dataset.asesorId));
 
         if (remainingFlexibleReclutas < 0) {
             showError(`La suma de reclutas fijos y asignaciones manuales excede el total de reclutas (${totalReclutasGeneral}). Ajuste las cantidades.`);
-            // Reset all flexible inputs to 0 or a calculated value to prevent negative assignments
-            targetFlexibleInputs.forEach(input => input.value = 0);
-            remainingFlexibleReclutas = 0; // Prevent negative display in summary
+            targetFlexibleInputs.forEach(input => { input.value = 0; });
+            remainingFlexibleReclutas = 0;
         } else if (targetFlexibleInputs.length > 0) {
             const basePerAsesor = Math.floor(remainingFlexibleReclutas / targetFlexibleInputs.length);
             let remainder = remainingFlexibleReclutas % targetFlexibleInputs.length;
@@ -840,18 +871,15 @@ const Reclutas = {
             targetFlexibleInputs.forEach(input => {
                 let assigned = basePerAsesor;
                 if (remainder > 0) {
-                    assigned++;
-                    remainder--;
+                    assigned += 1;
+                    remainder -= 1;
                 }
                 input.value = assigned;
             });
-        } else if (remainingFlexibleReclutas > 0 && targetFlexibleInputs.length === 0 && flexibleAsesoresInputs.length > 0) {
-            // This case means all flexible advisors were manually edited, and there are still recruits left.
-            // The remaining recruits will be unassigned, and the warning will show.
+        } else if (remainingFlexibleReclutas > 0 && flexibleAsesoresInputs.length > 0) {
             console.warn(`Quedan ${remainingFlexibleReclutas} reclutas sin asignar porque todos los asesores flexibles han sido asignados manualmente.`);
         }
 
-        // --- PASO 5: Update the summary ---
         let currentTotalAssigned = 0;
         reclutasInputs.forEach(input => {
             currentTotalAssigned += parseInt(input.value, 10) || 0;
@@ -860,11 +888,13 @@ const Reclutas = {
         const totalFlexibleCalculated = currentTotalAssigned - totalFixedReclutas;
         const unassignedReclutas = totalReclutasGeneral - currentTotalAssigned;
 
-        const summaryContainer = document.querySelector('.summary-stats-container');
-        if (!summaryContainer) return;
+        const summaryContainer = resultsContainer.querySelector('.summary-stats-container');
+        if (!summaryContainer) {
+            console.warn('No se encontro el contenedor de resumen para actualizar.');
+            return;
+        }
 
         let warningMessage = summaryContainer.querySelector('.no-asignados-warning');
-
         if (unassignedReclutas > 0) {
             if (!warningMessage) {
                 warningMessage = document.createElement('div');
@@ -879,13 +909,24 @@ const Reclutas = {
             warningMessage.remove();
         }
 
-        document.getElementById('total-reclutas-summary').textContent = totalReclutasGeneral;
-        document.getElementById('reclutas-fijos-summary').textContent = totalFixedReclutas;
-        document.getElementById('reclutas-flexibles-summary').textContent = totalFlexibleCalculated;
-        document.getElementById('asesores-flexibles-summary').textContent = flexibleAsesoresInputs.length;
-        
+        const totalSummaryEl = document.getElementById('total-reclutas-summary');
+        const fixedSummaryEl = document.getElementById('reclutas-fijos-summary');
+        const flexibleSummaryEl = document.getElementById('reclutas-flexibles-summary');
+        const asesoresSummaryEl = document.getElementById('asesores-flexibles-summary');
+        const promedioSummaryEl = document.getElementById('promedio-flexible-summary');
+
+        if (!totalSummaryEl || !fixedSummaryEl || !flexibleSummaryEl || !asesoresSummaryEl || !promedioSummaryEl) {
+            console.warn('No se encontraron los elementos de resumen para actualizar.');
+            return;
+        }
+
+        totalSummaryEl.textContent = totalReclutasGeneral;
+        fixedSummaryEl.textContent = totalFixedReclutas;
+        flexibleSummaryEl.textContent = totalFlexibleCalculated;
+        asesoresSummaryEl.textContent = flexibleAsesoresInputs.length;
+
         const promedio = flexibleAsesoresInputs.length > 0 ? (totalFlexibleCalculated / flexibleAsesoresInputs.length).toFixed(2) : '0.00';
-        document.getElementById('promedio-flexible-summary').textContent = promedio;
+        promedioSummaryEl.textContent = promedio;
     },
 
     /**
@@ -3359,6 +3400,7 @@ window.Reclutas = Reclutas;
 window.reclutaManager = Reclutas; // Alias unificado
 
 export default Reclutas;
+
 
 
 

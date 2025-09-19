@@ -9,6 +9,7 @@ from datetime import datetime, date, timedelta
 import json
 import re
 from collections import defaultdict
+import unicodedata
 
 # Configuración de seguridad para archivos
 ALLOWED_EXTENSIONS = {
@@ -135,6 +136,19 @@ def get_next_asesor(asesores, last_asesor_index):
     next_index = (last_asesor_index + 1) % len(asesores)
     return asesores[next_index], next_index
 
+def _normalize_header_value(value):
+    """Normaliza encabezados removiendo acentos, espacios y caracteres no alfanuméricos."""
+    if value is None:
+        return ''
+
+    normalized = unicodedata.normalize('NFD', str(value).strip().lower())
+    normalized = ''.join(ch for ch in normalized if unicodedata.category(ch) != 'Mn')
+
+    for ch in [' ', '\n', '\r', '\t', '-', '_', '/', '\\']:
+        normalized = normalized.replace(ch, '')
+
+    return normalized
+
 def procesar_y_distribuir_excel(archivo, asesores):
     """
     🔥 VERSIÓN CORREGIDA v1.4.1: Procesa archivo Excel y distribuye reclutas entre asesores.
@@ -170,16 +184,22 @@ def procesar_y_distribuir_excel(archivo, asesores):
         primera_fila = list(sheet.iter_rows(min_row=1, max_row=1, values_only=True))[0]
         current_app.logger.info(f"📋 Headers detectados: {primera_fila}")
         
-        # ✅ MAPEO ROBUSTO DE HEADERS (tolerante a columnas vacías)
+        # ✅ MAPEO ROBUSTO DE HEADERS (tolerante a columnas vacías y variaciones)
         headers_requeridos = {
-            'fecha_creacion': ['Fecha de creación', 'Fecha de Creación', 'fecha de creacion', 'FECHA DE CREACION'],
-            'nombre': ['Nombre', 'NOMBRE', 'nombre', 'Candidato', 'CANDIDATO'],
-            'telefono': ['Teléfono', 'Telefono', 'TELEFONO', 'TELÉFONO', 'telefono', 'Celular', 'CELULAR']
+            'fecha_creacion': {
+                'fechadecreacion', 'fechacreacion', 'fecha', 'fecharegistro', 'fechadealta'
+            },
+            'nombre': {
+                'nombre', 'nombrecompleto', 'candidato', 'candidatonombre', 'nombreyapellidos'
+            },
+            'telefono': {
+                'telefono', 'telefonocelular', 'celular', 'tel', 'telefonocontacto', 'telefonomovil'
+            }
         }
-        
+
         indices_encontrados = {}
         headers_disponibles = []
-        
+
         # Buscar cada header requerido en la fila completa
         for i, celda in enumerate(primera_fila):
             # ✅ CONVERSIÓN SEGURA A STRING (maneja None, int, float, etc.)
@@ -189,36 +209,39 @@ def procesar_y_distribuir_excel(archivo, asesores):
                 celda_str = str(celda)
             else:
                 celda_str = str(celda).strip()
-            
-            # Solo agregar headers no vacíos para el log
+
             if celda_str:
                 headers_disponibles.append(celda_str)
-            
-            # Buscar coincidencias con headers requeridos
+
+            normalized = _normalize_header_value(celda_str)
+
             for campo, posibles_nombres in headers_requeridos.items():
-                if celda_str in posibles_nombres:
+                if normalized in posibles_nombres:
                     indices_encontrados[campo] = i
-                    current_app.logger.info(f"✅ Header '{campo}' encontrado en columna {i}: '{celda_str}'")
+                    current_app.logger.info(
+                        f"✅ Header '{campo}' encontrado en columna {i}: '{celda_str}' (normalizado: '{normalized}')"
+                    )
                     break
         
         # ✅ VALIDACIÓN DE HEADERS REQUERIDOS
-        campos_faltantes = [campo for campo in headers_requeridos.keys() if campo not in indices_encontrados]
-        
+        headers_obligatorios = ['nombre', 'telefono']
+        campos_faltantes = [campo for campo in headers_obligatorios if campo not in indices_encontrados]
+
         if campos_faltantes:
             mensaje_error = f"No se encontraron las siguientes columnas requeridas: {campos_faltantes}. "
             mensaje_error += f"Headers disponibles en el Excel: {headers_disponibles}. "
-            mensaje_error += f"Se esperaban variaciones de: {dict(headers_requeridos)}"
-            
+            mensaje_error += f"Se esperaban variaciones de: {dict({k: headers_requeridos[k] for k in headers_obligatorios})}"
+
             current_app.logger.error(f"❌ {mensaje_error}")
-            
+
             return {
                 "success": False,
                 "message": mensaje_error,
                 "headers_disponibles": headers_disponibles,
-                "headers_esperados": headers_requeridos,
+                "headers_esperados": {k: headers_requeridos[k] for k in headers_obligatorios},
                 "tipo_error": "headers_faltantes"
             }
-        
+
         # ✅ PROCESAR DATOS FILA POR FILA
         datos_validos = []
         errores_detalle = []
@@ -242,7 +265,12 @@ def procesar_y_distribuir_excel(archivo, asesores):
                 # Asegurar que la fila tenga suficientes columnas
                 row_list = list(row) + [None] * 10  # Pad con None's por si acaso
                 
-                fecha_raw = row_list[indices_encontrados['fecha_creacion']] if indices_encontrados['fecha_creacion'] < len(row_list) else None
+                indice_fecha = indices_encontrados.get('fecha_creacion')
+                if indice_fecha is not None and indice_fecha < len(row_list):
+                    fecha_raw = row_list[indice_fecha]
+                else:
+                    fecha_raw = None
+
                 nombre_raw = row_list[indices_encontrados['nombre']] if indices_encontrados['nombre'] < len(row_list) else None
                 telefono_raw = row_list[indices_encontrados['telefono']] if indices_encontrados['telefono'] < len(row_list) else None
                 
