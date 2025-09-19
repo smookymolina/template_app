@@ -1192,11 +1192,6 @@ function updateGerenteNavigation() {
                 </a>
             </li>
             <li>
-                <a href="#" data-section="gestion-gerentes-section">
-                    <i class="fas fa-users-cog"></i> Gestión de Gerentes
-                </a>
-            </li>
-            <li>
                 <a href="#" data-section="configuracion-section">
                     <i class="fas fa-cog"></i> Configuración
                 </a>
