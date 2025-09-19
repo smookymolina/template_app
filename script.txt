@@ -1,29 +1,573 @@
-## Problemas de Diseño y Arquitectura en la Sección de Seguimiento
+===============================================================================
+🤖 PROMPTS PASO A PASO PARA CLAUDE - SISTEMA DE GESTIÓN DE GERENTES
+===============================================================================
 
-### 1. Implementación Duplicada y Conflictiva de la Timeline
-- **Problema:** Existen al menos dos implementaciones de la "línea de tiempo" (timeline) en el proyecto. Una es un componente reutilizable (`templates/components/seccion_timeline.html` con su `static/js/timeline.js`), y la otra está implementada desde cero y de forma aislada dentro de `templates/seguimiento.html`.
-- **Impacto:** Esto genera inconsistencia visual y funcional en la aplicación. El mantenimiento se duplica, ya que cualquier cambio de diseño debe aplicarse en dos lugares diferentes, y el código es más difícil de entender y depurar.
+🎯 OBJETIVO PRINCIPAL
+===============================================================================
+Implementar una nueva sección "Gestión de Gerentes" SOLO para administradores
+que permita:
+- Ver todos los gerentes con sus asesores asignados
+- Gestionar la jerarquía gerente-asesor-recluta
+- Visualizar estructura jerárquica completa
+- Sistema de permisos: Admin ve todo, Gerente ve sus asesores, Asesor ve sus reclutas
 
-### 2. CSS Incrustado y Redundante
-- **Problema:** El archivo `templates/seguimiento.html` contiene una etiqueta `<style>` con más de 200 líneas de CSS que son una copia directa del archivo `static/css/timeline.css`.
-- **Impacto:** Esta práctica es muy ineficiente. Impide que el navegador almacene en caché el CSS, lo que aumenta los tiempos de carga de la página. Además, hace que el archivo HTML sea innecesariamente grande y difícil de mantener. Cualquier cambio en `timeline.css` no se reflejará aquí, causando más inconsistencias.
+===============================================================================
+🚀 PROMPT 1: CREAR NUEVOS ENDPOINTS API PARA GESTIÓN JERÁRQUICA
+===============================================================================
 
-### 3. Diseño Visual Genérico y Poco Integrado
-- **Problema:** El diseño actual de la timeline es muy básico: una línea vertical con círculos. No aprovecha la paleta de colores, las sombras, los bordes redondeados y otros elementos de diseño definidos en el resto de la aplicación (visibles en `static/css/fixes.css` y `static/css/styles.css`).
-- **Impacto:** La sección de seguimiento se siente desconectada del resto de la aplicación, dando una impresión de baja calidad y falta de atención al detalle.
+Claude, necesito que agregues estos nuevos endpoints en routes/api.py:
 
-### 4. Falta de Interactividad y Retroalimentación Visual
-- **Problema:** Los elementos de la timeline son estáticos. No hay efectos visuales al pasar el cursor sobre ellos (hover), ni transiciones suaves que mejoren la experiencia de usuario.
-- **Impacto:** La interfaz se percibe como "plana" y poco atractiva. Pequeños detalles interactivos podrían hacerla mucho más agradable de usar.
+1. **GET /api/gerentes/jerarquia** (Solo Admin)
+   - Devuelve estructura jerárquica completa
+   - Gerentes con sus asesores y cantidad de reclutas
+   - Usar @admin_required decorator
 
-### 5. Jerarquía de Información Mejorable
-- **Problema:** Dentro de cada evento de la timeline, la información (título, fecha, descripción, estado) se presenta sin una estructura clara. Aunque se usan badges para el estado, el diseño general del contenido podría organizarse mejor para facilitar la lectura rápida.
-- **Impacto:** El usuario puede tardar más en encontrar la información que busca, especialmente en timelines con muchos eventos.
+2. **GET /api/gerentes/mis-asesores** (Solo Gerentes)
+   - Devuelve asesores asignados al gerente actual
+   - Usar @gerente_required decorator
 
-### 6. Código de Baja Calidad en `seguimiento.html`
-- **Problema:** El archivo `seguimiento.html` mezcla HTML, CSS y JavaScript de forma masiva. La lógica de la aplicación (llamadas a la API, renderizado dinámico) está escrita en un bloque `<script>` de más de 300 líneas directamente en el HTML. Además, contiene múltiples funciones de renderizado de timelines que parecen redundantes (`renderTimelineItems`, `renderServerTimeline`, `renderCustomTimeline`) y código de depuración (`console.log`) expuesto al cliente.
-- **Impacto:** Esto es una mala práctica de desarrollo (falta de separación de conceptos) que hace que el código sea extremadamente difícil de leer, mantener, probar y reutilizar. Aumenta la probabilidad de introducir errores.
+3. **POST /api/gerentes/asignar-asesor** (Solo Admin)
+   - Asigna un asesor a un gerente específico
+   - Body: {"gerente_id": int, "asesor_id": int}
+   - Validaciones de negocio
 
-### 7. Problemas de Responsividad
-- **Problema:** Aunque existen algunas reglas básicas de responsividad, el diseño de la timeline no se adapta de forma óptima a pantallas pequeñas, pudiendo verse apretado o desalineado.
-- **Impacto:** La experiencia de usuario en dispositivos móviles es deficiente.
+4. **POST /api/gerentes/redistribuir-reclutas** (Gerentes)
+   - Permite al gerente redistribuir SUS reclutas a SUS asesores
+   - Body: {"recluta_ids": [list], "asesor_id": int}
+   - Solo puede asignar a sus propios asesores
+
+Implementa usando las funciones jerárquicas ya existentes en models/usuario.py
+
+===============================================================================
+🚀 PROMPT 2: CREAR NUEVA SECCIÓN FRONTEND "GESTIÓN DE GERENTES"
+===============================================================================
+
+Claude, necesito que modifiques templates/index.html para agregar:
+
+1. **Nueva pestaña "Gestión de Gerentes"** 
+   - Solo visible para rol="admin"
+   - Icono: fas fa-users-cog
+   - Ubicación: después de "Métricas Avanzadas"
+
+2. **Contenido de la sección:**
+   ```html
+   <div id="gestion-gerentes-section" class="content-section" style="display: none;">
+       <div class="section-header">
+           <h2><i class="fas fa-users-cog"></i> Gestión de Gerentes</h2>
+           <p>Administrar la jerarquía organizacional y asignación de equipos</p>
+       </div>
+       
+       <div class="gerentes-actions">
+           <button class="btn-primary" onclick="mostrarAsignacionAsesores()">
+               <i class="fas fa-user-plus"></i> Asignar Asesores a Gerentes
+           </button>
+           <button class="btn-secondary" onclick="mostrarJerarquiaCompleta()">
+               <i class="fas fa-sitemap"></i> Ver Jerarquía Completa
+           </button>
+       </div>
+       
+       <div id="jerarquia-container"></div>
+   </div>
+   ```
+
+3. **Agregar evento al menú de navegación**
+   - Click en pestaña debe mostrar esta sección
+   - Ocultar otras secciones activas
+
+===============================================================================
+🚀 PROMPT 3: CREAR ARCHIVO static/js/jerarquia.js
+===============================================================================
+
+Claude, crea un nuevo archivo static/js/jerarquia.js con estas funciones:
+
+```javascript
+// 🏗️ GESTIÓN DE JERARQUÍA ORGANIZACIONAL
+
+async function mostrarJerarquiaCompleta() {
+    // Llamar a GET /api/gerentes/jerarquia
+    // Mostrar estructura tipo árbol expandible
+    // Gerente -> Asesores -> Cantidad de reclutas
+}
+
+async function mostrarAsignacionAsesores() {
+    // Modal para asignar asesores sin gerente a gerentes existentes
+    // Listar gerentes activos y asesores disponibles
+    // Drag & drop o select para asignación
+}
+
+async function redistribuirReclutasGerente(gerenteId) {
+    // Modal específico para que gerente redistribuya SUS reclutas
+    // Solo mostrar SUS asesores asignados
+    // Lista de reclutas pendientes del gerente
+}
+
+function renderJerarquiaTree(jerarquia) {
+    // Renderiza estructura jerárquica visual
+    // Cards anidadas con estadísticas
+    // Botones contextuales según permisos
+}
+```
+
+Incluir validaciones de permisos en cada función según el rol del usuario.
+
+===============================================================================
+🚀 PROMPT 4: CREAR MODAL DE REDISTRIBUCIÓN PARA GERENTES
+===============================================================================
+
+Claude, necesito que agregues en templates/index.html un nuevo modal:
+
+```html
+<!-- MODAL: Redistribuir Reclutas (Para Gerentes) -->
+<div id="modalRedistribucionGerente" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2><i class="fas fa-exchange-alt"></i> Redistribuir Mis Reclutas</h2>
+        
+        <div class="modal-body">
+            <div class="redistribucion-info">
+                <h3>Reclutas Pendientes de Asignar: <span id="cantidadPendientes">0</span></h3>
+            </div>
+            
+            <div class="mis-asesores">
+                <h4>Mis Asesores Disponibles:</h4>
+                <div id="asesoresContainer"></div>
+            </div>
+            
+            <div class="reclutas-seleccion">
+                <h4>Seleccionar Reclutas:</h4>
+                <div id="reclutasContainer"></div>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn-primary" onclick="ejecutarRedistribucionGerente()">
+                Redistribuir Seleccionados
+            </button>
+        </div>
+    </div>
+</div>
+```
+
+===============================================================================
+🚀 PROMPT 5: ACTUALIZAR NAVEGACIÓN Y PERMISOS
+===============================================================================
+
+Claude, modifica static/js/main.js para:
+
+1. **Agregar la nueva pestaña al sistema de navegación:**
+   - Evento click para "Gestión de Gerentes"
+   - Función showGestionGerentes()
+   - Solo visible si user.rol === 'admin'
+
+2. **Actualizar función updateNavigation():**
+   - Mostrar/ocultar pestaña según rol
+   - Mantener consistencia con otras secciones
+
+3. **Agregar al sistema de carga inicial:**
+   - Incluir jerarquia.js si es admin
+   - Cargar permisos jerárquicos
+
+===============================================================================
+🚀 PROMPT 6: MODIFICAR DASHBOARD SEGÚN ROL JERÁRQUICO
+===============================================================================
+
+Claude, actualiza el dashboard principal en static/js/reclutas.js:
+
+1. **Para Admin:** Vista global con métricas jerárquicas
+2. **Para Gerente:** Dashboard con sección "Mis Asesores"
+3. **Para Asesor:** Vista tradicional de sus reclutas
+
+Agregar estas métricas contextuales:
+- Admin: Total gerentes, asesores sin asignar, distribución general
+- Gerente: Mis asesores activos, reclutas por distribuir, rendimiento equipo
+- Asesor: Mis reclutas, estado de seguimiento
+
+===============================================================================
+🚀 PROMPT 7: IMPLEMENTAR VALIDACIONES JERÁRQUICAS
+===============================================================================
+
+Claude, agrega validaciones estrictas en routes/api.py:
+
+```python
+def validate_hierarchical_permissions(user, action, target_id=None):
+    """Valida permisos jerárquicos para acciones específicas"""
+    if action == 'view_gerente_data' and user.rol != 'admin':
+        return False
+    if action == 'redistribute_to_asesor' and user.rol == 'gerente':
+        return user.validate_hierarchical_assignment(target_id)
+    if action == 'view_all_hierarchy' and user.rol != 'admin':
+        return False
+    return True
+```
+
+Aplicar estas validaciones en todos los endpoints nuevos.
+
+===============================================================================
+🚀 PROMPT 8: ESTILOS CSS PARA GESTIÓN JERÁRQUICA
+===============================================================================
+
+Claude, agrega en static/css/styles.css estilos para:
+
+```css
+/* Gestión de Gerentes */
+.jerarquia-tree { /* Estructura tipo árbol */ }
+.gerente-card { /* Cards para cada gerente */ }
+.asesor-item { /* Items de asesores anidados */ }
+.redistribucion-container { /* Modal redistribución */ }
+.asignacion-drag-drop { /* Drag & drop asignación */ }
+```
+
+Mantener consistencia visual con el resto de la aplicación.
+
+===============================================================================
+🚀 PROMPT 9: TESTING Y VALIDACIÓN FINAL
+===============================================================================
+
+Claude, después de implementar todo:
+
+1. **Verifica que funcione la jerarquía:**
+   - Admin puede ver/gestionar todo
+   - Gerente solo ve sus asesores
+   - Asesor solo ve sus reclutas
+
+2. **Prueba los flujos principales:**
+   - Asignación asesor a gerente
+   - Redistribución gerente → asesores
+   - Visualización jerárquica
+
+3. **Validaciones de seguridad:**
+   - Endpoints protegidos por rol
+   - Validación de ownership
+   - Logs de auditoría
+
+===============================================================================
+🎯 RESULTADO ESPERADO FINAL
+===============================================================================
+
+**Para ADMINISTRADORES:**
+- Nueva sección "Gestión de Gerentes" en el menú
+- Vista jerárquica completa: Gerentes → Asesores → Reclutas
+- Herramientas para asignar asesores a gerentes
+- Dashboard global con métricas organizacionales
+
+**Para GERENTES:**
+- Dashboard actualizado con sección "Mis Asesores"
+- Modal para redistribuir SUS reclutas a SUS asesores
+- No pueden ver otros gerentes ni asesores ajenos
+- Métricas de su equipo específico
+
+**Para ASESORES:**
+- Vista tradicional sin cambios
+- Solo ven sus reclutas asignados
+- No pueden redistribuir ni ver jerarquía
+
+===============================================================================
+📋 CHECKLIST DE IMPLEMENTACIÓN
+===============================================================================
+
+□ PROMPT 1: Nuevos endpoints API jerárquicos
+□ PROMPT 2: Nueva sección frontend "Gestión de Gerentes"  
+□ PROMPT 3: Archivo jerarquia.js con funciones específicas
+□ PROMPT 4: Modal redistribución para gerentes
+□ PROMPT 5: Actualizar navegación y permisos
+□ PROMPT 6: Dashboard contextual por rol
+□ PROMPT 7: Validaciones jerárquicas estrictas
+□ PROMPT 8: Estilos CSS para jerarquía
+□ PROMPT 9: Testing y validación final
+
+✅ **LISTO PARA USAR:** Cada prompt es independiente y ejecutable
+✅ **ORDEN RECOMENDADO:** Seguir numeración secuencial
+✅ **TIEMPO ESTIMADO:** 1-2 prompts por día para implementación sólida
+
+===============================================================================
+🚨 NOTAS IMPORTANTES PARA CLAUDE
+===============================================================================
+
+1. **MANTENER COMPATIBILIDAD:** No romper funcionalidad existente
+2. **USAR ESTRUCTURA ACTUAL:** Aprovechar models/usuario.py ya implementado
+3. **SEGURIDAD PRIMERO:** Validar permisos en cada endpoint
+4. **UX CONSISTENTE:** Seguir patrones visuales existentes
+5. **LOGS IMPORTANTES:** Registrar cambios jerárquicos para auditoría
+
+⚡ **ESTRUCTURA YA DISPONIBLE:** El modelo Usuario ya tiene las relaciones
+jerárquicas implementadas (gerente_id, asesores, métodos de validación)
+
+===============================================================================
+🔄 PLAN ORIGINAL CONSERVADO ABAJO
+===============================================================================
+
+📋 PLAN DE IMPLEMENTACIÓN - SISTEMA JERÁRQUICO DE DISTRIBUCIÓN DE RECLUTAS
+===============================================================================
+
+🎯 OBJETIVO
+===============================================================================
+Implementar un sistema jerárquico donde:
+- ADMIN distribuye reclutas a GERENTES
+- GERENTES redistribuyen sus reclutas a sus ASESORES
+- Cada rol puede ver solo su jerarquía correspondiente
+
+===============================================================================
+🏗️ FASE 1: MODELO DE DATOS - RELACIONES JERÁRQUICAS
+===============================================================================
+
+1.1 ACTUALIZAR MODELO USUARIO
+   - Agregar campo 'gerente_id' para establecer relación asesor-gerente
+   - Agregar relaciones SQLAlchemy bidireccionales
+   - Mantener compatibilidad con sistema actual
+
+   Usuario:
+   ├── gerente_id (ForeignKey → Usuario.id)
+   ├── asesores (relationship → usuarios con gerente_id = self.id)
+   └── gerente (relationship → usuario padre)
+
+1.2 MIGRACIÓN DE DATOS
+   - Script para asignar asesores existentes a gerentes
+   - Mantener integridad referencial
+   - Backup de datos antes de migración
+
+===============================================================================
+🏗️ FASE 2: BACKEND - LÓGICA DE NEGOCIO JERÁRQUICA  
+===============================================================================
+
+2.1 NUEVOS ENDPOINTS API
+   ├── GET /usuarios/jerarquia
+   │   └── Obtiene estructura jerárquica completa para admin
+   ├── GET /usuarios/mis-asesores (gerente)
+   │   └── Obtiene asesores asignados al gerente actual
+   ├── POST /reclutas/distribuir-a-asesores (gerente)
+   │   └── Redistribuye reclutas del gerente a sus asesores
+   └── GET /reclutas/dashboard-gerente
+       └── Vista consolidada para gerente: reclutas + asesores
+
+2.2 MODIFICAR ENDPOINTS EXISTENTES
+   - /reclutas/distribuir-excel → Solo para admin → gerentes
+   - /reclutas/redistribuir-manual → Separar admin/gerente/asesor
+   - /reclutas → Filtros jerárquicos automáticos
+
+2.3 LÓGICA DE PERMISOS
+   Admin:
+   ├── Ve todos los usuarios y reclutas
+   ├── Distribuye reclutas a gerentes
+   └── Puede reasignar cualquier recluta
+
+   Gerente:  
+   ├── Ve solo sus asesores y reclutas asignados
+   ├── Redistribuye sus reclutas a sus asesores
+   └── Dashboard con vista consolidada
+
+   Asesor:
+   ├── Ve solo sus reclutas asignados
+   └── No puede redistribuir
+
+===============================================================================
+🏗️ FASE 3: FRONTEND - INTERFAZ JERÁRQUICA
+===============================================================================
+
+3.1 NUEVO MODAL DISTRIBUCIÓN GERENTE
+   - Modal específico para gerentes
+   - Lista de asesores asignados al gerente
+   - Redistribución manual de reclutas a asesores
+   - Estadísticas por asesor
+
+3.2 DASHBOARD JERÁRQUICO
+   Admin Dashboard:
+   ├── Tabla gerentes con reclutas asignados
+   ├── Vista expandible: gerente → asesores → reclutas
+   └── Métricas globales
+
+   Gerente Dashboard:
+   ├── Mis reclutas pendientes de asignar
+   ├── Tabla de asesores con sus reclutas
+   ├── Botón "Distribuir a Asesores"
+   └── Métricas de mi equipo
+
+3.3 ACTUALIZAR COMPONENTES EXISTENTES
+   - reclutas.js → Agregar modalDistribucionGerente()
+   - Filtros dinámicos según rol del usuario
+   - Botones contextuales (admin vs gerente vs asesor)
+
+===============================================================================
+🏗️ FASE 4: FLUJOS DE TRABAJO ESPECÍFICOS
+===============================================================================
+
+4.1 FLUJO ADMIN → GERENTES
+   1. Admin carga Excel con reclutas
+   2. Sistema distribuye automáticamente entre gerentes activos
+   3. Cada gerente recibe notificación
+   4. Admin ve dashboard global con distribución
+
+4.2 FLUJO GERENTE → ASESORES  
+   1. Gerente ve sus reclutas sin asignar
+   2. Abre modal "Distribuir a mis Asesores"
+   3. Sistema muestra solo SUS asesores
+   4. Redistribución manual o automática
+   5. Asesores reciben notificación
+
+4.3 FLUJO DE VISUALIZACIÓN
+   Admin:
+   ├── Dashboard global
+   ├── Gerente A (50 reclutas)
+   │   ├── Asesor A1 (15 reclutas)
+   │   ├── Asesor A2 (20 reclutas)
+   │   └── Sin asignar (15 reclutas)
+   └── Gerente B (30 reclutas)
+       ├── Asesor B1 (10 reclutas)
+       └── Sin asignar (20 reclutas)
+
+   Gerente:
+   ├── Mis reclutas sin asignar (15)
+   ├── Asesor 1 (15 reclutas)
+   └── Asesor 2 (20 reclutas)
+
+===============================================================================
+🏗️ FASE 5: VALIDACIONES Y RESTRICCIONES
+===============================================================================
+
+5.1 VALIDACIONES DE NEGOCIO
+   - Gerente solo puede asignar SUS reclutas
+   - Gerente solo ve SUS asesores
+   - Asesor no puede redistribuir reclutas
+   - Admin puede override cualquier asignación
+
+5.2 VALIDACIONES TÉCNICAS
+   - Integridad referencial en base de datos
+   - Validación de permisos en cada endpoint
+   - Logs de auditoría para cambios de asignación
+
+===============================================================================
+🚀 PLAN DE IMPLEMENTACIÓN POR PRIORIDADES
+===============================================================================
+
+PRIORIDAD ALTA (Semana 1)
+├── Modelo Usuario: agregar gerente_id
+├── Endpoint: GET /usuarios/mis-asesores
+├── Endpoint: POST /reclutas/distribuir-a-asesores  
+└── Modal básico distribución gerente
+
+PRIORIDAD MEDIA (Semana 2)
+├── Dashboard jerárquico para admin
+├── Dashboard consolidado para gerente
+├── Migración datos existentes
+└── Testing integral
+
+PRIORIDAD BAJA (Semana 3)
+├── Métricas avanzadas
+├── Notificaciones automáticas
+├── Exportación de reportes jerárquicos
+└── Optimizaciones de performance
+
+===============================================================================
+📁 ARCHIVOS A MODIFICAR/CREAR
+===============================================================================
+
+NUEVOS ARCHIVOS
+├── static/js/jerarquia.js → Funciones jerárquicas
+├── templates/components/modal-distribucion-gerente.html
+└── utils/jerarquia_helpers.py → Lógica jerárquica
+
+ARCHIVOS A MODIFICAR
+├── models/usuario.py → Agregar gerente_id, relaciones
+├── routes/api.py → Nuevos endpoints, modificar existentes
+├── static/js/reclutas.js → Funciones distribución gerente
+├── static/css/styles.css → Estilos dashboard jerárquico
+└── templates/index.html → Botones contextuales
+
+===============================================================================
+🔧 CONSIDERACIONES TÉCNICAS
+===============================================================================
+
+PERFORMANCE
+- Índices en gerente_id y asesor_id
+- Consultas optimizadas con joins
+- Cache para estructuras jerárquicas
+
+SEGURIDAD  
+- Decoradores de permisos por rol
+- Validación de ownership en cada operación
+- Logs de auditoría completos
+
+ESCALABILIDAD
+- Diseño preparado para múltiples niveles jerárquicos
+- API REST consistente
+- Separación clara de responsabilidades
+
+===============================================================================
+🧪 PLAN DE TESTING
+===============================================================================
+
+UNIT TESTS
+├── Modelo Usuario: relaciones jerárquicas
+├── Endpoints API: permisos por rol
+└── Lógica distribución: casos edge
+
+INTEGRATION TESTS  
+├── Flujo completo admin → gerente → asesor
+├── Dashboard jerárquico
+└── Migración de datos
+
+USER ACCEPTANCE TESTS
+├── Admin: distribución masiva
+├── Gerente: redistribución a asesores  
+└── Asesor: visualización reclutas
+
+===============================================================================
+📈 MÉTRICAS DE ÉXITO
+===============================================================================
+
+FUNCIONALIDAD
+✅ Admin puede distribuir a gerentes
+✅ Gerente puede redistribuir a asesores
+✅ Visualización jerárquica clara
+✅ Permisos funcionan correctamente
+
+PERFORMANCE
+✅ Dashboards cargan < 2 segundos
+✅ Distribución procesa < 5 segundos
+✅ Base datos optimizada
+
+USABILIDAD
+✅ Interfaz intuitiva por rol
+✅ Feedback claro en cada acción
+✅ Menos de 3 clics para distribuir
+
+===============================================================================
+🔄 CRONOGRAMA ESTIMADO: 3 SEMANAS
+===============================================================================
+
+SEMANA 1: Base técnica
+- Días 1-2: Modelo datos + migración
+- Días 3-4: Endpoints API básicos
+- Día 5: Modal distribución gerente
+
+SEMANA 2: Interfaz + integración  
+- Días 1-2: Dashboard jerárquico admin
+- Días 3-4: Dashboard gerente
+- Día 5: Testing + ajustes
+
+SEMANA 3: Optimización + entrega
+- Días 1-2: Métricas + notificaciones
+- Días 3-4: Testing integral
+- Día 5: Documentación + deployment
+
+===============================================================================
+🎯 RESULTADO ESPERADO
+===============================================================================
+
+Sistema jerárquico completo donde cada rol tiene funciones específicas:
+- Admin: Control total, distribución a gerentes, vista global
+- Gerente: Gestión de equipo, redistribución a asesores, dashboard consolidado  
+- Asesor: Vista de reclutas asignados, gestión individual
+
+Con interfaces diferenciadas, permisos estrictos y flujos de trabajo optimizados.
+
+===============================================================================
+📝 NOTAS IMPORTANTES
+===============================================================================
+
+- Mantener retrocompatibilidad con sistema actual
+- Migración gradual sin interrupciones de servicio
+- Backup completo antes de cada fase
+- Testing exhaustivo en cada entrega
+- Documentación actualizada en tiempo real
+
+===============================================================================

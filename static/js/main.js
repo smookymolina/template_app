@@ -7,6 +7,7 @@ import Client from './client.js';
 import Timeline from './timeline.js';
 import { showNotification, showError, showSuccess } from './notifications.js';
 import Tutorial from './tutorial.js';
+import Jerarquia from './jerarquia.js';
 
 let MetricasAdmin = null;
 
@@ -91,6 +92,9 @@ async function initializeUserSpecificFeatures() {
         console.log('👥 Usuario asesor detectado - Configurando vista simplificada');
         hideAdminFeatures();
     }
+    
+    // Actualizar navegación según rol (para todos los usuarios)
+    updateNavigationByRole();
 }
 
 /**
@@ -760,6 +764,79 @@ async function setupCommonModules(usuario) {
         console.log('Main: Inicializando módulo de Calendario...');
         Calendar.init();
     }
+
+    // Configurar navegación jerárquica basada en rol
+    setupHierarchicalNavigation(usuario);
+}
+
+/**
+ * ✅ CONFIGURAR NAVEGACIÓN JERÁRQUICA BASADA EN ROL
+ */
+function setupHierarchicalNavigation(usuario) {
+    console.log('🔍 Debug - setupHierarchicalNavigation llamado con usuario:', usuario);
+    console.log('🔍 Debug - usuario.rol:', usuario.rol);
+    console.log('🔍 Debug - typeof usuario.rol:', typeof usuario.rol);
+    
+    // Intentar múltiples veces si los elementos no están disponibles
+    const maxRetries = 10;
+    let retryCount = 0;
+    
+    function trySetupNavigation() {
+        const navJerarquia = document.getElementById('nav-jerarquia');
+        const jerarquiaSection = document.getElementById('jerarquia-section');
+        
+        console.log(`🔍 Debug (intento ${retryCount + 1}) - navJerarquia encontrado:`, !!navJerarquia);
+        console.log(`🔍 Debug (intento ${retryCount + 1}) - jerarquiaSection encontrado:`, !!jerarquiaSection);
+        
+        if (!navJerarquia && retryCount < maxRetries) {
+            retryCount++;
+            console.log(`⏳ Reintentando en 100ms... (intento ${retryCount}/${maxRetries})`);
+            setTimeout(trySetupNavigation, 100);
+            return;
+        }
+        
+        if (!navJerarquia || !jerarquiaSection) {
+            console.log('⚠️ Elementos de navegación jerárquica no encontrados después de todos los intentos');
+            return;
+        }
+        
+        console.log('✅ Elementos encontrados, configurando navegación jerárquica...');
+        setupNavigationElements(navJerarquia, jerarquiaSection, usuario);
+    }
+    
+    trySetupNavigation();
+}
+
+function setupNavigationElements(navJerarquia, jerarquiaSection, usuario) {
+    // ⚠️ PRUEBA TEMPORAL: Forzar mostrar siempre para debug
+    console.log('🚨 PRUEBA: Mostrando navegación jerárquica forzadamente');
+    navJerarquia.classList.remove('nav-jerarquia-hidden');
+    navJerarquia.classList.add('nav-jerarquia-visible');
+
+    // Mostrar/ocultar navegación según rol
+    const rolLower = usuario.rol ? usuario.rol.toLowerCase() : '';
+    if (rolLower === 'admin' || rolLower === 'administrador' || rolLower === 'gerente') {
+        navJerarquia.classList.remove('nav-jerarquia-hidden');
+        navJerarquia.classList.add('nav-jerarquia-visible');
+        
+        // Configurar controles específicos según rol
+        const adminControls = jerarquiaSection.querySelector('#admin-jerarquia-controls');
+        const gerenteControls = jerarquiaSection.querySelector('#gerente-jerarquia-controls');
+        
+        if (rolLower === 'admin' || rolLower === 'administrador') {
+            if (adminControls) adminControls.style.display = 'block';
+            if (gerenteControls) gerenteControls.style.display = 'none';
+            console.log('🔧 Navegación jerárquica habilitada para admin');
+        } else if (rolLower === 'gerente') {
+            if (adminControls) adminControls.style.display = 'none';
+            if (gerenteControls) gerenteControls.style.display = 'block';
+            console.log('🔧 Navegación jerárquica habilitada para gerente');
+        }
+    } else {
+        navJerarquia.classList.remove('nav-jerarquia-visible');
+        navJerarquia.classList.add('nav-jerarquia-hidden');
+        console.log('🔧 Navegación jerárquica deshabilitada para rol:', usuario.rol);
+    }
 }
 
 /**
@@ -987,9 +1064,7 @@ function showAsesorOnlyMessages() {
     }
 }
 
-/**
- * ✅ ACTUALIZAR NAVEGACIÓN PARA ADMIN
- */
+
 function updateAdminNavigation() {
     const dashboardNav = document.querySelector('.dashboard-nav ul');
     
@@ -1010,6 +1085,11 @@ function updateAdminNavigation() {
             <li>
                 <a href="#" data-section="estadisticas-section">
                     <i class="fas fa-chart-bar"></i> Métricas Avanzadas
+                </a>
+            </li>
+            <li>
+                <a href="#" data-section="gestion-gerentes-section">
+                    <i class="fas fa-users-cog"></i> Gestión de Gerentes
                 </a>
             </li>
             <li>
@@ -1099,6 +1179,42 @@ function hideAdminFeatures() {
     asesorMessage?.style && (asesorMessage.style.display = 'block');
     
     console.log('🔒 Funcionalidades admin ocultas para usuario asesor');
+}
+
+/**
+ * ✅ ACTUALIZAR NAVEGACIÓN SEGÚN ROL DE USUARIO
+ */
+function updateNavigationByRole() {
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
+    
+    console.log('🔄 Actualizando navegación para rol:', currentUser.rol);
+    
+    // Controlar visibilidad de Gestión de Gerentes (Admin y Gerentes)
+    const navGestionGerentes = document.getElementById('nav-gestion-gerentes');
+    if (navGestionGerentes) {
+        if (currentUser.rol === 'admin' || currentUser.rol === 'gerente') {
+            navGestionGerentes.style.display = 'list-item';
+            navGestionGerentes.classList.remove('nav-admin-hidden');
+            navGestionGerentes.classList.add('nav-admin-visible');
+            console.log('✅ Pestaña Gestión de Gerentes habilitada para', currentUser.rol);
+        } else {
+            navGestionGerentes.style.display = 'none';
+            navGestionGerentes.classList.add('nav-admin-hidden');
+            navGestionGerentes.classList.remove('nav-admin-visible');
+            console.log('🔒 Pestaña Gestión de Gerentes oculta para rol:', currentUser.rol);
+        }
+    }
+    
+    // Controlar otros elementos según rol
+    const adminOnlyElements = document.querySelectorAll('.nav-admin-only');
+    adminOnlyElements.forEach(element => {
+        if (currentUser.rol === 'admin') {
+            element.style.display = 'block';
+        } else {
+            element.style.display = 'none';
+        }
+    });
 }
 
 /**
@@ -1226,6 +1342,8 @@ function handleSpecialSections(sectionId) {
         handleCalendarioSection();
     } else if (sectionId === 'configuracion-section') {
         handleConfiguracionSection();
+    } else if (sectionId === 'gestion-gerentes-section') {
+        handleGestionGerentesSection();
     }
 }
 
@@ -1374,6 +1492,28 @@ function setupConfiguracionForAsesor() {
             console.log('ℹ️ Tutorial de configuración ya completado anteriormente');
         }
     }, 150);
+}
+
+
+function handleGestionGerentesSection() {
+    const currentUser = getCurrentUser();
+    console.log('🏗️ Accediendo a gestión de gerentes, usuario:', currentUser?.rol);
+
+    if (currentUser?.rol !== 'admin' && currentUser?.rol !== 'gerente') {
+        showNotification('Acceso denegado. Permisos insuficientes.', 'error');
+        showSection('reclutas-section');
+        return;
+    }
+
+    // Inicializar el módulo de jerarquía
+    if (Jerarquia) {
+        Jerarquia.init();
+    } else {
+        showError('No se pudo cargar el módulo de gestión de gerentes.');
+    }
+
+    // Configurar controles específicos del rol
+    setupGestionGerentesControls(currentUser);
 }
 
 /**
@@ -2167,6 +2307,13 @@ window.loginSuccess = loginSuccess;
 window.getCurrentUser = getCurrentUser;
 window.showSection = showSection;
 window.configureDashboardForRole = configureDashboardForRole;
+window.updateNavigationByRole = updateNavigationByRole;
+
+// Función específica para mostrar gestión de gerentes
+window.showGestionGerentes = function() {
+    console.log('🏗️ Función showGestionGerentes llamada');
+    showSection('gestion-gerentes-section');
+};
 
 // Exponer changeActiveSection también globalmente
 window.changeActiveSection = function(targetSection) {

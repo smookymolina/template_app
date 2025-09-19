@@ -4,7 +4,7 @@ from werkzeug.utils import secure_filename
 from models import db, DatabaseError
 from models.recluta import Recluta
 from models.usuario import Usuario
-from utils.decorators import admin_required, role_required, gerente_or_admin_required
+from utils.decorators import admin_required, role_required, gerente_or_admin_required, gerente_required
 from models.entrevista import Entrevista  # Importación específica desde el módulo
 from models.evento_recluta import EventoRecluta
 from utils.helpers import guardar_archivo, eliminar_archivo
@@ -113,8 +113,34 @@ def get_reclutas():
         if user_role == 'asesor':
             # Si es asesor, solo sus reclutas
             query = query.filter_by(asesor_id=user_id)
-        elif user_role in ['admin', 'gerente'] and asesor_id:
-            # Si es admin/gerente y especifica un asesor, filtrar por ese asesor
+        elif user_role == 'gerente':
+            # Si es gerente, puede ver:
+            # 1. Sus propios reclutas (asignados directamente)
+            # 2. Los reclutas de sus asesores
+            mis_asesores_ids = [asesor.id for asesor in current_user.get_mis_asesores()]
+            
+            if asesor_id:
+                # Si especifica un asesor, debe ser uno de los suyos
+                if asesor_id == 'sin_asignar':
+                    # Reclutas suyos sin asignar a asesores
+                    query = query.filter(
+                        Recluta.asesor_id == user_id
+                    )
+                elif asesor_id.isdigit() and int(asesor_id) in mis_asesores_ids:
+                    query = query.filter_by(asesor_id=int(asesor_id))
+                else:
+                    # No puede ver ese asesor, retornar vacío
+                    query = query.filter(False)
+            else:
+                # Ver todos: sus reclutas + reclutas de sus asesores
+                query = query.filter(
+                    db.or_(
+                        Recluta.asesor_id == user_id,  # Sus reclutas directos
+                        Recluta.asesor_id.in_(mis_asesores_ids)  # Reclutas de sus asesores
+                    )
+                )
+        elif user_role == 'admin' and asesor_id:
+            # Si es admin y especifica un asesor, filtrar por ese asesor
             if asesor_id == 'sin_asignar':
                 query = query.filter(Recluta.asesor_id.is_(None))
             elif asesor_id.isdigit():
@@ -1936,17 +1962,28 @@ def distribuir_reclutas_excel():
         if not archivo.filename.lower().endswith(('.xlsx', '.xls')):
             return jsonify({"success": False, "message": "Solo se permiten archivos Excel (.xlsx, .xls)"}), 400
         
-        # Obtener asesores activos
-        asesores = Usuario.query.filter(
-            Usuario.is_active == True,
-            Usuario.rol.in_(['asesor', 'gerente'])
-        ).all()
-        
-        if not asesores:
-            return jsonify({
-                "success": False, 
-                "message": "No hay asesores activos para asignar reclutas"
-            }), 400
+        # ✅ MODIFICADO: Obtener gerentes activos para distribución inicial (admin → gerentes)
+        if current_user.rol == 'admin':
+            # Admin distribuye a gerentes
+            asesores = Usuario.query.filter(
+                Usuario.is_active == True,
+                Usuario.rol == 'gerente'
+            ).all()
+            
+            if not asesores:
+                return jsonify({
+                    "success": False, 
+                    "message": "No hay gerentes activos para asignar reclutas"
+                }), 400
+        else:
+            # Gerente distribuye a sus asesores
+            asesores = current_user.get_mis_asesores()
+            
+            if not asesores:
+                return jsonify({
+                    "success": False, 
+                    "message": "No tienes asesores asignados para distribuir reclutas"
+                }), 400
         
         # Procesar Excel y distribuir
         from utils.helpers import procesar_y_distribuir_excel
@@ -2243,6 +2280,556 @@ def obtener_asesores_info():
             "success": False,
             "message": f"Error: {str(e)}"
         }), 500
+
+# ===============================================================================
+# 🆕 NUEVOS ENDPOINTS JERÁRQUICOS - Sistema Gerente -> Asesor
+# ===============================================================================
+
+@api_bp.route('/usuarios/jerarquia', methods=['GET'])
+@admin_required
+def get_jerarquia_completa():
+    """
+    Obtiene la estructura jerárquica completa para administradores
+    """
+    try:
+        current_app.logger.info("Obteniendo jerarquía completa para admin")
+        
+        jerarquia = current_user.get_jerarquia_completa()
+        
+        if jerarquia is None:
+            return jsonify({
+                "success": False,
+                "message": "No tienes permisos para ver la jerarquía completa"
+            }), 403
+        
+        return jsonify({
+            "success": True,
+            "jerarquia": jerarquia,
+            "total_gerentes": len(jerarquia),
+            "total_asesores": sum(len(item['asesores']) for item in jerarquia)
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo jerarquía: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al obtener jerarquía: {str(e)}"
+        }), 500
+
+@api_bp.route('/usuarios/mis-asesores', methods=['GET'])
+@role_required('gerente')
+def get_mis_asesores():
+    """
+    Obtiene los asesores asignados al gerente actual
+    """
+    try:
+        current_app.logger.info(f"Gerente {current_user.id} obteniendo sus asesores")
+        
+        asesores = current_user.get_mis_asesores()
+        
+        # Obtener estadísticas de reclutas para cada asesor
+        asesores_data = []
+        for asesor in asesores:
+            from models.recluta import Recluta
+            total_reclutas = Recluta.query.filter_by(asesor_id=asesor.id).count()
+            
+            asesores_data.append({
+                **asesor.serialize(),
+                "total_reclutas": total_reclutas
+            })
+        
+        return jsonify({
+            "success": True,
+            "asesores": asesores_data,
+            "total_asesores": len(asesores),
+            "gerente": current_user.serialize()
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo asesores del gerente: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al obtener asesores: {str(e)}"
+        }), 500
+
+@api_bp.route('/reclutas/distribuir-a-asesores', methods=['POST'])
+@role_required('gerente')
+def distribuir_reclutas_a_asesores():
+    """
+    Redistribuye reclutas del gerente a sus asesores
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'distribution' not in data:
+            return jsonify({
+                "success": False,
+                "message": "Datos de distribución requeridos"
+            }), 400
+        
+        distribution = data['distribution']
+        current_app.logger.info(f"Gerente {current_user.id} redistribuyendo a asesores: {distribution}")
+        
+        # Verificar que todos los asesores pertenecen al gerente actual
+        mis_asesores_ids = [asesor.id for asesor in current_user.get_mis_asesores()]
+        
+        redistribucion_resultado = {}
+        total_redistribuidos = 0
+        
+        for asesor_id_str, cantidad in distribution.items():
+            asesor_id = int(asesor_id_str)
+            cantidad = int(cantidad)
+            
+            # Usar nueva función de validación
+            if not current_user.validate_hierarchical_assignment(asesor_id):
+                return jsonify({
+                    "success": False,
+                    "message": f"El asesor {asesor_id} no pertenece a tu equipo"
+                }), 403
+            
+            # Obtener reclutas del gerente sin asignar o reasignar
+            from models.recluta import Recluta
+            reclutas_disponibles = Recluta.query.filter_by(asesor_id=current_user.id).limit(cantidad).all()
+            
+            reclutas_reasignados = 0
+            for recluta in reclutas_disponibles:
+                recluta.asesor_id = asesor_id
+                reclutas_reasignados += 1
+            
+            redistribucion_resultado[asesor_id] = reclutas_reasignados
+            total_redistribuidos += reclutas_reasignados
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Se redistribuyeron {total_redistribuidos} reclutas",
+            "redistribucion": redistribucion_resultado,
+            "total_redistribuidos": total_redistribuidos
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error redistribuyendo a asesores: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error en redistribución: {str(e)}"
+        }), 500
+
+@api_bp.route('/reclutas/dashboard-gerente', methods=['GET'])
+@role_required('gerente')
+def get_dashboard_gerente():
+    """
+    Vista consolidada para gerente: reclutas propios + estadísticas de asesores
+    """
+    try:
+        current_app.logger.info(f"Obteniendo dashboard para gerente {current_user.id}")
+        
+        from models.recluta import Recluta
+        
+        # Reclutas asignados directamente al gerente (sin asignar a asesores)
+        mis_reclutas = Recluta.query.filter_by(asesor_id=current_user.id).all()
+        
+        # Estadísticas de asesores
+        asesores = current_user.get_mis_asesores()
+        estadisticas_asesores = []
+        
+        total_reclutas_equipo = len(mis_reclutas)
+        
+        for asesor in asesores:
+            reclutas_asesor = Recluta.query.filter_by(asesor_id=asesor.id).all()
+            total_reclutas_equipo += len(reclutas_asesor)
+            
+            # Estadísticas por estado
+            estados = {}
+            for recluta in reclutas_asesor:
+                estado = recluta.estado or 'Sin estado'
+                estados[estado] = estados.get(estado, 0) + 1
+            
+            estadisticas_asesores.append({
+                **asesor.serialize(),
+                "total_reclutas": len(reclutas_asesor),
+                "estados": estados,
+                "reclutas": [r.serialize() for r in reclutas_asesor]
+            })
+        
+        return jsonify({
+            "success": True,
+            "gerente": current_user.serialize(),
+            "mis_reclutas": [r.serialize() for r in mis_reclutas],
+            "total_mis_reclutas": len(mis_reclutas),
+            "asesores": estadisticas_asesores,
+            "total_asesores": len(asesores),
+            "total_reclutas_equipo": total_reclutas_equipo
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo dashboard gerente: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al obtener dashboard: {str(e)}"
+        }), 500
+
+@api_bp.route('/usuarios/asignar-asesor', methods=['POST'])
+@admin_required  
+def asignar_asesor_a_gerente():
+    """
+    Asigna un asesor a un gerente (solo admin)
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'gerente_id' not in data or 'asesor_id' not in data:
+            return jsonify({
+                "success": False,
+                "message": "gerente_id y asesor_id son requeridos"
+            }), 400
+        
+        gerente_id = data['gerente_id']
+        asesor_id = data['asesor_id']
+        
+        gerente = Usuario.query.get(gerente_id)
+        asesor = Usuario.query.get(asesor_id)
+        
+        if not gerente or gerente.rol != 'gerente':
+            return jsonify({
+                "success": False,
+                "message": "Gerente no válido"
+            }), 400
+        
+        if not asesor or asesor.rol != 'asesor':
+            return jsonify({
+                "success": False,
+                "message": "Asesor no válido"
+            }), 400
+        
+        # Asignar asesor al gerente
+        asesor.gerente_id = gerente_id
+        db.session.commit()
+        
+        current_app.logger.info(f"Admin asignó asesor {asesor_id} al gerente {gerente_id}")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Asesor {asesor.nombre or asesor.email} asignado al gerente {gerente.nombre or gerente.email}",
+            "asesor": asesor.serialize(),
+            "gerente": gerente.serialize()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error asignando asesor a gerente: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error en asignación: {str(e)}"
+        }), 500
+
+# ===============================================================================
+# 🆕 NUEVOS ENDPOINTS PARA GESTIÓN JERÁRQUICA DE GERENTES
+# ===============================================================================
+
+def validate_hierarchical_permissions(user, action, target_id=None):
+    """Valida permisos jerárquicos para acciones específicas"""
+    if action == 'view_gerente_data' and user.rol != 'admin':
+        return False
+    
+    if action == 'redistribute_to_asesor' and user.rol == 'gerente':
+        # Verificar que el asesor pertenece al gerente
+        if target_id:
+            asesor = Usuario.query.get(target_id)
+            return asesor and asesor.gerente_id == user.id
+        return False
+    
+    if action == 'view_all_hierarchy' and user.rol != 'admin':
+        return False
+    
+    if action == 'assign_asesor' and user.rol != 'admin':
+        return False
+    
+    if action == 'view_mis_asesores' and user.rol != 'gerente':
+        return False
+    
+    return True
+
+@api_bp.route('/gerentes/jerarquia', methods=['GET'])
+@admin_required
+def get_gerentes_jerarquia():
+    """
+    Devuelve estructura jerárquica completa para administradores.
+    Gerentes con sus asesores y cantidad de reclutas.
+    """
+    try:
+        # Validación jerárquica adicional
+        if not validate_hierarchical_permissions(current_user, 'view_all_hierarchy'):
+            return jsonify({
+                "success": False,
+                "message": "No tienes permisos para ver toda la jerarquía"
+            }), 403
+        
+        current_app.logger.info(f"Admin {current_user.id} consultando jerarquía completa")
+        
+        # Usar el método existente en el modelo Usuario
+        jerarquia = current_user.get_jerarquia_completa()
+        
+        if jerarquia is None:
+            return jsonify({
+                "success": False,
+                "message": "Solo los administradores pueden ver la jerarquía completa"
+            }), 403
+        
+        return jsonify({
+            "success": True,
+            "jerarquia": jerarquia,
+            "total_gerentes": len(jerarquia),
+            "timestamp": datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo jerarquía completa: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error obteniendo jerarquía: {str(e)}"
+        }), 500
+
+@api_bp.route('/gerentes/mis-asesores', methods=['GET'])
+@role_required('gerente')
+def get_gerentes_mis_asesores():
+    """
+    Devuelve asesores asignados al gerente actual.
+    Solo para usuarios con rol 'gerente'.
+    """
+    try:
+        # Validación jerárquica adicional
+        if not validate_hierarchical_permissions(current_user, 'view_mis_asesores'):
+            return jsonify({
+                "success": False,
+                "message": "No tienes permisos para ver asesores"
+            }), 403
+        
+        current_app.logger.info(f"Gerente {current_user.id} consultando sus asesores")
+        
+        # Usar el método existente en el modelo Usuario
+        mis_asesores = current_user.get_mis_asesores()
+        
+        return jsonify({
+            "success": True,
+            "gerente": current_user.serialize(),
+            "asesores": [asesor.serialize() for asesor in mis_asesores],
+            "total_asesores": len(mis_asesores)
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo asesores del gerente: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error obteniendo asesores: {str(e)}"
+        }), 500
+
+@api_bp.route('/gerentes/asignar-asesor', methods=['POST'])
+@admin_required
+def asignar_gerentes_asesor():
+    """
+    Asigna un asesor a un gerente específico.
+    Solo para administradores.
+    Body: {"gerente_id": int, "asesor_id": int}
+    """
+    try:
+        # Validación jerárquica adicional
+        if not validate_hierarchical_permissions(current_user, 'assign_asesor'):
+            return jsonify({
+                "success": False,
+                "message": "No tienes permisos para asignar asesores"
+            }), 403
+        
+        data = request.get_json()
+        
+        if not data or 'gerente_id' not in data or 'asesor_id' not in data:
+            return jsonify({
+                "success": False,
+                "message": "gerente_id y asesor_id son requeridos"
+            }), 400
+        
+        gerente_id = data['gerente_id']
+        asesor_id = data['asesor_id']
+        
+        # Validaciones de negocio
+        gerente = Usuario.query.get(gerente_id)
+        asesor = Usuario.query.get(asesor_id)
+        
+        if not gerente or gerente.rol != 'gerente' or not gerente.is_active:
+            return jsonify({
+                "success": False,
+                "message": "Gerente no válido o inactivo"
+            }), 400
+        
+        if not asesor or asesor.rol != 'asesor' or not asesor.is_active:
+            return jsonify({
+                "success": False,
+                "message": "Asesor no válido o inactivo"
+            }), 400
+        
+        # Verificar si el asesor ya tiene gerente
+        if asesor.gerente_id and asesor.gerente_id != gerente_id:
+            gerente_actual = Usuario.query.get(asesor.gerente_id)
+            return jsonify({
+                "success": False,
+                "message": f"El asesor ya está asignado al gerente {gerente_actual.nombre if gerente_actual else 'desconocido'}"
+            }), 400
+        
+        # Asignar asesor al gerente
+        result = gerente.asignar_asesor(asesor_id)
+        
+        if not result:
+            return jsonify({
+                "success": False,
+                "message": "No se pudo realizar la asignación"
+            }), 400
+        
+        current_app.logger.info(f"Admin {current_user.id} asignó asesor {asesor_id} al gerente {gerente_id}")
+        
+        return jsonify({
+            "success": True,
+            "message": f"Asesor {asesor.nombre or asesor.email} asignado exitosamente al gerente {gerente.nombre or gerente.email}",
+            "asesor": asesor.serialize(),
+            "gerente": gerente.serialize()
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error asignando asesor a gerente: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error en asignación: {str(e)}"
+        }), 500
+
+@api_bp.route('/gerentes/redistribuir-reclutas', methods=['POST'])
+@role_required('gerente')
+def redistribuir_reclutas_gerente():
+    """
+    Permite al gerente redistribuir SUS reclutas a SUS asesores.
+    Solo puede asignar a sus propios asesores.
+    Body: {"recluta_ids": [list], "asesor_id": int}
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'recluta_ids' not in data or 'asesor_id' not in data:
+            return jsonify({
+                "success": False,
+                "message": "recluta_ids y asesor_id son requeridos"
+            }), 400
+        
+        recluta_ids = data['recluta_ids']
+        asesor_id = data['asesor_id']
+        
+        if not isinstance(recluta_ids, list) or not recluta_ids:
+            return jsonify({
+                "success": False,
+                "message": "recluta_ids debe ser una lista no vacía"
+            }), 400
+        
+        # Validación jerárquica adicional
+        if not validate_hierarchical_permissions(current_user, 'redistribute_to_asesor', asesor_id):
+            return jsonify({
+                "success": False,
+                "message": "No tienes permisos para redistribuir a este asesor"
+            }), 403
+        
+        # Validar que el asesor destino pertenece al gerente actual
+        if not current_user.validate_hierarchical_assignment(asesor_id):
+            return jsonify({
+                "success": False,
+                "message": "No tienes permisos para asignar reclutas a este asesor"
+            }), 403
+        
+        # Validar que todos los reclutas pertenecen al gerente actual
+        reclutas = Recluta.query.filter(Recluta.id.in_(recluta_ids)).all()
+        
+        if len(reclutas) != len(recluta_ids):
+            return jsonify({
+                "success": False,
+                "message": "Algunos reclutas no fueron encontrados"
+            }), 404
+        
+        # Verificar ownership de todos los reclutas
+        for recluta in reclutas:
+            if not current_user.puede_ver_recluta(recluta):
+                return jsonify({
+                    "success": False,
+                    "message": f"No tienes permisos para redistribuir el recluta {recluta.nombre}"
+                }), 403
+        
+        # Realizar la redistribución
+        redistribuidos = 0
+        for recluta in reclutas:
+            recluta.asesor_id = asesor_id
+            redistribuidos += 1
+        
+        db.session.commit()
+        
+        asesor = Usuario.query.get(asesor_id)
+        current_app.logger.info(f"Gerente {current_user.id} redistribuyó {redistribuidos} reclutas al asesor {asesor_id}")
+        
+        return jsonify({
+            "success": True,
+            "message": f"{redistribuidos} reclutas redistribuidos exitosamente a {asesor.nombre or asesor.email}",
+            "redistribuidos": redistribuidos,
+            "asesor": asesor.serialize(),
+            "reclutas": [r.serialize() for r in reclutas]
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error redistribuyendo reclutas del gerente: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error en redistribución: {str(e)}"
+        }), 500
+
+
+@api_bp.route('/api/gerentes/jerarquia', methods=['GET'])
+@admin_required
+def get_full_hierarchy():
+    """Devuelve la estructura jerárquica completa de gerentes y sus asesores."""
+    try:
+        gerentes = Usuario.query.filter_by(rol='gerente', is_active=True).all()
+        jerarquia = []
+        for gerente in gerentes:
+            asesores_data = []
+            for asesor in gerente.asesores:
+                if asesor.is_active:
+                    asesores_data.append({
+                        'id': asesor.id,
+                        'nombre': asesor.nombre,
+                        'email': asesor.email,
+                        'reclutas_count': len(asesor.reclutas_asignados)
+                    })
+            
+            jerarquia.append({
+                'id': gerente.id,
+                'nombre': gerente.nombre,
+                'email': gerente.email,
+                'asesores': asesores_data
+            })
+            
+        return jsonify({'success': True, 'jerarquia': jerarquia})
+
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener jerarquía: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
+
+@api_bp.route('/api/gerentes/mis-asesores', methods=['GET'])
+@gerente_required
+def get_my_asesores():
+    """Devuelve los asesores asignados al gerente que realiza la petición."""
+    try:
+        # El decorador @gerente_required ya nos da el usuario en current_user
+        asesores = [asesor.to_dict(rules=('-gerente', '-reclutas_asignados')) for asesor in current_user.asesores if asesor.is_active]
+        return jsonify({'success': True, 'asesores': asesores})
+
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener mis asesores: {str(e)}")
+        return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
 
 
 

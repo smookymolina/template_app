@@ -19,6 +19,13 @@ class Usuario(db.Model, UserMixin):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     last_login = db.Column(db.DateTime, nullable=True)
     
+    # ✅ NUEVO: Relación jerárquica - gerente_id para asesores
+    gerente_id = db.Column(db.Integer, db.ForeignKey('usuario.id'), nullable=True)
+    
+    # ✅ NUEVO: Relaciones jerárquicas bidireccionales
+    # Un gerente puede tener muchos asesores
+    asesores = db.relationship('Usuario', backref=db.backref('gerente', remote_side='Usuario.id'), lazy='dynamic')
+    
     # Relación con sesiones de usuario
     sessions = db.relationship('UserSession', backref='usuario', lazy='dynamic', cascade="all, delete-orphan")
     
@@ -60,7 +67,11 @@ class Usuario(db.Model, UserMixin):
             "foto_url": foto_url_completa, # Devolver la URL completa
             "rol": self.rol or 'asesor',
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "last_login": self.last_login.isoformat() if self.last_login else None
+            "last_login": self.last_login.isoformat() if self.last_login else None,
+            # ✅ NUEVO: Información jerárquica
+            "gerente_id": self.gerente_id,
+            "gerente_nombre": self.gerente.nombre if self.gerente else None,
+            "total_asesores": self.asesores.count() if self.rol == 'gerente' else 0
         }
     
     def get_display_role(self):
@@ -104,6 +115,113 @@ class Usuario(db.Model, UserMixin):
         }
         user_permissions = permissions.get(self.rol, [])
         return 'all' in user_permissions or permission in user_permissions
+
+    # ✅ NUEVOS MÉTODOS JERÁRQUICOS
+    def get_mis_asesores(self):
+        """Obtiene los asesores asignados a este gerente"""
+        if self.rol != 'gerente':
+            return []
+        return self.asesores.filter_by(is_active=True).all()
+    
+    @classmethod
+    def get_gerentes_activos(cls):
+        """Método estático para obtener todos los gerentes activos"""
+        return cls.query.filter_by(rol='gerente', is_active=True).all()
+    
+    @classmethod
+    def get_asesores_sin_gerente(cls):
+        """Método estático para obtener asesores sin gerente asignado"""
+        return cls.query.filter_by(rol='asesor', is_active=True, gerente_id=None).all()
+    
+    def asignar_asesor(self, asesor_id):
+        """Asigna un asesor a este gerente"""
+        if self.rol != 'gerente':
+            return False
+        
+        asesor = Usuario.query.get(asesor_id)
+        if asesor and asesor.rol == 'asesor' and asesor.is_active:
+            asesor.gerente_id = self.id
+            db.session.commit()
+            return True
+        return False
+    
+    def puede_ver_recluta(self, recluta):
+        """Verifica si el usuario puede ver un recluta específico"""
+        if self.rol == 'admin':
+            return True
+        elif self.rol == 'gerente':
+            # Gerente puede ver reclutas asignados a él o a sus asesores
+            if recluta.asesor_id == self.id:
+                return True
+            # Verificar si el recluta está asignado a alguno de sus asesores
+            mis_asesores_ids = [asesor.id for asesor in self.get_mis_asesores()]
+            return recluta.asesor_id in mis_asesores_ids
+        elif self.rol == 'asesor':
+            # Asesor solo puede ver sus propios reclutas
+            return recluta.asesor_id == self.id
+        return False
+
+    def validate_hierarchical_assignment(self, asesor_id):
+        """
+        Valida si este usuario puede asignar reclutas a un asesor específico
+        """
+        if self.rol == 'admin':
+            return True  # Admin puede asignar a cualquiera
+        elif self.rol == 'gerente':
+            # Gerente solo puede asignar a sus asesores
+            mis_asesores_ids = [asesor.id for asesor in self.get_mis_asesores()]
+            return asesor_id in mis_asesores_ids or asesor_id == self.id
+        else:
+            return False  # Asesores no pueden redistribuir
+
+    def can_access_asesor(self, asesor_id):
+        """
+        Valida si el usuario puede acceder a información de un asesor específico
+        """
+        if self.rol == 'admin':
+            return True
+        elif self.rol == 'gerente':
+            mis_asesores_ids = [asesor.id for asesor in self.get_mis_asesores()]
+            return asesor_id in mis_asesores_ids
+        else:
+            return asesor_id == self.id  # Asesor solo puede ver su propia info
+
+    def get_jerarquia_completa(self):
+        """Para admin: obtiene la estructura jerárquica completa"""
+        if self.rol != 'admin':
+            return None
+        
+        gerentes = Usuario.query.filter_by(rol='gerente', is_active=True).all()
+        jerarquia = []
+        
+        for gerente in gerentes:
+            asesores = gerente.get_mis_asesores()
+            jerarquia.append({
+                'gerente': gerente.serialize(),
+                'asesores': [asesor.serialize() for asesor in asesores],
+                'reclutas_gerente': self._count_reclutas_gerente(gerente.id),
+                'reclutas_total': self._count_reclutas_equipo(gerente.id)
+            })
+        
+        return jerarquia
+    
+    def _count_reclutas_gerente(self, gerente_id):
+        """Cuenta reclutas asignados directamente al gerente"""
+        from models.recluta import Recluta
+        return Recluta.query.filter_by(asesor_id=gerente_id).count()
+    
+    def _count_reclutas_equipo(self, gerente_id):
+        """Cuenta reclutas asignados al gerente y sus asesores"""
+        from models.recluta import Recluta
+        gerente = Usuario.query.get(gerente_id)
+        if not gerente:
+            return 0
+        
+        # Reclutas del gerente + reclutas de sus asesores
+        asesores_ids = [asesor.id for asesor in gerente.get_mis_asesores()]
+        asesores_ids.append(gerente.id)  # Incluir al gerente mismo
+        
+        return Recluta.query.filter(Recluta.asesor_id.in_(asesores_ids)).count()
     
     def save(self):
         """Guarda el usuario en la base de datos de forma segura"""

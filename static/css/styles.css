@@ -38,6 +38,31 @@ body.dark-mode {
     background-color: #181924 !important;
 }
 
+/* ===== NAVEGACIÓN ESPECÍFICA POR ROLES ===== */
+.nav-admin-only {
+    display: none !important;
+}
+
+body.admin-view .nav-admin-only {
+    display: list-item !important;
+}
+
+.nav-admin-hidden {
+    display: none !important;
+}
+
+.nav-admin-visible {
+    display: list-item !important;
+}
+
+.nav-jerarquia-hidden {
+    display: none !important;
+}
+
+.nav-jerarquia-visible {
+    display: list-item !important;
+}
+
 /* ===== RESET Y CONFIGURACIÓN BASE ===== */
 * {
     margin: 0;
@@ -1322,6 +1347,336 @@ body.admin-view #reclutas-table td:last-child {
 
 .dark-mode .stat-card {
     background-color: var(--light-color);
+}
+
+/* ===== GESTIÓN DE GERENTES ===== */
+.gerentes-actions {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.gerentes-actions .btn-primary,
+.gerentes-actions .btn-secondary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    transition: var(--transition);
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.gerentes-actions .btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.gerentes-actions .btn-primary:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.gerentes-actions .btn-secondary {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.gerentes-actions .btn-secondary:hover {
+    background-color: var(--secondary-dark);
+    transform: translateY(-2px);
+}
+
+.jerarquia-container {
+    background-color: white;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.dark-mode .jerarquia-container {
+    background-color: var(--light-color);
+}
+
+.info-placeholder {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-light);
+}
+
+.info-placeholder i {
+    font-size: 48px;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+}
+
+.info-placeholder h3 {
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.error-placeholder {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--danger-color);
+}
+
+.error-placeholder i {
+    font-size: 48px;
+    margin-bottom: 15px;
+    color: var(--danger-color);
+}
+
+/* Estilos para la vista de jerarquía */
+.gerente-card {
+    margin-bottom: 20px;
+    border-left: 4px solid var(--primary-color);
+    background-color: #fff;
+}
+
+.dark-mode .gerente-card {
+    background-color: var(--light-color);
+}
+
+.gerente-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.dark-mode .gerente-card .card-header {
+    background-color: #2a2b3d;
+}
+
+.gerente-card .card-header h4 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+}
+
+.gerente-card .card-body {
+    padding: 20px;
+}
+
+.asesores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+}
+
+.asesor-card {
+    background-color: #f8f9fa;
+    border-radius: var(--border-radius);
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.dark-mode .asesor-card {
+    background-color: #2a2d3d;
+    border-color: #3f3f3f;
+}
+
+.asesor-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-color);
+}
+
+.asesor-card p {
+    margin: 0 0 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: var(--text-light);
+}
+
+.asesor-card p:last-child {
+    margin-bottom: 0;
+}
+
+.asesor-card p i {
+    color: var(--primary-color);
+}
+
+/* ===== CONTROLES ESPECÍFICOS POR ROL ===== */
+.gerentes-controls {
+    margin-bottom: 20px;
+}
+
+.role-controls {
+    display: none;
+}
+
+.role-controls.active {
+    display: block;
+}
+
+/* ===== DASHBOARD MI EQUIPO ===== */
+.mi-equipo-dashboard {
+    background-color: white;
+    border-radius: var(--border-radius);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+}
+
+.dark-mode .mi-equipo-dashboard {
+    background-color: var(--light-color);
+}
+
+.equipo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.equipo-header h3 {
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.equipo-stats {
+    display: flex;
+    gap: 20px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 10px;
+    background-color: var(--primary-light);
+    border-radius: var(--border-radius);
+    min-width: 80px;
+}
+
+.stat-number {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-light);
+    text-transform: uppercase;
+}
+
+.equipo-actions {
+    margin-bottom: 25px;
+}
+
+.asesores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.asesor-card {
+    background-color: var(--light-color);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.asesor-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.dark-mode .asesor-card {
+    background-color: #2a2d3d;
+}
+
+.asesor-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.asesor-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.asesor-info h4 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 16px;
+}
+
+.asesor-email {
+    font-size: 12px;
+    color: var(--text-light);
+}
+
+.asesor-stats {
+    margin-bottom: 15px;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.stat-row .stat-label {
+    font-size: 14px;
+    color: var(--text-light);
+}
+
+.stat-row .stat-value {
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.asesor-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-small {
+    padding: 8px 12px;
+    font-size: 12px;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.no-asesores {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-light);
+    grid-column: 1 / -1;
+}
+
+.no-asesores i {
+    font-size: 48px;
+    margin-bottom: 15px;
+    color: var(--text-light);
 }
 
 .stat-card:hover {
@@ -2806,4 +3161,793 @@ body::after {
 
 .version-badge:hover {
     opacity: 1;
+}
+
+/* ===== SISTEMA JERÁRQUICO STYLES ===== */
+/* Modal de Distribución a Asesores */
+.gerente-info {
+    margin-bottom: 20px;
+}
+
+.gerente-info .info-box {
+    background: linear-gradient(135deg, var(--primary-light) 0%, rgba(52, 152, 219, 0.1) 100%);
+    border-left: 4px solid var(--primary-color);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .gerente-info .info-box {
+    background: linear-gradient(135deg, #2a2b3d 0%, rgba(52, 152, 219, 0.2) 100%);
+    border-left: 4px solid #4CAF50;
+}
+
+.asesores-distribution {
+    margin-bottom: 20px;
+}
+
+.asesores-distribution h4 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    font-size: 1.1em;
+}
+
+.asesores-distribution h4 i {
+    margin-right: 8px;
+}
+
+#asesores-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.asesor-item {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.asesor-item:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+.dark-mode .asesor-item {
+    background: #2a2b3d;
+    border-color: #444;
+}
+
+.dark-mode .asesor-item:hover {
+    border-color: #4CAF50;
+}
+
+.asesor-info h5 {
+    margin: 0 0 5px 0;
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.asesor-info p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.9em;
+}
+
+.asesor-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+}
+
+.asesor-controls label {
+    font-size: 0.85em;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.asesor-controls .reclutas-input {
+    width: 80px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    text-align: center;
+    font-weight: 600;
+    background: var(--input-background);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+}
+
+.asesor-controls .reclutas-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+    outline: none;
+}
+
+.dark-mode .asesor-controls .reclutas-input {
+    background: #1e1e2e;
+    border-color: #444;
+    color: #e9ecef;
+}
+
+.distribution-summary {
+    background: var(--success-light);
+    border-left: 4px solid var(--success-color);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    margin-top: 20px;
+}
+
+.dark-mode .distribution-summary {
+    background: rgba(76, 175, 80, 0.1);
+    border-left: 4px solid #4CAF50;
+}
+
+.distribution-summary h4 {
+    color: var(--success-color);
+    margin-top: 0;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    font-size: 1em;
+}
+
+.distribution-summary h4 i {
+    margin-right: 8px;
+}
+
+.distribution-summary ul {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 0 0;
+}
+
+.distribution-summary li {
+    background: rgba(255, 255, 255, 0.7);
+    padding: 8px 12px;
+    margin-bottom: 5px;
+    border-radius: calc(var(--border-radius) / 2);
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9em;
+}
+
+.dark-mode .distribution-summary li {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Navegación jerárquica - Control de visibilidad */
+.nav-jerarquia-hidden {
+    display: none !important;
+}
+
+.nav-jerarquia-visible {
+    display: block !important;
+}
+
+/* Dashboard Jerárquico */
+.jerarquia-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.gerente-card {
+    background: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.gerente-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.dark-mode .gerente-card {
+    background: #2a2b3d;
+    border-color: #444;
+}
+
+.gerente-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.gerente-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.gerente-title h5 {
+    margin: 0;
+    color: var(--primary-color);
+    font-size: 1.2em;
+}
+
+.gerente-stats {
+    display: flex;
+    gap: 15px;
+    font-size: 0.9em;
+    color: var(--text-muted);
+}
+
+.asesores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.asesor-card {
+    background: var(--background-alt);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    transition: all 0.3s ease;
+}
+
+.asesor-card:hover {
+    border-color: var(--primary-color);
+    transform: scale(1.02);
+}
+
+.dark-mode .asesor-card {
+    background: #1e1e2e;
+    border-color: #333;
+}
+
+.asesor-name {
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 8px;
+}
+
+.asesor-stats {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85em;
+    color: var(--text-muted);
+}
+
+/* Botones jerárquicos */
+.btn-jerarquico {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #2980b9 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-jerarquico:hover {
+    background: linear-gradient(135deg, #2980b9 0%, var(--primary-color) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+.btn-jerarquico:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .asesor-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    
+    .asesor-controls {
+        align-items: stretch;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+    
+    .asesores-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .gerente-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    
+    .gerente-stats {
+        justify-content: center;
+    }
+}
+
+/* =============================================================================== */
+/* 🆕 ESTILOS PARA GESTIÓN JERÁRQUICA DE GERENTES */
+/* =============================================================================== */
+
+/* Contenedor principal de jerarquía */
+.jerarquia-container {
+    padding: 24px;
+    background: var(--light-color);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    margin-bottom: 24px;
+}
+
+/* Árbol jerárquico */
+.jerarquia-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.jerarquia-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.jerarquia-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.jerarquia-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
+/* Tarjetas de gerente */
+.gerente-card {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.gerente-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.gerente-card.no-asesores {
+    border-left: 4px solid var(--warning-color);
+    background: #fffbf0;
+}
+
+.gerente-card.with-asesores {
+    border-left: 4px solid var(--success-color);
+}
+
+body.dark-mode .gerente-card {
+    background: #2a2d3a;
+    border-color: var(--border-color);
+}
+
+body.dark-mode .gerente-card.no-asesores {
+    background: #3a3520;
+    border-left-color: var(--warning-color);
+}
+
+/* Header del gerente */
+.gerente-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.gerente-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.gerente-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 1.2rem;
+}
+
+.gerente-details h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.gerente-details p {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    margin: 2px 0 0 0;
+}
+
+.gerente-stats {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.stat-badge {
+    background: var(--primary-light);
+    color: var(--primary-color);
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border: 1px solid rgba(0, 123, 255, 0.2);
+}
+
+.stat-badge.warning {
+    background: #fff8e1;
+    color: var(--warning-color);
+    border-color: rgba(255, 193, 7, 0.2);
+}
+
+/* Lista de asesores */
+.asesores-list {
+    margin-top: 16px;
+}
+
+.asesores-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.asesores-title {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.asesores-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+}
+
+.asesor-item {
+    background: var(--light-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+    transition: var(--transition);
+}
+
+.asesor-item:hover {
+    background: white;
+    box-shadow: var(--shadow-sm);
+}
+
+body.dark-mode .asesor-item {
+    background: #1e1e2c;
+    border-color: var(--border-color);
+}
+
+body.dark-mode .asesor-item:hover {
+    background: #252836;
+}
+
+.asesor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.asesor-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.asesor-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--secondary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.asesor-name {
+    font-weight: 500;
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.asesor-reclutas {
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+
+/* Botones de acción jerárquica */
+.jerarquia-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-jerarquia {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-asignar {
+    background: var(--primary-color);
+    color: white;
+}
+
+.btn-asignar:hover {
+    background: var(--primary-dark);
+}
+
+.btn-redistribuir {
+    background: var(--warning-color);
+    color: white;
+}
+
+.btn-redistribuir:hover {
+    background: #e0a800;
+}
+
+.btn-ver-detalle {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.btn-ver-detalle:hover {
+    background: var(--secondary-dark);
+}
+
+/* Estados vacíos */
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-light);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+    color: var(--text-color);
+}
+
+.empty-state p {
+    font-size: 0.9rem;
+    max-width: 400px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
+/* Modal de asignación */
+.modal-jerarquia .modal-body {
+    padding: 24px;
+}
+
+.form-group-jerarquia {
+    margin-bottom: 20px;
+}
+
+.form-group-jerarquia label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.select-jerarquia {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.9rem;
+    background: white;
+    color: var(--text-color);
+}
+
+body.dark-mode .select-jerarquia {
+    background: #2a2d3a;
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+/* Alertas jerárquicas */
+.alert-jerarquia {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.alert-warning {
+    background: #fff8e1;
+    border: 1px solid #ffecb3;
+    color: #f57c00;
+}
+
+.alert-info {
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    color: #1976d2;
+}
+
+body.dark-mode .alert-warning {
+    background: #3a3520;
+    border-color: #4a4020;
+    color: #ffb74d;
+}
+
+body.dark-mode .alert-info {
+    background: #1a2332;
+    border-color: #2a3442;
+    color: #64b5f6;
+}
+
+/* Indicadores de estado jerárquico */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.8rem;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.status-active {
+    background: #e8f5e8;
+    color: var(--success-color);
+    border: 1px solid rgba(40, 167, 69, 0.2);
+}
+
+.status-unassigned {
+    background: #fff3cd;
+    color: var(--warning-color);
+    border: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+.status-inactive {
+    background: #f8d7da;
+    color: var(--danger-color);
+    border: 1px solid rgba(220, 53, 69, 0.2);
+}
+
+body.dark-mode .status-active {
+    background: #1b3a1b;
+    border-color: rgba(40, 167, 69, 0.3);
+}
+
+body.dark-mode .status-unassigned {
+    background: #3a3520;
+    border-color: rgba(255, 193, 7, 0.3);
+}
+
+body.dark-mode .status-inactive {
+    background: #3a1e20;
+    border-color: rgba(220, 53, 69, 0.3);
+}
+
+/* Animaciones para la jerarquía */
+.jerarquia-fade-in {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive design para jerarquía */
+@media (max-width: 768px) {
+    .jerarquia-container {
+        padding: 16px;
+    }
+    
+    .jerarquia-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .jerarquia-stats {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .gerente-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .gerente-info {
+        justify-content: center;
+    }
+    
+    .gerente-stats {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .asesores-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .jerarquia-actions {
+        justify-content: center;
+    }
 }

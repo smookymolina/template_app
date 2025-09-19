@@ -154,6 +154,8 @@
                 <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Reclutas</a></li>
                 <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
                 <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Estadísticas</a></li>
+                <!-- ✅ NUEVA: Gestión de Gerentes (Solo Admin) -->
+                <li id="nav-gestion-gerentes" class="nav-admin-only"><a href="#" data-section="gestion-gerentes-section"><i class="fas fa-users-cog"></i> Gestión de Gerentes</a></li>
                 <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Configuración</a></li>
             </ul>
         </div>
@@ -183,6 +185,50 @@
         
         <!-- Sección de estadísticas -->
         {% include 'components/seccion_estadisticas.html' %}
+        
+        <!-- ✅ SECCIÓN UNIFICADA: Gestión de Gerentes y Jerarquía -->
+        <div id="gestion-gerentes-section" class="dashboard-content-section" style="display: none;">
+            <div class="section-header">
+                <h2><i class="fas fa-users-cog"></i> Gestión de Gerentes</h2>
+                <p class="section-description">Administrar la jerarquía organizacional y asignación de equipos</p>
+            </div>
+
+            <!-- Controles según rol del usuario -->
+            <div class="gerentes-controls">
+                <!-- Controles para Admin -->
+                <div id="admin-gerentes-controls" class="role-controls" style="display: none;">
+                    <div class="gerentes-actions">
+                        <button class="btn-primary" onclick="mostrarAsignacionAsesores()">
+                            <i class="fas fa-user-plus"></i> Asignar Asesores a Gerentes
+                        </button>
+                        <button class="btn-secondary" onclick="mostrarJerarquiaCompleta()">
+                            <i class="fas fa-sitemap"></i> Ver Jerarquía Completa
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Controles para Gerente -->
+                <div id="gerente-gerentes-controls" class="role-controls" style="display: none;">
+                    <div class="gerentes-actions">
+                        <button class="btn-primary" onclick="redistribuirReclutasGerente(getCurrentUser().id)">
+                            <i class="fas fa-share-alt"></i> Redistribuir Mis Reclutas
+                        </button>
+                        <button class="btn-secondary" onclick="verMiEquipo()">
+                            <i class="fas fa-users"></i> Ver Mi Equipo
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenedor principal para contenido dinámico -->
+            <div id="jerarquia-container">
+                <div class="info-placeholder">
+                    <i class="fas fa-users-cog"></i>
+                    <h3>Gestión de Gerentes</h3>
+                    <p>Selecciona una opción del menú superior para comenzar a gestionar la jerarquía organizacional</p>
+                </div>
+            </div>
+        </div>
         
         <!-- Sección de configuración -->
         {% include 'components/seccion_configuracion.html' %}
@@ -227,6 +273,7 @@
     import { showNotification, showError, showSuccess } from '/static/js/notifications.js';
     import Client from '/static/js/client.js';
     import Timeline from '/static/js/timeline.js';
+    import '/static/js/jerarquia.js';
 
     // ✅ INICIALIZACIÓN PRINCIPAL
     document.addEventListener('DOMContentLoaded', function() {

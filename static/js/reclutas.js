@@ -297,6 +297,8 @@ const Reclutas = {
         
         // Mensaje de bienvenida
         this.showAdminWelcome();
+        
+        
     },
 
     /**
@@ -319,7 +321,11 @@ const Reclutas = {
             distribucionBtn.id = 'distribuir-excel-btn';
             distribucionBtn.className = 'btn-primary';
             distribucionBtn.style.marginRight = '10px';
-            distribucionBtn.innerHTML = '<i class="fas fa-chart-line"></i> Distribuir Reclutas Excel';
+            // Texto contextual según rol
+            const buttonText = this.userRole === 'admin' 
+                ? '<i class="fas fa-chart-line"></i> Distribuir Reclutas a Gerentes'
+                : '<i class="fas fa-chart-line"></i> Distribuir Reclutas a Asesores';
+            distribucionBtn.innerHTML = buttonText;
             
             // Insertar antes del botón "Agregar Nuevo Recluta"
             const addButton = document.getElementById('open-add-recluta-modal');
@@ -370,7 +376,7 @@ const Reclutas = {
             modal.innerHTML = `
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3><i class="fas fa-chart-line"></i> Distribución Automática de Reclutas</h3>
+                        <h3><i class="fas fa-chart-line"></i> ${this.userRole === 'admin' ? 'Distribución Automática a Gerentes' : 'Distribución Automática a Mis Asesores'}</h3>
                         <span class="close-modal">&times;</span>
                     </div>
                     <div class="modal-body">
@@ -378,9 +384,9 @@ const Reclutas = {
                             <div class="info-box">
                                 <h4><i class="fas fa-info-circle"></i> Información del Proceso</h4>
                                 <ul>
-                                    <li>📊 <strong>Función:</strong> Distribuye reclutas automáticamente entre asesores activos</li>
+                                    <li>📊 <strong>Función:</strong> Distribuye reclutas automáticamente entre ${this.userRole === 'admin' ? 'gerentes activos' : 'mis asesores asignados'}</li>
                                     <li>📄 <strong>Formato:</strong> Excel (.xlsx, .xls) con headers: "Fecha de creación", "Nombre", "Teléfono"</li>
-                                    <li>⚖️ <strong>Distribución:</strong> Equitativa entre asesores no fijados</li>
+                                    <li>⚖️ <strong>Distribución:</strong> Equitativa entre ${this.userRole === 'admin' ? 'gerentes no fijados' : 'asesores no fijados'}</li>
                                     <li>🔍 <strong>Validación:</strong> Evita duplicados de teléfono</li>
                                 </ul>
                             </div>
@@ -999,6 +1005,8 @@ const Reclutas = {
 
         // Mensaje de bienvenida
         this.showGerenteWelcome();
+        
+        
     },
 
     /**
@@ -1015,7 +1023,11 @@ const Reclutas = {
         
         // Mensaje de bienvenida
         this.showAsesorWelcome();
+        
+        
     },
+
+    
 
     /**
      * ✅ NUEVA FUNCIÓN: Muestra selectores de asesor
