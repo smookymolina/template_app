@@ -144,7 +144,9 @@
         </div>
     </div>
     
-    <div class="card">
+    <!-- Administración de Usuarios (Solo para Administradores) -->
+    {% if current_user.rol == 'admin' %}
+    <div class="card admin-only" id="user-administration-section">
         <div class="card-header">
             <h4>Administración de Usuarios</h4>
         </div>
@@ -152,7 +154,7 @@
             <div class="config-section">
                 <h5>Gestión de Usuarios</h5>
                 <p>Crea cuentas para nuevos miembros del equipo y asignarles roles.</p>
-                
+
                 <div class="user-management-actions">
                     <button class="btn-primary" id="create-user-account-btn" data-modal-target="create-user-account-modal">
                         <i class="fas fa-user-plus"></i> Crear Nueva Cuenta
@@ -176,4 +178,5 @@
             </div>
         </div>
     </div>
+    {% endif %}
 </div>

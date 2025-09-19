@@ -27,82 +27,161 @@ const Reclutas = {
     currentEditingTimelineId: null,
 
     /**
-     * Configura el filtro por asesor (solo para administradores)
+     * Configura el filtro por asesor para administradores (usando el filtro unificado)
      */
-    setupAsesorFilter: function() {
-        if (this.userRole !== 'admin') {
-            console.log('Usuario no es admin, ocultando filtro de asesor');
-            const filterGroup = document.getElementById('filter-asesor-group');
-            if (filterGroup) filterGroup.style.display = 'none';
-            return;
-        }
-        
-        console.log('Configurando filtro de asesor para admin');
-        
-        // Mostrar el filtro
-        const filterGroup = document.getElementById('filter-asesor-group');
+    setupAdminAsesorFilter: function() {
+        console.log('Configurando filtro de asesores para admin');
+
+        // Mostrar el filtro unificado
+        const filterGroup = document.getElementById('filter-gerente-asesores-group');
         if (filterGroup) filterGroup.style.display = 'flex';
-        
-        // Poblar el selector con asesores
-        this.populateAsesorFilter();
-        
+
+        // Poblar con todos los asesores (no solo los del gerente)
+        this.populateAdminAsesorFilter();
+
         // Configurar evento
-        const filterAsesor = document.getElementById('filter-asesor');
-        if (filterAsesor) {
-            filterAsesor.addEventListener('change', () => {
-                this.filterByAsesor(filterAsesor.value);
+        const filterAsesores = document.getElementById('filter-gerente-asesores');
+        if (filterAsesores) {
+            filterAsesores.addEventListener('change', () => {
+                this.filterByAsesor(filterAsesores.value);
                 this.loadAndDisplayReclutas();
             });
         }
     },
 
     /**
-     * Pobla el selector de filtro por asesor
+     * Configura el filtro por asesor específico para gerentes
      */
-    populateAsesorFilter: async function() {
-        const filterAsesor = document.getElementById('filter-asesor');
-        if (!filterAsesor) return;
-        
+    setupGerenteAsesorFilter: function() {
+        if (this.userRole !== 'gerente') {
+            console.log('Usuario no es gerente, ocultando filtro de asesores del gerente');
+            const filterGroup = document.getElementById('filter-gerente-asesores-group');
+            if (filterGroup) filterGroup.style.display = 'none';
+            return;
+        }
+
+        console.log('Configurando filtro de asesores para gerente');
+
+        // Mostrar el filtro específico para gerente
+        const filterGroup = document.getElementById('filter-gerente-asesores-group');
+        if (filterGroup) filterGroup.style.display = 'flex';
+
+        // Poblar el selector con asesores asignados al gerente
+        this.populateGerenteAsesorFilter();
+
+        // Configurar evento
+        const filterGerenteAsesores = document.getElementById('filter-gerente-asesores');
+        if (filterGerenteAsesores) {
+            filterGerenteAsesores.addEventListener('change', () => {
+                this.filterByAsesor(filterGerenteAsesores.value);
+                this.loadAndDisplayReclutas();
+            });
+        }
+    },
+
+
+    /**
+     * Pobla el selector de filtro por asesor específico para gerentes
+     */
+    populateGerenteAsesorFilter: async function() {
+        const filterGerenteAsesores = document.getElementById('filter-gerente-asesores');
+        if (!filterGerenteAsesores) return;
+
         try {
-            // Cargar asesores si no están cargados
+            // Cargar asesores asignados al gerente actual
+            const currentUser = Auth.currentUser;
+            if (!currentUser || currentUser.rol !== 'gerente') {
+                console.warn('No hay gerente autenticado para cargar asesores');
+                return;
+            }
+
+            // Cargar asesores del gerente desde el backend
+            const response = await fetch(`${CONFIG.API_URL}/gerentes/mis-asesores`);
+            if (!response.ok) {
+                throw new Error(`Error al cargar asesores del gerente: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const asesoriesAsignados = data.asesores || [];
+
+            // Limpiar opciones existentes
+            filterGerenteAsesores.innerHTML = '';
+
+            // Añadir opciones por defecto
+            const todosOption = document.createElement('option');
+            todosOption.value = 'todos';
+            todosOption.textContent = 'Todos mis asesores';
+            filterGerenteAsesores.appendChild(todosOption);
+
+            const sinAsignarOption = document.createElement('option');
+            sinAsignarOption.value = 'sin_asignar';
+            sinAsignarOption.textContent = 'Sin asignar';
+            filterGerenteAsesores.appendChild(sinAsignarOption);
+
+            // Agregar asesores asignados al gerente
+            asesoriesAsignados.forEach(asesor => {
+                const option = document.createElement('option');
+                option.value = asesor.id;
+                option.textContent = asesor.nombre || asesor.email;
+                filterGerenteAsesores.appendChild(option);
+            });
+
+            console.log(`Filtro de asesores de gerente poblado con ${asesoriesAsignados.length} asesores`);
+
+        } catch (error) {
+            console.error('Error al poblar filtro de asesores del gerente:', error);
+            // En caso de error, al menos mostrar las opciones básicas
+            filterGerenteAsesores.innerHTML = `
+                <option value="todos">Todos mis asesores</option>
+                <option value="sin_asignar">Sin asignar</option>
+            `;
+        }
+    },
+
+    /**
+     * Pobla el selector de filtro por asesor para administradores (todos los asesores)
+     */
+    populateAdminAsesorFilter: async function() {
+        const filterAsesores = document.getElementById('filter-gerente-asesores');
+        if (!filterAsesores) return;
+
+        try {
+            // Cargar todos los asesores si no están cargados
             if (!this.asesores || this.asesores.length === 0) {
                 await this.loadAsesores();
             }
-            
-            // Limpiar opciones existentes (mantener las por defecto)
-            const defaultOptions = filterAsesor.querySelectorAll('option[value="todos"], option[value="sin_asignar"]');
-            filterAsesor.innerHTML = '';
-            
-            // Restaurar opciones por defecto
-            defaultOptions.forEach(option => {
-                filterAsesor.appendChild(option.cloneNode(true));
-            });
-            
-            // Si no había opciones por defecto, crearlas
-            if (defaultOptions.length === 0) {
-                const todosOption = document.createElement('option');
-                todosOption.value = 'todos';
-                todosOption.textContent = 'Todos los asesores';
-                filterAsesor.appendChild(todosOption);
-                
-                const sinAsignarOption = document.createElement('option');
-                sinAsignarOption.value = 'sin_asignar';
-                sinAsignarOption.textContent = 'Sin asignar';
-                filterAsesor.appendChild(sinAsignarOption);
-            }
-            
-            // Agregar opciones de asesores
+
+            // Limpiar opciones existentes
+            filterAsesores.innerHTML = '';
+
+            // Añadir opciones por defecto
+            const todosOption = document.createElement('option');
+            todosOption.value = 'todos';
+            todosOption.textContent = 'Todos los asesores';
+            filterAsesores.appendChild(todosOption);
+
+            const sinAsignarOption = document.createElement('option');
+            sinAsignarOption.value = 'sin_asignar';
+            sinAsignarOption.textContent = 'Sin asignar';
+            filterAsesores.appendChild(sinAsignarOption);
+
+            // Agregar todos los asesores disponibles
             this.asesores.forEach(asesor => {
                 const option = document.createElement('option');
                 option.value = asesor.id;
                 option.textContent = asesor.nombre || asesor.email;
-                filterAsesor.appendChild(option);
+                filterAsesores.appendChild(option);
             });
-            
-            console.log(`Filtro de asesor poblado con ${this.asesores.length} asesores`);
-            
+
+            console.log(`Filtro de asesores para admin poblado con ${this.asesores.length} asesores`);
+
         } catch (error) {
-            console.error('Error al poblar filtro de asesor:', error);
+            console.error('Error al poblar filtro de asesores para admin:', error);
+            // En caso de error, al menos mostrar las opciones básicas
+            filterAsesores.innerHTML = `
+                <option value="todos">Todos los asesores</option>
+                <option value="sin_asignar">Sin asignar</option>
+            `;
         }
     },
 
@@ -274,25 +353,24 @@ const Reclutas = {
      */
     setupAdminFeatures: function() {
         console.log('Configurando características de administrador');
-        
+
         // Mostrar columna de asesor
         this.showAsesorColumn();
         this.showAsesorSelectors();
-        this.setupAsesorFilter();
+
+        // Configurar filtro de asesores (usar el mismo que gerentes pero con todos los asesores)
+        this.setupAdminAsesorFilter();
 
         // Configurar botón de distribución Excel
         this.setupDistribucionExcelButton();
 
-        // Configurar filtro por asesor
-        this.setupAsesorFilter();
-        
         // Mostrar selectores de asesor en formularios
         this.showAsesorSelectors();
-        
+
         // Cargar asesores disponibles
         this.loadAsesores().then(() => {
             this.populateAsesorSelectors();
-            this.populateAsesorFilter();
+            this.populateAdminAsesorFilter();
         });
         
         // Mensaje de bienvenida
@@ -1023,17 +1101,15 @@ const Reclutas = {
      */
     setupGerenteFeatures: function() {
         console.log('Configurando características de gerente');
-        
+
         // Mostrar columna de asesor (como admin)
         this.showAsesorColumn();
         this.showAsesorSelectors();
-        this.setupAsesorFilter();
 
-        // Configurar botón de distribución Excel (gerentes también pueden)
-        this.setupDistribucionExcelButton();
+        // Configurar filtro específico para gerentes (sus asesores asignados)
+        this.setupGerenteAsesorFilter();
 
-        // Configurar filtro por asesor
-        this.setupAsesorFilter();
+        // Los gerentes NO pueden subir/distribuir Excel (solo admins)
         
         // Mostrar selectores de asesor en formularios
         this.showAsesorSelectors();

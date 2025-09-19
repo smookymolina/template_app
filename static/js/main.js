@@ -1005,7 +1005,7 @@ function configureDashboardForRole(rol) {
  * ✅ LIMPIAR CLASES DE ROL ANTERIORES
  */
 function cleanPreviousRoleClasses() {
-    document.body.classList.remove('admin-view', 'asesor-view');
+    document.body.classList.remove('admin-view', 'asesor-view', 'gerente-view');
 }
 
 /**
@@ -1014,6 +1014,8 @@ function cleanPreviousRoleClasses() {
 function applyRoleConfiguration(rol) {
     if (rol === 'admin') {
         setupAdminConfiguration();
+    } else if (rol === 'gerente') {
+        setupGerenteConfiguration();
     } else if (rol === 'asesor') {
         setupAsesorConfiguration();
     } else {
@@ -1046,26 +1048,61 @@ function setupAdminConfiguration() {
 }
 
 /**
- * ✅ CONFIGURAR PARA ASESOR
+ * ✅ CONFIGURAR PARA GERENTE
  */
-function setupAsesorConfiguration() {
-    console.log('👥 Configurando vista de asesor...');
-    
-    document.body.classList.add('asesor-view');
-    
+function setupGerenteConfiguration() {
+    console.log('👔 Configurando vista de gerente...');
+
+    document.body.classList.add('gerente-view');
+
+    // Ocultar elementos admin-only
     const adminElements = document.querySelectorAll('.admin-only');
-    console.log(`📦 Ocultando ${adminElements.length} elementos admin-only`);
-    
+    console.log(`📦 Ocultando ${adminElements.length} elementos admin-only para gerente`);
+
     adminElements.forEach((element, index) => {
         if (element) {
             element.style.display = 'none';
             console.log(`❌ Elemento admin ${index + 1} oculto:`, element.className);
         }
     });
-    
+
+    // Mostrar elementos específicos para gerente
+    const gerenteElements = document.querySelectorAll('.gerente-only-filter');
+    console.log(`📦 Mostrando ${gerenteElements.length} elementos gerente-only`);
+
+    gerenteElements.forEach((element, index) => {
+        if (element) {
+            element.style.display = 'block';
+            console.log(`✅ Elemento gerente ${index + 1} mostrado:`, element.className);
+        }
+    });
+
+    updateGerenteNavigation();
+
+    console.log('✅ Vista de gerente configurada correctamente');
+}
+
+/**
+ * ✅ CONFIGURAR PARA ASESOR
+ */
+function setupAsesorConfiguration() {
+    console.log('👥 Configurando vista de asesor...');
+
+    document.body.classList.add('asesor-view');
+
+    const adminElements = document.querySelectorAll('.admin-only');
+    console.log(`📦 Ocultando ${adminElements.length} elementos admin-only`);
+
+    adminElements.forEach((element, index) => {
+        if (element) {
+            element.style.display = 'none';
+            console.log(`❌ Elemento admin ${index + 1} oculto:`, element.className);
+        }
+    });
+
     showAsesorOnlyMessages();
     updateAsesorNavigation();
-    
+
     console.log('✅ Vista de asesor configurada correctamente');
 }
 
@@ -1130,14 +1167,56 @@ function updateAdminNavigation() {
 }
 
 /**
+ * ✅ ACTUALIZAR NAVEGACIÓN PARA GERENTE
+ */
+function updateGerenteNavigation() {
+    const dashboardNav = document.querySelector('.dashboard-nav ul');
+
+    if (dashboardNav) {
+        console.log('📋 Configurando navegación de gerente...');
+
+        dashboardNav.innerHTML = `
+            <li class="active">
+                <a href="#" data-section="reclutas-section">
+                    <i class="fas fa-users"></i> Gestión de Reclutas
+                </a>
+            </li>
+            <li>
+                <a href="#" data-section="calendario-section">
+                    <i class="fas fa-calendar-alt"></i> Calendario
+                </a>
+            </li>
+            <li>
+                <a href="#" data-section="estadisticas-section">
+                    <i class="fas fa-chart-bar"></i> Estadísticas
+                </a>
+            </li>
+            <li>
+                <a href="#" data-section="gestion-gerentes-section">
+                    <i class="fas fa-users-cog"></i> Gestión de Gerentes
+                </a>
+            </li>
+            <li>
+                <a href="#" data-section="configuracion-section">
+                    <i class="fas fa-cog"></i> Configuración
+                </a>
+            </li>
+        `;
+
+        reinitializeNavigation();
+        console.log('✅ Navegación de gerente configurada');
+    }
+}
+
+/**
  * ✅ ACTUALIZAR NAVEGACIÓN PARA ASESOR
  */
 function updateAsesorNavigation() {
     const dashboardNav = document.querySelector('.dashboard-nav ul');
-    
+
     if (dashboardNav) {
         console.log('📋 Configurando navegación de asesor...');
-        
+
         dashboardNav.innerHTML = `
             <li class="active">
                 <a href="#" data-section="reclutas-section">
@@ -1160,7 +1239,7 @@ function updateAsesorNavigation() {
                 </a>
             </li>
         `;
-        
+
         reinitializeNavigation();
         console.log('✅ Navegación de asesor configurada');
     }

@@ -47,6 +47,15 @@ body.admin-view .nav-admin-only {
     display: list-item !important;
 }
 
+/* ===== FILTROS ESPECÍFICOS POR ROLES ===== */
+.gerente-only-filter {
+    display: none !important;
+}
+
+body.gerente-view .gerente-only-filter,
+    display: block !important;
+}
+
 .nav-admin-hidden {
     display: none !important;
 }
