@@ -456,21 +456,43 @@ const Reclutas = {
         if (!modal) {
             modal = document.createElement('div');
             modal.id = modalId;
-            modal.className = 'modal';
+            modal.className = 'modal modal-lg';
             modal.innerHTML = `
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h3><i class="fas fa-chart-line"></i> ${this.userRole === 'admin' ? 'Distribución Automática a Gerentes' : 'Distribución Automática a Mis Asesores'}</h3>
+                        <h3><i class="fas fa-chart-line"></i> ${this.userRole === 'admin' ? 'Distribución Automática Dual' : 'Distribución Automática a Mis Asesores'}</h3>
                         <span class="close-modal">&times;</span>
                     </div>
                     <div class="modal-body">
                         <div class="distribucion-info">
+                            ${this.userRole === 'admin' ? `
+                            <div class="distribution-type-selector">
+                                <h4><i class="fas fa-users"></i> Tipo de Distribución</h4>
+                                <div class="radio-group">
+                                    <label class="radio-option">
+                                        <input type="radio" name="distribution-type" value="dual" checked>
+                                        <span class="radio-custom"></span>
+                                        <strong>Distribución Dual</strong> - A Gerentes y Asesores por separado
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="distribution-type" value="gerentes">
+                                        <span class="radio-custom"></span>
+                                        <strong>Solo Gerentes</strong> - Distribución únicamente a gerentes
+                                    </label>
+                                    <label class="radio-option">
+                                        <input type="radio" name="distribution-type" value="asesores">
+                                        <span class="radio-custom"></span>
+                                        <strong>Solo Asesores</strong> - Distribución únicamente a asesores
+                                    </label>
+                                </div>
+                            </div>
+                            ` : ''}
                             <div class="info-box">
                                 <h4><i class="fas fa-info-circle"></i> Información del Proceso</h4>
                                 <ul>
-                                    <li>📊 <strong>Función:</strong> Distribuye reclutas automáticamente entre ${this.userRole === 'admin' ? 'gerentes activos' : 'mis asesores asignados'}</li>
+                                    <li>📊 <strong>Función:</strong> ${this.userRole === 'admin' ? 'Distribuye reclutas por separado a gerentes y asesores' : 'Distribuye reclutas automáticamente entre mis asesores asignados'}</li>
                                     <li>📄 <strong>Formato:</strong> Excel (.xlsx, .xls) con headers: "Fecha de creación", "Nombre", "Teléfono"</li>
-                                    <li>⚖️ <strong>Distribución:</strong> Equitativa entre ${this.userRole === 'admin' ? 'gerentes no fijados' : 'asesores no fijados'}</li>
+                                    <li>⚖️ <strong>Distribución:</strong> ${this.userRole === 'admin' ? 'Configuración independiente para cada tipo' : 'Equitativa entre asesores no fijados'}</li>
                                     <li>🔍 <strong>Validación:</strong> Evita duplicados de teléfono</li>
                                 </ul>
                             </div>
@@ -491,17 +513,17 @@ const Reclutas = {
                                         <span class="stat-label">Total Reclutas:</span>
                                         <span class="stat-value" id="total-reclutas-summary">0</span>
                                     </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Reclutas Fijos:</span>
-                                        <span class="stat-value" id="reclutas-fijos-summary">0</span>
+                                    <div class="stat-item gerentes-stats" style="display: none;">
+                                        <span class="stat-label">A Gerentes:</span>
+                                        <span class="stat-value" id="reclutas-gerentes-summary">0</span>
+                                    </div>
+                                    <div class="stat-item asesores-stats" style="display: none;">
+                                        <span class="stat-label">A Asesores:</span>
+                                        <span class="stat-value" id="reclutas-asesores-summary">0</span>
                                     </div>
                                     <div class="stat-item">
-                                        <span class="stat-label">Reclutas Flexibles:</span>
-                                        <span class="stat-value" id="reclutas-flexibles-summary">0</span>
-                                    </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Asesores Flexibles:</span>
-                                        <span class="stat-value" id="asesores-flexibles-summary">0</span>
+                                        <span class="stat-label">Usuarios Flexibles:</span>
+                                        <span class="stat-value" id="usuarios-flexibles-summary">0</span>
                                     </div>
                                     <div class="stat-item">
                                         <span class="stat-label">Promedio Flexible:</span>
@@ -533,7 +555,13 @@ const Reclutas = {
         
         // Resetear modal
         this.resetDistribucionModal();
-        
+
+        // Inicializar tipo de distribución por defecto si es admin
+        if (this.userRole === 'admin') {
+            this.selectedDistributionType = 'dual';
+            this.handleDistributionTypeChange('dual');
+        }
+
         // Mostrar modal
         modal.style.display = 'block';
     },
@@ -592,6 +620,68 @@ const Reclutas = {
                 this.saveAsesorDistribution();
             });
         }
+
+        // Manejador del selector de tipo de distribución (solo para admin)
+        if (this.userRole === 'admin') {
+            const distributionTypeRadios = modal.querySelectorAll('input[name="distribution-type"]');
+            distributionTypeRadios.forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    this.handleDistributionTypeChange(e.target.value);
+                });
+            });
+        }
+    },
+
+    /**
+     * ✅ NUEVA FUNCIÓN: Maneja cambio del tipo de distribución
+     */
+    handleDistributionTypeChange: function(distributionType) {
+        console.log('🔄 Cambio tipo de distribución:', distributionType);
+
+        const gerentesStats = document.querySelector('.gerentes-stats');
+        const asesoresStats = document.querySelector('.asesores-stats');
+        const infoBox = document.querySelector('.info-box ul');
+
+        // Actualizar estadísticas visibles
+        if (gerentesStats && asesoresStats) {
+            switch(distributionType) {
+                case 'dual':
+                    gerentesStats.style.display = 'block';
+                    asesoresStats.style.display = 'block';
+                    break;
+                case 'gerentes':
+                    gerentesStats.style.display = 'block';
+                    asesoresStats.style.display = 'none';
+                    break;
+                case 'asesores':
+                    gerentesStats.style.display = 'none';
+                    asesoresStats.style.display = 'block';
+                    break;
+            }
+        }
+
+        // Actualizar información del proceso
+        if (infoBox) {
+            const functionItem = infoBox.querySelector('li');
+            if (functionItem) {
+                let newText = '';
+                switch(distributionType) {
+                    case 'dual':
+                        newText = '📊 <strong>Función:</strong> Distribuye reclutas por separado a gerentes y asesores';
+                        break;
+                    case 'gerentes':
+                        newText = '📊 <strong>Función:</strong> Distribuye reclutas únicamente a gerentes activos';
+                        break;
+                    case 'asesores':
+                        newText = '📊 <strong>Función:</strong> Distribuye reclutas únicamente a asesores activos';
+                        break;
+                }
+                functionItem.innerHTML = newText;
+            }
+        }
+
+        // Guardar el tipo seleccionado para usar en el procesamiento
+        this.selectedDistributionType = distributionType;
     },
 
     /**
@@ -660,9 +750,20 @@ const Reclutas = {
             // Preparar FormData
             const formData = new FormData();
             formData.append('excel_file', this.selectedDistribucionFile);
-            
+
+            // Agregar tipo de distribución si es admin y se ha seleccionado
+            const distributionType = this.selectedDistributionType || 'dual';
+            formData.append('distribution_type', distributionType);
+
+            // Determinar endpoint según si es distribución dual o normal
+            const endpoint = this.userRole === 'admin' && distributionType !== 'asesores'
+                ? '/reclutas/distribuir-dual'
+                : '/reclutas/distribuir-excel';
+
+            console.log(`🎯 Usando endpoint: ${endpoint}, tipo: ${distributionType}`);
+
             // Enviar al backend
-            const response = await fetch(`${CONFIG.API_URL}/reclutas/distribuir-excel`, {
+            const response = await fetch(`${CONFIG.API_URL}${endpoint}`, {
                 method: 'POST',
                 body: formData
             });
@@ -740,31 +841,140 @@ const Reclutas = {
      */
     showDistribucionResults: function(data) {
         this.hideDistribucionProgress();
-        
+
         const resultsContainer = document.getElementById('distribucion-results');
         if (!resultsContainer) return;
-        
-        // Preparar HTML de resultados
-        console.log('DEBUG: this.asesores before map:', this.asesores);
-        const distributionRows = Object.entries(data.distribucion || {})
-            .map(([email, distribData]) => {
-                const asesor = this.asesores.find(a => a.email === email);
-                const asesorId = asesor ? String(asesor.id) : ''; // Ensure asesorId is a string
-                const asesorDisplay = asesor ? (asesor.nombre || asesor.email) : email; // Usar nombre o email si no hay nombre
-                const count = distribData.count; // Get count from the object
-                const isFixed = distribData.is_fixed; // Get is_fixed from the object
-                return `<tr>
-                            <td>${asesorDisplay}</td>
-                            <td>
-                                <input type="number" class="form-control reclutas-input" data-asesor-id="${asesorId}" value="${count}" min="0">
-                                reclutas
-                                <label class="checkbox-container fixed-checkbox-label">
-                                    <input type="checkbox" class="fixed-checkbox" data-asesor-id="${asesorId}" ${isFixed ? 'checked' : ''}>
-                                    <span class="checkbox-label">Fijo</span>
-                                </label>
-                            </td>
-                        </tr>`;
-            }).join('');
+
+        // Detectar si es distribución dual o normal
+        const isDualDistribution = data.distribucion_gerentes || data.distribucion_asesores;
+
+        console.log('🔍 Tipo de distribución detectado:', isDualDistribution ? 'dual' : 'normal');
+        console.log('📊 Data recibida:', data);
+
+        let distributionRows = '';
+
+        if (isDualDistribution) {
+            // Distribución dual: mostrar gerentes y asesores por separado
+            let gerentesRows = '';
+            let asesoresRows = '';
+
+            // Procesar gerentes
+            if (data.distribucion_gerentes) {
+                gerentesRows = Object.entries(data.distribucion_gerentes)
+                    .map(([email, distribData]) => {
+                        const usuario = this.asesores.find(a => a.email === email);
+                        const usuarioId = usuario ? String(usuario.id) : '';
+                        const usuarioDisplay = usuario ? (usuario.nombre || usuario.email) : email;
+                        const count = distribData.count || 0;
+                        const isFixed = distribData.is_fixed || false;
+                        return `<tr class="gerente-row user-row">
+                                    <td class="user-info">
+                                        <div class="user-avatar gerente">
+                                            <i class="fas fa-user-tie"></i>
+                                        </div>
+                                        <div class="user-details">
+                                            <span class="user-name">${usuarioDisplay}</span>
+                                            <span class="user-role">Gerente</span>
+                                        </div>
+                                    </td>
+                                    <td class="assignment-controls">
+                                        <div class="input-group">
+                                            <input type="number" class="form-control reclutas-input" data-asesor-id="${usuarioId}" data-tipo="gerente" value="${count}" min="0">
+                                            <span class="input-addon">reclutas</span>
+                                        </div>
+                                        <label class="checkbox-container">
+                                            <input type="checkbox" class="fixed-checkbox" data-asesor-id="${usuarioId}" data-tipo="gerente" ${isFixed ? 'checked' : ''}>
+                                            <span class="checkmark"></span>
+                                            <span class="checkbox-label">Fijo</span>
+                                        </label>
+                                    </td>
+                                </tr>`;
+                    }).join('');
+            }
+
+            // Procesar asesores
+            if (data.distribucion_asesores) {
+                asesoresRows = Object.entries(data.distribucion_asesores)
+                    .map(([email, distribData]) => {
+                        const usuario = this.asesores.find(a => a.email === email);
+                        const usuarioId = usuario ? String(usuario.id) : '';
+                        const usuarioDisplay = usuario ? (usuario.nombre || usuario.email) : email;
+                        const count = distribData.count || 0;
+                        const isFixed = distribData.is_fixed || false;
+                        return `<tr class="asesor-row user-row">
+                                    <td class="user-info">
+                                        <div class="user-avatar asesor">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                        <div class="user-details">
+                                            <span class="user-name">${usuarioDisplay}</span>
+                                            <span class="user-role">Asesor</span>
+                                        </div>
+                                    </td>
+                                    <td class="assignment-controls">
+                                        <div class="input-group">
+                                            <input type="number" class="form-control reclutas-input" data-asesor-id="${usuarioId}" data-tipo="asesor" value="${count}" min="0">
+                                            <span class="input-addon">reclutas</span>
+                                        </div>
+                                        <label class="checkbox-container">
+                                            <input type="checkbox" class="fixed-checkbox" data-asesor-id="${usuarioId}" data-tipo="asesor" ${isFixed ? 'checked' : ''}>
+                                            <span class="checkmark"></span>
+                                            <span class="checkbox-label">Fijo</span>
+                                        </label>
+                                    </td>
+                                </tr>`;
+                    }).join('');
+            }
+
+            // Crear estructura dual mejorada
+            distributionRows = `
+                ${gerentesRows ? `
+                    <tr class="section-divider gerentes-section">
+                        <td colspan="2">
+                            <div class="section-header-dual">
+                                <i class="fas fa-user-tie"></i>
+                                <span class="section-title">GERENTES</span>
+                                <span class="section-count">${Object.keys(data.distribucion_gerentes || {}).length} usuarios</span>
+                            </div>
+                        </td>
+                    </tr>
+                    ${gerentesRows}
+                ` : ''}
+                ${asesoresRows ? `
+                    <tr class="section-divider asesores-section">
+                        <td colspan="2">
+                            <div class="section-header-dual">
+                                <i class="fas fa-user"></i>
+                                <span class="section-title">ASESORES</span>
+                                <span class="section-count">${Object.keys(data.distribucion_asesores || {}).length} usuarios</span>
+                            </div>
+                        </td>
+                    </tr>
+                    ${asesoresRows}
+                ` : ''}
+            `;
+        } else {
+            // Distribución normal: usar la lógica existente
+            distributionRows = Object.entries(data.distribucion || {})
+                .map(([email, distribData]) => {
+                    const asesor = this.asesores.find(a => a.email === email);
+                    const asesorId = asesor ? String(asesor.id) : '';
+                    const asesorDisplay = asesor ? (asesor.nombre || asesor.email) : email;
+                    const count = distribData.count || 0;
+                    const isFixed = distribData.is_fixed || false;
+                    return `<tr>
+                                <td>${asesorDisplay}</td>
+                                <td>
+                                    <input type="number" class="form-control reclutas-input" data-asesor-id="${asesorId}" value="${count}" min="0">
+                                    reclutas
+                                    <label class="checkbox-container fixed-checkbox-label">
+                                        <input type="checkbox" class="fixed-checkbox" data-asesor-id="${asesorId}" ${isFixed ? 'checked' : ''}>
+                                        <span class="checkbox-label">Fijo</span>
+                                    </label>
+                                </td>
+                            </tr>`;
+                }).join('');
+        }
         
         const errorsHtml = data.errores_detalle && data.errores_detalle.length > 0 ? 
             `<div class="errors-section">
@@ -818,15 +1028,20 @@ const Reclutas = {
                 </div>
             </div>
             <div class="distribution-table">
-                <h5><i class="fas fa-users"></i> Distribuci?n por Asesor</h5>
-                <table>
-                    <thead>
-                        <tr><th>Asesor</th><th>Reclutas Asignados</th></tr>
-                    </thead>
-                    <tbody>
-                        ${distributionRows}
-                    </tbody>
-                </table>
+                <h5><i class="fas fa-users"></i> ${isDualDistribution ? 'Distribución Dual - Gerentes y Asesores' : 'Distribución por Asesor'}</h5>
+                <div class="table-responsive">
+                    <table class="distribution-results-table">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Reclutas Asignados</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${distributionRows}
+                        </tbody>
+                    </table>
+                </div>
             </div>
             ${errorsHtml}
             <div class="results-actions">

@@ -1285,12 +1285,15 @@ body.admin-view #reclutas-table td:last-child {
 
 .modal-content {
     background-color: white;
-    margin: 50px auto;
+    margin: 20px auto;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-lg);
     width: 90%;
     max-width: 600px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
     animation: modalFadeIn 0.3s;
+    position: relative;
 }
 
 .dark-mode .modal-content {
@@ -1301,12 +1304,22 @@ body.admin-view #reclutas-table td:last-child {
     max-width: 400px;
 }
 
+.modal-lg .modal-content {
+    max-width: 900px;
+    width: 95%;
+    margin: 10px auto;
+    max-height: calc(100vh - 20px);
+    display: flex;
+    flex-direction: column;
+}
+
 .modal-header {
     padding: 15px 20px;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
 }
 
 .modal-header h3 {
@@ -1329,6 +1342,9 @@ body.admin-view #reclutas-table td:last-child {
 
 .modal-body {
     padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
 }
 
 .modal-footer {
@@ -1337,6 +1353,7 @@ body.admin-view #reclutas-table td:last-child {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+    flex-shrink: 0;
 }
 
 .modal-footer button {
@@ -4479,5 +4496,383 @@ body.dark-mode .asesores-section {
     .selection-controls {
         flex-direction: column;
         gap: 4px;
+    }
+}
+
+/* ===== ESTILOS PARA DISTRIBUCIÓN DUAL ===== */
+
+/* Modal de distribución dual */
+.distribution-type-selector {
+    margin-bottom: 24px;
+    padding: 20px;
+    background: var(--light-color);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.distribution-type-selector h4 {
+    margin: 0 0 16px 0;
+    color: var(--text-color);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.radio-option:hover {
+    border-color: var(--primary-color);
+    background: var(--primary-light);
+}
+
+.radio-option input[type="radio"] {
+    margin: 0;
+}
+
+.radio-custom {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    position: relative;
+    transition: var(--transition);
+}
+
+.radio-option input[type="radio"]:checked + .radio-custom {
+    border-color: var(--primary-color);
+    background: var(--primary-color);
+}
+
+.radio-option input[type="radio"]:checked + .radio-custom::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+}
+
+/* Tabla de resultados de distribución dual */
+.distribution-table {
+    max-height: 60vh;
+    overflow-y: auto;
+    margin-bottom: 20px;
+}
+
+/* Estilo de scrollbar personalizado */
+.distribution-table::-webkit-scrollbar {
+    width: 8px;
+}
+
+.distribution-table::-webkit-scrollbar-track {
+    background: var(--light-color);
+    border-radius: 4px;
+}
+
+.distribution-table::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.distribution-table::-webkit-scrollbar-thumb:hover {
+    background: var(--text-light);
+}
+
+.modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: var(--light-color);
+    border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--text-light);
+}
+
+.distribution-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    box-shadow: var(--shadow-sm);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.distribution-results-table thead th {
+    background: var(--primary-color);
+    color: white;
+    padding: 16px 20px;
+    font-weight: 600;
+    text-align: left;
+    border: none;
+}
+
+.distribution-results-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.distribution-results-table tbody tr:hover {
+    background: var(--light-color);
+}
+
+/* Divisores de sección */
+.section-divider {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    border: none !important;
+}
+
+.section-divider.gerentes-section {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+}
+
+.section-divider.asesores-section {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+.section-divider td {
+    padding: 0 !important;
+    border: none !important;
+}
+
+.section-header-dual {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    color: white;
+    font-weight: 600;
+}
+
+.section-header-dual i {
+    font-size: 20px;
+    opacity: 0.9;
+}
+
+.section-title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.section-count {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+/* Filas de usuarios */
+.user-row {
+    border-left: 4px solid transparent;
+    transition: var(--transition);
+}
+
+.user-row.gerente-row {
+    border-left-color: #28a745;
+}
+
+.user-row.asesor-row {
+    border-left-color: #007bff;
+}
+
+.user-row:hover {
+    background: var(--light-color);
+    transform: translateX(2px);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 20px;
+}
+
+.user-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.user-avatar.gerente {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+}
+
+.user-avatar.asesor {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.user-name {
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 15px;
+}
+
+.user-role {
+    font-size: 12px;
+    color: var(--text-light);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Controles de asignación */
+.assignment-controls {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 8px 12px;
+    transition: var(--transition);
+}
+
+.input-group:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.input-group input[type="number"] {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-weight: 600;
+    color: var(--text-color);
+    width: 80px;
+    text-align: center;
+}
+
+.input-addon {
+    color: var(--text-light);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Checkbox mejorado */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-container input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    position: relative;
+    transition: var(--transition);
+    background: white;
+}
+
+.checkbox-container input[type="checkbox"]:checked + .checkmark {
+    background: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.checkbox-container input[type="checkbox"]:checked + .checkmark::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 1px;
+    width: 4px;
+    height: 8px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.checkbox-label {
+    font-size: 12px;
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+/* Responsive para distribución dual */
+@media (max-width: 768px) {
+    .radio-group {
+        gap: 8px;
+    }
+
+    .radio-option {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+
+    .user-info {
+        gap: 12px;
+        padding: 12px 16px;
+    }
+
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+
+    .assignment-controls {
+        padding: 12px 16px;
+    }
+
+    .section-header-dual {
+        padding: 12px 16px;
+        font-size: 13px;
     }
 }

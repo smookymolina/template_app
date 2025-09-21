@@ -2063,6 +2063,71 @@ def distribuir_reclutas_excel():
         }), 500
 
 
+@api_bp.route('/reclutas/distribuir-dual', methods=['POST'])
+@admin_required
+def distribuir_reclutas_dual():
+    """
+    Distribución dual: permite asignar reclutas por separado a gerentes y asesores.
+    Solo disponible para administradores.
+    """
+    try:
+        # Verificar que se subió un archivo
+        if 'excel_file' not in request.files:
+            return jsonify({"success": False, "message": "No se encontró archivo Excel"}), 400
+
+        archivo = request.files['excel_file']
+        if archivo.filename == '':
+            return jsonify({"success": False, "message": "No se seleccionó archivo"}), 400
+
+        # Validar extensión
+        if not archivo.filename.lower().endswith(('.xlsx', '.xls')):
+            return jsonify({"success": False, "message": "Solo se permiten archivos Excel (.xlsx, .xls)"}), 400
+
+        # Obtener tipo de distribución del form data
+        distribution_type = request.form.get('distribution_type', 'dual')
+        current_app.logger.info(f"🎯 Distribución dual iniciada, tipo: {distribution_type}")
+
+        # Obtener usuarios según el tipo de distribución
+        gerentes = []
+        asesores = []
+
+        if distribution_type in ['dual', 'gerentes']:
+            gerentes = Usuario.query.filter(
+                Usuario.is_active == True,
+                Usuario.rol == 'gerente'
+            ).all()
+
+        if distribution_type in ['dual', 'asesores']:
+            asesores = Usuario.query.filter(
+                Usuario.is_active == True,
+                Usuario.rol == 'asesor'
+            ).all()
+
+        # Validar que hay usuarios disponibles
+        if not gerentes and not asesores:
+            return jsonify({
+                "success": False,
+                "message": f"No hay usuarios activos disponibles para distribución tipo '{distribution_type}'"
+            }), 400
+
+        # Procesar Excel y distribuir usando nueva función dual
+        from utils.helpers import procesar_y_distribuir_dual
+        resultado = procesar_y_distribuir_dual(archivo, gerentes, asesores, distribution_type)
+
+        if resultado['success']:
+            current_app.logger.info(f"Distribución dual exitosa: {resultado['total_procesados']} reclutas")
+            return jsonify(resultado), 200
+        else:
+            return jsonify(resultado), 400
+
+    except Exception as e:
+        current_app.logger.error(f"Error en distribución dual: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al procesar distribución dual: {str(e)}"
+        }), 500
+
+
 @api_bp.route('/reclutas/redistribuir-manual', methods=['POST'])
 @gerente_or_admin_required
 def redistribuir_reclutas_manual():
