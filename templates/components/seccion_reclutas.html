@@ -49,6 +49,23 @@
                             <option value="fecha_registro-desc">Fecha (Nuevo-Antiguo)</option>
                         </select>
                     </div>
+
+                    {% if current_user.rol == 'admin' %}
+                    <div class="filter-group filter-group--button">
+                        <label for="filter-by-gerente-btn">Gerentes:</label>
+                        <button type="button" class="btn-secondary filter-button" id="filter-by-gerente-btn" aria-haspopup="listbox" aria-expanded="false">
+                            <i class="fas fa-user-tie"></i> Filtrar por Gerente
+                        </button>
+                        <div class="filter-dropdown" id="filter-gerente-dropdown" role="listbox" aria-labelledby="filter-by-gerente-btn" aria-hidden="true">
+                            <div class="filter-dropdown-inner" id="filter-gerente-options">
+                                <button type="button" class="filter-option active" data-gerente-id="todos" role="option" aria-selected="true">
+                                    Todos los gerentes
+                                </button>
+                                <div class="filter-empty-state">Cargando gerentes...</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
                 
                 <table id="reclutas-table">

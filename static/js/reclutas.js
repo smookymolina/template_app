@@ -17,12 +17,14 @@ const Reclutas = {
         search: '',
         estado: 'todos',
         asesor_id: 'todos',
+        gerente_id: 'todos',
         sortBy: 'nombre',
         sortOrder: 'asc'
     },
     currentReclutaId: null,
     asesores: [], // Añadido para almacenar la lista de asesores
     gerentes: [], // Añadido para almacenar la lista de gerentes
+    gerenteFilterInitialized: false,
     
     // Variables para gestión de timeline
     currentTimelineData: [],
@@ -194,6 +196,169 @@ const Reclutas = {
     },
 
     /**
+     * Configura el filtro de gerentes para administradores
+     */
+    setupAdminGerenteFilter: function() {
+        if (this.userRole !== 'admin') return;
+
+        const button = document.getElementById('filter-by-gerente-btn');
+        const dropdown = document.getElementById('filter-gerente-dropdown');
+        const optionsContainer = document.getElementById('filter-gerente-options');
+
+        if (!button || !dropdown || !optionsContainer) {
+            console.warn('Reclutas: elementos del filtro de gerentes no disponibles en el DOM');
+            return;
+        }
+
+        this.renderGerenteFilterOptions();
+        this.updateGerenteFilterButtonLabel();
+
+        button.setAttribute('aria-expanded', button.getAttribute('aria-expanded') || 'false');
+        dropdown.setAttribute('aria-hidden', dropdown.classList.contains('open') ? 'false' : 'true');
+
+        if (this.gerenteFilterInitialized) {
+            return;
+        }
+
+        this.gerenteFilterInitialized = true;
+
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const isOpen = dropdown.classList.toggle('open');
+            button.setAttribute('aria-expanded', String(isOpen));
+            dropdown.setAttribute('aria-hidden', String(!isOpen));
+        });
+
+        dropdown.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const option = event.target.closest('[data-gerente-id]');
+            if (!option) return;
+
+            const selectedValue = option.getAttribute('data-gerente-id') || 'todos';
+            this.filterByGerente(selectedValue);
+            dropdown.classList.remove('open');
+            button.setAttribute('aria-expanded', 'false');
+            dropdown.setAttribute('aria-hidden', 'true');
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!dropdown.contains(event.target) && event.target !== button) {
+                dropdown.classList.remove('open');
+                button.setAttribute('aria-expanded', 'false');
+                dropdown.setAttribute('aria-hidden', 'true');
+            }
+        });
+    },
+
+    /**
+     * Actualiza el listado de gerentes dentro del dropdown
+     */
+    renderGerenteFilterOptions: function() {
+        const optionsContainer = document.getElementById('filter-gerente-options');
+        if (!optionsContainer) return;
+
+        optionsContainer.innerHTML = '';
+
+        const activeValue = this.filters.gerente_id || 'todos';
+
+        const buildOption = (value, label) => {
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'filter-option';
+            option.setAttribute('data-gerente-id', value);
+            option.setAttribute('role', 'option');
+            option.setAttribute('aria-selected', value === activeValue ? 'true' : 'false');
+            option.textContent = label;
+            if (value === activeValue) {
+                option.classList.add('active');
+            }
+            return option;
+        };
+
+        optionsContainer.appendChild(buildOption('todos', 'Todos los gerentes'));
+
+        if (this.gerentes && this.gerentes.length) {
+            this.gerentes.forEach((gerente) => {
+                const label = gerente.nombre || gerente.email || ('Gerente #' + gerente.id);
+                optionsContainer.appendChild(buildOption(String(gerente.id), label));
+            });
+        } else {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'filter-empty-state';
+            emptyState.textContent = 'Sin gerentes activos';
+            optionsContainer.appendChild(emptyState);
+        }
+
+        this.highlightActiveGerenteOption();
+    },
+
+    /**
+     * Marca la opción activa dentro del dropdown de gerentes
+     */
+    highlightActiveGerenteOption: function() {
+        const activeValue = this.filters.gerente_id || 'todos';
+        const options = document.querySelectorAll('#filter-gerente-dropdown [data-gerente-id]');
+        options.forEach(option => {
+            const optionValue = option.getAttribute('data-gerente-id');
+            const isActive = optionValue === activeValue;
+            option.classList.toggle('active', isActive);
+            option.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+    },
+
+    /**
+     * Ajusta el texto del botón de filtro según el gerente seleccionado
+     */
+    updateGerenteFilterButtonLabel: function() {
+        const button = document.getElementById('filter-by-gerente-btn');
+        if (!button) return;
+
+        const activeValue = this.filters.gerente_id || 'todos';
+        if (activeValue !== 'todos') {
+            const selectedGerente = (this.gerentes || []).find(gerente => String(gerente.id) === String(activeValue));
+            const displayName = selectedGerente ? (selectedGerente.nombre || selectedGerente.email || ('ID ' + activeValue)) : ('ID ' + activeValue);
+            button.innerHTML = '<i class="fas fa-user-tie"></i> Gerente: ' + displayName;
+            button.classList.add('active');
+        } else {
+            button.innerHTML = '<i class="fas fa-user-tie"></i> Filtrar por Gerente';
+            button.classList.remove('active');
+        }
+    },
+
+    /**
+     * Aplica el filtro por gerente y recarga la tabla
+     * @param {string} gerenteId - ID del gerente o 'todos'
+     */
+    filterByGerente: function(gerenteId) {
+        const normalizedValue = gerenteId && gerenteId !== '' ? gerenteId : 'todos';
+        this.filters.gerente_id = normalizedValue;
+        this.currentPage = 1;
+
+        if (normalizedValue !== 'todos') {
+            this.filters.asesor_id = 'todos';
+            const asesorSelect = document.getElementById('filter-gerente-asesores');
+            if (asesorSelect) {
+                asesorSelect.value = 'todos';
+            }
+        }
+
+        const dropdown = document.getElementById('filter-gerente-dropdown');
+        const button = document.getElementById('filter-by-gerente-btn');
+        if (dropdown) {
+            dropdown.classList.remove('open');
+            dropdown.setAttribute('aria-hidden', 'true');
+        }
+        if (button) {
+            button.setAttribute('aria-expanded', 'false');
+        }
+
+        this.updateGerenteFilterButtonLabel();
+        this.highlightActiveGerenteOption();
+        this.loadAndDisplayReclutas();
+    },
+
+    /**
      * Filtra reclutas por asesor
      * @param {string} asesorId - ID del asesor ('todos', 'sin_asignar', o ID numérico)
      */
@@ -201,6 +366,14 @@ const Reclutas = {
         this.filters.asesor_id = asesorId;
         this.currentPage = 1; // Resetear a primera página
         console.log('Filtrando por asesor:', asesorId);
+
+        if (this.userRole === 'admin') {
+            if (asesorId !== 'todos') {
+                this.filters.gerente_id = 'todos';
+            }
+            this.updateGerenteFilterButtonLabel();
+            this.highlightActiveGerenteOption();
+        }
     },
 
     /**
@@ -376,9 +549,12 @@ const Reclutas = {
         this.showAsesorSelectors();
 
         // Cargar gerentes y asesores disponibles
-        this.populateUserSelectors().then(() => {
-            this.populateAdminAsesorFilter();
-        });
+        this.populateUserSelectors()
+            .then(() => {
+                this.populateAdminAsesorFilter();
+                this.setupAdminGerenteFilter();
+            })
+            .catch(error => console.error('Error inicializando filtros de usuarios:', error));
         
         // Mensaje de bienvenida
         this.showAdminWelcome();
@@ -1485,7 +1661,13 @@ const Reclutas = {
             
             // Rellenar datos
             if (elements.pic) {
-                elements.pic.src = recluta.foto_url || '/api/placeholder/100/100';
+                elements.pic.src = this.getFotoUrl(recluta.foto_url);
+
+                // Actualizar texto del botón de foto
+                const photoButtonText = document.getElementById('photo-btn-text');
+                if (photoButtonText) {
+                    photoButtonText.textContent = recluta.foto_url ? 'Actualizar foto' : 'Subir foto';
+                }
             }
             if (elements.nombre) elements.nombre.textContent = recluta.nombre || 'N/A';
             if (elements.email) elements.email.textContent = recluta.email || 'N/A';
@@ -1554,6 +1736,8 @@ const Reclutas = {
             const data = await response.json();
             if (data.success) {
                 this.gerentes = data.gerentes || [];
+                this.renderGerenteFilterOptions();
+                this.updateGerenteFilterButtonLabel();
                 console.log(`✅ ${this.gerentes.length} gerentes cargados`);
                 return this.gerentes;
             } else {
@@ -1603,7 +1787,8 @@ const Reclutas = {
                 per_page: this.itemsPerPage,
                 search: this.filters.search,
                 estado: this.filters.estado !== 'todos' ? this.filters.estado : '',
-                asesor_id: this.filters.asesor_id !== 'todos' ? this.filters.asesor_id : '', 
+                asesor_id: this.filters.asesor_id !== 'todos' ? this.filters.asesor_id : '',
+                gerente_id: this.filters.gerente_id !== 'todos' ? this.filters.gerente_id : '',
                 sort_by: this.filters.sortBy,
                 sort_order: this.filters.sortOrder
             });
@@ -1819,16 +2004,30 @@ const Reclutas = {
      */
     getFotoUrl: function(fotoUrl) {
         if (!fotoUrl) return '/api/placeholder/40/40';
-        
+
         if (fotoUrl.startsWith('http')) {
             return fotoUrl;
         }
-        
+
         if (fotoUrl === 'default_profile.jpg') {
             return '/api/placeholder/40/40';
         }
-        
-        return `/${fotoUrl}`;
+
+        // Si la foto_url contiene 'recluta/' (formato antiguo), extraer solo el nombre del archivo
+        if (fotoUrl.includes('recluta/')) {
+            const filename = fotoUrl.split('/').pop();
+            return `/media/profiles/${filename}`;
+        }
+
+        // Si la foto_url es una ruta relativa desde uploads/, construir la URL correcta
+        if (fotoUrl.startsWith('uploads/')) {
+            // Extraer solo el nombre del archivo
+            const filename = fotoUrl.split('/').pop();
+            return `/media/profiles/${filename}`;
+        }
+
+        // Si es solo el nombre del archivo
+        return `/media/profiles/${fotoUrl}`;
     },
 
     /**
@@ -1970,6 +2169,8 @@ const Reclutas = {
             // Poblar selectores
             this.populateGerenteSelectors();
             this.populateAsesorSelectors();
+            this.renderGerenteFilterOptions();
+            this.updateGerenteFilterButtonLabel();
 
             console.log('✅ Selectores de gerentes y asesores poblados correctamente');
         } catch (error) {

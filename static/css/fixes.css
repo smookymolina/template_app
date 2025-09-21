@@ -1,3 +1,180 @@
+/* Estilos para modal de actualización de foto */
+.btn-update-photo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-update-photo:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.profile-pic-actions {
+    text-align: center;
+}
+
+/* Estilos para modal de foto */
+#photo-update-modal .modal-content {
+    max-width: 800px;
+    width: 90%;
+}
+
+.photo-upload-section {
+    padding: 20px 0;
+}
+
+.upload-zone {
+    border: 2px dashed #cbd5e0;
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    background: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+}
+
+.upload-zone:hover,
+.upload-zone.drag-over {
+    border-color: #667eea;
+    background: #edf2f7;
+    transform: translateY(-2px);
+}
+
+.upload-zone i {
+    font-size: 48px;
+    color: #667eea;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.upload-zone h4 {
+    color: #2d3748;
+    margin: 0 0 8px 0;
+    font-weight: 600;
+}
+
+.upload-zone p {
+    color: #718096;
+    margin: 0 0 16px 0;
+}
+
+.upload-zone small {
+    color: #a0aec0;
+}
+
+/* Estilos para el área de recorte */
+.crop-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+}
+
+.image-container {
+    position: relative;
+    max-width: 400px;
+    flex: 1;
+}
+
+.crop-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.5);
+}
+
+.crop-box {
+    position: absolute;
+    border: 2px solid #667eea;
+    background: transparent;
+    cursor: move;
+    min-width: 100px;
+    min-height: 100px;
+}
+
+.crop-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #667eea;
+    border: 2px solid white;
+    border-radius: 50%;
+}
+
+.crop-handle.top-left { top: -5px; left: -5px; cursor: nw-resize; }
+.crop-handle.top-right { top: -5px; right: -5px; cursor: ne-resize; }
+.crop-handle.bottom-left { bottom: -5px; left: -5px; cursor: sw-resize; }
+.crop-handle.bottom-right { bottom: -5px; right: -5px; cursor: se-resize; }
+.crop-handle.top { top: -5px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+.crop-handle.bottom { bottom: -5px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+.crop-handle.left { left: -5px; top: 50%; transform: translateY(-50%); cursor: w-resize; }
+.crop-handle.right { right: -5px; top: 50%; transform: translateY(-50%); cursor: e-resize; }
+
+.preview-result {
+    flex: 0 0 200px;
+}
+
+.preview-result h5 {
+    color: #2d3748;
+    margin: 0 0 15px 0;
+    font-weight: 600;
+}
+
+.final-preview {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid #e2e8f0;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.final-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#crop-image {
+    max-width: 100%;
+    display: block;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .crop-container {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .preview-result {
+        flex: none;
+        text-align: center;
+    }
+
+    #photo-update-modal .modal-content {
+        width: 95%;
+        margin: 20px auto;
+    }
+}
+
 /* Correcciones generales de contenedores */
 .container {
     width: 100%;

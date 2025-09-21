@@ -55,16 +55,22 @@ def guardar_archivo(archivo, subcarpeta, tipos_permitidos=None):
             if ext not in [e.lower().lstrip('.') for e in tipos_permitidos]:
                 raise ValueError('Extensión de archivo no permitida')
         
-        # Crear el directorio completo dentro de UPLOAD_FOLDER
-        directorio = os.path.join(current_app.config['UPLOAD_FOLDER'], subcarpeta)
+        # Crear el directorio completo dentro de PROFILE_IMG_FOLDER para imágenes de perfil
+        if subcarpeta == 'recluta':
+            directorio = current_app.config['PROFILE_IMG_FOLDER']
+        else:
+            directorio = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), subcarpeta)
         if not os.path.exists(directorio):
             os.makedirs(directorio, exist_ok=True)
         
         ruta_completa = os.path.join(directorio, nombre_unico)
         archivo.save(ruta_completa)
 
-        # Retornar la ruta relativa desde la raíz del proyecto
-        return os.path.join(subcarpeta, nombre_unico).replace('\\', '/')
+        # Retornar la ruta relativa adecuada
+        if subcarpeta == 'recluta':
+            return nombre_unico  # Solo el nombre del archivo para imágenes de perfil
+        else:
+            return os.path.join(subcarpeta, nombre_unico).replace('\\', '/')
     except Exception as e:
         current_app.logger.error(f'Error al guardar archivo: {str(e)}')
         return None

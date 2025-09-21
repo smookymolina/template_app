@@ -141,6 +141,12 @@
                 <div class="recluta-details-header">
                     <div class="profile-pic-container modal-profile">
                         <img id="detail-recluta-pic" class="profile-pic" src="/api/placeholder/100/100" alt="Foto del recluta">
+                        <div class="profile-pic-actions">
+                            <button id="btn-update-photo" class="btn-update-photo" onclick="openPhotoUpdateModal()">
+                                <i class="fas fa-camera"></i>
+                                <span id="photo-btn-text">Subir foto</span>
+                            </button>
+                        </div>
                     </div>
                     <div class="recluta-info">
                         <h4 id="detail-recluta-nombre">Nombre del Recluta</h4>
@@ -595,7 +601,77 @@
             </div>
         </div>
     </div>
-    
+
+</div>
+
+<!-- ===========================================
+     Modal para Actualizar Foto de Perfil
+=========================================== -->
+<div id="photo-update-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-camera"></i> Actualizar Foto de Perfil</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+
+        <div class="modal-body">
+            <div class="photo-upload-section">
+                <!-- Área de selección de archivo -->
+                <div class="file-selection-area">
+                    <div class="upload-zone" id="photo-upload-zone"
+                         onclick="document.getElementById('photo-file-input').click()"
+                         ondragover="event.preventDefault(); this.classList.add('drag-over');"
+                         ondragleave="this.classList.remove('drag-over');"
+                         ondrop="event.preventDefault(); this.classList.remove('drag-over'); handlePhotoDrop(event);">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <h4>Selecciona una imagen</h4>
+                        <p>Arrastra y suelta una imagen aquí o haz clic para seleccionar</p>
+                        <small>Formatos: JPG, PNG, GIF - Máximo 5MB</small>
+                    </div>
+                    <input type="file" id="photo-file-input" accept="image/*" style="display: none;" onchange="handlePhotoSelect(this)">
+                </div>
+
+                <!-- Área de vista previa y recorte -->
+                <div class="photo-preview-section" id="photo-preview-section" style="display: none;">
+                    <div class="preview-container">
+                        <h4>Vista previa y recorte</h4>
+                        <div class="crop-container">
+                            <div class="image-container">
+                                <img id="crop-image" src="" alt="Imagen para recortar">
+                                <div class="crop-overlay">
+                                    <div class="crop-box" id="crop-box">
+                                        <div class="crop-handle top-left"></div>
+                                        <div class="crop-handle top-right"></div>
+                                        <div class="crop-handle bottom-left"></div>
+                                        <div class="crop-handle bottom-right"></div>
+                                        <div class="crop-handle top"></div>
+                                        <div class="crop-handle bottom"></div>
+                                        <div class="crop-handle left"></div>
+                                        <div class="crop-handle right"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="preview-result">
+                                <h5>Resultado final:</h5>
+                                <div class="final-preview">
+                                    <img id="final-preview-img" src="" alt="Vista previa final">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary close-modal">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+            <button type="button" id="save-photo-btn" class="btn-primary" onclick="saveUpdatedPhoto()" disabled>
+                <i class="fas fa-save"></i> Guardar Foto
+            </button>
+        </div>
+    </div>
 </div>
 
 <!-- ===========================================

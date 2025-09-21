@@ -22,7 +22,10 @@
       "Bash(mkdir:*)",
       "Bash(touch:*)",
       "Bash(curl:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(dir uploads)",
+      "Bash(dir uploadsprofile_images)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

@@ -80,7 +80,7 @@
     </div>
     
     <!-- Versión en esquina inferior derecha -->
-    <div class="version-badge">v1.5</div>
+    <div class="version-badge">v1.5.1</div>
 </div>
 
 <!-- ✅ MODAL DE CLIENTE PARA SEGUIMIENTO -->
@@ -458,6 +458,9 @@
         console.log('✅ Sistema de tracking por folio inicializado correctamente');
     });
 </script>
+
+<!-- Photo Cropper Script -->
+<script src="{{ url_for('static', filename='js/photo-cropper.js') }}"></script>
 
 <!-- Input para Excel (si es necesario) -->
 <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display: none;">

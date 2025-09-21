@@ -158,7 +158,9 @@ def get_reclutas():
         
         # 🆕 NUEVO: Parámetro de filtro por asesor
         asesor_id = request.args.get('asesor_id', '')
-        
+        gerente_id_raw = request.args.get('gerente_id', '').strip()
+        gerente_id = int(gerente_id_raw) if gerente_id_raw.isdigit() else None
+
         per_page = min(per_page, current_app.config.get('MAX_PAGE_SIZE', 50))
         
         # Construir query base
@@ -206,6 +208,18 @@ def get_reclutas():
             elif asesor_id.isdigit():
                 query = query.filter_by(asesor_id=int(asesor_id))
         
+        if user_role == 'admin' and gerente_id:
+            gerente_equipo_subquery = Usuario.query.with_entities(Usuario.id).filter(
+                Usuario.gerente_id == gerente_id,
+                Usuario.is_active.is_(True)
+            )
+            query = query.filter(
+                db.or_(
+                    Recluta.asesor_id == gerente_id,
+                    Recluta.asesor_id.in_(gerente_equipo_subquery)
+                )
+            )
+
         # Aplicar filtros existentes
         if search:
             search_term = f"%{search}%"
@@ -246,6 +260,7 @@ def get_reclutas():
             "user_role": user_role or 'user',
             "applied_filters": {  # 🆕 NUEVO: Información de filtros aplicados
                 "asesor_id": asesor_id,
+                "gerente_id": gerente_id_raw,
                 "estado": estado,
                 "search": search
             }
