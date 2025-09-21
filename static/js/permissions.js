@@ -68,14 +68,23 @@ const Permissions = {
     },
     
     /**
-     * Verifica si el usuario actual es asesor/gerente
+     * Verifica si el usuario actual es estrictamente un asesor
+     * @param {object} user - El objeto de usuario a verificar
      * @returns {boolean}
      */
-    isAsesor: function() {
-        const user = Auth.currentUser;
+    isAsesor: function(user) {
         if (!user) return false;
-        
-        return user.rol === 'asesor' || user.rol === 'gerente' || (user.permisos && user.permisos.is_asesor);
+        return user.rol === 'asesor';
+    },
+
+    /**
+     * Verifica si el usuario actual es estrictamente un gerente
+     * @param {object} user - El objeto de usuario a verificar
+     * @returns {boolean}
+     */
+    isGerente: function(user) {
+        if (!user) return false;
+        return user.rol === 'gerente';
     },
     
     /**

@@ -89,9 +89,24 @@ class Usuario(db.Model, UserMixin):
         """Verifica si el usuario es administrador"""
         return self.rol == 'admin'
     
+    ROLES_ALIAS = {
+        'admin': 'Administrador del Sistema',
+        'gerente': 'Gerente',
+        'asesor': 'Asesor',
+        'usuario': 'Usuario Básico'
+    }
+
+    @property
+    def role_alias(self):
+        return self.ROLES_ALIAS.get(self.rol, 'Rol Desconocido')
+
     def is_asesor(self):
-        """Verifica si el usuario es asesor/gerente"""
-        return self.rol in ['asesor', 'gerente']
+        """Verifica si el usuario es estrictamente un asesor."""
+        return self.rol == 'asesor'
+
+    def is_gerente(self):
+        """Verifica si el usuario es estrictamente un gerente."""
+        return self.rol == 'gerente'
     
     def can_upload_excel(self):
         """Verifica si el usuario puede subir archivos Excel"""

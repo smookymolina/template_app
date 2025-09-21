@@ -12,6 +12,7 @@ const Reclutas = {
     currentPage: 1,
     totalPages: 1,
     itemsPerPage: CONFIG.DEFAULT_PAGE_SIZE,
+    isSaving: false, // 🚫 Bandera para prevenir duplicación
     filters: {
         search: '',
         estado: 'todos',
@@ -21,6 +22,7 @@ const Reclutas = {
     },
     currentReclutaId: null,
     asesores: [], // Añadido para almacenar la lista de asesores
+    gerentes: [], // Añadido para almacenar la lista de gerentes
     
     // Variables para gestión de timeline
     currentTimelineData: [],
@@ -373,9 +375,8 @@ const Reclutas = {
         // Mostrar selectores de asesor en formularios
         this.showAsesorSelectors();
 
-        // Cargar asesores disponibles
-        this.loadAsesores().then(() => {
-            this.populateAsesorSelectors();
+        // Cargar gerentes y asesores disponibles
+        this.populateUserSelectors().then(() => {
             this.populateAdminAsesorFilter();
         });
         
@@ -1404,10 +1405,9 @@ const Reclutas = {
             // Configurar la UI según el rol
             this.configureUIForRole();
             
-            // Cargar asesores si es necesario
+            // Cargar gerentes y asesores si es necesario
             if (this.userRole === 'admin') {
-                await this.loadAsesores();
-                this.populateAsesorSelectors();
+                await this.populateUserSelectors();
             }
             
             // Inicializar eventos de la interfaz
@@ -1541,12 +1541,38 @@ const Reclutas = {
     },
 
     /**
+     * Carga la lista de gerentes disponibles
+     * @returns {Promise<Array>} - Lista de gerentes
+     */
+    loadGerentes: async function() {
+        try {
+            const response = await fetch(`${CONFIG.API_URL}/usuarios/gerentes`);
+            if (!response.ok) {
+                throw new Error(`Error HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                this.gerentes = data.gerentes || [];
+                console.log(`✅ ${this.gerentes.length} gerentes cargados`);
+                return this.gerentes;
+            } else {
+                throw new Error(data.message || 'Error al cargar gerentes');
+            }
+        } catch (error) {
+            console.error('❌ Error cargando gerentes:', error);
+            this.gerentes = [];
+            throw error;
+        }
+    },
+
+    /**
      * Carga la lista de asesores disponibles
      * @returns {Promise<Array>} - Lista de asesores
      */
     loadAsesores: async function() {
         try {
-            const response = await fetch(`${CONFIG.API_URL}/asesores`);
+            const response = await fetch(`${CONFIG.API_URL}/asesores?rol=asesor`);
 
             if (!response.ok) {
                 throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -1861,6 +1887,93 @@ const Reclutas = {
         } catch (error) {
             console.error(`Error al obtener recluta ${id}:`, error);
             throw error;
+        }
+    },
+
+    /**
+     * Rellena los selectores de gerentes en los formularios
+     */
+    populateGerenteSelectors: function() {
+        // Solo ejecutar si es admin
+        if (this.userRole !== 'admin') {
+            console.log('Saltando población de gerentes - usuario no es admin');
+            return;
+        }
+
+        const addSelector = document.getElementById('recluta-gerente');
+        const editSelector = document.getElementById('edit-recluta-gerente');
+
+        if (!this.gerentes || this.gerentes.length === 0) {
+            console.log('No hay gerentes cargados, intentando cargar...');
+            this.loadGerentes()
+                .then(() => this.populateGerenteSelectors())
+                .catch(error => console.error('No se pudieron cargar los gerentes:', error));
+            return;
+        }
+
+        // Función para rellenar un selector
+        const fillSelector = (selector) => {
+            if (!selector) return;
+
+            // Limpiar opciones existentes excepto la por defecto
+            const defaultOption = selector.querySelector('option[value=""]');
+            selector.innerHTML = '';
+
+            // Restaurar opción por defecto
+            if (defaultOption) {
+                selector.appendChild(defaultOption.cloneNode(true));
+            } else {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = '-- Seleccionar gerente --';
+                selector.appendChild(option);
+            }
+
+            // Añadir opciones para cada gerente
+            this.gerentes.forEach(gerente => {
+                const option = document.createElement('option');
+                option.value = gerente.id;
+                option.textContent = gerente.nombre || gerente.email;
+                selector.appendChild(option);
+            });
+
+            console.log(`Selector de gerentes poblado con ${this.gerentes.length} gerentes`);
+        };
+
+        // Rellenar ambos selectores
+        fillSelector(addSelector);
+        fillSelector(editSelector);
+    },
+
+    /**
+     * 🆕 NUEVA FUNCIÓN: Poblado unificado de selectores de gerentes y asesores
+     */
+    populateUserSelectors: async function() {
+        if (this.userRole !== 'admin') {
+            console.log('Saltando población de selectores - usuario no es admin');
+            return;
+        }
+
+        try {
+            // Cargar gerentes y asesores en paralelo
+            const [gerentes, asesores] = await Promise.all([
+                this.loadGerentes().catch(e => {
+                    console.warn('Error cargando gerentes:', e);
+                    return [];
+                }),
+                this.loadAsesores().catch(e => {
+                    console.warn('Error cargando asesores:', e);
+                    return [];
+                })
+            ]);
+
+            // Poblar selectores
+            this.populateGerenteSelectors();
+            this.populateAsesorSelectors();
+
+            console.log('✅ Selectores de gerentes y asesores poblados correctamente');
+        } catch (error) {
+            console.error('❌ Error poblando selectores:', error);
         }
     },
 
@@ -2590,6 +2703,132 @@ const Reclutas = {
         if (fotoInput) {
             fotoInput.addEventListener('change', this.handleReclutaImageChange);
         }
+
+        // 📱 CONFIGURAR MÁSCARA DE TELÉFONO
+        const telefonoInput = document.getElementById('recluta-telefono');
+        if (telefonoInput) {
+            this.setupTelefonoMask(telefonoInput);
+        }
+
+        // 👥 CONFIGURAR LÓGICA JERÁRQUICA GERENTE-ASESOR
+        const gerenteSelect = document.getElementById('recluta-gerente');
+        if (gerenteSelect) {
+            gerenteSelect.addEventListener('change', (e) => {
+                this.handleGerenteChange(e.target.value);
+            });
+        }
+    },
+
+    /**
+     * 📱 NUEVA FUNCIÓN: Configurar máscara de teléfono
+     */
+    setupTelefonoMask: function(input) {
+        input.addEventListener('input', function(e) {
+            // Obtener solo números
+            let value = e.target.value.replace(/\D/g, '');
+
+            // Limitar a 10 dígitos
+            value = value.substring(0, 10);
+
+            // Formatear como (XXX) XXX-XXXX
+            if (value.length >= 6) {
+                value = `(${value.substring(0, 3)}) ${value.substring(3, 6)}-${value.substring(6)}`;
+            } else if (value.length >= 3) {
+                value = `(${value.substring(0, 3)}) ${value.substring(3)}`;
+            }
+
+            e.target.value = value;
+
+            // Validación visual en tiempo real
+            const cleanValue = value.replace(/\D/g, '');
+            if (cleanValue.length === 10) {
+                e.target.style.borderColor = '#28a745'; // Verde
+                e.target.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+            } else if (cleanValue.length > 0) {
+                e.target.style.borderColor = '#ffc107'; // Amarillo
+                e.target.style.boxShadow = '0 0 0 0.2rem rgba(255, 193, 7, 0.25)';
+            } else {
+                e.target.style.borderColor = '';
+                e.target.style.boxShadow = '';
+            }
+        });
+
+        // Permitir solo números, backspace, delete, tab, escape, enter
+        input.addEventListener('keydown', function(e) {
+            // Permitir: backspace, delete, tab, escape, enter
+            if ([46, 8, 9, 27, 13].indexOf(e.keyCode) !== -1 ||
+                // Permitir Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+                (e.keyCode === 65 && e.ctrlKey === true) ||
+                (e.keyCode === 67 && e.ctrlKey === true) ||
+                (e.keyCode === 86 && e.ctrlKey === true) ||
+                (e.keyCode === 88 && e.ctrlKey === true)) {
+                return;
+            }
+            // Asegurar que solo sean números
+            if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+                e.preventDefault();
+            }
+        });
+
+        // Placeholder dinámico
+        input.placeholder = '(555) 123-4567';
+    },
+
+    /**
+     * 👥 NUEVA FUNCIÓN: Manejar cambio de gerente para filtrar asesores
+     */
+    handleGerenteChange: function(gerenteId) {
+        console.log('🔄 Gerente seleccionado:', gerenteId);
+
+        const asesorSelect = document.getElementById('recluta-asesor');
+        if (!asesorSelect) return;
+
+        // Limpiar selección actual de asesor
+        asesorSelect.value = '';
+
+        // Si no hay gerente seleccionado, mostrar todos los asesores
+        if (!gerenteId) {
+            this.populateAsesorSelectors();
+            return;
+        }
+
+        // Filtrar asesores que pertenecen al gerente seleccionado
+        const asesoresDelGerente = this.asesores.filter(asesor =>
+            asesor.gerente_id && asesor.gerente_id.toString() === gerenteId.toString()
+        );
+
+        console.log(`📋 ${asesoresDelGerente.length} asesores encontrados para gerente ${gerenteId}`);
+
+        // Poblar selector con asesores filtrados
+        asesorSelect.innerHTML = '';
+
+        // Agregar opción por defecto
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = asesoresDelGerente.length > 0
+            ? '-- Seleccionar asesor --'
+            : '-- No hay asesores disponibles --';
+        asesorSelect.appendChild(defaultOption);
+
+        // Agregar asesores del gerente
+        asesoresDelGerente.forEach(asesor => {
+            const option = document.createElement('option');
+            option.value = asesor.id;
+            option.textContent = asesor.nombre || asesor.email;
+            asesorSelect.appendChild(option);
+        });
+
+        // Deshabilitar selector si no hay asesores
+        asesorSelect.disabled = asesoresDelGerente.length === 0;
+
+        // Feedback visual
+        if (asesoresDelGerente.length === 0) {
+            asesorSelect.style.borderColor = '#ffc107';
+            asesorSelect.title = 'Este gerente no tiene asesores asignados';
+        } else {
+            asesorSelect.style.borderColor = '';
+            asesorSelect.title = '';
+        }
     },
 
     /**
@@ -2633,9 +2872,9 @@ const Reclutas = {
             picPreview.innerHTML = '<i class="fas fa-user-circle"></i>';
         }
         
-        // Si es admin, asegurar que el selector de asesor esté poblado
-        if (this.userRole === 'admin' && this.asesores && this.asesores.length > 0) {
-            this.populateAsesorSelectors();
+        // Si es admin, asegurar que los selectores estén poblados
+        if (this.userRole === 'admin') {
+            this.populateUserSelectors();
         }
         
         // Enfocar el primer campo
@@ -2708,6 +2947,7 @@ const Reclutas = {
             estado: document.getElementById('recluta-estado'),
             puesto: document.getElementById('recluta-puesto'),
             notas: document.getElementById('recluta-notas'),
+            gerente: document.getElementById('recluta-gerente'),
             asesor: document.getElementById('recluta-asesor')
         };
 
@@ -2735,15 +2975,42 @@ const Reclutas = {
             estado: elementos.estado.value || 'En proceso',
             puesto: elementos.puesto?.value?.trim() || '',
             notas: elementos.notas?.value?.trim() || '',
+            gerente_id: elementos.gerente?.value || null,
             asesor_id: elementos.asesor?.value || null
         };
 
         console.log('📋 Datos extraídos:', reclutaData);
 
-        // 🔍 VALIDACIONES FRONTEND
+        // 🔍 VALIDACIONES FRONTEND MEJORADAS
         if (!reclutaData.nombre) {
             showError('El nombre es requerido');
             elementos.nombre.focus();
+            elementos.nombre.style.borderColor = '#dc3545';
+            setTimeout(() => {
+                elementos.nombre.style.borderColor = '';
+            }, 3000);
+            return;
+        }
+
+        // Validar longitud mínima del nombre
+        if (reclutaData.nombre.length < 2) {
+            showError('El nombre debe tener al menos 2 caracteres');
+            elementos.nombre.focus();
+            elementos.nombre.style.borderColor = '#dc3545';
+            setTimeout(() => {
+                elementos.nombre.style.borderColor = '';
+            }, 3000);
+            return;
+        }
+
+        // Validar que el nombre no contenga solo números
+        if (/^\d+$/.test(reclutaData.nombre)) {
+            showError('El nombre no puede contener solo números');
+            elementos.nombre.focus();
+            elementos.nombre.style.borderColor = '#dc3545';
+            setTimeout(() => {
+                elementos.nombre.style.borderColor = '';
+            }, 3000);
             return;
         }
 
@@ -2759,30 +3026,73 @@ const Reclutas = {
             return;
         }
 
+        // 📱 VALIDACIÓN DE TELÉFONO A 10 DÍGITOS
+        const telefonoLimpio = reclutaData.telefono.replace(/\D/g, ''); // Solo números
+        if (telefonoLimpio.length !== 10) {
+            showError('El teléfono debe tener exactamente 10 dígitos');
+            elementos.telefono.focus();
+            elementos.telefono.style.borderColor = '#dc3545';
+            setTimeout(() => {
+                elementos.telefono.style.borderColor = '';
+            }, 3000);
+            return;
+        }
+
+        // Actualizar el teléfono con solo números
+        reclutaData.telefono = telefonoLimpio;
+
         // Validar formato de email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(reclutaData.email)) {
             showError('Por favor, ingresa un email válido');
             elementos.email.focus();
+            elementos.email.style.borderColor = '#dc3545';
+            setTimeout(() => {
+                elementos.email.style.borderColor = '';
+            }, 3000);
+            return;
+        }
+
+        // 🚫 PREVENCIÓN DE DUPLICACIÓN: Verificar si ya se está guardando
+        if (this.isSaving) {
+            console.warn('⚠️ Ya se está guardando un recluta, ignorando solicitud duplicada');
             return;
         }
 
         // 🔄 ESTADO DE CARGA
+        this.isSaving = true;
         const saveButton = modal.querySelector('.btn-primary');
         const originalButtonHTML = saveButton?.innerHTML;
-        
+
         if (saveButton) {
             saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
             saveButton.disabled = true;
         }
 
         try {
-            // 📸 MANEJO DE FOTO
+            // 📸 MANEJO DE FOTO CON VALIDACIONES
             const fotoInput = document.getElementById('recluta-upload');
-            const foto = fotoInput && fotoInput.files && fotoInput.files.length > 0 ? fotoInput.files[0] : null;
+            let foto = null;
 
-            if (foto) {
-                console.log('📸 Foto seleccionada:', foto.name, 'Tamaño:', foto.size);
+            if (fotoInput && fotoInput.files && fotoInput.files.length > 0) {
+                const archivoFoto = fotoInput.files[0];
+
+                // Validar tipo de archivo
+                const tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (!tiposPermitidos.includes(archivoFoto.type)) {
+                    throw new Error('Solo se permiten archivos de imagen (JPG, PNG, GIF, WebP)');
+                }
+
+                // Validar tamaño (máximo 5MB)
+                const maxSize = 5 * 1024 * 1024; // 5MB
+                if (archivoFoto.size > maxSize) {
+                    throw new Error('La foto no puede ser mayor a 5MB');
+                }
+
+                foto = archivoFoto;
+                console.log('📸 Foto válida seleccionada:', foto.name, 'Tamaño:', (foto.size / 1024 / 1024).toFixed(2) + 'MB');
+            } else {
+                console.log('📸 No se seleccionó foto - continuando sin imagen');
             }
 
             // 🚀 ENVIAR DATOS AL SERVIDOR
@@ -2821,7 +3131,8 @@ const Reclutas = {
             showError(errorMessage);
             
         } finally {
-            // 🔄 RESTAURAR ESTADO DEL BOTÓN
+            // 🔄 RESTAURAR ESTADO DEL BOTÓN Y BANDERA
+            this.isSaving = false;
             if (saveButton && originalButtonHTML) {
                 saveButton.innerHTML = originalButtonHTML;
                 saveButton.disabled = false;

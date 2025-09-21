@@ -315,14 +315,11 @@ def get_usuario_rol():
         "can_manage_users": False,
         "show_asesor_column": False
     },
-    'gerente': {  # MANTENER ESTA SECCIÓN SIN CAMBIOS
-        "is_admin": False,
-        "is_asesor": True,
-        "can_assign_asesores": False,
-        "can_see_all_reclutas": False,
-        "can_manage_users": False,
-        "show_asesor_column": False
-    },
+            'gerente': {
+                "is_asesor": False,
+                "can_assign_asesores": False,
+                "show_asesor_column": False
+            },
     'user': {  # MANTENER ESTA SECCIÓN SIN CAMBIOS
         "is_admin": False,
         "is_asesor": False,
@@ -2872,6 +2869,23 @@ def get_my_asesores():
     except Exception as e:
         current_app.logger.error(f"Error al obtener mis asesores: {str(e)}")
         return jsonify({'success': False, 'message': f'Error interno: {str(e)}'}), 500
+
+
+@api_bp.route('/usuarios/gerentes', methods=['GET'])
+@login_required
+def get_gerentes():
+    """
+    Obtiene una lista de todos los usuarios con el rol de gerente.
+    """
+    try:
+        gerentes = Usuario.query.filter_by(rol='gerente', is_active=True).all()
+        return jsonify({
+            "success": True,
+            "gerentes": [g.serialize() for g in gerentes]
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener gerentes: {str(e)}")
+        return jsonify({"success": False, "message": "Error interno al obtener gerentes"}), 500
 
 
 @api_bp.route('/gerentes/reasignar-asesor', methods=['POST'])
