@@ -652,6 +652,46 @@ body.asesor-view .dashboard-header::before {
     cursor: pointer;
 }
 
+/* ===== ESTILOS PARA MODAL DE PERFIL ===== */
+.modal-profile {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 20px auto;
+}
+
+.profile-pic-actions {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+}
+
+.btn-update-photo {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: var(--transition);
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+.btn-update-photo:hover {
+    background: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+}
+
+.btn-update-photo i {
+    font-size: 10px;
+}
+
 .profile-info h2 {
     font-size: 18px;
     margin: 0;
