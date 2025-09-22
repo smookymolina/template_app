@@ -566,43 +566,50 @@ const Reclutas = {
      * ✅ NUEVA FUNCIÓN: Configura botón de distribución automática Excel
      */
     setupDistribucionExcelButton: function() {
-        console.log('🔧 Configurando botón distribución Excel para admin');
-        
-        // Buscar contenedor de botones de sección
+        console.log("🎯 Configurando botón distribución Excel para roles permitidos");
         const sectionActions = document.querySelector('.section-actions');
         if (!sectionActions) {
-            console.error('❌ No se encontró contenedor .section-actions');
+            console.error("❌ No se encontró contenedor .section-actions");
             return;
         }
-        
-        // Crear botón si no existe
         let distribucionBtn = document.getElementById('distribuir-excel-btn');
         if (!distribucionBtn) {
             distribucionBtn = document.createElement('button');
             distribucionBtn.id = 'distribuir-excel-btn';
-            distribucionBtn.className = 'btn-primary';
+            distribucionBtn.className = "btn-primary distribute-excel admin-only";
             distribucionBtn.style.marginRight = '10px';
-            // Texto contextual según rol
-            const buttonText = this.userRole === 'admin' 
-                ? '<i class="fas fa-chart-line"></i> Distribuir Reclutas a Gerentes'
-                : '<i class="fas fa-chart-line"></i> Distribuir Reclutas a Asesores';
-            distribucionBtn.innerHTML = buttonText;
-            
-            // Insertar antes del botón "Agregar Nuevo Recluta"
+        } else {
+            distribucionBtn.classList.add('distribute-excel', 'admin-only');
+        }
+        const buttonText = this.userRole === "admin"
+            ? '<i class="fas fa-chart-line"></i> Distribuir Reclutas a Gerentes'
+            : '<i class="fas fa-chart-line"></i> Distribuir Reclutas a Mis Asesores';
+        distribucionBtn.innerHTML = buttonText;
+        if (!distribucionBtn.dataset.defaultDisplay) {
+            const computedDisplay = window.getComputedStyle
+                ? window.getComputedStyle(distribucionBtn).display
+                : distribucionBtn.style.display || '';
+            const fallbackDisplay = 'inline-flex';
+            distribucionBtn.dataset.defaultDisplay = computedDisplay && computedDisplay !== 'none'
+                ? computedDisplay
+                : fallbackDisplay;
+        }
+        distribucionBtn.style.display = distribucionBtn.dataset.defaultDisplay || 'inline-flex';
+        distribucionBtn.removeAttribute('disabled');
+        if (!sectionActions.contains(distribucionBtn)) {
             const addButton = document.getElementById('open-add-recluta-modal');
-            if (addButton) {
+            if (addButton && addButton.parentElement === sectionActions) {
                 sectionActions.insertBefore(distribucionBtn, addButton);
             } else {
                 sectionActions.appendChild(distribucionBtn);
             }
         }
-        
-        // Configurar evento click
-        distribucionBtn.addEventListener('click', () => {
-            this.openDistribucionExcelModal();
-        });
-        
-        // Crear input file oculto
+        if (!distribucionBtn.dataset.listenerAttached) {
+            distribucionBtn.addEventListener('click', () => {
+                this.openDistribucionExcelModal();
+            });
+            distribucionBtn.dataset.listenerAttached = 'true';
+        }
         let fileInput = document.getElementById('distribucion-excel-input');
         if (!fileInput) {
             fileInput = document.createElement('input');
@@ -611,13 +618,11 @@ const Reclutas = {
             fileInput.accept = '.xlsx,.xls';
             fileInput.style.display = 'none';
             document.body.appendChild(fileInput);
-            
             fileInput.addEventListener('change', (e) => {
                 this.handleDistribucionExcelFile(e.target.files[0]);
             });
         }
-        
-        console.log('✅ Botón distribución Excel configurado');
+        console.log("✅ Botón distribución Excel configurado");
     },
 
     /**
@@ -1507,7 +1512,8 @@ const Reclutas = {
         // Configurar filtro específico para gerentes (sus asesores asignados)
         this.setupGerenteAsesorFilter();
 
-        // Los gerentes NO pueden subir/distribuir Excel (solo admins)
+        // Habilitar distribución por Excel para redistribuir su equipo
+        this.setupDistribucionExcelButton();
         
         // Mostrar selectores de asesor en formularios
         this.showAsesorSelectors();
@@ -1528,6 +1534,11 @@ const Reclutas = {
      * Configura características para asesores
      */
     setupAsesorFeatures: function() {
+        const distribucionBtn = document.getElementById('distribuir-excel-btn');
+        if (distribucionBtn) {
+            distribucionBtn.style.display = 'none';
+            distribucionBtn.setAttribute('disabled', 'true');
+        }
         console.log('Configurando características de asesor');
         
         // Ocultar columna de asesor

@@ -982,14 +982,25 @@ function applyHierarchicalVisibility(rol) {
     // Funciones de Excel y distribución
     const excelUploadElements = document.querySelectorAll('.excel-upload, .distribute-excel');
     excelUploadElements.forEach(element => {
+        if (!element.dataset.defaultDisplay) {
+            const computedDisplay = window.getComputedStyle
+                ? window.getComputedStyle(element).display
+                : element.style.display || '';
+            const fallbackDisplay = element.tagName === 'BUTTON' ? 'inline-flex' : 'block';
+            element.dataset.defaultDisplay = computedDisplay && computedDisplay !== 'none'
+                ? computedDisplay
+                : fallbackDisplay;
+        }
+
         if (rol === 'admin' || rol === 'gerente') {
-            element.style.display = 'block';
+            element.style.display = element.dataset.defaultDisplay || 'block';
             element.removeAttribute('disabled');
         } else {
             element.style.display = 'none';
             element.setAttribute('disabled', 'true');
         }
     });
+
 
     console.log(`✅ Visibilidad jerárquica aplicada para: ${rol}`);
 }
