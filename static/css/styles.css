@@ -5043,3 +5043,215 @@ body.dark-mode .asesores-section {
         font-size: 13px;
     }
 }
+
+/* ===== ESTILOS PARA PRÓXIMAS ENTREVISTAS ===== */
+.upcoming-interview-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+    cursor: pointer;
+    position: relative;
+    box-shadow: var(--shadow-sm);
+}
+
+.upcoming-interview-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-color);
+}
+
+.dark-mode .upcoming-interview-item {
+    background: linear-gradient(135deg, #2a2b3d 0%, #252836 100%);
+    border-color: #3f3f3f;
+}
+
+.dark-mode .upcoming-interview-item:hover {
+    border-color: var(--primary-color);
+}
+
+.event-date-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-right: 12px;
+    position: relative;
+}
+
+.event-date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 8px;
+    min-width: 50px;
+    box-shadow: var(--shadow-sm);
+}
+
+.event-day {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.event-month {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+.time-indicator {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.time-indicator.hoy {
+    background: var(--danger-color);
+    animation: pulse 2s infinite;
+}
+
+.time-indicator.mañana {
+    background: var(--warning-color);
+    color: var(--dark-color);
+}
+
+.time-indicator.pasada {
+    background: var(--secondary-color);
+    color: white;
+    opacity: 0.7;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.event-details {
+    flex: 1;
+    margin-right: 8px;
+}
+
+.event-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.event-title i {
+    color: var(--primary-color);
+    font-size: 12px;
+}
+
+.event-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.event-time, .event-type {
+    font-size: 12px;
+    color: var(--text-light);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.event-time i, .event-type i {
+    font-size: 10px;
+    width: 12px;
+}
+
+.duration {
+    font-size: 11px;
+    color: var(--text-light);
+    margin-left: 4px;
+}
+
+.event-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.upcoming-interview-item:hover .event-actions {
+    opacity: 1;
+}
+
+.btn-icon-small {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 6px;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--text-light);
+    font-size: 10px;
+}
+
+.btn-icon-small:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.btn-icon-small.view-interview:hover {
+    background: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.btn-icon-small.edit-interview:hover {
+    background: var(--warning-color);
+    border-color: var(--warning-color);
+    color: var(--dark-color);
+}
+
+/* Responsive para próximas entrevistas */
+@media (max-width: 768px) {
+    .upcoming-interview-item {
+        padding: 8px;
+    }
+
+    .event-date {
+        min-width: 40px;
+        padding: 6px;
+    }
+
+    .event-day {
+        font-size: 16px;
+    }
+
+    .event-month {
+        font-size: 9px;
+    }
+
+    .event-title {
+        font-size: 13px;
+    }
+
+    .event-time, .event-type {
+        font-size: 11px;
+    }
+}

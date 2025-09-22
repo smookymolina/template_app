@@ -22,7 +22,10 @@ class Entrevista(db.Model):
         return {
             'id': self.id,
             'recluta_id': self.recluta_id,
-            'recluta_nombre': self.recluta.nombre if self.recluta else None,
+            'candidato_nombre': self.recluta.nombre if self.recluta else None,
+            'recluta_nombre': self.recluta.nombre if self.recluta else None,  # Backward compatibility
+            'asesor_id': self.recluta.asesor_id if self.recluta else None,  # ID del asesor asignado al recluta
+            'asesor_nombre': self.recluta.asesor.nombre if self.recluta and self.recluta.asesor else None,  # Nombre del asesor
             'fecha': self.fecha.isoformat() if self.fecha else None,
             'hora': self.hora,
             'duracion': self.duracion,

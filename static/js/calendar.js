@@ -4,6 +4,7 @@
 import CONFIG from './config.js';
 import { showNotification, showError, showSuccess, handleApiError } from './notifications.js';
 import UI from './ui.js';
+import Auth from './auth.js';
 
 const API_BASE_URL = CONFIG.API_URL;
 
@@ -258,31 +259,44 @@ const Calendar = {
         console.log('Calendar: loadEvents - Cargando eventos del servidor...');
         try {
             const allEvents = await Api.getEntrevistas();
-            this.calendarEvents = allEvents;
-            console.log('Calendar: loadEvents - Eventos recibidos:', allEvents);
-            
+            console.log('Calendar: loadEvents - Eventos raw del servidor:', allEvents);
+
+            if (!Array.isArray(allEvents)) {
+                console.error('Calendar: loadEvents - Los eventos no son un array:', allEvents);
+                this.calendarEvents = [];
+                this.updateUpcomingEventsList();
+                return;
+            }
+
+            // Aplicar filtros basados en roles
+            const filteredEvents = this.applyRoleBasedFilters(allEvents);
+            this.calendarEvents = filteredEvents;
+            console.log('Calendar: loadEvents - Eventos después de filtros:', this.calendarEvents);
+
             // Limpiar eventos existentes en el calendario antes de mostrar los nuevos
             document.querySelectorAll('.calendar-event').forEach(el => el.remove());
 
-            // Filtrar eventos del mes actual
-            const currentMonthEvents = allEvents.filter(event => {
-                const eventDate = new Date(event.fecha); // Usar 'fecha' en lugar de 'date'
-                return eventDate.getMonth() === this.currentMonth && 
+            // Filtrar eventos del mes actual usando los eventos filtrados
+            const currentMonthEvents = filteredEvents.filter(event => {
+                const eventDate = new Date(event.fecha);
+                return eventDate.getMonth() === this.currentMonth &&
                        eventDate.getFullYear() === this.currentYear;
             });
-            console.log('Calendar: loadEvents - Eventos para el mes actual:', currentMonthEvents);
-            
+            console.log('Calendar: loadEvents - Eventos para el mes actual:', currentMonthEvents.length);
+
             // Mostrar eventos en el calendario
             currentMonthEvents.forEach(event => {
                 this.displayEventInCalendar(event);
             });
-            
+
             // Actualizar lista de próximas entrevistas
             this.updateUpcomingEventsList();
-            console.log('Calendar: loadEvents - Eventos cargados y mostrados.');
+            console.log('Calendar: loadEvents - Proceso completado exitosamente.');
         } catch (error) {
             console.error('Calendar: loadEvents - Error al cargar eventos:', error);
             showError('Error al cargar las entrevistas del servidor.');
+            this.calendarEvents = [];
+            this.updateUpcomingEventsList();
         }
     },
     
@@ -346,18 +360,30 @@ const Calendar = {
         optionsMenu.style.left = `${rect.left}px`;
         optionsMenu.style.top = `${rect.bottom + 5}px`;
         
-        // Añadir opciones
-        optionsMenu.innerHTML = `
+        // Añadir opciones basadas en permisos
+        let optionsHTML = `
             <div class="event-option" data-action="view">
                 <i class="fas fa-eye"></i> Ver detalles
             </div>
-            <div class="event-option" data-action="edit">
-                <i class="fas fa-edit"></i> Editar entrevista
-            </div>
-            <div class="event-option" data-action="delete">
-                <i class="fas fa-trash-alt"></i> Eliminar entrevista
-            </div>
         `;
+
+        if (this.canEditInterview(event)) {
+            optionsHTML += `
+                <div class="event-option" data-action="edit">
+                    <i class="fas fa-edit"></i> Editar entrevista
+                </div>
+            `;
+        }
+
+        if (this.canDeleteInterview(event)) {
+            optionsHTML += `
+                <div class="event-option" data-action="delete">
+                    <i class="fas fa-trash-alt"></i> Eliminar entrevista
+                </div>
+            `;
+        }
+
+        optionsMenu.innerHTML = optionsHTML;
         
         // Estilos para las opciones
         const optionElements = optionsMenu.querySelectorAll('.event-option');
@@ -624,8 +650,8 @@ const Calendar = {
             showError('Error al actualizar la entrevista.');
         } finally {
             // Actualizar las vistas
-            this.refreshCalendarEvents();
-            
+            await this.refreshCalendarEvents();
+
             // Cerrar modal
             UI.closeModal('schedule-interview-modal');
             
@@ -667,7 +693,7 @@ const Calendar = {
             showError('Error al eliminar la entrevista.');
         } finally {
             // Actualizar vistas
-            this.refreshCalendarEvents();
+            await this.refreshCalendarEvents();
         }
     },
     
@@ -748,52 +774,101 @@ const Calendar = {
      * Actualiza la lista de próximas entrevistas
      */
     updateUpcomingEventsList: function() {
+        console.log('Calendar: updateUpcomingEventsList - Actualizando lista de próximas entrevistas');
         const upcomingEventsContainer = document.querySelector('.upcoming-events');
-        if (!upcomingEventsContainer) return;
-        
+        if (!upcomingEventsContainer) {
+            console.warn('Calendar: updateUpcomingEventsList - Container .upcoming-events no encontrado');
+            return;
+        }
+
         // Encontrar el encabezado h5
         const header = upcomingEventsContainer.querySelector('h5');
-        
+        const headerText = header ? header.textContent : 'Próximas Entrevistas';
+
         // Limpiar los eventos actuales pero conservar el encabezado
         upcomingEventsContainer.innerHTML = '';
-        if (header) {
-            upcomingEventsContainer.appendChild(header);
-        } else {
-            const newHeader = document.createElement('h5');
-            newHeader.textContent = 'Próximas Entrevistas';
-            upcomingEventsContainer.appendChild(newHeader);
-        }
-        
-        // Filtrar los eventos futuros (a partir de hoy)
+        const newHeader = document.createElement('h5');
+        newHeader.textContent = headerText;
+        upcomingEventsContainer.appendChild(newHeader);
+
+        // Filtrar los eventos próximos (incluye hoy y futuros) y solo pendientes
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        const futureEvents = this.calendarEvents.filter(event => {
-            const eventDate = new Date(event.fecha);
-            return eventDate >= today;
+        const todayDateString = today.toISOString().split('T')[0]; // YYYY-MM-DD
+
+        console.log('Calendar: updateUpcomingEventsList - Fecha de hoy:', todayDateString);
+        console.log('Calendar: updateUpcomingEventsList - Total eventos en memoria:', this.calendarEvents.length);
+
+        // Logging de todos los eventos para debug
+        this.calendarEvents.forEach((event, index) => {
+            console.log(`Calendar: updateUpcomingEventsList - Evento ${index + 1}:`, {
+                id: event.id,
+                fecha: event.fecha,
+                hora: event.hora,
+                candidato: event.candidato_nombre || event.recluta_nombre,
+                estado: event.estado
+            });
+        });
+
+        // TEMPORAL: Mostrar todas las entrevistas para debugging
+        // TODO: Cambiar después del testing a solo futuras
+        const showAllForDebug = true;
+
+        const upcomingEvents = this.calendarEvents.filter(event => {
+            if (!event.fecha) {
+                console.warn('Calendar: updateUpcomingEventsList - Evento sin fecha:', event);
+                return false;
+            }
+
+            if (showAllForDebug) {
+                // Modo debug: mostrar todas las entrevistas pendientes
+                const isPending = event.estado === 'pendiente' || !event.estado || event.estado === undefined;
+                console.log(`Calendar: updateUpcomingEventsList - [DEBUG MODE] Evaluando evento:`, {
+                    fecha: event.fecha,
+                    hora: event.hora,
+                    candidato: event.candidato_nombre || event.recluta_nombre,
+                    esPendiente: isPending,
+                    pasa: isPending
+                });
+                return isPending;
+            } else {
+                // Modo normal: solo eventos futuros
+                const eventDateString = event.fecha;
+                const isUpcoming = eventDateString >= todayDateString;
+                const isPending = event.estado === 'pendiente' || !event.estado || event.estado === undefined;
+
+                console.log(`Calendar: updateUpcomingEventsList - Evaluando evento:`, {
+                    fecha: eventDateString,
+                    esProximo: isUpcoming,
+                    esPendiente: isPending,
+                    pasa: isUpcoming && isPending
+                });
+
+                return isUpcoming && isPending;
+            }
         }).sort((a, b) => {
             // Ordenar primero por fecha
-            const dateA = new Date(a.fecha);
-            const dateB = new Date(b.fecha);
-            if (dateA.getTime() !== dateB.getTime()) {
-                return dateA - dateB;
+            if (a.fecha !== b.fecha) {
+                return a.fecha.localeCompare(b.fecha);
             }
             // Si son del mismo día, ordenar por hora
             return this.convertTimeToMinutes(a.hora) - this.convertTimeToMinutes(b.hora);
         });
-        
+
+        console.log(`Calendar: updateUpcomingEventsList - Eventos próximos encontrados: ${upcomingEvents.length}`);
+
         // Mostrar máximo 5 próximos eventos
-        const eventsToShow = futureEvents.slice(0, 5);
-        
+        const eventsToShow = upcomingEvents.slice(0, 5);
+
         if (eventsToShow.length === 0) {
             const noEventsMsg = document.createElement('p');
             noEventsMsg.textContent = 'No hay próximas entrevistas programadas';
             noEventsMsg.style.textAlign = 'center';
             noEventsMsg.style.color = 'var(--text-light)';
-            noEventsMsg.style.padding = '10px 0';
+            noEventsMsg.style.padding = '20px 0';
             upcomingEventsContainer.appendChild(noEventsMsg);
         } else {
-            eventsToShow.forEach(event => {
+            eventsToShow.forEach((event, index) => {
+                console.log(`Calendar: updateUpcomingEventsList - Añadiendo evento ${index + 1}:`, event);
                 this.addEventToUpcomingList(event, upcomingEventsContainer);
             });
         }
@@ -808,43 +883,109 @@ const Calendar = {
         const eventDate = new Date(event.fecha);
         const day = eventDate.getDate();
         const month = this.monthShortNames[eventDate.getMonth()];
-        
+
+        // Determinar si es hoy, mañana o fecha futura/pasada
+        const today = new Date();
+        const todayString = today.toISOString().split('T')[0];
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowString = tomorrow.toISOString().split('T')[0];
+
+        let timeIndicator = '';
+        if (event.fecha === todayString) {
+            timeIndicator = 'HOY';
+        } else if (event.fecha === tomorrowString) {
+            timeIndicator = 'MAÑANA';
+        } else if (event.fecha < todayString) {
+            timeIndicator = 'PASADA';
+        }
+
         const eventItem = document.createElement('div');
-        eventItem.className = 'event-item';
+        eventItem.className = 'event-item upcoming-interview-item';
         eventItem.dataset.eventId = event.id;
-        
+
         eventItem.innerHTML = `
-            <div class="event-date">
-                <span class="event-day">${day}</span>
-                <span class="event-month">${month}</span>
+            <div class="event-date-container">
+                <div class="event-date">
+                    <span class="event-day">${day}</span>
+                    <span class="event-month">${month}</span>
+                </div>
+                ${timeIndicator ? `<div class="time-indicator ${timeIndicator.toLowerCase()}">${timeIndicator}</div>` : ''}
             </div>
             <div class="event-details">
-                <h6>Entrevista con ${event.candidato_nombre || 'Candidato'}</h6>
-                <p><i class="fas fa-clock"></i> ${event.hora} (${event.duracion || 60} min)</p>
+                <h6 class="event-title">
+                    <i class="fas fa-user-tie"></i>
+                    ${event.candidato_nombre || event.recluta_nombre || 'Candidato'}
+                </h6>
+                <div class="event-meta">
+                    <p class="event-time">
+                        <i class="fas fa-clock"></i> ${event.hora}
+                        <span class="duration">(${event.duracion || 60} min)</span>
+                    </p>
+                    ${event.tipo && event.tipo !== 'presencial' ?
+                        `<p class="event-type">
+                            <i class="fas fa-${event.tipo === 'virtual' ? 'video' : 'phone'}"></i>
+                            ${event.tipo.charAt(0).toUpperCase() + event.tipo.slice(1)}
+                        </p>` : ''
+                    }
+                </div>
+            </div>
+            <div class="event-actions">
+                <button class="btn-icon-small view-interview" title="Ver detalles">
+                    <i class="fas fa-eye"></i>
+                </button>
+                ${this.canEditInterview(event) ?
+                    `<button class="btn-icon-small edit-interview" title="Editar">
+                        <i class="fas fa-edit"></i>
+                     </button>` : ''
+                }
             </div>
         `;
-        
-        // Añadir evento de clic para ver detalles
+
+        // Añadir eventos para los botones de acción
+        const viewBtn = eventItem.querySelector('.view-interview');
+        const editBtn = eventItem.querySelector('.edit-interview');
+
+        if (viewBtn) {
+            viewBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.viewEventDetails(event);
+            });
+        }
+
+        if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                console.log('Calendar: addEventToUpcomingList - Click en botón editar, evento:', event);
+                this.editEvent(event);
+            });
+        }
+
+        // Añadir evento de clic general para ver detalles
         eventItem.addEventListener('click', () => {
             this.viewEventDetails(event);
         });
-        
+
         container.appendChild(eventItem);
     },
     
     /**
      * Actualiza todos los eventos del calendario
      */
-    refreshCalendarEvents: function() {
+    refreshCalendarEvents: async function() {
+        console.log('Calendar: refreshCalendarEvents - Iniciando actualización completa');
+
         // Limpiar todos los eventos del calendario
         document.querySelectorAll('.calendar-event').forEach(el => {
             if (el.parentNode) {
                 el.parentNode.removeChild(el);
             }
         });
-        
+
         // Volver a cargar y mostrar eventos
-        this.loadEvents();
+        await this.loadEvents();
+
+        console.log('Calendar: refreshCalendarEvents - Actualización completa terminada');
     },
     
     /**
@@ -1096,17 +1237,24 @@ const Calendar = {
             // No hay solapamiento, guardar
             try {
                 console.log('Calendar: saveInterview - No hay solapamiento, llamando a Api.createEntrevista...');
-                await Api.createEntrevista(eventData);
-                
-                // Actualizar vistas
-                this.refreshCalendarEvents();
-                
+                const newInterview = await Api.createEntrevista(eventData);
+                console.log('Calendar: saveInterview - Entrevista creada exitosamente:', newInterview);
+
+                // Añadir inmediatamente a la lista local para una respuesta más rápida
+                if (newInterview && newInterview.id) {
+                    this.calendarEvents.push(newInterview);
+                    console.log('Calendar: saveInterview - Entrevista añadida a la lista local');
+                }
+
+                // Actualizar vistas (esto hará una nueva llamada al servidor)
+                await this.refreshCalendarEvents();
+
                 // Cerrar modal
                 UI.closeModal('schedule-interview-modal');
-                
+
                 // Mostrar notificación
                 showSuccess('Entrevista programada correctamente');
-                console.log('Calendar: saveInterview - Entrevista guardada con éxito.');
+                console.log('Calendar: saveInterview - Proceso de creación completado.');
             } catch (error) {
                 console.error('Calendar: saveInterview - Error al guardar entrevista:', error);
                 showError('Error al programar la entrevista');
@@ -1133,9 +1281,11 @@ const Calendar = {
      * Inicializa eventos y manejadores para el calendario
      */
     init: function() {
+        console.log('Calendar: init - Inicializando calendario completo');
+
         // Inicializar calendario
         this.initCalendar();
-        
+
         // Configurar modal de programación
         const modal = document.getElementById('schedule-interview-modal');
         if (modal) {
@@ -1146,25 +1296,255 @@ const Calendar = {
                     UI.closeModal('schedule-interview-modal');
                 });
             });
-            
+
             // Botón para añadir evento manualmente
             const addEventButton = document.getElementById('add-event-button');
             if (addEventButton) {
-                addEventButton.addEventListener('click', () => {
-                    const today = new Date();
-                    const dateString = this.formatDateForDataset(today);
-                    this.openAddEventModal(dateString);
-                });
+                // Verificar permisos para crear entrevistas
+                if (this.canCreateInterview()) {
+                    addEventButton.addEventListener('click', () => {
+                        const today = new Date();
+                        const dateString = this.formatDateForDataset(today);
+                        this.openAddEventModal(dateString);
+                    });
+                } else {
+                    addEventButton.style.display = 'none';
+                }
             }
         }
-        
+
         // Registrarse para eventos de cambio de sección
         document.addEventListener('sectionChanged', (e) => {
             if (e.detail.section === 'calendario-section') {
+                console.log('Calendar: init - Sección de calendario activada, refrescando eventos');
                 this.refreshCalendarEvents();
             }
         });
+
+        // Auto-refresh cada 5 minutos para mantener sincronizado
+        this.setupAutoRefresh();
+
+        // Escuchar cambios en reclutas para actualizar el calendario
+        document.addEventListener('reclutaUpdated', () => {
+            console.log('Calendar: init - Recluta actualizado, refrescando calendario');
+            this.refreshCalendarEvents();
+        });
+
+        document.addEventListener('reclutaDeleted', () => {
+            console.log('Calendar: init - Recluta eliminado, refrescando calendario');
+            this.refreshCalendarEvents();
+        });
+
+        console.log('Calendar: init - Inicialización completada');
+
+        // Forzar actualización inmediata de próximas entrevistas
+        setTimeout(() => {
+            console.log('Calendar: init - Forzando actualización de próximas entrevistas');
+            this.updateUpcomingEventsList();
+        }, 500);
+    },
+
+    /**
+     * Configura el auto-refresh del calendario
+     */
+    setupAutoRefresh: function() {
+        // Refresh cada 5 minutos (300000 ms)
+        this.refreshInterval = setInterval(() => {
+            // Solo refresh si la sección del calendario está visible
+            const calendarSection = document.getElementById('calendario-section');
+            if (calendarSection && calendarSection.style.display !== 'none') {
+                console.log('Calendar: setupAutoRefresh - Auto-refresh ejecutado');
+                this.refreshCalendarEvents();
+            }
+        }, 300000);
+
+        // Limpiar interval cuando la página se descarga
+        window.addEventListener('beforeunload', () => {
+            if (this.refreshInterval) {
+                clearInterval(this.refreshInterval);
+            }
+        });
+    },
+
+    /**
+     * Manejo inteligente de cambios de estado
+     */
+    handleInterviewStateChange: function(interviewId, newState) {
+        const interview = this.calendarEvents.find(e => e.id === interviewId);
+        if (interview) {
+            interview.estado = newState;
+
+            // Si se completó o canceló, remover de próximas entrevistas
+            if (newState === 'completada' || newState === 'cancelada') {
+                this.updateUpcomingEventsList();
+            }
+
+            // Actualizar display del evento en el calendario
+            this.updateEventDisplay(interview);
+        }
+    },
+
+    /**
+     * Actualiza la visualización de un evento específico
+     */
+    updateEventDisplay: function(event) {
+        const eventElements = document.querySelectorAll(`[data-event-id="${event.id}"]`);
+        eventElements.forEach(el => {
+            // Actualizar clases según el estado
+            el.classList.remove('completed', 'cancelled', 'pending');
+            el.classList.add(event.estado || 'pending');
+
+            // Actualizar texto si es necesario
+            const titleElement = el.querySelector('.event-title, .calendar-event');
+            if (titleElement && event.candidato_nombre) {
+                const isCalendarEvent = titleElement.classList.contains('calendar-event');
+                if (isCalendarEvent) {
+                    titleElement.textContent = `${event.hora} - ${event.candidato_nombre}`;
+                }
+            }
+        });
+    },
+
+    /**
+     * Verifica si el usuario puede editar una entrevista
+     * @param {Object} event - Evento de entrevista
+     * @returns {boolean} - True si puede editar, False en caso contrario
+     */
+    canEditInterview: function(event) {
+        if (!Auth.currentUser) {
+            console.warn('Calendar: canEditInterview - No hay usuario autenticado');
+            return false;
+        }
+
+        // Admins y gerentes pueden editar todas las entrevistas
+        if (Auth.isGerenteOrAdmin()) {
+            console.log('Calendar: canEditInterview - Usuario admin/gerente puede editar');
+            return true;
+        }
+
+        // Asesores solo pueden editar entrevistas de sus propios reclutas
+        if (Auth.isAsesor()) {
+            const canEdit = event.asesor_id === Auth.currentUser.id ||
+                           !event.asesor_id ||
+                           event.asesor_id === null ||
+                           event.asesor_id === undefined;
+
+            console.log(`Calendar: canEditInterview - Asesor ${Auth.currentUser.id}, evento asesor_id: ${event.asesor_id}, puede editar: ${canEdit}`);
+            return canEdit;
+        }
+
+        console.log('Calendar: canEditInterview - Usuario sin permisos para editar');
+        return false;
+    },
+
+    /**
+     * Verifica si el usuario puede eliminar una entrevista
+     * @param {Object} event - Evento de entrevista
+     * @returns {boolean} - True si puede eliminar, False en caso contrario
+     */
+    canDeleteInterview: function(event) {
+        // Solo admins y gerentes pueden eliminar entrevistas
+        if (Auth.isGerenteOrAdmin()) {
+            return true;
+        }
+
+        // Asesores pueden eliminar solo si es su propio recluta y la entrevista aún está pendiente
+        if (Auth.isAsesor() && Auth.currentUser && event.estado === 'pendiente') {
+            return event.asesor_id === Auth.currentUser.id || !event.asesor_id;
+        }
+
+        return false;
+    },
+
+    /**
+     * Verifica si el usuario puede crear entrevistas
+     * @returns {boolean} - True si puede crear, False en caso contrario
+     */
+    canCreateInterview: function() {
+        // Todos los usuarios autenticados pueden crear entrevistas
+        return Auth.currentUser !== null;
+    },
+
+    /**
+     * Aplica filtros basados en roles para los eventos
+     * @param {Array} events - Lista de eventos
+     * @returns {Array} - Lista filtrada de eventos
+     */
+    applyRoleBasedFilters: function(events) {
+        if (!Auth.currentUser) {
+            console.warn('Calendar: applyRoleBasedFilters - No hay usuario autenticado');
+            return [];
+        }
+
+        console.log('Calendar: applyRoleBasedFilters - Aplicando filtros para rol:', Auth.currentUser.rol);
+        console.log('Calendar: applyRoleBasedFilters - Eventos recibidos:', events.length);
+
+        // Admins y gerentes ven todas las entrevistas
+        if (Auth.isGerenteOrAdmin()) {
+            console.log('Calendar: applyRoleBasedFilters - Usuario admin/gerente, mostrando todos los eventos');
+            return events;
+        }
+
+        // Asesores solo ven entrevistas de sus reclutas asignados o entrevistas sin asesor asignado
+        if (Auth.isAsesor()) {
+            const filteredEvents = events.filter(event => {
+                // Si el evento tiene asesor_id, debe coincidir con el usuario actual
+                // Si no tiene asesor_id, puede verlo (para retrocompatibilidad)
+                const canView = event.asesor_id === Auth.currentUser.id ||
+                              !event.asesor_id ||
+                              event.asesor_id === null ||
+                              event.asesor_id === undefined;
+
+                if (!canView) {
+                    console.log(`Calendar: applyRoleBasedFilters - Evento ${event.id} filtrado (asesor_id: ${event.asesor_id}, current_user: ${Auth.currentUser.id})`);
+                }
+
+                return canView;
+            });
+
+            console.log('Calendar: applyRoleBasedFilters - Eventos filtrados para asesor:', filteredEvents.length);
+            return filteredEvents;
+        }
+
+        console.log('Calendar: applyRoleBasedFilters - Rol no reconocido, retornando array vacío');
+        return events;
+    },
+
+    /**
+     * Método de debug para verificar el estado del calendario
+     */
+    debugCalendarState: function() {
+        console.group('Calendar Debug State');
+        console.log('Eventos en memoria:', this.calendarEvents.length);
+        console.log('Usuario actual:', Auth.currentUser);
+        console.log('Mes actual:', this.currentMonth, this.currentYear);
+
+        const upcomingContainer = document.querySelector('.upcoming-events');
+        console.log('Container de próximas entrevistas:', upcomingContainer ? 'Encontrado' : 'No encontrado');
+
+        if (upcomingContainer) {
+            const eventItems = upcomingContainer.querySelectorAll('.upcoming-interview-item');
+            console.log('Items de próximas entrevistas en DOM:', eventItems.length);
+        }
+
+        console.log('Detalle de eventos:', this.calendarEvents);
+        console.groupEnd();
     }
+};
+
+// Exponer métodos globalmente para testing
+window.CalendarDebug = function() {
+    return Calendar.debugCalendarState();
+};
+
+window.ForceUpdateSidebar = function() {
+    console.log('🔄 Forzando actualización manual del sidebar');
+    Calendar.updateUpcomingEventsList();
+};
+
+window.RefreshCalendar = function() {
+    console.log('🔄 Forzando actualización completa del calendario');
+    Calendar.refreshCalendarEvents();
 };
 
 export default Calendar;
