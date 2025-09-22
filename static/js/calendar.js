@@ -811,7 +811,7 @@ const Calendar = {
 
         // TEMPORAL: Mostrar todas las entrevistas para debugging
         // TODO: Cambiar después del testing a solo futuras
-        const showAllForDebug = true;
+        const showAllForDebug = false;
 
         const upcomingEvents = this.calendarEvents.filter(event => {
             if (!event.fecha) {

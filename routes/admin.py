@@ -441,6 +441,275 @@ def get_metricas_tendencias():
             "message": f"Error al generar tendencias: {str(e)}"
         }), 500
 
+@admin_bp.route('/metricas/equipos', methods=['GET'])
+@cross_origin()
+@admin_required
+def get_metricas_equipos():
+    """
+    🎯 NUEVA FUNCIONALIDAD: Obtiene métricas detalladas por gerentes y sus equipos
+    Solo disponible para administradores.
+
+    Returns:
+        JSON con métricas jerárquicas:
+        - Métricas por gerente y sus asesores
+        - Comparativas de equipos
+        - Rankings consolidados
+    """
+    try:
+        # Obtener métricas de gerentes con sus equipos
+        gerentes_metricas = []
+        asesores_sin_gerente = []
+
+        # 1. Procesar Gerentes y sus equipos
+        gerentes = Usuario.query.filter_by(rol='gerente').all()
+        for gerente in gerentes:
+            # Métricas del gerente
+            gerente_reclutas = db.session.query(
+                func.count(Recluta.id).label('total'),
+                func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes'),
+                func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('amarillos'),
+                func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rojos')
+            ).filter(Recluta.asesor_id == gerente.id).first()
+
+            # Métricas de sus asesores
+            asesores_ids = [a.id for a in gerente.asesores]
+            equipo_metricas = []
+            total_equipo = 0
+            verdes_equipo = 0
+            amarillos_equipo = 0
+            rojos_equipo = 0
+
+            if asesores_ids:
+                equipo_query = db.session.query(
+                    Usuario.id,
+                    Usuario.nombre,
+                    func.count(Recluta.id).label('total'),
+                    func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes'),
+                    func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('amarillos'),
+                    func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rojos')
+                ).outerjoin(
+                    Recluta, Usuario.id == Recluta.asesor_id
+                ).filter(
+                    Usuario.id.in_(asesores_ids)
+                ).group_by(Usuario.id, Usuario.nombre).all()
+
+                for asesor_data in equipo_query:
+                    asesor_verdes = asesor_data.verdes or 0
+                    asesor_amarillos = asesor_data.amarillos or 0
+                    asesor_rojos = asesor_data.rojos or 0
+                    asesor_total = asesor_data.total or 0
+
+                    total_equipo += asesor_total
+                    verdes_equipo += asesor_verdes
+                    amarillos_equipo += asesor_amarillos
+                    rojos_equipo += asesor_rojos
+
+                    equipo_metricas.append({
+                        'id': asesor_data.id,
+                        'nombre': asesor_data.nombre,
+                        'total': asesor_total,
+                        'verdes': asesor_verdes,
+                        'amarillos': asesor_amarillos,
+                        'rojos': asesor_rojos,
+                        'tasa_exito': (asesor_verdes / asesor_total * 100) if asesor_total > 0 else 0
+                    })
+
+            # Métricas consolidadas del gerente (propias + equipo)
+            gerente_total = (gerente_reclutas.total or 0) + total_equipo
+            gerente_verdes_total = (gerente_reclutas.verdes or 0) + verdes_equipo
+            gerente_amarillos_total = (gerente_reclutas.amarillos or 0) + amarillos_equipo
+            gerente_rojos_total = (gerente_reclutas.rojos or 0) + rojos_equipo
+
+            gerentes_metricas.append({
+                'id': gerente.id,
+                'nombre': gerente.nombre,
+                'email': gerente.email,
+                'rol': 'gerente',
+                'metricas_propias': {
+                    'total': gerente_reclutas.total or 0,
+                    'verdes': gerente_reclutas.verdes or 0,
+                    'amarillos': gerente_reclutas.amarillos or 0,
+                    'rojos': gerente_reclutas.rojos or 0
+                },
+                'metricas_equipo': {
+                    'total': total_equipo,
+                    'verdes': verdes_equipo,
+                    'amarillos': amarillos_equipo,
+                    'rojos': rojos_equipo,
+                    'total_asesores': len(equipo_metricas)
+                },
+                'metricas_consolidadas': {
+                    'total': gerente_total,
+                    'verdes': gerente_verdes_total,
+                    'amarillos': gerente_amarillos_total,
+                    'rojos': gerente_rojos_total,
+                    'tasa_exito': (gerente_verdes_total / gerente_total * 100) if gerente_total > 0 else 0
+                },
+                'equipo_detalle': equipo_metricas
+            })
+
+        # 2. Asesores sin gerente asignado
+        asesores_independientes = db.session.query(
+            Usuario.id,
+            Usuario.nombre,
+            Usuario.email,
+            func.count(Recluta.id).label('total'),
+            func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes'),
+            func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('amarillos'),
+            func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rojos')
+        ).outerjoin(
+            Recluta, Usuario.id == Recluta.asesor_id
+        ).filter(
+            Usuario.rol == 'asesor',
+            Usuario.gerente_id.is_(None)
+        ).group_by(Usuario.id, Usuario.nombre, Usuario.email).all()
+
+        for asesor in asesores_independientes:
+            asesores_sin_gerente.append({
+                'id': asesor.id,
+                'nombre': asesor.nombre,
+                'email': asesor.email,
+                'rol': 'asesor',
+                'total': asesor.total or 0,
+                'verdes': asesor.verdes or 0,
+                'amarillos': asesor.amarillos or 0,
+                'rojos': asesor.rojos or 0,
+                'tasa_exito': ((asesor.verdes or 0) / (asesor.total or 1) * 100) if (asesor.total or 0) > 0 else 0
+            })
+
+        return jsonify({
+            "success": True,
+            "gerentes_equipos": gerentes_metricas,
+            "asesores_independientes": asesores_sin_gerente,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error al generar métricas de equipos: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al generar métricas de equipos: {str(e)}"
+        }), 500
+
+@admin_bp.route('/metricas/gerentes', methods=['GET'])
+@cross_origin()
+@admin_required
+def get_metricas_gerentes():
+    """
+    🎯 NUEVA FUNCIONALIDAD: Obtiene métricas específicas de gerentes para el dashboard
+    Solo disponible para administradores.
+
+    Returns:
+        JSON con métricas optimizadas para dashboard de gerentes:
+        - Ranking de gerentes por performance
+        - Comparativas de equipos
+        - Insights de gestión de equipos
+    """
+    try:
+        gerentes = Usuario.query.filter_by(rol='gerente').all()
+        gerentes_ranking = []
+
+        for gerente in gerentes:
+            # Métricas propias del gerente
+            gerente_stats = db.session.query(
+                func.count(Recluta.id).label('total_propio'),
+                func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes_propio'),
+                func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('amarillos_propio'),
+                func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rojos_propio')
+            ).filter(Recluta.asesor_id == gerente.id).first()
+
+            # Métricas del equipo
+            asesores_ids = [a.id for a in gerente.asesores]
+            equipo_stats = {'total': 0, 'verdes': 0, 'amarillos': 0, 'rojos': 0}
+
+            if asesores_ids:
+                equipo_query = db.session.query(
+                    func.count(Recluta.id).label('total'),
+                    func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes'),
+                    func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('amarillos'),
+                    func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rojos')
+                ).filter(Recluta.asesor_id.in_(asesores_ids)).first()
+
+                equipo_stats = {
+                    'total': equipo_query.total or 0,
+                    'verdes': equipo_query.verdes or 0,
+                    'amarillos': equipo_query.amarillos or 0,
+                    'rojos': equipo_query.rojos or 0
+                }
+
+            # Consolidar métricas
+            total_consolidado = (gerente_stats.total_propio or 0) + equipo_stats['total']
+            verdes_consolidado = (gerente_stats.verdes_propio or 0) + equipo_stats['verdes']
+
+            # Calcular KPIs de liderazgo
+            tasa_exito_consolidada = (verdes_consolidado / total_consolidado * 100) if total_consolidado > 0 else 0
+            eficiencia_equipo = (equipo_stats['verdes'] / equipo_stats['total'] * 100) if equipo_stats['total'] > 0 else 0
+
+            # Clasificar performance de liderazgo
+            if tasa_exito_consolidada >= 80:
+                nivel_liderazgo = 'Excepcional'
+                color_liderazgo = '#059669'
+            elif tasa_exito_consolidada >= 60:
+                nivel_liderazgo = 'Bueno'
+                color_liderazgo = '#10B981'
+            elif tasa_exito_consolidada >= 40:
+                nivel_liderazgo = 'Regular'
+                color_liderazgo = '#F59E0B'
+            else:
+                nivel_liderazgo = 'Necesita Apoyo'
+                color_liderazgo = '#EF4444'
+
+            gerentes_ranking.append({
+                'id': gerente.id,
+                'nombre': gerente.nombre,
+                'email': gerente.email,
+                'total_asesores': len(asesores_ids),
+                'metricas_propias': {
+                    'total': gerente_stats.total_propio or 0,
+                    'verdes': gerente_stats.verdes_propio or 0,
+                    'amarillos': gerente_stats.amarillos_propio or 0,
+                    'rojos': gerente_stats.rojos_propio or 0
+                },
+                'metricas_equipo': equipo_stats,
+                'consolidado': {
+                    'total': total_consolidado,
+                    'verdes': verdes_consolidado,
+                    'tasa_exito': round(tasa_exito_consolidada, 2)
+                },
+                'kpis_liderazgo': {
+                    'eficiencia_equipo': round(eficiencia_equipo, 2),
+                    'nivel': nivel_liderazgo,
+                    'color': color_liderazgo,
+                    'score_liderazgo': round((tasa_exito_consolidada + eficiencia_equipo) / 2, 2)
+                }
+            })
+
+        # Ordenar por score de liderazgo
+        gerentes_ranking.sort(key=lambda x: x['kpis_liderazgo']['score_liderazgo'], reverse=True)
+
+        # Insights de gerentes
+        insights = {
+            'top_gerente': gerentes_ranking[0] if gerentes_ranking else None,
+            'total_gerentes': len(gerentes_ranking),
+            'gerentes_excelentes': len([g for g in gerentes_ranking if g['kpis_liderazgo']['nivel'] == 'Excepcional']),
+            'gerentes_necesitan_apoyo': len([g for g in gerentes_ranking if g['kpis_liderazgo']['nivel'] == 'Necesita Apoyo']),
+            'promedio_eficiencia': sum([g['kpis_liderazgo']['eficiencia_equipo'] for g in gerentes_ranking]) / len(gerentes_ranking) if gerentes_ranking else 0
+        }
+
+        return jsonify({
+            "success": True,
+            "gerentes_ranking": gerentes_ranking,
+            "insights_gerentes": insights,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error al generar métricas de gerentes: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al generar métricas de gerentes: {str(e)}"
+        }), 500
+
 @admin_bp.route('/metricas/asesores', methods=['GET'])
 @cross_origin()
 @admin_required

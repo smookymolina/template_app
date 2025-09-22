@@ -39,8 +39,8 @@ const MetricasAdmin = {
             return;
         }
 
-        if (currentUser.rol !== 'admin') {
-            console.log('⚠️ Usuario no es admin, no inicializando métricas admin');
+        if (!['admin', 'gerente'].includes(currentUser.rol)) {
+            console.log(`⚠️ Usuario con rol ${currentUser.rol} no tiene acceso a métricas avanzadas`);
             return;
         }
 
@@ -88,16 +88,23 @@ const MetricasAdmin = {
     setupContainer() {
         const currentUser = this.getCurrentUserSafe();
         
-        if (currentUser && currentUser.rol === 'admin') {
-            // Mostrar elementos admin
-            const adminElements = document.querySelectorAll('.admin-only');
-            adminElements.forEach(el => {
-                if (el) el.style.display = 'block';
-            });
-            
-            // Agregar clase admin-view al body
-            document.body.classList.add('admin-view');
-            document.body.classList.remove('asesor-view');
+        if (currentUser && ['admin', 'gerente'].includes(currentUser.rol)) {
+            // Mostrar elementos según rol
+            if (currentUser.rol === 'admin') {
+                const adminElements = document.querySelectorAll('.admin-only');
+                adminElements.forEach(el => {
+                    if (el) el.style.display = 'block';
+                });
+                document.body.classList.add('admin-view');
+                document.body.classList.remove('gerente-view', 'asesor-view');
+            } else if (currentUser.rol === 'gerente') {
+                const gerenteElements = document.querySelectorAll('.gerente-only, .admin-gerente-only');
+                gerenteElements.forEach(el => {
+                    if (el) el.style.display = 'block';
+                });
+                document.body.classList.add('gerente-view');
+                document.body.classList.remove('admin-view', 'asesor-view');
+            }
             
             console.log('👑 Configuración admin aplicada');
         } else {
@@ -178,8 +185,8 @@ const MetricasAdmin = {
             return;
         }
 
-        if (currentUser.rol !== 'admin') {
-            console.log('⚠️ Usuario no es admin, no cargando métricas admin');
+        if (!['admin', 'gerente'].includes(currentUser.rol)) {
+            console.log(`⚠️ Usuario con rol ${currentUser.rol} no tiene acceso a métricas avanzadas`);
             return;
         }
 
@@ -187,10 +194,18 @@ const MetricasAdmin = {
             this.showLoader();
         }
 
+        // Determinar endpoint según rol
+        let endpoint = '/admin/metricas/asesores'; // Default
+        if (currentUser.rol === 'admin') {
+            endpoint = '/admin/metricas/equipos'; // Métricas completas para admin
+        } else if (currentUser.rol === 'gerente') {
+            endpoint = '/admin/metricas/gerentes'; // Métricas específicas para gerentes
+        }
+
         try {
-            console.log('📊 Cargando métricas administrativas...');
-            
-            const response = await fetch('/admin/metricas/asesores', {
+            console.log(`📊 Cargando métricas desde: ${endpoint} para rol: ${currentUser.rol}`);
+
+            const response = await fetch(endpoint, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -265,19 +280,73 @@ const MetricasAdmin = {
 
     // ✅ RENDERIZAR MÉTRICAS EN TU ESTRUCTURA EXISTENTE
     renderMetricas(data) {
-        console.log('🎨 Renderizando métricas en estructura existente:', data);
-        
-        this.asesoresData = data.metricas_asesores || []; // Store data here
+        console.log('🎨 Renderizando métricas:', data);
+
+        const currentUser = this.getCurrentUserSafe();
+
+        // Renderizar según el formato de datos y rol del usuario
+        if (currentUser?.rol === 'admin' && data.gerentes_equipos) {
+            // Formato de equipos para admin
+            this.renderMetricasEquipos(data);
+        } else if (currentUser?.rol === 'gerente' && data.gerentes_ranking) {
+            // Formato específico para gerentes
+            this.renderMetricasGerentes(data);
+        } else if (data.metricas_asesores) {
+            // Formato legacy para asesores
+            this.renderMetricasAsesores(data);
+        }
+
+        this.updateKPIs(data);
+        this.loadTendencias(); // Cargar tendencias iniciales
+    },
+
+    // ✅ NUEVO: Renderizar métricas de equipos para admin
+    renderMetricasEquipos(data) {
+        console.log('🎨 Renderizando métricas de equipos para admin');
+
+        // Procesar datos de gerentes
+        if (data.gerentes_equipos) {
+            this.renderGerentesSection(data.gerentes_equipos);
+        }
+
+        // Procesar asesores independientes
+        if (data.asesores_independientes) {
+            this.renderAsesoresIndependientes(data.asesores_independientes);
+        }
+
+        // Crear métricas globales consolidadas
+        const globalData = this.consolidateGlobalMetrics(data);
+        this.renderResumenGlobal(globalData);
+    },
+
+    // ✅ NUEVO: Renderizar métricas específicas para gerentes
+    renderMetricasGerentes(data) {
+        console.log('🎨 Renderizando métricas específicas para gerentes');
+
+        if (data.gerentes_ranking) {
+            this.renderRankingGerentes(data.gerentes_ranking);
+        }
+
+        if (data.insights_gerentes) {
+            this.renderInsightsGerentes(data.insights_gerentes);
+        }
+    },
+
+    // ✅ Renderizar métricas legacy de asesores
+    renderMetricasAsesores(data) {
+        console.log('🎨 Renderizando métricas legacy de asesores');
+
+        this.asesoresData = data.metricas_asesores || [];
 
         if (data.metricas_globales) {
             this.renderResumenGlobal(data.metricas_globales);
         }
-        
+
         if (data.metricas_asesores) {
             this.renderAsesoresMetricas(data.metricas_asesores);
             this.renderTablaDetallada(data.metricas_asesores);
         }
-        
+
         if (data.insights) {
             if (data.insights.top_performers) {
                 this.renderTopPerformers(data.insights.top_performers);
@@ -286,13 +355,10 @@ const MetricasAdmin = {
                 this.renderNeedsImprovement(data.insights.needs_improvement);
             }
         }
-        
+
         if (data.metricas_globales && data.metricas_globales.distribucion_global) {
             this.renderGraficoDistribucion(data.metricas_globales.distribucion_global);
         }
-
-        this.updateKPIs(data);
-        this.loadTendencias(); // Cargar tendencias iniciales
     },
 
     // ✅ RESTO DE FUNCIONES (sin cambios - copiar del anterior)
@@ -632,29 +698,138 @@ const MetricasAdmin = {
     },
 
     updateKPIs(data) {
+        let globales = null;
+
+        // Extraer métricas globales según la estructura de datos recibida
         if (data.metricas_globales) {
-            const globales = data.metricas_globales;
-            
+            // Formato legacy de asesores
+            globales = data.metricas_globales;
+        } else if (data.gerentes_equipos) {
+            // Formato de equipos - calcular globales agregando todos los datos
+            globales = this.calculateGlobalMetricsFromEquipos(data.gerentes_equipos, data.asesores_independientes);
+        } else if (data.gerentes_ranking) {
+            // Formato de gerentes - calcular globales del ranking
+            globales = this.calculateGlobalMetricsFromGerentes(data.gerentes_ranking);
+        }
+
+        if (globales) {
             const kpiConversion = document.getElementById('kpi-conversion');
             if (kpiConversion) {
-                kpiConversion.textContent = `${globales.promedio_sistema.exito}%`;
+                const conversion = globales.promedio_sistema?.exito || globales.conversion_rate || 0;
+                kpiConversion.textContent = `${Math.round(conversion)}%`;
             }
 
             const kpiTiempo = document.getElementById('kpi-tiempo-promedio');
             if (kpiTiempo) {
-                kpiTiempo.textContent = `${Math.round(globales.total_reclutas / Math.max(globales.total_asesores, 1))} avg`;
+                const promedio = Math.round(globales.total_reclutas / Math.max(globales.total_asesores, 1)) || 0;
+                kpiTiempo.textContent = `${promedio} avg`;
             }
 
             const kpiSatisfaccion = document.getElementById('kpi-satisfaccion');
             if (kpiSatisfaccion) {
-                kpiSatisfaccion.textContent = `${Math.round((globales.promedio_sistema.exito + globales.promedio_sistema.proceso) / 2)}%`;
+                let satisfaccion = 0;
+                if (globales.promedio_sistema) {
+                    satisfaccion = Math.round((globales.promedio_sistema.exito + globales.promedio_sistema.proceso) / 2);
+                } else {
+                    satisfaccion = Math.round((globales.conversion_rate || 0 + globales.proceso_rate || 0) / 2);
+                }
+                kpiSatisfaccion.textContent = `${satisfaccion}%`;
             }
 
             const kpiProductividad = document.getElementById('kpi-productividad');
             if (kpiProductividad) {
-                kpiProductividad.textContent = `${Math.round(globales.total_reclutas / Math.max(globales.total_asesores, 1))}`;
+                const productividad = Math.round(globales.total_reclutas / Math.max(globales.total_asesores, 1)) || 0;
+                kpiProductividad.textContent = `${productividad}`;
             }
         }
+    },
+
+    // ✅ NUEVO: Calcular métricas globales desde datos de equipos
+    calculateGlobalMetricsFromEquipos(gerentes_equipos, asesores_independientes) {
+        let totalReclutas = 0;
+        let totalVerdes = 0;
+        let totalAmarillos = 0;
+        let totalRojos = 0;
+        let totalAsesores = 0;
+
+        // Procesar gerentes y sus equipos
+        if (gerentes_equipos) {
+            gerentes_equipos.forEach(gerente => {
+                // Métricas propias del gerente
+                totalReclutas += gerente.metricas_propias?.total || 0;
+                totalVerdes += gerente.metricas_propias?.verdes || 0;
+                totalAmarillos += gerente.metricas_propias?.amarillos || 0;
+                totalRojos += gerente.metricas_propias?.rojos || 0;
+                totalAsesores += 1; // El gerente cuenta como asesor
+
+                // Métricas del equipo
+                if (gerente.equipo_metricas) {
+                    gerente.equipo_metricas.forEach(asesor => {
+                        totalReclutas += asesor.total || 0;
+                        totalVerdes += asesor.verdes || 0;
+                        totalAmarillos += asesor.amarillos || 0;
+                        totalRojos += asesor.rojos || 0;
+                        totalAsesores += 1;
+                    });
+                }
+            });
+        }
+
+        // Procesar asesores independientes
+        if (asesores_independientes) {
+            asesores_independientes.forEach(asesor => {
+                totalReclutas += asesor.total || 0;
+                totalVerdes += asesor.verdes || 0;
+                totalAmarillos += asesor.amarillos || 0;
+                totalRojos += asesor.rojos || 0;
+                totalAsesores += 1;
+            });
+        }
+
+        const conversion_rate = totalReclutas > 0 ? (totalVerdes / totalReclutas) * 100 : 0;
+        const proceso_rate = totalReclutas > 0 ? (totalAmarillos / totalReclutas) * 100 : 0;
+        const rechazo_rate = totalReclutas > 0 ? (totalRojos / totalReclutas) * 100 : 0;
+
+        return {
+            total_reclutas: totalReclutas,
+            total_asesores: totalAsesores,
+            conversion_rate: conversion_rate,
+            proceso_rate: proceso_rate,
+            rechazo_rate: rechazo_rate,
+            distribucion_global: { verdes: totalVerdes, amarillos: totalAmarillos, rojos: totalRojos },
+            promedio_sistema: { exito: conversion_rate, proceso: proceso_rate, rechazo: rechazo_rate }
+        };
+    },
+
+    // ✅ NUEVO: Calcular métricas globales desde ranking de gerentes
+    calculateGlobalMetricsFromGerentes(gerentes_ranking) {
+        let totalReclutas = 0;
+        let totalVerdes = 0;
+        let totalAmarillos = 0;
+        let totalRojos = 0;
+        let totalAsesores = gerentes_ranking.length;
+
+        gerentes_ranking.forEach(gerente => {
+            const metricas = gerente.metricas_consolidadas || {};
+            totalReclutas += metricas.total || 0;
+            totalVerdes += metricas.verdes || 0;
+            totalAmarillos += metricas.amarillos || 0;
+            totalRojos += metricas.rojos || 0;
+        });
+
+        const conversion_rate = totalReclutas > 0 ? (totalVerdes / totalReclutas) * 100 : 0;
+        const proceso_rate = totalReclutas > 0 ? (totalAmarillos / totalReclutas) * 100 : 0;
+        const rechazo_rate = totalReclutas > 0 ? (totalRojos / totalReclutas) * 100 : 0;
+
+        return {
+            total_reclutas: totalReclutas,
+            total_asesores: totalAsesores,
+            conversion_rate: conversion_rate,
+            proceso_rate: proceso_rate,
+            rechazo_rate: rechazo_rate,
+            distribucion_global: { verdes: totalVerdes, amarillos: totalAmarillos, rojos: totalRojos },
+            promedio_sistema: { exito: conversion_rate, proceso: proceso_rate, rechazo: rechazo_rate }
+        };
     },
 
     // 🎛️ FUNCIONES DE INTERFAZ
@@ -807,7 +982,7 @@ const MetricasAdmin = {
         
         this.autoRefreshInterval = setInterval(() => {
             const currentUser = this.getCurrentUserSafe();
-            if (currentUser && currentUser.rol === 'admin') {
+            if (currentUser && ['admin', 'gerente'].includes(currentUser.rol)) {
                 this.loadMetricas(false);
             }
         }, this.config.refreshInterval);
@@ -886,8 +1061,8 @@ window.initializeMetricasAdmin = function() {
         return false;
     }
     
-    if (currentUser.rol !== 'admin') {
-        console.log('⚠️ Usuario no es admin, no inicializando métricas avanzadas');
+    if (!['admin', 'gerente'].includes(currentUser.rol)) {
+        console.log('⚠️ Usuario no es admin ni gerente, no inicializando métricas avanzadas');
         MetricasAdmin.setupContainer(); // Solo configurar visibilidad
         return false;
     }
@@ -939,7 +1114,7 @@ window.debugMetricas = function() {
     
     // Test manual de inicialización
     console.log('🧪 Probando inicialización manual...');
-    if (currentUser && currentUser.rol === 'admin') {
+    if (currentUser && ['admin', 'gerente'].includes(currentUser.rol)) {
         const resultado = window.initializeMetricasAdmin();
         console.log('✅ Resultado de inicialización manual:', resultado);
     } else {
@@ -975,3 +1150,590 @@ window.debugMetricas = function() {
             console.error('❌ Error en endpoint:', error);
         });
 };
+
+// ✅ NUEVAS FUNCIONES PARA GERENTES
+MetricasAdmin.renderGerentesSection = function(gerentes) {
+    console.log('🎨 Renderizando sección de gerentes:', gerentes.length);
+
+    const container = document.getElementById('asesores-metricas') || this.createGerentesContainer();
+    if (!container) return;
+
+    container.innerHTML = '<h3>📊 Métricas por Equipos de Gerentes</h3>';
+
+    gerentes.forEach(gerente => {
+        const gerenteCard = document.createElement('div');
+        gerenteCard.className = 'gerente-card metrics-card';
+        gerenteCard.innerHTML = `
+            <div class="gerente-header">
+                <h4>👑 ${gerente.nombre}</h4>
+                <span class="rol-badge gerente">Gerente</span>
+            </div>
+            <div class="metricas-split">
+                <div class="metricas-propias">
+                    <h5>📈 Métricas Propias</h5>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-number">${gerente.metricas_propias.total}</span>
+                            <span class="stat-label">Total</span>
+                        </div>
+                        <div class="stat-item verde">
+                            <span class="stat-number">${gerente.metricas_propias.verdes}</span>
+                            <span class="stat-label">Activos</span>
+                        </div>
+                        <div class="stat-item amarillo">
+                            <span class="stat-number">${gerente.metricas_propias.amarillos}</span>
+                            <span class="stat-label">En Proceso</span>
+                        </div>
+                        <div class="stat-item rojo">
+                            <span class="stat-number">${gerente.metricas_propias.rojos}</span>
+                            <span class="stat-label">Rechazados</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="metricas-equipo">
+                    <h5>👥 Métricas de Equipo (${gerente.metricas_equipo.total_asesores} asesores)</h5>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-number">${gerente.metricas_equipo.total}</span>
+                            <span class="stat-label">Total Equipo</span>
+                        </div>
+                        <div class="stat-item verde">
+                            <span class="stat-number">${gerente.metricas_equipo.verdes}</span>
+                            <span class="stat-label">Activos</span>
+                        </div>
+                        <div class="stat-item amarillo">
+                            <span class="stat-number">${gerente.metricas_equipo.amarillos}</span>
+                            <span class="stat-label">En Proceso</span>
+                        </div>
+                        <div class="stat-item rojo">
+                            <span class="stat-number">${gerente.metricas_equipo.rojos}</span>
+                            <span class="stat-label">Rechazados</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="metricas-consolidadas">
+                <h5>🎯 Resultado Consolidado</h5>
+                <div class="kpi-consolidado">
+                    <div class="kpi-main">
+                        <span class="kpi-number">${gerente.metricas_consolidadas.total}</span>
+                        <span class="kpi-label">Total Consolidado</span>
+                    </div>
+                    <div class="kpi-tasa">
+                        <span class="kpi-number">${gerente.metricas_consolidadas.tasa_exito.toFixed(1)}%</span>
+                        <span class="kpi-label">Tasa de Éxito</span>
+                    </div>
+                </div>
+            </div>
+            ${gerente.equipo_detalle.length > 0 ? `
+                <div class="equipo-detalle">
+                    <h5>👥 Detalle del Equipo</h5>
+                    <div class="asesores-list">
+                        ${gerente.equipo_detalle.map(asesor => `
+                            <div class="asesor-mini">
+                                <span class="asesor-nombre">${asesor.nombre}</span>
+                                <span class="asesor-stats">${asesor.total} reclutas | ${asesor.tasa_exito.toFixed(1)}% éxito</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+        `;
+
+        container.appendChild(gerenteCard);
+    });
+};
+
+// ✅ NUEVO: Renderizar asesores independientes (sin gerente)
+MetricasAdmin.renderAsesoresIndependientes = function(asesores) {
+    console.log('🎨 Renderizando asesores independientes:', asesores.length);
+
+    if (!asesores || asesores.length === 0) {
+        console.log('ℹ️ No hay asesores independientes para mostrar');
+        return;
+    }
+
+    const container = document.getElementById('asesores-metricas') || this.createGerentesContainer();
+    if (!container) return;
+
+    // Agregar sección de asesores independientes
+    const independientesSection = document.createElement('div');
+    independientesSection.className = 'asesores-independientes-section';
+    independientesSection.innerHTML = '<h3>🏴 Asesores Independientes</h3>';
+
+    asesores.forEach(asesor => {
+        const asesorCard = document.createElement('div');
+        asesorCard.className = 'asesor-card metrics-card';
+        asesorCard.innerHTML = `
+            <div class="asesor-header">
+                <h4>👤 ${asesor.nombre || asesor.email}</h4>
+                <span class="rol-badge asesor">Asesor</span>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-number">${asesor.total || 0}</span>
+                    <span class="stat-label">Total Reclutas</span>
+                </div>
+                <div class="stat-item verde">
+                    <span class="stat-number">${asesor.verdes || 0}</span>
+                    <span class="stat-label">Activos</span>
+                </div>
+                <div class="stat-item amarillo">
+                    <span class="stat-number">${asesor.amarillos || 0}</span>
+                    <span class="stat-label">En Proceso</span>
+                </div>
+                <div class="stat-item rojo">
+                    <span class="stat-number">${asesor.rojos || 0}</span>
+                    <span class="stat-label">Rechazados</span>
+                </div>
+            </div>
+            <div class="performance-indicator">
+                <div class="performance-level ${asesor.performance?.class || 'neutral'}">
+                    <span class="nivel-text">${asesor.performance?.nivel || 'Evaluando'}</span>
+                    <span class="score-text">Score: ${asesor.performance?.score || 0}%</span>
+                </div>
+            </div>
+        `;
+
+        independientesSection.appendChild(asesorCard);
+    });
+
+    container.appendChild(independientesSection);
+};
+
+MetricasAdmin.renderRankingGerentes = function(gerentes) {
+    console.log('🏆 Renderizando ranking de gerentes:', gerentes.length);
+
+    const container = document.getElementById('top-performers') || this.createRankingContainer();
+    if (!container) return;
+
+    container.innerHTML = '<h3>🏆 Ranking de Gerentes por Performance</h3>';
+
+    gerentes.forEach((gerente, index) => {
+        const rankingCard = document.createElement('div');
+        rankingCard.className = `ranking-card gerente-ranking position-${index + 1}`;
+        rankingCard.innerHTML = `
+            <div class="ranking-position">
+                <span class="position-number">#${index + 1}</span>
+                ${index === 0 ? '<span class="crown">👑</span>' : ''}
+            </div>
+            <div class="gerente-info">
+                <h4>${gerente.nombre}</h4>
+                <span class="gerente-email">${gerente.email}</span>
+                <span class="team-size">👥 ${gerente.total_asesores} asesores</span>
+            </div>
+            <div class="performance-metrics">
+                <div class="metric-consolidado">
+                    <span class="metric-value">${gerente.consolidado.total}</span>
+                    <span class="metric-label">Total Reclutas</span>
+                </div>
+                <div class="metric-consolidado">
+                    <span class="metric-value">${gerente.consolidado.tasa_exito}%</span>
+                    <span class="metric-label">Tasa Éxito</span>
+                </div>
+                <div class="metric-liderazgo">
+                    <span class="metric-value">${gerente.kpis_liderazgo.eficiencia_equipo}%</span>
+                    <span class="metric-label">Eficiencia Equipo</span>
+                </div>
+            </div>
+            <div class="liderazgo-badge" style="background-color: ${gerente.kpis_liderazgo.color}">
+                <span class="nivel-text">${gerente.kpis_liderazgo.nivel}</span>
+                <span class="score-text">Score: ${gerente.kpis_liderazgo.score_liderazgo}%</span>
+            </div>
+        `;
+
+        container.appendChild(rankingCard);
+    });
+};
+
+MetricasAdmin.renderInsightsGerentes = function(insights) {
+    console.log('💡 Renderizando insights de gerentes:', insights);
+
+    const container = document.getElementById('insights-container') || this.createInsightsContainer();
+    if (!container) return;
+
+    container.innerHTML = `
+        <h3>💡 Insights de Gestión</h3>
+        <div class="insights-grid">
+            <div class="insight-card highlight">
+                <h4>🌟 Top Gerente</h4>
+                <p>${insights.top_gerente ? insights.top_gerente.nombre : 'Sin datos'}</p>
+                ${insights.top_gerente ? `<span class="insight-detail">Score: ${insights.top_gerente.kpis_liderazgo.score_liderazgo}%</span>` : ''}
+            </div>
+            <div class="insight-card success">
+                <h4>✅ Gerentes Excepcionales</h4>
+                <p>${insights.gerentes_excelentes} de ${insights.total_gerentes}</p>
+                <span class="insight-detail">${((insights.gerentes_excelentes / insights.total_gerentes) * 100).toFixed(1)}% del equipo</span>
+            </div>
+            <div class="insight-card warning">
+                <h4>⚠️ Necesitan Apoyo</h4>
+                <p>${insights.gerentes_necesitan_apoyo} gerentes</p>
+                <span class="insight-detail">Requieren atención especial</span>
+            </div>
+            <div class="insight-card info">
+                <h4>📊 Eficiencia Promedio</h4>
+                <p>${insights.promedio_eficiencia.toFixed(1)}%</p>
+                <span class="insight-detail">Promedio del sistema</span>
+            </div>
+        </div>
+    `;
+};
+
+MetricasAdmin.consolidateGlobalMetrics = function(data) {
+    console.log('🔄 Consolidando métricas globales desde equipos');
+
+    let totalReclutas = 0;
+    let totalVerdes = 0;
+    let totalAmarillos = 0;
+    let totalRojos = 0;
+    let totalAsesores = 0;
+
+    // Contar desde gerentes
+    if (data.gerentes_equipos) {
+        data.gerentes_equipos.forEach(gerente => {
+            totalReclutas += gerente.metricas_consolidadas.total;
+            totalVerdes += gerente.metricas_consolidadas.verdes;
+            totalAmarillos += gerente.metricas_consolidadas.amarillos || 0;
+            totalRojos += gerente.metricas_consolidadas.rojos || 0;
+            totalAsesores += gerente.metricas_equipo.total_asesores;
+        });
+    }
+
+    // Contar asesores independientes
+    if (data.asesores_independientes) {
+        data.asesores_independientes.forEach(asesor => {
+            totalReclutas += asesor.total;
+            totalVerdes += asesor.verdes;
+            totalAmarillos += asesor.amarillos;
+            totalRojos += asesor.rojos;
+            totalAsesores += 1;
+        });
+    }
+
+    return {
+        total_asesores: totalAsesores,
+        total_reclutas: totalReclutas,
+        distribucion_global: {
+            verdes: totalVerdes,
+            amarillos: totalAmarillos,
+            rojos: totalRojos
+        },
+        promedio_sistema: {
+            exito: totalReclutas > 0 ? (totalVerdes / totalReclutas * 100) : 0,
+            proceso: totalReclutas > 0 ? (totalAmarillos / totalReclutas * 100) : 0,
+            rechazo: totalReclutas > 0 ? (totalRojos / totalReclutas * 100) : 0
+        }
+    };
+};
+
+// Funciones auxiliares para crear contenedores
+MetricasAdmin.createGerentesContainer = function() {
+    const container = document.createElement('div');
+    container.id = 'gerentes-metricas';
+    container.className = 'metricas-section';
+
+    const parentContainer = document.getElementById('metricas-admin-container') || document.body;
+    parentContainer.appendChild(container);
+    return container;
+};
+
+MetricasAdmin.createRankingContainer = function() {
+    const container = document.createElement('div');
+    container.id = 'ranking-gerentes';
+    container.className = 'metricas-section';
+
+    const parentContainer = document.getElementById('metricas-admin-container') || document.body;
+    parentContainer.appendChild(container);
+    return container;
+};
+
+MetricasAdmin.createInsightsContainer = function() {
+    const container = document.createElement('div');
+    container.id = 'insights-gerentes';
+    container.className = 'metricas-section';
+
+    const parentContainer = document.getElementById('metricas-admin-container') || document.body;
+    parentContainer.appendChild(container);
+    return container;
+};
+
+// ✅ FUNCIONES DE TESTING PARA VERIFICAR INTEGRACIÓN
+window.testMetricasGerentes = async function() {
+    console.group('🧪 TEST: Métricas de Gerentes');
+
+    try {
+        // 1. Verificar usuario actual
+        const currentUser = MetricasAdmin.getCurrentUserSafe();
+        console.log('👤 Usuario actual:', currentUser);
+
+        if (!currentUser) {
+            console.error('❌ No hay usuario autenticado');
+            console.groupEnd();
+            return false;
+        }
+
+        // 2. Test endpoint de equipos (admin)
+        console.log('🔍 Testing endpoint /admin/metricas/equipos');
+        try {
+            const equiposResponse = await fetch('/admin/metricas/equipos');
+            const equiposData = await equiposResponse.json();
+            console.log('📊 Datos de equipos:', equiposData);
+
+            if (equiposData.success) {
+                console.log('✅ Endpoint equipos funciona correctamente');
+                console.log(`📈 Gerentes encontrados: ${equiposData.gerentes_equipos?.length || 0}`);
+                console.log(`📈 Asesores independientes: ${equiposData.asesores_independientes?.length || 0}`);
+            } else {
+                console.warn('⚠️ Endpoint equipos responde con error:', equiposData.message);
+            }
+        } catch (error) {
+            console.error('❌ Error en endpoint equipos:', error);
+        }
+
+        // 3. Test endpoint de gerentes (gerente)
+        console.log('🔍 Testing endpoint /admin/metricas/gerentes');
+        try {
+            const gerentesResponse = await fetch('/admin/metricas/gerentes');
+            const gerentesData = await gerentesResponse.json();
+            console.log('📊 Datos de gerentes:', gerentesData);
+
+            if (gerentesData.success) {
+                console.log('✅ Endpoint gerentes funciona correctamente');
+                console.log(`🏆 Gerentes en ranking: ${gerentesData.gerentes_ranking?.length || 0}`);
+                console.log(`💡 Insights disponibles:`, gerentesData.insights_gerentes);
+            } else {
+                console.warn('⚠️ Endpoint gerentes responde con error:', gerentesData.message);
+            }
+        } catch (error) {
+            console.error('❌ Error en endpoint gerentes:', error);
+        }
+
+        // 4. Test de renderizado
+        console.log('🎨 Testing funciones de renderizado...');
+
+        if (typeof MetricasAdmin.renderGerentesSection === 'function') {
+            console.log('✅ MetricasAdmin.renderGerentesSection disponible');
+        } else {
+            console.error('❌ MetricasAdmin.renderGerentesSection NO disponible');
+        }
+
+        if (typeof MetricasAdmin.renderRankingGerentes === 'function') {
+            console.log('✅ MetricasAdmin.renderRankingGerentes disponible');
+        } else {
+            console.error('❌ MetricasAdmin.renderRankingGerentes NO disponible');
+        }
+
+        // 5. Test de inicialización según rol
+        console.log(`🔐 Testing inicialización para rol: ${currentUser.rol}`);
+        MetricasAdmin.setupContainer();
+
+        const bodyClasses = document.body.className;
+        console.log('📋 Clases del body:', bodyClasses);
+
+        if (['admin', 'gerente'].includes(currentUser.rol)) {
+            if (bodyClasses.includes('admin-view')) {
+                console.log('✅ Clase admin-view aplicada correctamente');
+            } else {
+                console.warn('⚠️ Clase admin-view NO aplicada');
+            }
+        } else if (currentUser.rol === 'gerente') {
+            if (bodyClasses.includes('gerente-view')) {
+                console.log('✅ Clase gerente-view aplicada correctamente');
+            } else {
+                console.warn('⚠️ Clase gerente-view NO aplicada');
+            }
+        }
+
+        // 6. Test de loadMetricas
+        console.log('📡 Testing carga de métricas...');
+        try {
+            await MetricasAdmin.loadMetricas(true);
+            console.log('✅ Carga de métricas completada');
+        } catch (error) {
+            console.error('❌ Error en carga de métricas:', error);
+        }
+
+        console.log('🎉 Test completado exitosamente');
+        console.groupEnd();
+        return true;
+
+    } catch (error) {
+        console.error('❌ Error durante el test:', error);
+        console.groupEnd();
+        return false;
+    }
+};
+
+// ✅ FUNCIÓN PARA SIMULAR DATOS DE GERENTES
+window.simulateGerenteMetrics = function() {
+    console.log('🎭 Simulando datos de métricas para gerentes...');
+
+    const mockGerentesData = {
+        success: true,
+        gerentes_ranking: [
+            {
+                id: 1,
+                nombre: "Ana García",
+                email: "ana.garcia@empresa.com",
+                total_asesores: 3,
+                metricas_propias: { total: 15, verdes: 12, amarillos: 2, rojos: 1 },
+                metricas_equipo: { total: 45, verdes: 35, amarillos: 8, rojos: 2 },
+                consolidado: { total: 60, verdes: 47, tasa_exito: 78.3 },
+                kpis_liderazgo: {
+                    eficiencia_equipo: 77.8,
+                    nivel: "Excepcional",
+                    color: "#059669",
+                    score_liderazgo: 78.05
+                }
+            },
+            {
+                id: 2,
+                nombre: "Carlos López",
+                email: "carlos.lopez@empresa.com",
+                total_asesores: 2,
+                metricas_propias: { total: 8, verdes: 5, amarillos: 2, rojos: 1 },
+                metricas_equipo: { total: 25, verdes: 15, amarillos: 7, rojos: 3 },
+                consolidado: { total: 33, verdes: 20, tasa_exito: 60.6 },
+                kpis_liderazgo: {
+                    eficiencia_equipo: 60.0,
+                    nivel: "Bueno",
+                    color: "#10B981",
+                    score_liderazgo: 60.3
+                }
+            }
+        ],
+        insights_gerentes: {
+            top_gerente: null,
+            total_gerentes: 2,
+            gerentes_excelentes: 1,
+            gerentes_necesitan_apoyo: 0,
+            promedio_eficiencia: 68.9
+        }
+    };
+
+    // Establecer el top gerente
+    mockGerentesData.insights_gerentes.top_gerente = mockGerentesData.gerentes_ranking[0];
+
+    console.log('📊 Datos simulados:', mockGerentesData);
+
+    // Renderizar datos simulados
+    if (typeof MetricasAdmin.renderRankingGerentes === 'function') {
+        MetricasAdmin.renderRankingGerentes(mockGerentesData.gerentes_ranking);
+        console.log('✅ Ranking renderizado');
+    }
+
+    if (typeof MetricasAdmin.renderInsightsGerentes === 'function') {
+        MetricasAdmin.renderInsightsGerentes(mockGerentesData.insights_gerentes);
+        console.log('✅ Insights renderizados');
+    }
+
+    return mockGerentesData;
+};
+
+// ✅ FUNCIÓN PARA VERIFICAR PERMISOS
+window.checkGerentePermissions = function() {
+    console.group('🔐 Verificando Permisos de Gerentes');
+
+    const currentUser = MetricasAdmin.getCurrentUserSafe();
+    if (!currentUser) {
+        console.error('❌ No hay usuario para verificar permisos');
+        console.groupEnd();
+        return;
+    }
+
+    console.log('👤 Usuario:', currentUser.nombre, 'Rol:', currentUser.rol);
+
+    // Verificar Auth functions
+    if (typeof Auth !== 'undefined') {
+        console.log('🔍 Verificando funciones Auth:');
+        console.log('  - Auth.isAdmin():', Auth.isAdmin());
+        console.log('  - Auth.isGerente():', Auth.isGerente());
+        console.log('  - Auth.isAsesor():', Auth.isAsesor());
+        console.log('  - Auth.isGerenteOrAdmin():', Auth.isGerenteOrAdmin());
+        console.log('  - Auth.hasPermission("ver_metricas_globales"):', Auth.hasPermission('ver_metricas_globales'));
+    } else {
+        console.warn('⚠️ Auth no está disponible');
+    }
+
+    // Verificar elementos de UI
+    console.log('🎨 Verificando elementos de UI:');
+    const adminElements = document.querySelectorAll('.admin-only');
+    const gerenteElements = document.querySelectorAll('.gerente-only');
+    const adminGerenteElements = document.querySelectorAll('.admin-gerente-only');
+
+    console.log(`  - Elementos .admin-only: ${adminElements.length}`);
+    console.log(`  - Elementos .gerente-only: ${gerenteElements.length}`);
+    console.log(`  - Elementos .admin-gerente-only: ${adminGerenteElements.length}`);
+
+    // Verificar visibilidad según rol
+    let visibleAdminElements = 0;
+    let visibleGerenteElements = 0;
+
+    adminElements.forEach(el => {
+        if (el.style.display !== 'none') visibleAdminElements++;
+    });
+
+    gerenteElements.forEach(el => {
+        if (el.style.display !== 'none') visibleGerenteElements++;
+    });
+
+    console.log(`  - Elementos admin visibles: ${visibleAdminElements}`);
+    console.log(`  - Elementos gerente visibles: ${visibleGerenteElements}`);
+
+    console.groupEnd();
+};
+
+// ✅ FUNCIÓN DE DEBUG PARA KPIs
+window.debugKPIs = function() {
+    console.log('🔍 === DEBUG KPIs ===');
+
+    const kpiElements = {
+        'kpi-conversion': document.getElementById('kpi-conversion'),
+        'kpi-tiempo-promedio': document.getElementById('kpi-tiempo-promedio'),
+        'kpi-satisfaccion': document.getElementById('kpi-satisfaccion'),
+        'kpi-productividad': document.getElementById('kpi-productividad')
+    };
+
+    console.log('📊 Elementos KPI encontrados:');
+    Object.entries(kpiElements).forEach(([name, element]) => {
+        if (element) {
+            console.log(`✅ ${name}: "${element.textContent}" (visible: ${element.style.display !== 'none'})`);
+        } else {
+            console.log(`❌ ${name}: No encontrado`);
+        }
+    });
+
+    // Test manual de updateKPIs con datos simulados
+    const testData = {
+        gerentes_equipos: [
+            {
+                metricas_propias: { total: 10, verdes: 7, amarillos: 2, rojos: 1 },
+                equipo_metricas: [
+                    { total: 8, verdes: 5, amarillos: 2, rojos: 1 },
+                    { total: 12, verdes: 8, amarillos: 3, rojos: 1 }
+                ]
+            }
+        ],
+        asesores_independientes: [
+            { total: 6, verdes: 4, amarillos: 1, rojos: 1 }
+        ]
+    };
+
+    console.log('🧪 Probando updateKPIs con datos simulados...');
+    MetricasAdmin.updateKPIs(testData);
+
+    console.log('📊 Valores después del test:');
+    Object.entries(kpiElements).forEach(([name, element]) => {
+        if (element) {
+            console.log(`📈 ${name}: "${element.textContent}"`);
+        }
+    });
+
+    console.log('🎉 Debug KPIs completado');
+};
+
+console.log('🧪 Funciones de testing cargadas:');
+console.log('   - window.testMetricasGerentes() - Test completo de métricas');
+console.log('   - window.simulateGerenteMetrics() - Simular datos de gerentes');
+console.log('   - window.debugKPIs() - Verificar actualización de KPIs');
+console.log('   - window.checkGerentePermissions() - Verificar permisos');
