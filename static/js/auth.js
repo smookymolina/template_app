@@ -226,14 +226,14 @@ const Auth = {
     
 /**
  * Limpia completamente el estado del usuario y configuraciones
- * ✅ NUEVA FUNCIÓN - Agregar al objeto Auth
+ * ✅ FUNCIÓN MEJORADA - Limpieza más completa
  */
 clearUserState: function() {
     console.log('🧹 Iniciando limpieza completa de estado de usuario...');
-    
+
     // 1. Limpiar usuario actual
     this.currentUser = null;
-    
+
     // 2. Limpiar localStorage relacionado con usuario
     const userKeys = [
         CONFIG.STORAGE_KEYS.THEME,
@@ -241,9 +241,11 @@ clearUserState: function() {
         'user_preferences',
         'dashboard_settings',
         'last_user_role',
-        'user_config'
+        'user_config',
+        'user_data',
+        'session_data'
     ];
-    
+
     userKeys.forEach(key => {
         try {
             localStorage.removeItem(key);
@@ -252,7 +254,25 @@ clearUserState: function() {
             console.warn(`⚠️ No se pudo limpiar ${key}:`, e);
         }
     });
-    
+
+    // 2.1. ✅ NUEVO: Limpiar configuraciones específicas por usuario
+    try {
+        const allKeys = Object.keys(localStorage);
+        const userSpecificKeys = allKeys.filter(key =>
+            key.includes('_user_') ||
+            key.includes('@') ||
+            key.endsWith('_settings') ||
+            key.startsWith('user_')
+        );
+
+        userSpecificKeys.forEach(key => {
+            localStorage.removeItem(key);
+            console.log(`🗑️ Limpiado configuración específica: ${key}`);
+        });
+    } catch (e) {
+        console.warn('⚠️ Error limpiando configuraciones específicas:', e);
+    }
+
     // 3. Limpiar sessionStorage
     try {
         sessionStorage.clear();
@@ -260,13 +280,19 @@ clearUserState: function() {
     } catch (e) {
         console.warn('⚠️ Error limpiando sessionStorage:', e);
     }
-    
+
     // 4. Resetear configuraciones CSS a valores por defecto
     this.resetUIToDefault();
-    
+
     // 5. Limpiar elementos DOM dinámicos
     this.cleanupDynamicElements();
-    
+
+    // 6. ✅ NUEVO: Limpiar fotos de perfil en UI
+    this.clearProfileImages();
+
+    // 7. ✅ NUEVO: Notificar a otros módulos de la limpieza
+    this.notifyCleanupComplete();
+
     console.log('✅ Limpieza completa de estado finalizada');
 },
 
@@ -353,6 +379,65 @@ cleanupDynamicElements: function() {
     });
     
     console.log('✅ Elementos DOM dinámicos limpiados');
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Limpiar fotos de perfil de la UI
+ */
+clearProfileImages: function() {
+    console.log('📸 Limpiando fotos de perfil de la UI...');
+
+    const profileImageSelectors = [
+        '#dashboard-profile-pic',
+        '#user-avatar',
+        '#profile-image',
+        '.profile-picture',
+        '.user-photo',
+        '#user-photo-preview'
+    ];
+
+    profileImageSelectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(element => {
+            if (element.tagName === 'IMG') {
+                element.src = '/api/placeholder/100/100'; // Imagen por defecto
+                console.log(`📸 Limpiada imagen: ${selector}`);
+            } else if (element.style) {
+                element.style.backgroundImage = '';
+                element.innerHTML = '<i class="fas fa-user-circle"></i>';
+                console.log(`📸 Limpiado background: ${selector}`);
+            }
+        });
+    });
+
+    console.log('✅ Fotos de perfil limpiadas de la UI');
+},
+
+/**
+ * ✅ NUEVA FUNCIÓN: Notificar a otros módulos de limpieza completa
+ */
+notifyCleanupComplete: function() {
+    console.log('📢 Notificando limpieza completa a otros módulos...');
+
+    // Notificar a ConfigurationManager si existe
+    if (window.configManager && typeof window.configManager.resetToDefaults === 'function') {
+        window.configManager.resetToDefaults();
+    }
+
+    // Disparar evento personalizado
+    document.dispatchEvent(new CustomEvent('userStateCleared', {
+        detail: {
+            timestamp: Date.now(),
+            type: 'logout_cleanup'
+        }
+    }));
+
+    // Limpiar variables globales si existen
+    if (window.currentGerente) {
+        window.currentGerente = null;
+    }
+
+    console.log('✅ Notificación de limpieza enviada');
 },
 
 /**

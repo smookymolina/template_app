@@ -203,40 +203,94 @@ class ConfigurationManager {
     
 
     handleColorChange(color) {
-        console.log('<� Cambiando color principal a:', color);
-        
-        // Aplicar color
-        document.documentElement.style.setProperty('--primary-color', color);
-        
-        // Actualizar selecci�n visual
+        console.log('🎨 Cambiando color principal a:', color);
+
+        // Aplicar color inmediatamente
+        this.applyColorTheme(color);
+
+        // Actualizar selección visual
+        this.updateColorSelection(color);
+
+        // Guardar preferencia y sincronizar
+        this.saveSetting('primary_color', color);
+        this.syncUIChanges();
+    }
+
+    applyColorTheme(color) {
+        if (window.UI && typeof window.UI.changePrimaryColor === 'function') {
+            window.UI.changePrimaryColor(color);
+        } else {
+            document.documentElement.style.setProperty('--primary-color', color);
+            document.documentElement.style.setProperty('--primary-dark', this.darkenColor(color, 20));
+            document.documentElement.style.setProperty('--primary-light', this.lightenColor(color, 80));
+        }
+
+        // Actualizar colores relacionados inmediatamente
+        this.updateDynamicColors(color);
+    }
+
+    updateColorSelection(color) {
         document.querySelectorAll('.color-option').forEach(option => {
             option.classList.remove('selected');
         });
-        
+
         const selectedOption = document.querySelector(`input[value="${color}"]`)?.closest('.color-option');
         if (selectedOption) {
             selectedOption.classList.add('selected');
         }
-        
-        // Guardar preferencia
-        this.saveSetting('primary_color', color);
+    }
+
+    updateDynamicColors(primaryColor) {
+        // Actualizar elementos que usan colores dinámicos
+        const dynamicElements = document.querySelectorAll('.btn-primary, .badge-primary, .nav-link.active');
+        dynamicElements.forEach(element => {
+            element.style.backgroundColor = primaryColor;
+        });
+    }
+
+    darkenColor(hex, percent) {
+        const num = parseInt(hex.replace("#", ""), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) - amt;
+        const G = (num >> 8 & 0x00FF) - amt;
+        const B = (num & 0x0000FF) - amt;
+        return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+            (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+            (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+    }
+
+    lightenColor(hex, percent) {
+        const num = parseInt(hex.replace("#", ""), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = (num >> 16) + amt;
+        const G = (num >> 8 & 0x00FF) + amt;
+        const B = (num & 0x0000FF) + amt;
+        return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+            (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+            (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
     }
 
     handleCustomColorChange() {
         const customColor = this.customColorInput.value;
-        console.log('<� Color personalizado:', customColor);
-        
-        // Aplicar color personalizado
-        document.documentElement.style.setProperty('--primary-color', customColor);
-        
+        console.log('🎨 Color personalizado:', customColor);
+
+        // ✅ USAR FUNCIÓN COMPLETA DE APLICACIÓN DE COLOR
+        this.applyColorTheme(customColor);
+
         // Deseleccionar opciones predefinidas
         this.primaryColorRadios.forEach(radio => {
             radio.checked = false;
             radio.closest('.color-option').classList.remove('selected');
         });
-        
-        // Guardar preferencia
+
+        // Guardar preferencia y sincronizar
         this.saveSetting('primary_color', customColor);
+        this.syncUIChanges();
+
+        // ✅ ACTUALIZAR TAMBIÉN EL UI.js SI EXISTE
+        if (window.UI && typeof window.UI.changePrimaryColor === 'function') {
+            window.UI.changePrimaryColor(customColor);
+        }
     }
 
     handleNotificationSettings() {
@@ -341,7 +395,7 @@ class ConfigurationManager {
             console.log(`[displayPhotoPreview] URL final a mostrar: ${finalUrl}`);
 
             this.userPhotoPreview.innerHTML = `<img src="${finalUrl}" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-            
+
             const label = document.getElementById('user-photo-label');
             if (label) {
                 label.innerHTML = '<i class="fas fa-sync-alt"></i> Actualizar foto';
@@ -350,9 +404,47 @@ class ConfigurationManager {
             if (this.removeUserPhoto) {
                 this.removeUserPhoto.style.display = 'inline-block';
             }
+
+            // ✅ ACTUALIZAR TODAS LAS FOTOS DE PERFIL EN LA UI
+            this.updateAllProfileImages(finalUrl);
         } else {
             console.warn('[displayPhotoPreview] Llamado sin URL o sin elemento de preview.');
         }
+    }
+
+    updateAllProfileImages(photoUrl) {
+        console.log('🔄 Actualizando todas las fotos de perfil en la UI...');
+
+        // Lista de selectores de fotos de perfil en la aplicación
+        const profileImageSelectors = [
+            '#dashboard-profile-pic',
+            '#user-avatar',
+            '#profile-image',
+            '.profile-picture',
+            '.user-photo'
+        ];
+
+        profileImageSelectors.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(element => {
+                if (element.tagName === 'IMG') {
+                    element.src = photoUrl;
+                    console.log(`📸 Actualizada imagen: ${selector}`);
+                } else if (element.style) {
+                    element.style.backgroundImage = `url(${photoUrl})`;
+                    console.log(`📸 Actualizado background: ${selector}`);
+                }
+            });
+        });
+
+        // Actualizar en Auth.currentUser si existe
+        if (window.Auth && window.Auth.currentUser) {
+            window.Auth.currentUser.foto_url = photoUrl.split('?')[0]; // Sin cache buster
+            localStorage.setItem('user_data', JSON.stringify(window.Auth.currentUser));
+            console.log('👤 Actualizado foto en Auth.currentUser');
+        }
+
+        console.log('✅ Todas las fotos de perfil actualizadas');
     }
 
     resetPhotoPreview() {
@@ -419,19 +511,19 @@ class ConfigurationManager {
         
         
         
-        if (settings.primary_color && settings.primary_color !== 'default') {
-            document.documentElement.style.setProperty('--primary-color', settings.primary_color);
-            
-            // Seleccionar opci�n correspondiente
+        if (window.UI && typeof window.UI.applyUserSettings === 'function') {
+            window.UI.applyUserSettings(settings);
+        } else if (settings.primary_color && settings.primary_color !== 'default') {
+            this.applyColorTheme(settings.primary_color);
+
+            // Seleccionar opción correspondiente
             const matchingRadio = document.querySelector(`input[value="${settings.primary_color}"]`);
             if (matchingRadio) {
                 matchingRadio.checked = true;
                 matchingRadio.closest('.color-option')?.classList.add('selected');
-            } else {
+            } else if (this.customColorInput) {
                 // Es un color personalizado
-                if (this.customColorInput) {
-                    this.customColorInput.value = settings.primary_color;
-                }
+                this.customColorInput.value = settings.primary_color;
             }
         }
         
@@ -538,8 +630,69 @@ class ConfigurationManager {
                 })
             });
         } catch (error) {
-            console.error(`L Error al guardar configuraci�n ${key}:`, error);
+            console.error(`❌ Error al guardar configuración ${key}:`, error);
         }
+    }
+
+    // ✅ NUEVA FUNCIÓN: Sincronizar cambios de UI inmediatamente
+    syncUIChanges() {
+        console.log('🔄 Sincronizando cambios de UI...');
+
+        // Disparar evento personalizado para notificar cambios
+        document.dispatchEvent(new CustomEvent('userSettingsChanged', {
+            detail: {
+                timestamp: Date.now(),
+                type: 'ui_update'
+            }
+        }));
+
+        // Actualizar Auth.currentUser si existe
+        if (window.Auth && window.Auth.currentUser) {
+            // Forzar actualización del estado
+            window.Auth.checkAuth().then(user => {
+                if (user) {
+                    this.updateUIWithUserData(user);
+                }
+            }).catch(err => {
+                console.warn('⚠️ Error al verificar auth tras cambios:', err);
+            });
+        }
+
+        console.log('✅ Sincronización de UI completada');
+    }
+
+    // ✅ NUEVA FUNCIÓN: Actualizar UI con datos de usuario actualizados
+    updateUIWithUserData(userData) {
+        console.log('👤 Actualizando UI con datos de usuario:', userData.email);
+
+        // Actualizar elementos de texto que muestran info del usuario
+        const userNameElements = document.querySelectorAll('#gerente-name, #dropdown-user-name, #user-name');
+        userNameElements.forEach(element => {
+            if (element.tagName === 'INPUT') {
+                element.value = userData.nombre || userData.email;
+            } else {
+                element.textContent = userData.nombre || userData.email;
+            }
+        });
+
+        // Actualizar email si es campo de input
+        const emailElement = document.getElementById('user-email');
+        if (emailElement && emailElement.tagName === 'INPUT') {
+            emailElement.value = userData.email;
+        }
+
+        // Actualizar teléfono si existe
+        const phoneElement = document.getElementById('user-phone');
+        if (phoneElement && userData.telefono) {
+            phoneElement.value = userData.telefono;
+        }
+
+        // Actualizar foto de perfil si existe
+        if (userData.foto_url) {
+            this.updateAllProfileImages(userData.foto_url + '?t=' + Date.now());
+        }
+
+        console.log('✅ UI actualizada con datos de usuario');
     }
 
     updateButton(button, loading, text) {
@@ -562,7 +715,51 @@ class ConfigurationManager {
         }
     }
 
-    // M�todo de debug
+    // ✅ NUEVA FUNCIÓN: Resetear a configuraciones por defecto
+    resetToDefaults() {
+        console.log('🔄 Reseteando ConfigurationManager a valores por defecto...');
+
+        // Resetear campos de perfil a vacío
+        if (this.usernameInput) this.usernameInput.value = '';
+        if (this.emailInput) this.emailInput.value = '';
+        if (this.phoneInput) this.phoneInput.value = '';
+
+        // Resetear foto de perfil
+        this.resetPhotoPreview();
+
+        // Resetear configuraciones de color
+        document.querySelectorAll('.color-option').forEach(option => {
+            option.classList.remove('selected');
+        });
+
+        // Seleccionar color por defecto (azul)
+        const defaultColorOption = document.querySelector('input[value="#007bff"]');
+        if (defaultColorOption) {
+            defaultColorOption.checked = true;
+            defaultColorOption.parentElement.classList.add('selected');
+        }
+
+        // Aplicar color por defecto
+        this.applyColorTheme('#007bff');
+
+        // Resetear configuraciones de notificaciones
+        if (this.emailNotificationsToggle) this.emailNotificationsToggle.checked = true;
+        if (this.interviewRemindersToggle) this.interviewRemindersToggle.checked = true;
+
+        // Limpiar campos de contraseña
+        if (this.currentPasswordInput) this.currentPasswordInput.value = '';
+        if (this.newPasswordInput) this.newPasswordInput.value = '';
+        if (this.confirmNewPasswordInput) this.confirmNewPasswordInput.value = '';
+
+        // Limpiar contenedor de sesiones activas
+        if (this.activeSessionsContainer) {
+            this.activeSessionsContainer.innerHTML = '';
+        }
+
+        console.log('✅ ConfigurationManager reseteado a valores por defecto');
+    }
+
+    // Método de debug
     debugStatus() {
         return {
             isLoading: this.isLoading,

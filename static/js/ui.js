@@ -194,6 +194,11 @@ const UI = {
             }
         });
         
+        const customColorInput = document.getElementById('custom-primary-color');
+        if (customColorInput && this.isValidColor(color)) {
+            customColorInput.value = color;
+        }
+
     } catch (error) {
         console.error('❌ Error al cambiar color primario:', error);
     }
@@ -324,7 +329,39 @@ initializeForUser: function(usuario) {
     
     console.log(`✅ Configuraciones inicializadas para: ${usuario.email}`);
 },
-    
+        /**
+     * Aplica configuraciones persistentes del usuario (tema, colores)
+     */
+    applyUserSettings: function(settings = {}) {
+        try {
+            if (!settings || typeof settings !== 'object') {
+                return;
+            }
+
+            const primaryColor = settings.primary_color || settings.primaryColor;
+            if (primaryColor) {
+                this.changePrimaryColor(primaryColor);
+            }
+
+            if (Object.prototype.hasOwnProperty.call(settings, 'dark_mode') && this.theme && typeof this.theme.apply === 'function') {
+                const shouldEnableDark = settings.dark_mode === true || settings.dark_mode === 'true';
+                this.theme.apply(shouldEnableDark);
+
+                try {
+                    const themeKey = (typeof Auth !== 'undefined' && Auth?.currentUser?.email)
+                        ? `${CONFIG.STORAGE_KEYS.THEME}_${Auth.currentUser.email}`
+                        : CONFIG.STORAGE_KEYS.THEME;
+                    localStorage.setItem(themeKey, shouldEnableDark.toString());
+                } catch (storageError) {
+                    console.warn('No se pudo sincronizar el tema en localStorage:', storageError);
+                }
+            }
+        } catch (error) {
+            console.error('Error al aplicar configuraciones de usuario:', error);
+        }
+    },
+
+
     /**
      * Oscurece un color hexadecimal
      * @param {string} hex - Color en formato hexadecimal

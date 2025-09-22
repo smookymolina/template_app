@@ -99,7 +99,7 @@ async function initializeUserSpecificFeatures() {
     }
     
     // Actualizar navegación según rol (para todos los usuarios)
-    updateNavigationByRole();
+    updateNavigationByRole(currentUser);
 }
 
 /**
@@ -648,8 +648,11 @@ function validateUserData(usuario) {
  */
 async function processLogin(usuario) {
     await processSuccessfulLogin(usuario);
+    await ensureUserSettingsApplied(usuario);
     await setupUserInterface(usuario);
     await initializeUserModules(usuario);
+    // ✅ AGREGAR: Forzar actualización inmediata de funciones jerárquicas
+    forceUpdateHierarchicalFeatures(usuario);
 }
 
 /**
@@ -675,6 +678,83 @@ async function processSuccessfulLogin(usuario) {
     
     // Variable global para compatibilidad
     window.currentGerente = usuario;
+}
+
+async function ensureUserSettingsApplied(usuario) {
+    try {
+        UI?.resetUIToDefault?.();
+        const settings = await fetchAndApplyUserSettings(usuario);
+        if (!settings && typeof UI?.loadSavedTheme === 'function') {
+            UI.loadSavedTheme();
+        }
+    } catch (error) {
+        console.warn('[settings] No se pudieron aplicar las configuraciones personalizadas inmediatamente:', error);
+    }
+}
+
+async function fetchAndApplyUserSettings(usuario) {
+    if (!usuario || !usuario.email) {
+        return null;
+    }
+
+    try {
+        const response = await fetch('/auth/user-settings', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        if (data.success) {
+            const resolvedUser = mergeUserProfile(usuario, data.user);
+            if (resolvedUser) {
+                Auth?.updateUserData?.(resolvedUser);
+                try {
+                    localStorage.setItem('user_data', JSON.stringify(resolvedUser));
+                } catch (storageError) {
+                    console.warn('[settings] No se pudo almacenar el usuario actualizado en localStorage:', storageError);
+                }
+                window.currentGerente = resolvedUser;
+                if (data.settings) {
+                    resolvedUser.settings = data.settings;
+                }
+            }
+
+            const settings = data.settings || {};
+            UI?.applyUserSettings?.(settings);
+
+            document.dispatchEvent(new CustomEvent('userSettingsChanged', {
+                detail: {
+                    timestamp: Date.now(),
+                    type: 'login_sync',
+                    settings
+                }
+            }));
+
+            return settings;
+        }
+    } catch (error) {
+        console.warn('[settings] No se pudieron recuperar las configuraciones del usuario:', error);
+    }
+
+    return null;
+}
+
+function mergeUserProfile(baseUser, incomingUser) {
+    if (!baseUser) {
+        return incomingUser ? { ...incomingUser } : null;
+    }
+    if (!incomingUser) {
+        return baseUser;
+    }
+
+    Object.assign(baseUser, incomingUser);
+    return baseUser;
 }
 
 /**
@@ -792,40 +872,163 @@ async function setupCommonModules(usuario) {
 }
 
 /**
+ * ✅ NUEVA FUNCIÓN: Forzar actualización de funciones jerárquicas
+ */
+function forceUpdateHierarchicalFeatures(usuario) {
+    console.log('🔄 Forzando actualización de funciones jerárquicas para:', usuario.rol);
+
+    try {
+        // 1. Actualizar navegación inmediatamente
+        updateNavigationByRole(usuario);
+
+        // 2. Configurar dashboard específico por rol
+        configureDashboardForRole(usuario.rol);
+
+        // 3. Actualizar elementos admin/gerente/asesor inmediatamente
+        updateRoleSpecificElements(usuario.rol);
+
+        // 4. Configurar navegación jerárquica
+        setupHierarchicalNavigation(usuario);
+
+        // 5. Mostrar/ocultar elementos según jerarquía
+        applyHierarchicalVisibility(usuario.rol);
+
+        console.log('✅ Funciones jerárquicas actualizadas para:', usuario.rol);
+
+    } catch (error) {
+        console.error('❌ Error actualizando funciones jerárquicas:', error);
+    }
+}
+
+/**
+ * ✅ NUEVA FUNCIÓN: Actualizar elementos específicos por rol
+ */
+function updateRoleSpecificElements(rol) {
+    console.log('🎭 Actualizando elementos específicos para rol:', rol);
+
+    // Elementos admin-only
+    const adminElements = document.querySelectorAll('.admin-only');
+    adminElements.forEach(element => {
+        if (rol === 'admin') {
+            element.style.display = 'block';
+            element.style.visibility = 'visible';
+        } else {
+            element.style.display = 'none';
+            element.style.visibility = 'hidden';
+        }
+    });
+
+    // Elementos gerente-only
+    const gerenteElements = document.querySelectorAll('.gerente-only, .gerente-only-filter');
+    gerenteElements.forEach(element => {
+        if (rol === 'admin' || rol === 'gerente') {
+            element.style.display = 'block';
+            element.style.visibility = 'visible';
+        } else {
+            element.style.display = 'none';
+            element.style.visibility = 'hidden';
+        }
+    });
+
+    // Elementos asesor-only
+    const asesorElements = document.querySelectorAll('.asesor-only, .asesor-only-message');
+    asesorElements.forEach(element => {
+        if (rol === 'asesor') {
+            element.style.display = 'block';
+            element.style.visibility = 'visible';
+        } else {
+            element.style.display = 'none';
+            element.style.visibility = 'hidden';
+        }
+    });
+
+    console.log(`✅ Elementos específicos actualizados para: ${rol}`);
+}
+
+/**
+ * ✅ NUEVA FUNCIÓN: Aplicar visibilidad jerárquica
+ */
+function applyHierarchicalVisibility(rol) {
+    console.log('👑 Aplicando visibilidad jerárquica para:', rol);
+
+    // Navegación de jerarquía (solo admin)
+    const navJerarquia = document.getElementById('nav-jerarquia');
+    if (navJerarquia) {
+        if (rol === 'admin') {
+            navJerarquia.style.display = 'list-item';
+            navJerarquia.classList.remove('nav-jerarquia-hidden');
+            navJerarquia.classList.add('nav-jerarquia-visible');
+        } else {
+            navJerarquia.style.display = 'none';
+            navJerarquia.classList.add('nav-jerarquia-hidden');
+            navJerarquia.classList.remove('nav-jerarquia-visible');
+        }
+    }
+
+    // Gestión de gerentes (solo admin)
+    const navGestionGerentes = document.getElementById('nav-gestion-gerentes');
+    if (navGestionGerentes) {
+        if (rol === 'admin') {
+            navGestionGerentes.style.display = 'list-item';
+            navGestionGerentes.classList.remove('nav-admin-hidden');
+            navGestionGerentes.classList.add('nav-admin-visible');
+        } else {
+            navGestionGerentes.style.display = 'none';
+            navGestionGerentes.classList.add('nav-admin-hidden');
+            navGestionGerentes.classList.remove('nav-admin-visible');
+        }
+    }
+
+    // Funciones de Excel y distribución
+    const excelUploadElements = document.querySelectorAll('.excel-upload, .distribute-excel');
+    excelUploadElements.forEach(element => {
+        if (rol === 'admin' || rol === 'gerente') {
+            element.style.display = 'block';
+            element.removeAttribute('disabled');
+        } else {
+            element.style.display = 'none';
+            element.setAttribute('disabled', 'true');
+        }
+    });
+
+    console.log(`✅ Visibilidad jerárquica aplicada para: ${rol}`);
+}
+
+/**
  * ✅ CONFIGURAR NAVEGACIÓN JERÁRQUICA BASADA EN ROL
  */
 function setupHierarchicalNavigation(usuario) {
     console.log('🔍 Debug - setupHierarchicalNavigation llamado con usuario:', usuario);
     console.log('🔍 Debug - usuario.rol:', usuario.rol);
     console.log('🔍 Debug - typeof usuario.rol:', typeof usuario.rol);
-    
+
     // Intentar múltiples veces si los elementos no están disponibles
     const maxRetries = 10;
     let retryCount = 0;
-    
+
     function trySetupNavigation() {
         const navJerarquia = document.getElementById('nav-jerarquia');
         const jerarquiaSection = document.getElementById('jerarquia-section');
-        
+
         console.log(`🔍 Debug (intento ${retryCount + 1}) - navJerarquia encontrado:`, !!navJerarquia);
         console.log(`🔍 Debug (intento ${retryCount + 1}) - jerarquiaSection encontrado:`, !!jerarquiaSection);
-        
+
         if (!navJerarquia && retryCount < maxRetries) {
             retryCount++;
             console.log(`⏳ Reintentando en 100ms... (intento ${retryCount}/${maxRetries})`);
             setTimeout(trySetupNavigation, 100);
             return;
         }
-        
+
         if (!navJerarquia || !jerarquiaSection) {
             console.log('⚠️ Elementos de navegación jerárquica no encontrados después de todos los intentos');
             return;
         }
-        
+
         console.log('✅ Elementos encontrados, configurando navegación jerárquica...');
         setupNavigationElements(navJerarquia, jerarquiaSection, usuario);
     }
-    
+
     trySetupNavigation();
 }
 
@@ -1283,16 +1486,45 @@ function hideAdminFeatures() {
 /**
  * ✅ ACTUALIZAR NAVEGACIÓN SEGÚN ROL DE USUARIO
  */
-function updateNavigationByRole() {
-    const currentUser = getCurrentUser();
-    if (!currentUser) return;
-    
-    console.log('🔄 Actualizando navegación para rol:', currentUser.rol);
-    const normalizedRole = (currentUser.rol || '').toLowerCase();
+function updateNavigationByRole(userOrRole = null) {
+    function resetRoleNavigationState() {
+        const navGestion = document.getElementById('nav-gestion-gerentes');
+        if (navGestion) {
+            navGestion.style.display = 'none';
+            navGestion.classList.add('nav-admin-hidden');
+            navGestion.classList.remove('nav-admin-visible');
+        }
+
+        const adminLinks = document.querySelectorAll('.nav-admin-only');
+        adminLinks.forEach(link => {
+            link.style.display = 'none';
+        });
+    }
+
+    let resolvedRole = null;
+
+    if (typeof userOrRole === 'string') {
+        resolvedRole = userOrRole;
+    } else if (userOrRole && typeof userOrRole === 'object') {
+        resolvedRole = userOrRole.rol;
+    }
+
+    if (!resolvedRole) {
+        const currentUser = getCurrentUser();
+        resolvedRole = currentUser?.rol;
+        userOrRole = currentUser || userOrRole;
+    }
+
+    if (!resolvedRole) {
+        resetRoleNavigationState();
+        return;
+    }
+
+    console.log('[nav] Actualizando navegación para rol:', resolvedRole);
+    const normalizedRole = (resolvedRole || '').toLowerCase();
     const isAdmin = normalizedRole === 'admin' || normalizedRole === 'administrador';
     const isGerente = normalizedRole === 'gerente';
-    
-    // Controlar visibilidad de Gestión de Gerentes (solo administradores visibles)
+
     const navGestionGerentes = document.getElementById('nav-gestion-gerentes');
     if (navGestionGerentes) {
         if (isAdmin) {
@@ -1300,18 +1532,18 @@ function updateNavigationByRole() {
             navGestionGerentes.classList.remove('nav-admin-hidden');
             navGestionGerentes.classList.add('nav-admin-visible');
             console.log('Gestión de Gerentes habilitada para administrador');
-        } else if (isGerente) {
-            navGestionGerentes.remove();
-            console.log('Gestión de Gerentes removida del menú para rol gerente');
         } else {
             navGestionGerentes.style.display = 'none';
             navGestionGerentes.classList.add('nav-admin-hidden');
             navGestionGerentes.classList.remove('nav-admin-visible');
-            console.log('Gestión de Gerentes oculta para rol:', currentUser.rol);
+            if (isGerente) {
+                console.log('Gestión de Gerentes oculta para rol gerente');
+            } else {
+                console.log('Gestión de Gerentes oculta para rol:', resolvedRole);
+            }
         }
     }
 
-    // Controlar otros elementos según rol
     const adminOnlyElements = document.querySelectorAll('.nav-admin-only');
     adminOnlyElements.forEach(element => {
         element.style.display = isAdmin ? 'block' : 'none';
@@ -2653,6 +2885,70 @@ window.testCacheStateFix = function() {
     }, 500);
 };
 
+// ✅ AGREGAR LISTENER PARA EVENTOS DE LIMPIEZA DE USUARIO
+document.addEventListener('userStateCleared', function(event) {
+    console.log('🧹 Evento de limpieza de estado de usuario recibido:', event.detail);
+
+    try {
+        // Resetear estado de la aplicación
+        if (window.appState) {
+            window.appState.initialized = false;
+            window.appState.currentSection = 'reclutas-section';
+        }
+
+        // Limpiar módulos específicos
+        if (window.Reclutas && typeof window.Reclutas.clearCache === 'function') {
+            window.Reclutas.clearCache();
+        }
+
+        if (window.Calendar && typeof window.Calendar.reset === 'function') {
+            window.Calendar.reset();
+        }
+
+        // Resetear navegación a estado inicial
+        const dashboardNav = document.querySelector('.dashboard-nav ul');
+        if (dashboardNav) {
+            dashboardNav.innerHTML = '';
+        }
+
+        // Ocultar todas las secciones del dashboard
+        const dashboardSections = document.querySelectorAll('.dashboard-content-section');
+        dashboardSections.forEach(section => {
+            if (section) section.style.display = 'none';
+        });
+
+        updateNavigationByRole(null);
+
+        console.log('✅ Limpieza de main.js completada tras evento de logout');
+
+    } catch (error) {
+        console.error('❌ Error procesando evento de limpieza en main.js:', error);
+    }
+});
+
+// ✅ AGREGAR LISTENER PARA EVENTOS DE ACTUALIZACIÓN DE CONFIGURACIONES
+document.addEventListener('userSettingsChanged', function(event) {
+    console.log('⚙️ Configuraciones de usuario actualizadas:', event.detail);
+
+    try {
+        // Refresh elementos que podrían haber cambiado
+        const currentUser = getCurrentUser();
+        if (currentUser) {
+            updateUserInfo(currentUser);
+            configureDashboardForRole(currentUser.rol);
+
+            // ✅ ACTUALIZAR TAMBIÉN FUNCIONES JERÁRQUICAS
+            forceUpdateHierarchicalFeatures(currentUser);
+        }
+
+        console.log('✅ UI sincronizada tras cambio de configuraciones');
+
+    } catch (error) {
+        console.error('❌ Error sincronizando UI tras cambio de configuraciones:', error);
+    }
+});
+
 console.log('✅ main.js cargado completamente - Sistema de folio restaurado');
 console.log('🔧 Integración de métricas administrativas completada');
 console.log('🎯 Todas las funciones de validación y debug disponibles');
+console.log('🔄 Listeners de eventos de limpieza y sincronización agregados');
