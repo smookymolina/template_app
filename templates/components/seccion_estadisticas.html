@@ -49,12 +49,121 @@
         </div>
     </div>
 
-    <!-- 👥 MÉTRICAS POR ASESOR - Solo Admin -->
+    <!-- 🏢 MÉTRICAS JERÁRQUICAS POR EQUIPOS - Solo Admin -->
+    <div class="stats-section admin-only" id="metricas-equipos-section">
+        <div class="subsection-header">
+            <h4 class="subsection-title">
+                <i class="fas fa-sitemap"></i> Gestión de Equipos y Rendimiento
+                <span class="admin-badge">Panel Administrativo</span>
+            </h4>
+            <div class="subsection-filters">
+                <select id="filtro-equipos" class="form-select">
+                    <option value="todos">Todos los equipos</option>
+                    <option value="gerentes">Solo gerentes</option>
+                    <option value="independientes">Asesores independientes</option>
+                    <option value="top-performance">Alto rendimiento</option>
+                </select>
+
+                <select id="ordenar-equipos" class="form-select">
+                    <option value="performance">Por Rendimiento</option>
+                    <option value="equipo-size">Por Tamaño de Equipo</option>
+                    <option value="total-reclutas">Por Total de Reclutas</option>
+                    <option value="nombre">Por Nombre</option>
+                </select>
+
+                <div class="vista-toggle">
+                    <button id="vista-jerarquica" class="btn-toggle active" data-view="jerarquica">
+                        <i class="fas fa-sitemap"></i> Jerárquica
+                    </button>
+                    <button id="vista-comparativa" class="btn-toggle" data-view="comparativa">
+                        <i class="fas fa-chart-bar"></i> Comparativa
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🎯 INSIGHTS DE EQUIPOS -->
+        <div class="insights-equipos-grid">
+            <div class="insight-card equipos-overview">
+                <h5><i class="fas fa-users-cog"></i> Resumen de Equipos</h5>
+                <div id="equipos-overview">
+                    <div class="loading-placeholder">
+                        <i class="fas fa-sitemap fa-spin"></i>
+                        <p>Analizando estructura organizacional...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insight-card top-gerentes">
+                <h5><i class="fas fa-crown"></i> Gerentes Destacados</h5>
+                <div id="top-gerentes">
+                    <div class="loading-placeholder">
+                        <i class="fas fa-trophy fa-spin"></i>
+                        <p>Evaluando liderazgo...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insight-card equipos-necesitan-apoyo">
+                <h5><i class="fas fa-hands-helping"></i> Equipos que Necesitan Apoyo</h5>
+                <div id="equipos-necesitan-apoyo">
+                    <div class="loading-placeholder">
+                        <i class="fas fa-chart-line fa-spin"></i>
+                        <p>Identificando oportunidades de mejora...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insight-card asesores-independientes">
+                <h5><i class="fas fa-user-tie"></i> Asesores Independientes</h5>
+                <div id="asesores-independientes-overview">
+                    <div class="loading-placeholder">
+                        <i class="fas fa-users fa-spin"></i>
+                        <p>Analizando asesores sin gerente...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🏢 CONTENEDOR PRINCIPAL DE EQUIPOS -->
+        <div id="equipos-container">
+            <!-- Vista Jerárquica -->
+            <div id="vista-jerarquica-content" class="vista-content active">
+                <h4 class="subsection-title">
+                    <i class="fas fa-sitemap"></i> Estructura Jerárquica de Equipos
+                </h4>
+                <div id="equipos-jerarquia" class="equipos-jerarquia-container">
+                    <div class="gerentes-grid-container">
+                        <!-- Las tarjetas de gerentes se insertarán aquí dinámicamente -->
+                        <div class="loading-placeholder">
+                            <i class="fas fa-user-tie fa-spin"></i>
+                            <p>Cargando datos de gerentes...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vista Comparativa -->
+            <div id="vista-comparativa-content" class="vista-content">
+                <h4 class="subsection-title">
+                    <i class="fas fa-chart-bar"></i> Comparativa de Rendimiento por Equipos
+                </h4>
+                <div id="equipos-comparativa" class="equipos-comparativa-container">
+                    <div class="loading-placeholder">
+                        <i class="fas fa-chart-bar fa-spin"></i>
+                        <p>Generando comparativas...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 👥 MÉTRICAS INDIVIDUALES DE ASESORES - Solo Admin (Complementaria) -->
     <div class="stats-section admin-only" id="metricas-asesores-section">
         <div class="subsection-header">
             <h4 class="subsection-title">
-                <i class="fas fa-users-cog"></i> Rendimiento por Asesor
-                <span class="admin-badge">Solo Administradores</span>
+                <i class="fas fa-users"></i> Métricas Individuales de Asesores
+                <span class="admin-badge">Vista Detallada</span>
             </h4>
             <div class="subsection-filters">
                 <select id="filtro-performance" class="form-select">
@@ -64,7 +173,7 @@
                     <option value="average">Regular</option>
                     <option value="needs-improvement">Necesita Mejora</option>
                 </select>
-                
+
                 <select id="ordenar-por" class="form-select">
                     <option value="performance">Por Rendimiento</option>
                     <option value="total">Por Total de Reclutas</option>
@@ -96,9 +205,6 @@
             </div>
         </div>
 
-        <h4 class="subsection-title">
-            <i class="fas fa-chart-bar"></i> Comparativa de Asesores
-        </h4>
         <div id="asesores-metricas" class="asesores-metricas-container card-content">
             <div class="loading-placeholder">
                 <i class="fas fa-users fa-spin"></i>
@@ -302,6 +408,8 @@
 <div id="metricas-admin-container" class="admin-only">
     <!-- Todo el contenido de métricas administrativas se carga aquí -->
 </div>
+
+<link rel="stylesheet" href="/static/css/metricas-admin-extensiones.css">
 
 <style>
 /* ============================================================================ */

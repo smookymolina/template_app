@@ -25,7 +25,10 @@
       "Bash(echo:*)",
       "Bash(dir uploads)",
       "Bash(dir uploadsprofile_images)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(pip install:*)",
+      "Bash(pip show:*)",
+      "Bash(pip freeze)"
     ],
     "deny": [],
     "ask": []

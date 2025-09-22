@@ -17,6 +17,7 @@ python-dotenv==1.0.0
 pandas==2.1.1
 openpyxl==3.1.2
 xlrd==2.0.1
+xlsxwriter==3.2.9
 
 # 🖼️ PROCESAMIENTO DE IMÁGENES
 Pillow==10.0.0

@@ -1,7 +1,1233 @@
 /* ============================================================================ */
-/* 🎨 ESTILOS PARA MÉTRICAS ADMINISTRATIVAS */
+/* 🎨 ESTILOS PARA MÉTRICAS ADMINISTRATIVAS OPTIMIZADAS */
 /* Archivo: static/css/metricas-admin.css */
+/* Versión: 2.0 - Layout de Equipos Jerárquicos */
 /* ============================================================================ */
+
+/* ===== NUEVOS ESTILOS PARA EQUIPOS JERÁRQUICOS ===== */
+
+/* 🎛️ Vista Toggle para cambiar entre Jerárquica y Comparativa */
+.vista-toggle {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+}
+
+.btn-toggle {
+    padding: 0.5rem 1rem;
+    border: 2px solid #e5e7eb;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6b7280;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-toggle:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+.btn-toggle.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+}
+
+/* 🎯 Grid de Insights para Equipos */
+.insights-equipos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.insights-equipos-grid .insight-card {
+    background: var(--card-bg, #ffffff);
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #3b82f6;
+    transition: all 0.3s ease;
+}
+
+.insights-equipos-grid .insight-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.insights-equipos-grid .insight-card.equipos-overview {
+    border-left-color: #3b82f6;
+    background: linear-gradient(135deg, #dbeafe, #f0f9ff);
+}
+
+.insights-equipos-grid .insight-card.top-gerentes {
+    border-left-color: #f59e0b;
+    background: linear-gradient(135deg, #fef3c7, #fffbeb);
+}
+
+.insights-equipos-grid .insight-card.equipos-necesitan-apoyo {
+    border-left-color: #ef4444;
+    background: linear-gradient(135deg, #fee2e2, #fef2f2);
+}
+
+.insights-equipos-grid .insight-card.asesores-independientes {
+    border-left-color: #10b981;
+    background: linear-gradient(135deg, #d1fae5, #ecfdf5);
+}
+
+/* 📊 Contenedores de Vista */
+.vista-content {
+    display: none;
+}
+
+.vista-content.active {
+    display: block;
+}
+
+/* 🏢 Contenedor de Equipos Jerárquicos */
+.equipos-jerarquia-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* 👑 Tarjeta de Gerente con Equipo */
+.gerente-equipo-card {
+    background: var(--card-bg, #ffffff);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #6f42c1;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.gerente-equipo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(111, 66, 193, 0.2);
+}
+
+/* Encabezado del Gerente */
+.gerente-equipo-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.gerente-avatar-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.gerente-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6f42c1, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    position: relative;
+}
+
+.crown-icon {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 1rem;
+    color: #f59e0b;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.gerente-info {
+    min-width: 0; /* Fix for flexbox overflow */
+}
+
+.gerente-info h4 {
+    margin: 0;
+    color: var(--text-primary, #1f2937);
+    font-size: 1.25rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gerente-info .email {
+    font-size: 0.875rem;
+    color: var(--text-secondary, #6b7280);
+    margin: 0.25rem 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.equipo-size-badge {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Métricas Consolidadas del Gerente */
+.gerente-metricas-consolidadas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.metrica-gerente-item {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    border: 1px solid #cbd5e1;
+}
+
+.metrica-gerente-valor {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color, #3b82f6);
+    display: block;
+    line-height: 1;
+}
+
+.metrica-gerente-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0.5rem;
+}
+
+.metrica-gerente-item.total {
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: white;
+}
+
+.metrica-gerente-item.total .metrica-gerente-valor,
+.metrica-gerente-item.total .metrica-gerente-label {
+    color: white;
+}
+
+.metrica-gerente-item.tasa-exito {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.metrica-gerente-item.tasa-exito .metrica-gerente-valor,
+.metrica-gerente-item.tasa-exito .metrica-gerente-label {
+    color: white;
+}
+
+/* Performance Badge del Gerente */
+.gerente-performance-badge {
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.gerente-performance-badge.excepcional {
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+}
+
+.gerente-performance-badge.bueno {
+    background: linear-gradient(135deg, #10b981, #34d399);
+    color: white;
+}
+
+.gerente-performance-badge.regular {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    color: white;
+}
+
+.gerente-performance-badge.necesita-apoyo {
+    background: linear-gradient(135deg, #ef4444, #f87171);
+    color: white;
+}
+
+/* Equipo del Gerente */
+.equipo-section {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 1.5rem;
+    border: 1px solid #e2e8f0;
+}
+
+.equipo-section h5 {
+    margin: 0 0 1rem 0;
+    color: var(--primary-color, #3b82f6);
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.asesores-grid-compacto {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+/* Tarjeta de Asesor dentro del Equipo */
+.asesor-equipo-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    border: 1px solid #d1d5db;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.asesor-equipo-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: var(--primary-color, #3b82f6);
+}
+
+.asesor-equipo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.asesor-equipo-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.asesor-equipo-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.asesor-equipo-details h6 {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--text-primary, #1f2937);
+    font-weight: 600;
+}
+
+.asesor-equipo-details .email {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #6b7280);
+    margin: 0.25rem 0;
+}
+
+.asesor-performance-mini {
+    padding: 0.25rem 0.5rem;
+    border-radius: 15px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.asesor-performance-mini.excellent { background: rgba(5, 150, 105, 0.1); color: #047857; }
+.asesor-performance-mini.good { background: rgba(16, 185, 129, 0.1); color: #065f46; }
+.asesor-performance-mini.average { background: rgba(245, 158, 11, 0.1); color: #92400e; }
+.asesor-performance-mini.needs-improvement { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
+
+/* Métricas del Asesor en Equipo */
+.asesor-equipo-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+
+.asesor-stat-mini {
+    text-align: center;
+    padding: 0.5rem 0.25rem;
+    border-radius: 6px;
+    background: #f9fafb;
+}
+
+.asesor-stat-mini.total { background: rgba(107, 114, 128, 0.1); }
+.asesor-stat-mini.verde { background: rgba(16, 185, 129, 0.1); }
+.asesor-stat-mini.amarillo { background: rgba(245, 158, 11, 0.1); }
+.asesor-stat-mini.rojo { background: rgba(239, 68, 68, 0.1); }
+
+.asesor-stat-number {
+    display: block;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary, #1f2937);
+    line-height: 1;
+}
+
+.asesor-stat-label {
+    font-size: 0.65rem;
+    color: var(--text-secondary, #6b7280);
+    text-transform: uppercase;
+    margin-top: 0.25rem;
+}
+
+/* Asesores Independientes */
+.asesores-independientes-section {
+    background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 2px solid #10b981;
+    margin-top: 2rem;
+}
+
+.asesores-independientes-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: #047857;
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.asesores-independientes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+}
+
+/* Asesor Independiente Card */
+.asesor-independiente-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1.25rem;
+    border: 1px solid #d1d5db;
+    transition: all 0.3s ease;
+    border-left: 4px solid #10b981;
+}
+
+.asesor-independiente-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
+}
+
+/* ===== VISTA COMPARATIVA DE EQUIPOS ===== */
+
+.equipos-comparativa-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Ranking de Equipos */
+.equipos-ranking-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1.5rem;
+}
+
+.equipo-ranking-card {
+    background: var(--card-bg, #ffffff);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-left: 4px solid #3b82f6;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.equipo-ranking-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.equipo-ranking-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.ranking-position-badge {
+    background: linear-gradient(135deg, #f59e0b, #fbbf24);
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.ranking-position-badge.first {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+}
+
+.ranking-position-badge.second {
+    background: linear-gradient(135deg, #9ca3af, #6b7280);
+}
+
+.ranking-position-badge.third {
+    background: linear-gradient(135deg, #fb923c, #ea580c);
+}
+
+/* Gráfico de Barras Comparativo */
+.equipos-chart-container {
+    background: var(--card-bg, #ffffff);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.5rem;
+}
+
+.equipos-chart-container h5 {
+    margin: 0 0 1.5rem 0;
+    color: var(--text-primary, #1f2937);
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.equipos-bars-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.equipo-bar-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.equipo-bar-label {
+    min-width: 150px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary, #1f2937);
+}
+
+.equipo-bar-visual {
+    flex: 1;
+    height: 30px;
+    background: #f3f4f6;
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+}
+
+.equipo-bar-fill {
+    height: 100%;
+    border-radius: 15px;
+    transition: width 0.8s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.equipo-bar-fill.excellent { background: linear-gradient(135deg, #059669, #10b981); }
+.equipo-bar-fill.good { background: linear-gradient(135deg, #10b981, #34d399); }
+.equipo-bar-fill.average { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+.equipo-bar-fill.needs-improvement { background: linear-gradient(135deg, #ef4444, #f87171); }
+
+.equipo-bar-value {
+    min-width: 60px;
+    text-align: right;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary, #1f2937);
+}
+
+/* ===== RESPONSIVIDAD PARA EQUIPOS ===== */
+
+@media (max-width: 1200px) {
+    .insights-equipos-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .gerente-metricas-consolidadas {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .asesores-grid-compacto {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .vista-toggle {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn-toggle {
+        justify-content: center;
+    }
+
+    .insights-equipos-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .gerente-equipo-header {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .gerente-metricas-consolidadas {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .asesor-equipo-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .equipos-ranking-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .equipo-bar-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+
+    .equipo-bar-label {
+        min-width: auto;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .gerente-avatar-section {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .gerente-metricas-consolidadas {
+        grid-template-columns: 1fr;
+    }
+
+    .asesor-equipo-stats {
+        grid-template-columns: 2fr 1fr 1fr;
+        gap: 0.25rem;
+    }
+
+    .asesor-equipo-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+}
+
+/* ===== ESTILOS PARA INSIGHTS DE EQUIPOS ===== */
+
+.equipos-overview-stats {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+}
+
+.overview-stat {
+    text-align: center;
+    flex: 1;
+}
+
+.overview-stat .stat-number {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary-color, #3b82f6);
+    line-height: 1;
+}
+
+.overview-stat .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-secondary, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0.5rem;
+}
+
+/* Top Gerentes */
+.top-gerente-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    margin: 0.5rem 0;
+    border-radius: 8px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    transition: all 0.3s ease;
+}
+
+.top-gerente-item:hover {
+    transform: translateX(5px);
+    background: rgba(16, 185, 129, 0.15);
+}
+
+.gerente-medalla {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.gerente-info-mini {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.gerente-nombre {
+    font-weight: 600;
+    color: var(--text-primary, #1f2937);
+}
+
+.gerente-tasa {
+    font-weight: 700;
+    color: #059669;
+    background: rgba(5, 150, 105, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 15px;
+    font-size: 0.875rem;
+}
+
+/* Equipos que necesitan apoyo */
+.equipo-apoyo-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    margin: 0.5rem 0;
+    border-radius: 8px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    transition: all 0.3s ease;
+}
+
+.equipo-apoyo-item:hover {
+    transform: translateX(5px);
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.apoyo-icon {
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.apoyo-info {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.apoyo-nombre {
+    font-weight: 600;
+    color: var(--text-primary, #1f2937);
+}
+
+.apoyo-tasa {
+    font-weight: 700;
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: 15px;
+    font-size: 0.875rem;
+}
+
+.no-apoyo-needed {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    text-align: center;
+    color: #059669;
+    font-weight: 600;
+    background: rgba(5, 150, 105, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(5, 150, 105, 0.2);
+}
+
+.success-icon {
+    font-size: 1.5rem;
+}
+
+/* Asesores independientes overview */
+.independientes-overview {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+}
+
+.indep-stat {
+    text-align: center;
+    flex: 1;
+}
+
+.indep-stat .stat-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #059669;
+    line-height: 1;
+}
+
+.indep-stat .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #6b7280);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0.5rem;
+}
+
+/* ===== MEJORAS DE RESPONSIVIDAD PARA INSIGHTS ===== */
+
+@media (max-width: 768px) {
+    .equipos-overview-stats {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .independientes-overview {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .top-gerente-item,
+    .equipo-apoyo-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+
+    .gerente-info-mini,
+    .apoyo-info {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
+/* ===== ANIMACIONES MEJORADAS ===== */
+
+@keyframes slideInFromLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.gerente-equipo-card {
+    animation: slideInFromLeft 0.5s ease forwards;
+}
+
+.asesor-equipo-card {
+    animation: slideInFromLeft 0.3s ease forwards;
+}
+
+/* Delay progresivo para las tarjetas de gerentes */
+.gerente-equipo-card:nth-child(1) { animation-delay: 0.1s; }
+.gerente-equipo-card:nth-child(2) { animation-delay: 0.2s; }
+.gerente-equipo-card:nth-child(3) { animation-delay: 0.3s; }
+.gerente-equipo-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* Delay progresivo para asesores en equipo */
+.asesor-equipo-card:nth-child(1) { animation-delay: 0.1s; }
+.asesor-equipo-card:nth-child(2) { animation-delay: 0.2s; }
+.asesor-equipo-card:nth-child(3) { animation-delay: 0.3s; }
+
+/* ===== HOVER EFFECTS MEJORADOS ===== */
+
+.gerente-equipo-card:hover .crown-icon {
+    animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
+.asesor-equipo-card:hover .asesor-equipo-avatar {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== MEJORAS DE ACCESIBILIDAD ===== */
+
+.btn-toggle:focus {
+    outline: 2px solid var(--primary-color, #3b82f6);
+    outline-offset: 2px;
+}
+
+.gerente-equipo-card:focus-within {
+    outline: 2px solid var(--primary-color, #3b82f6);
+    outline-offset: 2px;
+}
+
+/* ===== ESTILOS PARA IMÁGENES DE PERFIL DE GERENTES ===== */
+
+.gerente-avatar-container {
+    position: relative;
+    width: 60px;
+    height: 60px;
+}
+
+.gerente-foto-perfil {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #6f42c1;
+    box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+    transition: all 0.3s ease;
+}
+
+.gerente-foto-perfil:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(111, 66, 193, 0.5);
+}
+
+.gerente-avatar-fallback {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6f42c1, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+    font-weight: 700;
+    border: 3px solid #6f42c1;
+    box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+}
+
+/* ===== ESTILOS PARA MODAL DE EXPORTACIÓN ===== */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: var(--card-bg, #ffffff);
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-primary, #1f2937);
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.close-modal {
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: var(--text-secondary, #6b7280);
+    transition: color 0.3s ease;
+}
+
+.close-modal:hover {
+    color: var(--text-primary, #1f2937);
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.export-options h4 {
+    margin: 0 0 1rem 0;
+    color: var(--text-primary, #1f2937);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.formato-opciones,
+.incluir-opciones {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.radio-option,
+.checkbox-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 2px solid var(--border-color, #e5e7eb);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--card-bg, #ffffff);
+}
+
+.radio-option:hover,
+.checkbox-option:hover {
+    border-color: var(--primary-color, #3b82f6);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.radio-option input[type="radio"],
+.checkbox-option input[type="checkbox"] {
+    display: none;
+}
+
+.radio-custom,
+.checkbox-custom {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color, #e5e7eb);
+    background: white;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.radio-custom {
+    border-radius: 50%;
+}
+
+.checkbox-custom {
+    border-radius: 4px;
+}
+
+.radio-option input[type="radio"]:checked + .radio-custom {
+    background: var(--primary-color, #3b82f6);
+    border-color: var(--primary-color, #3b82f6);
+}
+
+.radio-option input[type="radio"]:checked + .radio-custom::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+}
+
+.checkbox-option input[type="checkbox"]:checked + .checkbox-custom {
+    background: var(--primary-color, #3b82f6);
+    border-color: var(--primary-color, #3b82f6);
+}
+
+.checkbox-option input[type="checkbox"]:checked + .checkbox-custom::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.radio-option i,
+.checkbox-option i {
+    font-size: 1.25rem;
+    margin-right: 0.5rem;
+}
+
+.radio-option .fa-file-excel { color: #10b981; }
+.radio-option .fa-file-csv { color: #f59e0b; }
+.radio-option .fa-file-pdf { color: #ef4444; }
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color, #e5e7eb);
+}
+
+.btn-secondary,
+.btn-primary {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-secondary {
+    background: var(--secondary-color, #6b7280);
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: var(--text-secondary, #4b5563);
+}
+
+.btn-primary {
+    background: var(--primary-color, #3b82f6);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* ===== MODO OSCURO PARA NUEVOS ELEMENTOS ===== */
+
+@media (prefers-color-scheme: dark) {
+    .insights-equipos-grid .insight-card.equipos-overview {
+        background: linear-gradient(135deg, #1e3a8a, #1e40af);
+    }
+
+    .insights-equipos-grid .insight-card.top-gerentes {
+        background: linear-gradient(135deg, #92400e, #b45309);
+    }
+
+    .insights-equipos-grid .insight-card.equipos-necesitan-apoyo {
+        background: linear-gradient(135deg, #7f1d1d, #991b1b);
+    }
+
+    .insights-equipos-grid .insight-card.asesores-independientes {
+        background: linear-gradient(135deg, #064e3b, #065f46);
+    }
+
+    .gerente-equipo-card {
+        background: #1f2937;
+        border-color: #6f42c1;
+    }
+
+    .equipo-section {
+        background: #111827;
+        border-color: #374151;
+    }
+
+    .asesor-equipo-card {
+        background: #1f2937;
+        border-color: #374151;
+    }
+
+    .top-gerente-item {
+        background: rgba(16, 185, 129, 0.2);
+        border-color: rgba(16, 185, 129, 0.4);
+    }
+
+    .equipo-apoyo-item {
+        background: rgba(239, 68, 68, 0.2);
+        border-color: rgba(239, 68, 68, 0.4);
+    }
+
+    .no-apoyo-needed {
+        background: rgba(5, 150, 105, 0.2);
+        border-color: rgba(5, 150, 105, 0.4);
+    }
+
+    /* Modal en modo oscuro */
+    .modal-content {
+        background: #1f2937;
+    }
+
+    .modal-header {
+        border-bottom-color: #374151;
+    }
+
+    .modal-footer {
+        border-top-color: #374151;
+    }
+
+    .radio-option,
+    .checkbox-option {
+        background: #1f2937;
+        border-color: #374151;
+    }
+
+    .radio-option:hover,
+    .checkbox-option:hover {
+        background: rgba(59, 130, 246, 0.1);
+    }
+
+    .radio-custom,
+    .checkbox-custom {
+        background: #374151;
+        border-color: #4b5563;
+    }
+}
 
 /* 📊 CONTENEDOR PRINCIPAL DE MÉTRICAS */
 .metricas-admin-container {
@@ -586,6 +1812,7 @@
 .improvement-info h5 {
     margin: 0 0 0.25rem 0;
     color: var(--text-primary, #1f2937);
+    font-size: 1rem;
 }
 
 .improvement-info p {
@@ -981,7 +2208,7 @@
     margin-left: 1rem;
 }
 
-/* 📊 Gráficos mejorados */
+/* 📈 Gráficos mejorados */
 .chart-visual {
     display: flex;
     height: 120px;
@@ -1790,5 +3017,137 @@ body.gerente-view .gerente-only {
 
     .ranking-card.gerente-ranking {
         padding: 12px 15px;
+    }
+}
+
+/* ============================================================================ */
+/* 🎨 ESTILOS PARA TARJETAS DE VISUALIZACIÓN DE GERENTES (NUEVO) */
+/* ============================================================================ */
+
+.gerentes-grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.gerente-card-display {
+    background: var(--card-bg, #ffffff);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-color, #e5e7eb);
+    transition: all 0.3s ease;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.gerente-card-display:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+
+.gerente-card-display.excelente {
+    border-top: 4px solid #10b981;
+}
+.gerente-card-display.bueno {
+    border-top: 4px solid #3b82f6;
+}
+.gerente-card-display.regular {
+    border-top: 4px solid #f59e0b;
+}
+
+.gerente-card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: rgba(0,0,0,0.02);
+}
+
+.gerente-avatar-container {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+}
+
+.gerente-foto {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.gerente-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    border: 3px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.gerente-info .gerente-nombre {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text-primary, #1f2937);
+}
+
+.gerente-info .gerente-email {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary, #6b7280);
+}
+
+.gerente-card-body {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    padding: 1.5rem;
+}
+
+.gerente-kpi {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(0,0,0,0.03);
+    border-radius: 8px;
+}
+
+.gerente-kpi .kpi-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary-color, #3b82f6);
+    line-height: 1.2;
+}
+
+.gerente-kpi .kpi-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #6b7280);
+    margin-top: 0.5rem;
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+@media (prefers-color-scheme: dark) {
+    .gerente-card-display {
+        background: #1f2937;
+        border-color: #374151;
+    }
+    .gerente-card-header {
+        background: rgba(255,255,255,0.05);
+    }
+    .gerente-kpi {
+        background: rgba(255,255,255,0.05);
     }
 }

@@ -17,6 +17,7 @@ from utils.validators import (
 from sqlalchemy import func, case, extract, desc
 from datetime import datetime, timedelta
 from collections import defaultdict
+from flask import Response
 import os
 import calendar
 
@@ -957,6 +958,8 @@ def delete_documento(id):
 
 # ----- API DE ESTADÍSTICAS -----
 
+
+
 @api_bp.route('/estadisticas', methods=['GET'])
 @login_required
 def get_estadisticas():
@@ -1027,9 +1030,9 @@ def get_estadisticas():
 
 @api_bp.route('/metricas/admin', methods=['GET'])
 @login_required
-def get_metricas_admin():
+def get_metricas_admin_old():
     """
-    👑 ENDPOINT para métricas administrativas avanzadas
+    👑 ENDPOINT para métricas administrativas avanzadas (obsoleto)
     """
     try:
         from flask_login import current_user
@@ -2945,3 +2948,453 @@ def reasignar_asesor_gerente():
         db.session.rollback()
         current_app.logger.error(f"Error reasignando asesor: {str(e)}")
         return jsonify({"success": False, "message": f"Error en reasignación: {str(e)}"}), 500
+
+@api_bp.route('/metricas_avanzadas', methods=['GET'])
+@admin_required
+def get_metricas_avanzadas():
+    """
+    🚀 NUEVO ENDPOINT CENTRALIZADO: Obtiene todas las métricas avanzadas para el dashboard del admin.
+    """
+    try:
+        # --- 1. KPIs Globales y Distribución ---
+        total_reclutas = db.session.query(func.count(Recluta.id)).scalar()
+        total_activos = db.session.query(func.count(Recluta.id)).filter(Recluta.estado == 'Activo').scalar()
+        total_proceso = db.session.query(func.count(Recluta.id)).filter(Recluta.estado == 'En proceso').scalar()
+        total_rechazados = db.session.query(func.count(Recluta.id)).filter(Recluta.estado == 'Rechazado').scalar()
+        tasa_exito_global = (total_activos / total_reclutas * 100) if total_reclutas > 0 else 0
+        
+        total_gerentes = db.session.query(func.count(Usuario.id)).filter(Usuario.rol == 'gerente', Usuario.is_active == True).scalar()
+        total_asesores = db.session.query(func.count(Usuario.id)).filter(Usuario.rol == 'asesor', Usuario.is_active == True).scalar()
+
+        global_kpis = {
+            "total_gerentes": total_gerentes,
+            "total_asesores": total_asesores,
+            "total_reclutas": total_reclutas,
+            "tasa_exito_global": round(tasa_exito_global, 2),
+            "distribucion_global": {
+                "verdes": total_activos,
+                "amarillos": total_proceso,
+                "rojos": total_rechazados
+            }
+        }
+
+        # --- 2. Métricas por Gerente ---
+        gerentes = Usuario.query.filter_by(rol='gerente', is_active=True).all()
+        gerentes_data = []
+        for gerente in gerentes:
+            asesores_ids = [a.id for a in gerente.asesores]
+            equipo_ids = asesores_ids + [gerente.id]
+            if equipo_ids:
+                equipo_stats = db.session.query(
+                    func.count(Recluta.id).label('total'),
+                    func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes')
+                ).filter(Recluta.asesor_id.in_(equipo_ids)).first()
+                total_equipo = equipo_stats.total or 0
+                verdes_equipo = equipo_stats.verdes or 0
+                tasa_exito_equipo = (verdes_equipo / total_equipo * 100) if total_equipo > 0 else 0
+            else:
+                total_equipo = 0
+                tasa_exito_equipo = 0
+
+            gerentes_data.append({
+                "id": gerente.id,
+                "nombre": gerente.nombre,
+                "email": gerente.email,
+                "foto_url": gerente.serialize().get('foto_url'),
+                "metricas": {
+                    "total_reclutas_equipo": total_equipo,
+                    "tasa_exito_equipo": round(tasa_exito_equipo, 2)
+                },
+                "total_asesores": len(asesores_ids)
+            })
+        gerentes_data.sort(key=lambda g: g['metricas']['tasa_exito_equipo'], reverse=True)
+
+        # --- 3. Métricas de Asesores Individuales ---
+        query_asesores = db.session.query(
+            Usuario.id, Usuario.nombre, Usuario.email,
+            func.count(Recluta.id).label('total_reclutas'),
+            func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes'),
+            func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('amarillos'),
+            func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rojos')
+        ).outerjoin(Recluta, Usuario.id == Recluta.asesor_id).filter(Usuario.rol.in_(['asesor', 'gerente'])).group_by(Usuario.id).all()
+
+        metricas_asesores = []
+        for asesor in query_asesores:
+            total = asesor.total_reclutas or 0
+            verdes = asesor.verdes or 0
+            tasa_exito = (verdes / total * 100) if total > 0 else 0
+            performance_class = 'needs-improvement'
+            if tasa_exito >= 70: performance_class = "excellent"
+            elif tasa_exito >= 50: performance_class = "good"
+            elif tasa_exito >= 30: performance_class = "average"
+            
+            metricas_asesores.append({
+                "id": asesor.id,
+                "nombre": asesor.nombre or asesor.email,
+                "email": asesor.email,
+                "total_reclutas": total,
+                "estados": {"verdes": verdes, "amarillos": asesor.amarillos or 0, "rojos": asesor.rojos or 0},
+                "tasas": {"exito": round(tasa_exito, 1)},
+                "performance": {"score": round(tasa_exito, 1), "class": performance_class}
+            })
+        metricas_asesores.sort(key=lambda x: x['performance']['score'], reverse=True)
+
+        # --- 4. Insights ---
+        insights = {
+            "top_performers": [m for m in metricas_asesores[:3] if m['total_reclutas'] > 0],
+            "needs_improvement": [m for m in metricas_asesores if m['performance']['class'] == 'needs-improvement' and m['total_reclutas'] > 0]
+        }
+
+        # --- 5. Tendencia Temporal ---
+        tendencia = []
+        for i in range(6):
+            mes_inicio = (datetime.utcnow().replace(day=1) - timedelta(days=i*30)).replace(day=1)
+            mes_fin = (mes_inicio + timedelta(days=32)).replace(day=1)
+            query = db.session.query(func.count(Recluta.id).label('total')).filter(Recluta.fecha_registro >= mes_inicio, Recluta.fecha_registro < mes_fin).first()
+            tendencia.append({"periodo_nombre": mes_inicio.strftime('%B %Y'), "total": query.total or 0})
+        tendencia.reverse()
+
+        # --- 6. Ensamblar Respuesta ---
+        return jsonify({
+            "success": True,
+            "global_kpis": global_kpis,
+            "gerentes": gerentes_data,
+            "metricas_asesores": metricas_asesores,
+            "insights": insights,
+            "tendencia": tendencia,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error al generar métricas avanzadas: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al generar métricas avanzadas: {str(e)}"
+        }), 500
+
+
+# 📥 RUTA: Exportar métricas avanzadas en múltiples formatos
+@api_bp.route('/admin/exportar-metricas', methods=['POST'])
+@admin_required
+def exportar_metricas_admin():
+    """
+    Exporta métricas avanzadas en formato Excel, CSV o PDF según la selección del admin
+    """
+    try:
+        data = request.get_json()
+        formato = data.get('formato', 'excel')
+        incluir = data.get('incluir', {})
+
+        # Obtener datos de métricas
+        metricas_response = get_metricas_avanzadas()
+        if metricas_response[1] != 200:
+            return jsonify({"success": False, "message": "Error al obtener métricas"}), 500
+
+        metricas_data = metricas_response[0].get_json()
+
+        if formato == 'excel':
+            # Crear archivo Excel con múltiples hojas
+            from io import BytesIO
+            import xlsxwriter
+
+            output = BytesIO()
+            workbook = xlsxwriter.Workbook(output, {'in_memory': True})
+
+            # Hoja 1: KPIs Globales
+            worksheet1 = workbook.add_worksheet('KPIs Globales')
+            worksheet1.write('A1', 'Métrica')
+            worksheet1.write('B1', 'Valor')
+
+            kpis = metricas_data['global_kpis']
+            row = 1
+            for key, value in kpis.items():
+                if key != 'distribucion_global':
+                    worksheet1.write(row, 0, key.replace('_', ' ').title())
+                    worksheet1.write(row, 1, value)
+                    row += 1
+
+            # Hoja 2: Gerentes (si incluido)
+            if incluir.get('equipos', True):
+                worksheet2 = workbook.add_worksheet('Gerentes y Equipos')
+                headers = ['Nombre', 'Email', 'Total Asesores', 'Reclutas Equipo', 'Tasa Éxito %']
+                for col, header in enumerate(headers):
+                    worksheet2.write(0, col, header)
+
+                for row, gerente in enumerate(metricas_data['gerentes'], 1):
+                    worksheet2.write(row, 0, gerente['nombre'])
+                    worksheet2.write(row, 1, gerente['email'])
+                    worksheet2.write(row, 2, gerente['total_asesores'])
+                    worksheet2.write(row, 3, gerente['metricas']['total_reclutas_equipo'])
+                    worksheet2.write(row, 4, gerente['metricas']['tasa_exito_equipo'])
+
+            # Hoja 3: Asesores (si incluido)
+            if incluir.get('asesores', True):
+                worksheet3 = workbook.add_worksheet('Métricas Asesores')
+                headers = ['Nombre', 'Email', 'Total Reclutas', 'Activos', 'En Proceso', 'Rechazados', 'Tasa Éxito %', 'Performance']
+                for col, header in enumerate(headers):
+                    worksheet3.write(0, col, header)
+
+                for row, asesor in enumerate(metricas_data['metricas_asesores'], 1):
+                    worksheet3.write(row, 0, asesor['nombre'])
+                    worksheet3.write(row, 1, asesor['email'])
+                    worksheet3.write(row, 2, asesor['total_reclutas'])
+                    worksheet3.write(row, 3, asesor['estados']['verdes'])
+                    worksheet3.write(row, 4, asesor['estados']['amarillos'])
+                    worksheet3.write(row, 5, asesor['estados']['rojos'])
+                    worksheet3.write(row, 6, asesor['tasas']['exito'])
+                    worksheet3.write(row, 7, asesor['performance']['class'])
+
+            workbook.close()
+            output.seek(0)
+
+            return Response(
+                output.getvalue(),
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                headers={"Content-Disposition": f"attachment; filename=metricas_admin_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.xlsx"}
+            )
+
+        elif formato == 'csv':
+            import csv
+            from io import StringIO
+
+            output = StringIO()
+            writer = csv.writer(output)
+
+            # Escribir datos de asesores
+            writer.writerow(['Nombre', 'Email', 'Total Reclutas', 'Activos', 'En Proceso', 'Rechazados', 'Tasa Éxito %', 'Performance'])
+            for asesor in metricas_data['metricas_asesores']:
+                writer.writerow([
+                    asesor['nombre'], asesor['email'], asesor['total_reclutas'],
+                    asesor['estados']['verdes'], asesor['estados']['amarillos'],
+                    asesor['estados']['rojos'], asesor['tasas']['exito'], asesor['performance']['class']
+                ])
+
+            output.seek(0)
+            return Response(
+                output.getvalue(),
+                mimetype='text/csv',
+                headers={"Content-Disposition": f"attachment; filename=metricas_admin_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"}
+            )
+
+        else:
+            return jsonify({"success": False, "message": "Formato no soportado"}), 400
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error al exportar métricas: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al exportar: {str(e)}"}), 500
+
+
+# 👤 RUTA: Obtener detalle específico de un asesor
+@api_bp.route('/admin/asesor-detalle/<int:asesor_id>', methods=['GET'])
+@admin_required
+def get_asesor_detalle(asesor_id):
+    """
+    Obtiene información detallada de un asesor específico para el modal
+    """
+    try:
+        asesor = Usuario.query.get_or_404(asesor_id)
+
+        # Estadísticas del asesor
+        stats = db.session.query(
+            func.count(Recluta.id).label('total'),
+            func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes'),
+            func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('amarillos'),
+            func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rojos')
+        ).filter(Recluta.asesor_id == asesor_id).first()
+
+        total = stats.total or 0
+        verdes = stats.verdes or 0
+        amarillos = stats.amarillos or 0
+        rojos = stats.rojos or 0
+
+        tasa_exito = (verdes / total * 100) if total > 0 else 0
+
+        # Reclutas recientes
+        reclutas_recientes = db.session.query(Recluta).filter(
+            Recluta.asesor_id == asesor_id
+        ).order_by(Recluta.fecha_registro.desc()).limit(10).all()
+
+        # Tendencia últimos 6 meses
+        tendencia_mensual = []
+        for i in range(6):
+            mes_inicio = (datetime.utcnow().replace(day=1) - timedelta(days=i*30)).replace(day=1)
+            mes_fin = (mes_inicio + timedelta(days=32)).replace(day=1)
+
+            count = db.session.query(func.count(Recluta.id)).filter(
+                Recluta.asesor_id == asesor_id,
+                Recluta.fecha_registro >= mes_inicio,
+                Recluta.fecha_registro < mes_fin
+            ).scalar()
+
+            tendencia_mensual.append({
+                "mes": mes_inicio.strftime('%b %Y'),
+                "total": count or 0
+            })
+        tendencia_mensual.reverse()
+
+        # Performance class
+        performance_class = 'needs-improvement'
+        if tasa_exito >= 70: performance_class = "excellent"
+        elif tasa_exito >= 50: performance_class = "good"
+        elif tasa_exito >= 30: performance_class = "average"
+
+        return jsonify({
+            "success": True,
+            "asesor": {
+                "id": asesor.id,
+                "nombre": asesor.nombre,
+                "email": asesor.email,
+                "rol": asesor.rol,
+                "fecha_registro": asesor.fecha_registro.isoformat() if asesor.fecha_registro else None,
+                "is_active": asesor.is_active,
+                "foto_url": asesor.serialize().get('foto_url')
+            },
+            "estadisticas": {
+                "total_reclutas": total,
+                "estados": {"verdes": verdes, "amarillos": amarillos, "rojos": rojos},
+                "tasa_exito": round(tasa_exito, 2),
+                "performance_class": performance_class
+            },
+            "reclutas_recientes": [r.serialize() for r in reclutas_recientes],
+            "tendencia_mensual": tendencia_mensual
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error al obtener detalle del asesor {asesor_id}: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al obtener detalle: {str(e)}"}), 500
+
+
+# 🏢 RUTA: Métricas específicas de equipos y gerentes
+@api_bp.route('/admin/metricas/equipos', methods=['GET'])
+@admin_required
+def get_metricas_equipos():
+    """
+    Obtiene métricas específicas de equipos con filtros avanzados
+    """
+    try:
+        filtro = request.args.get('filtro', 'todos')
+        ordenar = request.args.get('ordenar', 'performance')
+        vista = request.args.get('vista', 'jerarquica')
+
+        # Obtener gerentes activos
+        gerentes = Usuario.query.filter_by(rol='gerente', is_active=True).all()
+        equipos_data = []
+
+        for gerente in gerentes:
+            # Obtener asesores del gerente
+            asesores_ids = [a.id for a in gerente.asesores if a.is_active]
+            equipo_completo_ids = asesores_ids + [gerente.id]
+
+            # Estadísticas del equipo
+            if equipo_completo_ids:
+                stats = db.session.query(
+                    func.count(Recluta.id).label('total'),
+                    func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes'),
+                    func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('amarillos'),
+                    func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rojos')
+                ).filter(Recluta.asesor_id.in_(equipo_completo_ids)).first()
+
+                total_equipo = stats.total or 0
+                verdes_equipo = stats.verdes or 0
+                tasa_exito = (verdes_equipo / total_equipo * 100) if total_equipo > 0 else 0
+            else:
+                total_equipo = verdes_equipo = tasa_exito = 0
+
+            # Datos del equipo
+            equipo_info = {
+                "gerente": {
+                    "id": gerente.id,
+                    "nombre": gerente.nombre,
+                    "email": gerente.email,
+                    "foto_url": gerente.serialize().get('foto_url')
+                },
+                "equipo_size": len(asesores_ids),
+                "total_reclutas": total_equipo,
+                "tasa_exito": round(tasa_exito, 2),
+                "estados": {
+                    "verdes": verdes_equipo,
+                    "amarillos": stats.amarillos or 0,
+                    "rojos": stats.rojos or 0
+                },
+                "asesores": []
+            }
+
+            # Agregar información de asesores si se solicita vista detallada
+            if vista == 'jerarquica':
+                for asesor_id in asesores_ids:
+                    asesor = Usuario.query.get(asesor_id)
+                    if asesor:
+                        asesor_stats = db.session.query(
+                            func.count(Recluta.id).label('total'),
+                            func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes')
+                        ).filter(Recluta.asesor_id == asesor_id).first()
+
+                        total_asesor = asesor_stats.total or 0
+                        tasa_asesor = (asesor_stats.verdes / total_asesor * 100) if total_asesor > 0 else 0
+
+                        equipo_info["asesores"].append({
+                            "id": asesor.id,
+                            "nombre": asesor.nombre,
+                            "email": asesor.email,
+                            "total_reclutas": total_asesor,
+                            "tasa_exito": round(tasa_asesor, 2)
+                        })
+
+            equipos_data.append(equipo_info)
+
+        # Aplicar filtros
+        if filtro == 'top-performance':
+            equipos_data = [e for e in equipos_data if e['tasa_exito'] >= 60]
+        elif filtro == 'gerentes':
+            # Ya están todos los gerentes
+            pass
+
+        # Aplicar ordenamiento
+        if ordenar == 'performance':
+            equipos_data.sort(key=lambda x: x['tasa_exito'], reverse=True)
+        elif ordenar == 'equipo-size':
+            equipos_data.sort(key=lambda x: x['equipo_size'], reverse=True)
+        elif ordenar == 'total-reclutas':
+            equipos_data.sort(key=lambda x: x['total_reclutas'], reverse=True)
+        elif ordenar == 'nombre':
+            equipos_data.sort(key=lambda x: x['gerente']['nombre'])
+
+        # Asesores independientes
+        asesores_independientes = Usuario.query.filter(
+            Usuario.rol == 'asesor',
+            Usuario.is_active == True,
+            Usuario.gerente_id.is_(None)
+        ).all()
+
+        independientes_data = []
+        for asesor in asesores_independientes:
+            stats = db.session.query(
+                func.count(Recluta.id).label('total'),
+                func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('verdes')
+            ).filter(Recluta.asesor_id == asesor.id).first()
+
+            total = stats.total or 0
+            tasa = (stats.verdes / total * 100) if total > 0 else 0
+
+            independientes_data.append({
+                "id": asesor.id,
+                "nombre": asesor.nombre,
+                "email": asesor.email,
+                "total_reclutas": total,
+                "tasa_exito": round(tasa, 2)
+            })
+
+        return jsonify({
+            "success": True,
+            "equipos": equipos_data,
+            "asesores_independientes": independientes_data,
+            "resumen": {
+                "total_equipos": len(equipos_data),
+                "total_independientes": len(independientes_data),
+                "promedio_tasa_exito": round(sum(e['tasa_exito'] for e in equipos_data) / len(equipos_data), 2) if equipos_data else 0
+            }
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error al obtener métricas de equipos: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al obtener métricas de equipos: {str(e)}"}), 500
