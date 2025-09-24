@@ -698,6 +698,52 @@ def delete_entrevista(id):
         current_app.logger.error(f"Error al eliminar entrevista {id}: {str(e)}")
         return jsonify({"success": False, "message": f"Error al eliminar entrevista: {str(e)}"}), 500
 
+
+@api_bp.route('/entrevistas/counts', methods=['GET'])
+@login_required
+def get_entrevista_counts():
+    """
+    Obtiene el número de entrevistas por día para un mes y año específicos.
+    Filtra los resultados según el rol del usuario (admin, gerente, asesor).
+    """
+    try:
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
+
+        if not year or not month:
+            return jsonify({"success": False, "message": "Los parámetros 'year' y 'month' son requeridos"}), 400
+
+        user_role = getattr(current_user, 'rol', 'asesor')
+
+        query = db.session.query(
+            extract('day', Entrevista.fecha).label('day'),
+            func.count(Entrevista.id).label('count')
+        ).filter(
+            extract('year', Entrevista.fecha) == year,
+            extract('month', Entrevista.fecha) == month
+        )
+
+        if user_role == 'asesor':
+            query = query.join(Recluta, Entrevista.recluta_id == Recluta.id).filter(Recluta.asesor_id == current_user.id)
+        elif user_role == 'gerente':
+            mis_asesores_ids = [asesor.id for asesor in current_user.get_mis_asesores()]
+            all_viewable_ids = mis_asesores_ids + [current_user.id]
+            query = query.join(Recluta, Entrevista.recluta_id == Recluta.id).filter(Recluta.asesor_id.in_(all_viewable_ids))
+        
+        # Los administradores no necesitan filtro adicional
+
+        results = query.group_by(extract('day', Entrevista.fecha)).all()
+
+        # Formatear la respuesta como { "YYYY-MM-DD": count, ... }
+        counts = {f"{year}-{month:02d}-{day:02d}": count for day, count in results}
+        
+        return jsonify({"success": True, "counts": counts})
+
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener conteo de entrevistas: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al obtener conteo de entrevistas: {str(e)}"}), 500
+
+
 # ----- API DE TIMELINE PERSONALIZADO POR RECLUTA -----
 
 @api_bp.route('/debug/timeline-setup', methods=['GET'])

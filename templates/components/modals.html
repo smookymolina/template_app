@@ -760,6 +760,18 @@
     </div>
 </div>
 
+<!-- ===========================================
+     Sub-Modal Template para Opciones del Día
+=========================================== -->
+<div id="day-options-submodal-template" class="day-options-submodal" style="display: none; position: fixed; z-index: 1010;">
+    <div class="day-option" data-action="add">
+        <i class="fas fa-plus"></i> Agendar Entrevista
+    </div>
+    <div class="day-option" data-action="view">
+        <i class="fas fa-eye"></i> Ver Entrevistas
+    </div>
+</div>
+
 <script>
 // Event listeners para los modales de reclutas
 // Función unificada para abrir el modal de timeline
@@ -862,3 +874,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<!-- ===========================================
+     Modal para ver Entrevistas del Día
+=========================================== -->
+<div id="day-interviews-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="day-interviews-modal-title">Entrevistas del Día</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+        <div class="modal-body" id="day-interviews-modal-body">
+            <!-- La lista de entrevistas se insertará aquí -->
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary close-modal">
+                <i class="fas fa-times"></i> Cerrar
+            </button>
+        </div>
+    </div>
+</div>

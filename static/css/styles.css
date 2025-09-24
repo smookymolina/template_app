@@ -2024,12 +2024,164 @@ body.admin-view #reclutas-table td:last-child {
         font-size: 12px;
     }
     
-    .actions-column {
-        padding: 6px 8px !important;
-        gap: 4px;
-        min-width: 120px;
-        width: 120px;
+    .recluta-foto {
+        width: 32px;
+        height: 32px;
     }
+}
+
+/* ===== COLORES DE DÍAS DEL CALENDARIO POR CONTEO DE ENTREVISTAS ===== */
+.calendar-day.interview-count-1 {
+    background-color: #28a745; /* Verde */
+    color: white;
+}
+
+.calendar-day.interview-count-2-4 {
+    background-color: #ffc107; /* Amarillo */
+    color: #333;
+}
+
+.calendar-day.interview-count-5-plus {
+    background-color: #dc3545; /* Rojo */
+    color: white;
+}
+
+/* Asegurar que el número del día sea legible en todos los casos */
+.calendar-day.interview-count-1 .calendar-day-number,
+.calendar-day.interview-count-5-plus .calendar-day-number {
+    color: white;
+    font-weight: bold;
+}
+
+.calendar-day.interview-count-2-4 .calendar-day-number {
+    color: #333;
+    font-weight: bold;
+}
+
+/* Calendar Day Highlighting */
+.calendar-day.interview-count-1 {
+    background-color: rgba(40, 167, 69, 0.2); /* green */
+    border: 1px solid rgba(40, 167, 69, 0.3);
+}
+.calendar-day.interview-count-1:hover {
+    background-color: rgba(40, 167, 69, 0.4);
+}
+
+.calendar-day.interview-count-2-4 {
+    background-color: rgba(255, 193, 7, 0.3); /* yellow */
+    border: 1px solid rgba(255, 193, 7, 0.4);
+}
+.calendar-day.interview-count-2-4:hover {
+    background-color: rgba(255, 193, 7, 0.5);
+}
+
+.calendar-day.interview-count-5-plus {
+    background-color: rgba(220, 53, 69, 0.3); /* red */
+    border: 1px solid rgba(220, 53, 69, 0.4);
+}
+.calendar-day.interview-count-5-plus:hover {
+    background-color: rgba(220, 53, 69, 0.5);
+}
+
+.calendar-day[class*="interview-count-"] {
+    cursor: pointer;
+}
+
+/* Day Interviews Modal */
+.interview-list-modal {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.interview-item-modal {
+    display: flex;
+    align-items: center;
+    padding: 15px 10px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+}
+
+.interview-item-modal:last-child {
+    border-bottom: none;
+}
+
+.interview-item-modal:hover {
+    background-color: #f8f9fa;
+}
+
+.interview-time {
+    font-weight: 600;
+    color: var(--primary-color);
+    width: 80px;
+}
+
+.interview-details {
+    flex-grow: 1;
+}
+
+.interview-candidate {
+    font-weight: 500;
+    color: var(--dark-color);
+}
+
+.interview-type {
+    font-size: 0.9em;
+    color: var(--text-light);
+}
+
+.interview-actions .btn-icon-small {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-light);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+}
+
+.interview-actions .btn-icon-small:hover {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* Day Options Sub-modal */
+.day-options-submodal {
+    position: fixed;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-lg);
+    z-index: 1010;
+    padding: 5px;
+    animation: fadeIn 0.1s ease-out;
+}
+
+.dark-mode .day-options-submodal {
+    background-color: var(--light-color);
+}
+
+.day-option {
+    padding: 10px 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+
+.day-option:hover {
+    background-color: var(--primary-light);
+}
+
+.dark-mode .day-option:hover {
+    background-color: #2a2b3d;
+}
+
+.day-option i {
+    color: var(--primary-color);
 }
 
 @media (max-width: 576px) {

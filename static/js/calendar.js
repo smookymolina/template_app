@@ -80,6 +80,21 @@ const Api = {
             handleApiError(error, 'Error al eliminar la entrevista.');
             throw error;
         }
+    },
+
+    async getInterviewCounts(year, month) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/entrevistas/counts?year=${year}&month=${month + 1}`); // El backend espera el mes 1-12
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error al obtener el conteo de entrevistas');
+            }
+            const data = await response.json();
+            return data.counts;
+        } catch (error) {
+            handleApiError(error, 'Error al cargar el conteo de entrevistas.');
+            return {};
+        }
     }
 };
 
@@ -88,6 +103,7 @@ const Calendar = {
     currentMonth: new Date().getMonth(),
     currentYear: new Date().getFullYear(),
     calendarEvents: [],
+    interviewCounts: {},
     monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
     dayNames: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
     monthShortNames: ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'],
@@ -147,10 +163,9 @@ const Calendar = {
             dayDiv.innerHTML = `<div class="calendar-day-number">${prevMonthDate.getDate()}</div>`;
             dayDiv.dataset.date = this.formatDateForDataset(prevMonthDate);
             
-            // Añadir evento para programar entrevista
-            dayDiv.addEventListener('click', () => {
-                console.log('Calendar: Click en día (mes anterior):', dayDiv.dataset.date);
-                this.openAddEventModal(dayDiv.dataset.date);
+            dayDiv.addEventListener('click', (e) => {
+                const date = dayDiv.dataset.date;
+                this.showDayOptionsSubModal(e.currentTarget, date);
             });
             
             calendarGrid.appendChild(dayDiv);
@@ -173,10 +188,9 @@ const Calendar = {
             dayDiv.innerHTML = `<div class="calendar-day-number">${i}</div>`;
             dayDiv.dataset.date = this.formatDateForDataset(currentDate);
             
-            // Añadir evento para programar entrevista
-            dayDiv.addEventListener('click', () => {
-                console.log('Calendar: Click en día (mes actual):', dayDiv.dataset.date);
-                this.openAddEventModal(dayDiv.dataset.date);
+            dayDiv.addEventListener('click', (e) => {
+                const date = dayDiv.dataset.date;
+                this.showDayOptionsSubModal(e.currentTarget, date);
             });
             
             calendarGrid.appendChild(dayDiv);
@@ -194,15 +208,127 @@ const Calendar = {
             dayDiv.innerHTML = `<div class="calendar-day-number">${i}</div>`;
             dayDiv.dataset.date = this.formatDateForDataset(nextMonthDate);
             
-            // Añadir evento para programar entrevista
-            dayDiv.addEventListener('click', () => {
-                console.log('Calendar: Click en día (mes siguiente):', dayDiv.dataset.date);
-                this.openAddEventModal(dayDiv.dataset.date);
+            dayDiv.addEventListener('click', (e) => {
+                const date = dayDiv.dataset.date;
+                this.showDayOptionsSubModal(e.currentTarget, date);
             });
             
             calendarGrid.appendChild(dayDiv);
         }
         console.log('Calendar: generateCalendarDays - Días generados.');
+    },
+
+    showDayInterviewsModal: function(date, events) {
+        const modal = document.getElementById('day-interviews-modal');
+        if (!modal) {
+            console.error('Modal "day-interviews-modal" not found');
+            return;
+        }
+
+        const modalTitle = modal.querySelector('#day-interviews-modal-title');
+        const modalBody = modal.querySelector('#day-interviews-modal-body');
+
+        const formattedDate = UI.formatDate(date, 'full');
+        modalTitle.textContent = `Entrevistas para ${formattedDate}`;
+
+        modalBody.innerHTML = ''; // Clear previous content
+
+        if (events.length === 0) {
+            modalBody.innerHTML = '<p>No hay entrevistas para este día.</p>';
+        } else {
+            const list = document.createElement('ul');
+            list.className = 'interview-list-modal';
+            events.forEach(event => {
+                const item = document.createElement('li');
+                item.className = 'interview-item-modal';
+                item.innerHTML = `
+                    <div class="interview-time">${event.hora}</div>
+                    <div class="interview-details">
+                        <div class="interview-candidate">${event.candidato_nombre}</div>
+                        <div class="interview-type">${event.tipo}</div>
+                    </div>
+                    <div class="interview-actions">
+                        <button class="btn-icon-small view-details-btn"><i class="fas fa-eye"></i></button>
+                    </div>
+                `;
+                item.querySelector('.view-details-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.viewEventDetails(event);
+                    UI.closeModal('day-interviews-modal');
+                });
+                list.appendChild(item);
+            });
+            modalBody.appendChild(list);
+        }
+
+        // Setup close buttons
+        modal.querySelectorAll('.close-modal').forEach(btn => {
+            btn.onclick = () => UI.closeModal('day-interviews-modal');
+        });
+
+        UI.showModal('day-interviews-modal');
+    },
+
+    showDayOptionsSubModal: function(targetElement, date) {
+        this.closeDayOptionsSubModal();
+
+        const template = document.getElementById('day-options-submodal-template');
+        if (!template) {
+            console.error('Sub-modal template not found');
+            return;
+        }
+
+        const subModal = template.cloneNode(true);
+        subModal.id = 'day-options-submodal-instance';
+        subModal.style.display = 'block';
+
+        const interviewCount = this.interviewCounts[date] || 0;
+        const viewOption = subModal.querySelector('[data-action="view"]');
+
+        if (interviewCount > 0) {
+            viewOption.style.display = 'flex';
+            const textNode = Array.from(viewOption.childNodes).find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '');
+            if(textNode) {
+                textNode.textContent = ` Ver Entrevistas (${interviewCount})`;
+            }
+        } else {
+            viewOption.style.display = 'none';
+        }
+
+        document.body.appendChild(subModal);
+
+        // Positioning
+        const rect = targetElement.getBoundingClientRect();
+        subModal.style.left = `${rect.left}px`;
+        subModal.style.top = `${rect.bottom + 5}px`; // 5px offset
+
+        // Event listeners
+        subModal.addEventListener('click', (e) => {
+            const actionTarget = e.target.closest('.day-option');
+            if (actionTarget) {
+                const action = actionTarget.dataset.action;
+                if (action === 'add') {
+                    this.openAddEventModal(date);
+                } else if (action === 'view') {
+                    const events = this.getEventsForDate(date);
+                    this.showDayInterviewsModal(date, events);
+                }
+                this.closeDayOptionsSubModal();
+            }
+        });
+
+        // Outside click handler
+        setTimeout(() => {
+            document.addEventListener('click', this.closeDayOptionsSubModal.bind(this), { once: true });
+        }, 0);
+        subModal.addEventListener('click', e => e.stopPropagation());
+    },
+
+    closeDayOptionsSubModal: function() {
+        const subModal = document.getElementById('day-options-submodal-instance');
+        if (subModal) {
+            subModal.remove();
+        }
     },
     
     /**
@@ -256,49 +382,41 @@ const Calendar = {
      * Carga y muestra eventos guardados
      */
     loadEvents: async function() {
-        console.log('Calendar: loadEvents - Cargando eventos del servidor...');
+        console.log('Calendar: loadEvents - Cargando datos del servidor...');
         try {
+            // 1. Cargar conteos de entrevistas para el mes actual
+            this.interviewCounts = await Api.getInterviewCounts(this.currentYear, this.currentMonth);
+            console.log('Calendar: loadEvents - Conteos de entrevistas cargados:', this.interviewCounts);
+
+            // 2. Cargar detalles de todas las entrevistas (como antes)
             const allEvents = await Api.getEntrevistas();
             console.log('Calendar: loadEvents - Eventos raw del servidor:', allEvents);
 
             if (!Array.isArray(allEvents)) {
                 console.error('Calendar: loadEvents - Los eventos no son un array:', allEvents);
                 this.calendarEvents = [];
-                this.updateUpcomingEventsList();
-                return;
+            } else {
+                // Aplicar filtros basados en roles
+                this.calendarEvents = this.applyRoleBasedFilters(allEvents);
+                console.log('Calendar: loadEvents - Eventos después de filtros:', this.calendarEvents);
             }
 
-            // Aplicar filtros basados en roles
-            const filteredEvents = this.applyRoleBasedFilters(allEvents);
-            this.calendarEvents = filteredEvents;
-            console.log('Calendar: loadEvents - Eventos después de filtros:', this.calendarEvents);
-
+            // 3. Actualizar la UI
             // Limpiar eventos existentes en el calendario antes de mostrar los nuevos
             document.querySelectorAll('.calendar-event').forEach(el => el.remove());
 
-            // Filtrar eventos del mes actual usando los eventos filtrados
-            const currentMonthEvents = filteredEvents.filter(event => {
-                const eventDate = new Date(event.fecha);
-                return eventDate.getMonth() === this.currentMonth &&
-                       eventDate.getFullYear() === this.currentYear;
-            });
-            console.log('Calendar: loadEvents - Eventos para el mes actual:', currentMonthEvents.length);
-
-            // Mostrar eventos en el calendario
-            currentMonthEvents.forEach(event => {
-                this.displayEventInCalendar(event);
-            });
-
-            // Actualizar colores de todos los días después de cargar todos los eventos
+            // Actualizar colores de todos los días usando los conteos
             this.updateAllDayColors();
 
             // Actualizar lista de próximas entrevistas
             this.updateUpcomingEventsList();
             console.log('Calendar: loadEvents - Proceso completado exitosamente.');
+
         } catch (error) {
-            console.error('Calendar: loadEvents - Error al cargar eventos:', error);
-            showError('Error al cargar las entrevistas del servidor.');
+            console.error('Calendar: loadEvents - Error al cargar datos del calendario:', error);
+            showError('Error al cargar los datos del calendario.');
             this.calendarEvents = [];
+            this.interviewCounts = {};
             this.updateUpcomingEventsList();
         }
     },
@@ -324,23 +442,7 @@ const Calendar = {
             return;
         }
 
-        // Crear elemento del evento
-        const eventElement = document.createElement('div');
-        eventElement.className = 'calendar-event';
-        eventElement.textContent = `${event.hora} - ${event.candidato_nombre || event.title}`;
-        eventElement.dataset.eventId = event.id;
-
-        // Añadir evento al hacer clic para ver detalles
-        eventElement.addEventListener('click', (e) => {
-            e.stopPropagation(); // Evitar que se active el evento del día
-            this.showEventOptions(eventElement, event);
-        });
-
-        // Añadir evento al día
-        dayCell.appendChild(eventElement);
-        console.log('Calendar: displayEventInCalendar - Evento añadido a la celda.');
-
-        // Aplicar colores basados en el conteo de entrevistas después de agregar el evento
+        // No renderizar el evento directamente, solo actualizar el color del día
         this.updateDayColorByInterviewCount(dayCell, formattedDate);
     },
     
@@ -1529,9 +1631,8 @@ const Calendar = {
     updateDayColorByInterviewCount: function(dayCell, formattedDate) {
         if (!dayCell) return;
 
-        // Contar eventos para este día
-        const eventsForDay = this.getEventsForDate(formattedDate);
-        const eventCount = eventsForDay.length;
+        // Obtener el conteo directamente del objeto de conteos
+        const eventCount = this.interviewCounts[formattedDate] || 0;
 
         // Remover clases de conteo existentes
         dayCell.classList.remove('interview-count-1', 'interview-count-2-4', 'interview-count-5-plus');
@@ -1544,8 +1645,6 @@ const Calendar = {
         } else if (eventCount >= 5) {
             dayCell.classList.add('interview-count-5-plus');
         }
-
-        console.log(`Calendar: updateDayColorByInterviewCount - Día ${formattedDate}: ${eventCount} entrevistas`);
     },
 
     /**
