@@ -68,8 +68,14 @@
     <script type="module" src="{{ url_for('static', filename='js/auth.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/configuracion.js') }}"></script>
+
+    <!-- 📊 MÉTRICAS ADMIN - LEGACY -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/metricas-admin.css') }}">
     <script type="module" src="{{ url_for('static', filename='js/admin.js') }}"></script>
+
+    <!-- 🎯 MÉTRICAS ADMIN V2.0 - NUEVO SISTEMA -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/metricas-admin-v2.css') }}">
+    <script src="{{ url_for('static', filename='js/metricas-admin-v2.js') }}"></script>
     {% endblock %}
 </body>
 </html>

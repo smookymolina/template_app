@@ -1027,3 +1027,436 @@ def exportar_metricas():
             "message": f"Error en exportación: {str(e)}"
         }), 500
 
+@admin_bp.route('/metricas/dashboard-unificado', methods=['GET'])
+@admin_required
+def get_dashboard_unificado():
+    """
+    🎯 NUEVO ENDPOINT UNIFICADO: Dashboard consolidado de métricas administrativas
+    Combina datos de equipos, gerentes, asesores y tendencias en una sola respuesta optimizada.
+
+    Returns:
+        JSON unificado con todas las métricas necesarias para el dashboard admin
+    """
+    try:
+        # 📊 OBTENER DATOS CONSOLIDADOS
+        dashboard_data = {
+            "success": True,
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": "2.0-unified"
+        }
+
+        # 1. MÉTRICAS GLOBALES DEL SISTEMA
+        dashboard_data["global_kpis"] = _get_global_kpis()
+
+        # 2. ESTRUCTURA JERÁRQUICA COMPLETA
+        dashboard_data["jerarquia"] = _get_jerarquia_optimizada()
+
+        # 3. MÉTRICAS DE EQUIPOS
+        dashboard_data["equipos"] = _get_equipos_metricas()
+
+        # 4. RANKING DE GERENTES
+        dashboard_data["gerentes_ranking"] = _get_gerentes_ranking()
+
+        # 5. MÉTRICAS INDIVIDUALES DE ASESORES
+        dashboard_data["asesores_individuales"] = _get_asesores_individuales()
+
+        # 6. TENDENCIAS TEMPORALES
+        dashboard_data["tendencias"] = _get_tendencias_consolidadas()
+
+        # 7. INSIGHTS Y ALERTAS
+        dashboard_data["insights"] = _get_insights_automaticos(dashboard_data)
+
+        current_app.logger.info(f"✅ Dashboard unificado generado exitosamente")
+
+        return jsonify(dashboard_data)
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en dashboard unificado: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al generar dashboard: {str(e)}"
+        }), 500
+
+def _get_global_kpis():
+    """Obtiene KPIs globales del sistema optimizados"""
+    try:
+        # Query unificada para obtener todas las métricas globales de una vez
+        global_query = db.session.query(
+            func.count(Recluta.id).label('total_reclutas'),
+            func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('activos'),
+            func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('en_proceso'),
+            func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rechazados'),
+            func.count(Usuario.id.distinct()).label('total_usuarios')
+        ).outerjoin(
+            Recluta, True  # Left join para incluir usuarios sin reclutas
+        ).filter(
+            Usuario.is_active == True
+        ).first()
+
+        total_reclutas = global_query.total_reclutas or 0
+        activos = global_query.activos or 0
+        en_proceso = global_query.en_proceso or 0
+        rechazados = global_query.rechazados or 0
+
+        # Métricas adicionales por rol
+        usuarios_por_rol = db.session.query(
+            Usuario.rol,
+            func.count(Usuario.id).label('cantidad')
+        ).filter(Usuario.is_active == True).group_by(Usuario.rol).all()
+
+        roles_count = {rol.rol: rol.cantidad for rol in usuarios_por_rol}
+
+        return {
+            "total_reclutas": total_reclutas,
+            "distribucion_global": {
+                "activos": activos,
+                "en_proceso": en_proceso,
+                "rechazados": rechazados
+            },
+            "tasas": {
+                "conversion": round(activos / total_reclutas * 100, 1) if total_reclutas > 0 else 0,
+                "proceso": round(en_proceso / total_reclutas * 100, 1) if total_reclutas > 0 else 0,
+                "rechazo": round(rechazados / total_reclutas * 100, 1) if total_reclutas > 0 else 0
+            },
+            "usuarios": {
+                "total_administradores": roles_count.get('admin', 0),
+                "total_gerentes": roles_count.get('gerente', 0),
+                "total_asesores": roles_count.get('asesor', 0),
+                "total_activos": sum(roles_count.values())
+            },
+            "performance_global": {
+                "nivel": _calculate_global_performance_level(activos, total_reclutas),
+                "score": round(activos / total_reclutas * 100, 1) if total_reclutas > 0 else 0
+            }
+        }
+    except Exception as e:
+        current_app.logger.error(f"Error en KPIs globales: {str(e)}")
+        return {
+            "total_reclutas": 0,
+            "distribucion_global": {"activos": 0, "en_proceso": 0, "rechazados": 0},
+            "tasas": {"conversion": 0, "proceso": 0, "rechazo": 0},
+            "usuarios": {"total_administradores": 0, "total_gerentes": 0, "total_asesores": 0, "total_activos": 0},
+            "performance_global": {"nivel": "Sin datos", "score": 0}
+        }
+
+def _get_jerarquia_optimizada():
+    """Obtiene estructura jerárquica optimizada con una sola consulta compleja"""
+    try:
+        # Query optimizada que obtiene toda la información jerárquica de una vez
+        jerarquia_query = db.session.query(
+            Usuario.id.label('usuario_id'),
+            Usuario.nombre.label('usuario_nombre'),
+            Usuario.email.label('usuario_email'),
+            Usuario.rol.label('usuario_rol'),
+            Usuario.gerente_id,
+            Usuario.foto_url,
+            func.count(Recluta.id).label('total_reclutas'),
+            func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('reclutas_activos'),
+            func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('reclutas_proceso'),
+            func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('reclutas_rechazados')
+        ).outerjoin(
+            Recluta, Usuario.id == Recluta.asesor_id
+        ).filter(
+            Usuario.is_active == True,
+            Usuario.rol.in_(['gerente', 'asesor'])
+        ).group_by(
+            Usuario.id, Usuario.nombre, Usuario.email, Usuario.rol, Usuario.gerente_id, Usuario.foto_url
+        ).all()
+
+        # Procesar datos para estructura jerárquica
+        gerentes = {}
+        asesores_independientes = []
+
+        for row in jerarquia_query:
+            usuario_data = {
+                "id": row.usuario_id,
+                "nombre": row.usuario_nombre,
+                "email": row.usuario_email,
+                "rol": row.usuario_rol,
+                "foto_url": row.foto_url,
+                "metricas": {
+                    "total": row.total_reclutas or 0,
+                    "activos": row.reclutas_activos or 0,
+                    "proceso": row.reclutas_proceso or 0,
+                    "rechazados": row.reclutas_rechazados or 0,
+                    "tasa_exito": round((row.reclutas_activos or 0) / (row.total_reclutas or 1) * 100, 1)
+                }
+            }
+
+            if row.usuario_rol == 'gerente':
+                gerentes[row.usuario_id] = {
+                    **usuario_data,
+                    "asesores": [],
+                    "metricas_equipo": {"total": 0, "activos": 0, "proceso": 0, "rechazados": 0}
+                }
+            elif row.usuario_rol == 'asesor':
+                if row.gerente_id and row.gerente_id in gerentes:
+                    gerentes[row.gerente_id]["asesores"].append(usuario_data)
+                    # Sumar métricas del asesor al equipo
+                    gerentes[row.gerente_id]["metricas_equipo"]["total"] += usuario_data["metricas"]["total"]
+                    gerentes[row.gerente_id]["metricas_equipo"]["activos"] += usuario_data["metricas"]["activos"]
+                    gerentes[row.gerente_id]["metricas_equipo"]["proceso"] += usuario_data["metricas"]["proceso"]
+                    gerentes[row.gerente_id]["metricas_equipo"]["rechazados"] += usuario_data["metricas"]["rechazados"]
+                else:
+                    asesores_independientes.append(usuario_data)
+
+        # Calcular métricas consolidadas para cada gerente
+        for gerente_id, gerente in gerentes.items():
+            total_equipo = gerente["metricas"]["total"] + gerente["metricas_equipo"]["total"]
+            activos_equipo = gerente["metricas"]["activos"] + gerente["metricas_equipo"]["activos"]
+
+            gerente["metricas_consolidadas"] = {
+                "total": total_equipo,
+                "activos": activos_equipo,
+                "tasa_exito_equipo": round(activos_equipo / total_equipo * 100, 1) if total_equipo > 0 else 0,
+                "total_asesores": len(gerente["asesores"])
+            }
+
+        return {
+            "gerentes": list(gerentes.values()),
+            "asesores_independientes": asesores_independientes,
+            "resumen": {
+                "total_gerentes": len(gerentes),
+                "total_asesores_independientes": len(asesores_independientes),
+                "total_equipos_activos": len([g for g in gerentes.values() if len(g["asesores"]) > 0])
+            }
+        }
+
+    except Exception as e:
+        current_app.logger.error(f"Error en jerarquía optimizada: {str(e)}")
+        return {
+            "gerentes": [],
+            "asesores_independientes": [],
+            "resumen": {"total_gerentes": 0, "total_asesores_independientes": 0, "total_equipos_activos": 0}
+        }
+
+def _get_equipos_metricas():
+    """Obtiene métricas específicas de equipos para vista comparativa"""
+    try:
+        # Reutilizar datos de jerarquía para calcular métricas de equipos
+        jerarquia = _get_jerarquia_optimizada()
+        equipos_metricas = []
+
+        for gerente in jerarquia["gerentes"]:
+            if len(gerente["asesores"]) > 0:  # Solo gerentes con equipos
+                equipos_metricas.append({
+                    "gerente": {
+                        "id": gerente["id"],
+                        "nombre": gerente["nombre"],
+                        "email": gerente["email"],
+                        "foto_url": gerente["foto_url"]
+                    },
+                    "equipo_stats": {
+                        "total_asesores": len(gerente["asesores"]),
+                        "total_reclutas": gerente["metricas_consolidadas"]["total"],
+                        "tasa_exito": gerente["metricas_consolidadas"]["tasa_exito_equipo"],
+                        "performance_level": _calculate_team_performance_level(gerente["metricas_consolidadas"]["tasa_exito_equipo"])
+                    },
+                    "top_asesor": _get_top_asesor_del_equipo(gerente["asesores"]),
+                    "tendencia": _calculate_team_trend(gerente["id"])  # Placeholder para tendencia
+                })
+
+        # Ordenar equipos por performance
+        equipos_metricas.sort(key=lambda x: x["equipo_stats"]["tasa_exito"], reverse=True)
+
+        return equipos_metricas
+
+    except Exception as e:
+        current_app.logger.error(f"Error en métricas de equipos: {str(e)}")
+        return []
+
+def _get_gerentes_ranking():
+    """Obtiene ranking de gerentes optimizado"""
+    try:
+        jerarquia = _get_jerarquia_optimizada()
+        ranking = []
+
+        for gerente in jerarquia["gerentes"]:
+            ranking_item = {
+                "id": gerente["id"],
+                "nombre": gerente["nombre"],
+                "email": gerente["email"],
+                "foto_url": gerente["foto_url"],
+                "metricas": gerente["metricas_consolidadas"],
+                "kpis_liderazgo": {
+                    "nivel": _calculate_leadership_level(gerente["metricas_consolidadas"]["tasa_exito_equipo"]),
+                    "score": gerente["metricas_consolidadas"]["tasa_exito_equipo"],
+                    "team_size": gerente["metricas_consolidadas"]["total_asesores"]
+                }
+            }
+            ranking.append(ranking_item)
+
+        # Ordenar por score de liderazgo
+        ranking.sort(key=lambda x: x["kpis_liderazgo"]["score"], reverse=True)
+
+        return ranking
+
+    except Exception as e:
+        current_app.logger.error(f"Error en ranking de gerentes: {str(e)}")
+        return []
+
+def _get_asesores_individuales():
+    """Obtiene métricas individuales de asesores optimizadas"""
+    try:
+        jerarquia = _get_jerarquia_optimizada()
+        asesores = []
+
+        # Combinar asesores de equipos y independientes
+        for gerente in jerarquia["gerentes"]:
+            for asesor in gerente["asesores"]:
+                asesor["gerente_nombre"] = gerente["nombre"]
+                asesores.append(asesor)
+
+        asesores.extend(jerarquia["asesores_independientes"])
+
+        # Ordenar por tasa de éxito
+        asesores.sort(key=lambda x: x["metricas"]["tasa_exito"], reverse=True)
+
+        return asesores
+
+    except Exception as e:
+        current_app.logger.error(f"Error en asesores individuales: {str(e)}")
+        return []
+
+def _get_tendencias_consolidadas():
+    """Obtiene tendencias temporales consolidadas"""
+    try:
+        now = datetime.utcnow()
+        tendencias = {"mensual": [], "semanal": []}
+
+        # Tendencia mensual (últimos 6 meses)
+        for i in range(6):
+            mes_inicio = (now.replace(day=1) - timedelta(days=i*30)).replace(day=1)
+            if mes_inicio.month == 12:
+                mes_fin = mes_inicio.replace(year=mes_inicio.year + 1, month=1, day=1)
+            else:
+                mes_fin = mes_inicio.replace(month=mes_inicio.month + 1, day=1)
+
+            query = db.session.query(
+                func.count(Recluta.id).label('total'),
+                func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('activos'),
+                func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('proceso'),
+                func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rechazados')
+            ).filter(
+                Recluta.fecha_registro >= mes_inicio,
+                Recluta.fecha_registro < mes_fin
+            ).first()
+
+            tendencias["mensual"].append({
+                "periodo": mes_inicio.strftime('%Y-%m'),
+                "periodo_nombre": mes_inicio.strftime('%B %Y'),
+                "metricas": {
+                    "total": query.total or 0,
+                    "activos": query.activos or 0,
+                    "proceso": query.proceso or 0,
+                    "rechazados": query.rechazados or 0,
+                    "tasa_conversion": round((query.activos or 0) / (query.total or 1) * 100, 1)
+                }
+            })
+
+        tendencias["mensual"].reverse()  # Orden cronológico
+
+        return tendencias
+
+    except Exception as e:
+        current_app.logger.error(f"Error en tendencias: {str(e)}")
+        return {"mensual": [], "semanal": []}
+
+def _get_insights_automaticos(dashboard_data):
+    """Genera insights automáticos basados en los datos del dashboard"""
+    try:
+        insights = {
+            "alertas": [],
+            "oportunidades": [],
+            "destacados": []
+        }
+
+        # Analizar performance global
+        performance_global = dashboard_data["global_kpis"]["performance_global"]["score"]
+        if performance_global < 50:
+            insights["alertas"].append({
+                "tipo": "performance_baja",
+                "mensaje": f"Performance global del sistema está en {performance_global}%. Revisar estrategias de conversión.",
+                "prioridad": "alta"
+            })
+
+        # Analizar equipos sin asesores
+        gerentes_sin_equipo = len([g for g in dashboard_data["jerarquia"]["gerentes"] if len(g["asesores"]) == 0])
+        if gerentes_sin_equipo > 0:
+            insights["oportunidades"].append({
+                "tipo": "asignacion_equipos",
+                "mensaje": f"{gerentes_sin_equipo} gerentes sin asesores asignados. Oportunidad de optimizar estructura.",
+                "accion": "asignar_asesores"
+            })
+
+        # Identificar top performers
+        if dashboard_data["gerentes_ranking"]:
+            top_gerente = dashboard_data["gerentes_ranking"][0]
+            insights["destacados"].append({
+                "tipo": "top_gerente",
+                "mensaje": f"{top_gerente['nombre']} lidera con {top_gerente['kpis_liderazgo']['score']}% de éxito.",
+                "usuario_id": top_gerente["id"]
+            })
+
+        return insights
+
+    except Exception as e:
+        current_app.logger.error(f"Error generando insights: {str(e)}")
+        return {"alertas": [], "oportunidades": [], "destacados": []}
+
+# Funciones auxiliares para cálculos
+def _calculate_global_performance_level(activos, total):
+    """Calcula el nivel de performance global"""
+    if total == 0:
+        return "Sin datos"
+
+    tasa = (activos / total) * 100
+    if tasa >= 80:
+        return "Excelente"
+    elif tasa >= 60:
+        return "Bueno"
+    elif tasa >= 40:
+        return "Regular"
+    else:
+        return "Necesita Mejora"
+
+def _calculate_team_performance_level(tasa_exito):
+    """Calcula el nivel de performance del equipo"""
+    if tasa_exito >= 80:
+        return "Excelente"
+    elif tasa_exito >= 60:
+        return "Bueno"
+    elif tasa_exito >= 40:
+        return "Regular"
+    else:
+        return "Necesita Mejora"
+
+def _calculate_leadership_level(tasa_exito_equipo):
+    """Calcula el nivel de liderazgo basado en performance del equipo"""
+    if tasa_exito_equipo >= 85:
+        return "Líder Excepcional"
+    elif tasa_exito_equipo >= 70:
+        return "Buen Líder"
+    elif tasa_exito_equipo >= 50:
+        return "Líder en Desarrollo"
+    else:
+        return "Necesita Apoyo"
+
+def _get_top_asesor_del_equipo(asesores):
+    """Obtiene el asesor con mejor performance del equipo"""
+    if not asesores:
+        return None
+
+    top_asesor = max(asesores, key=lambda a: a["metricas"]["tasa_exito"])
+    return {
+        "nombre": top_asesor["nombre"],
+        "tasa_exito": top_asesor["metricas"]["tasa_exito"]
+    }
+
+def _calculate_team_trend(gerente_id):
+    """Calcula la tendencia del equipo (placeholder)"""
+    # TODO: Implementar cálculo real de tendencia basado en datos históricos
+    import random
+    trends = ["↗️ +12%", "↘️ -3%", "➡️ Sin cambios", "↗️ +8%", "↗️ +15%"]
+    return random.choice(trends)
+

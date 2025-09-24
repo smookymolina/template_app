@@ -1,806 +1,488 @@
-<!-- Sección de estadísticas -->
+<!-- 🎯 SECCIÓN DE ESTADÍSTICAS REFORMULADA - VERSIÓN 2.0 -->
 <div id="estadisticas-section" class="dashboard-content-section">
-    <!-- 🎯 HEADER DE ESTADÍSTICAS -->
-    <div class="section-header">
-        <div class="header-content">
-            <h3><i class="fas fa-chart-bar"></i> Panel de Estadísticas y Métricas</h3>
-            <p class="section-description">Análisis completo del rendimiento del sistema y asesores</p>
+    <!-- 📊 HEADER SIMPLIFICADO -->
+    <div class="section-header-v2">
+        <div class="header-content-v2">
+            <h3><i class="fas fa-chart-bar"></i> Métricas Administrativas</h3>
+            <div class="header-meta">
+                <span id="last-refresh-v2" class="last-update">Actualizado: --:--</span>
+                <span class="version-badge">v2.0</span>
+            </div>
         </div>
-        <div class="header-actions">
-            <!-- 🔄 BOTÓN ACTUALIZAR -->
-            <button id="refresh-metricas-btn" class="btn-icon" title="Actualizar métricas">
+        <div class="header-actions-v2">
+            <button id="refresh-metricas-v2" class="btn-icon-v2" title="Actualizar métricas">
                 <i class="fas fa-sync-alt"></i>
             </button>
-            
-            <!-- 📥 BOTÓN EXPORTAR - Solo Admin -->
-            <button id="export-metricas-btn" class="btn-primary admin-only" title="Exportar métricas">
+            <div class="action-separator"></div>
+            <button id="export-metricas-v2" class="btn-primary-v2 admin-only" title="Exportar métricas">
                 <i class="fas fa-download"></i> Exportar
             </button>
-            
-            <!-- ⚙️ TOGGLE VISTA DETALLADA - Solo Admin -->
-            <div class="toggle-container admin-only">
-                <label for="metricas-view-toggle">Vista Detallada</label>
-                <input type="checkbox" id="metricas-view-toggle" class="toggle-switch">
+            <button id="settings-metricas-v2" class="btn-secondary-v2 admin-only" title="Configuración">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 🔄 LOADER MEJORADO -->
+    <div id="metricas-loader-v2" class="loader-overlay-v2" style="display: none;">
+        <div class="loader-content-v2">
+            <div class="spinner-v2"></div>
+            <p class="loader-text">Cargando dashboard unificado...</p>
+            <div class="loader-progress">
+                <div class="progress-bar-v2">
+                    <div id="progress-fill-v2" class="progress-fill-v2"></div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 🔄 LOADER -->
-    <div id="metricas-loader" class="loader-overlay" style="display: none;">
-        <div class="loader-content">
-            <div class="spinner"></div>
-            <p>Cargando métricas...</p>
+    <!-- 🎛️ NAVEGACIÓN POR TABS - NUEVA ESTRUCTURA -->
+    <div class="metricas-tabs-navigation">
+        <div class="tabs-container-v2">
+            <button class="tab-button-v2 active" data-tab="resumen" id="tab-resumen">
+                <i class="fas fa-chart-pie"></i>
+                <span>Resumen General</span>
+                <div class="tab-indicator"></div>
+            </button>
+            <button class="tab-button-v2" data-tab="equipos" id="tab-equipos">
+                <i class="fas fa-users"></i>
+                <span>Vista por Equipos</span>
+                <div class="tab-indicator"></div>
+            </button>
+            <button class="tab-button-v2" data-tab="individual" id="tab-individual">
+                <i class="fas fa-user-chart"></i>
+                <span>Análisis Individual</span>
+                <div class="tab-indicator"></div>
+            </button>
+            <button class="tab-button-v2" data-tab="tendencias" id="tab-tendencias">
+                <i class="fas fa-chart-line"></i>
+                <span>Tendencias & Reportes</span>
+                <div class="tab-indicator"></div>
+            </button>
         </div>
     </div>
 
-    <!-- 📊 RESUMEN GLOBAL DEL SISTEMA -->
-    <div class="stats-section">
-        <h4 class="subsection-title">
-            <i class="fas fa-globe"></i> Resumen Global del Sistema
-            <span id="last-refresh" class="last-update">Actualizado: --:--</span>
-        </h4>
-        
-        <div id="resumen-global" class="resumen-global-container">
-            <!-- El contenido se carga dinámicamente via JavaScript -->
-            <div class="loading-placeholder">
-                <i class="fas fa-chart-line fa-spin"></i>
-                <p>Cargando métricas globales...</p>
-            </div>
-        </div>
+    <!-- 📊 BREADCRUMB NAVIGATION -->
+    <div id="metricas-breadcrumb" class="breadcrumb-container" style="display: none;">
+        <nav class="breadcrumb-nav">
+            <span class="breadcrumb-item active" id="breadcrumb-home">
+                <i class="fas fa-home"></i> Dashboard
+            </span>
+        </nav>
     </div>
 
-    <!-- 🏢 MÉTRICAS JERÁRQUICAS POR EQUIPOS - Solo Admin -->
-    <div class="stats-section admin-only" id="metricas-equipos-section">
-        <div class="subsection-header">
-            <h4 class="subsection-title">
-                <i class="fas fa-sitemap"></i> Gestión de Equipos y Rendimiento
-                <span class="admin-badge">Panel Administrativo</span>
-            </h4>
-            <div class="subsection-filters">
-                <select id="filtro-equipos" class="form-select">
-                    <option value="todos">Todos los equipos</option>
-                    <option value="gerentes">Solo gerentes</option>
-                    <option value="independientes">Asesores independientes</option>
-                    <option value="top-performance">Alto rendimiento</option>
-                </select>
+    <!-- 🎛️ CONTENIDO DE TABS - NUEVA ESTRUCTURA ORGANIZADA -->
+    <div class="tabs-content-container">
 
-                <select id="ordenar-equipos" class="form-select">
-                    <option value="performance">Por Rendimiento</option>
-                    <option value="equipo-size">Por Tamaño de Equipo</option>
-                    <option value="total-reclutas">Por Total de Reclutas</option>
-                    <option value="nombre">Por Nombre</option>
-                </select>
-
-                <div class="vista-toggle">
-                    <button id="vista-jerarquica" class="btn-toggle active" data-view="jerarquica">
-                        <i class="fas fa-sitemap"></i> Jerárquica
-                    </button>
-                    <button id="vista-comparativa" class="btn-toggle" data-view="comparativa">
-                        <i class="fas fa-chart-bar"></i> Comparativa
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 🎯 INSIGHTS DE EQUIPOS -->
-        <div class="insights-equipos-grid">
-            <div class="insight-card equipos-overview">
-                <h5><i class="fas fa-users-cog"></i> Resumen de Equipos</h5>
-                <div id="equipos-overview">
-                    <div class="loading-placeholder">
-                        <i class="fas fa-sitemap fa-spin"></i>
-                        <p>Analizando estructura organizacional...</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="insight-card top-gerentes">
-                <h5><i class="fas fa-crown"></i> Gerentes Destacados</h5>
-                <div id="top-gerentes">
-                    <div class="loading-placeholder">
-                        <i class="fas fa-trophy fa-spin"></i>
-                        <p>Evaluando liderazgo...</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="insight-card equipos-necesitan-apoyo">
-                <h5><i class="fas fa-hands-helping"></i> Equipos que Necesitan Apoyo</h5>
-                <div id="equipos-necesitan-apoyo">
-                    <div class="loading-placeholder">
-                        <i class="fas fa-chart-line fa-spin"></i>
-                        <p>Identificando oportunidades de mejora...</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="insight-card asesores-independientes">
-                <h5><i class="fas fa-user-tie"></i> Asesores Independientes</h5>
-                <div id="asesores-independientes-overview">
-                    <div class="loading-placeholder">
-                        <i class="fas fa-users fa-spin"></i>
-                        <p>Analizando asesores sin gerente...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 🏢 CONTENEDOR PRINCIPAL DE EQUIPOS -->
-        <div id="equipos-container">
-            <!-- Vista Jerárquica -->
-            <div id="vista-jerarquica-content" class="vista-content active">
-                <h4 class="subsection-title">
-                    <i class="fas fa-sitemap"></i> Estructura Jerárquica de Equipos
-                </h4>
-                <div id="equipos-jerarquia" class="equipos-jerarquia-container">
-                    <div class="gerentes-grid-container">
-                        <!-- Las tarjetas de gerentes se insertarán aquí dinámicamente -->
-                        <div class="loading-placeholder">
-                            <i class="fas fa-user-tie fa-spin"></i>
-                            <p>Cargando datos de gerentes...</p>
+        <!-- 📊 TAB 1: RESUMEN GENERAL -->
+        <div id="tab-content-resumen" class="tab-content-v2 active" data-tab="resumen">
+            <!-- KPIs Globales Principales -->
+            <div class="kpis-global-section">
+                <div class="kpis-grid-v2">
+                    <div class="kpi-card-v2 total-reclutas">
+                        <div class="kpi-icon-v2">
+                            <i class="fas fa-users"></i>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Vista Comparativa -->
-            <div id="vista-comparativa-content" class="vista-content">
-                <h4 class="subsection-title">
-                    <i class="fas fa-chart-bar"></i> Comparativa de Rendimiento por Equipos
-                </h4>
-                <div id="equipos-comparativa" class="equipos-comparativa-container">
-                    <div class="loading-placeholder">
-                        <i class="fas fa-chart-bar fa-spin"></i>
-                        <p>Generando comparativas...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 👥 MÉTRICAS INDIVIDUALES DE ASESORES - Solo Admin (Complementaria) -->
-    <div class="stats-section admin-only" id="metricas-asesores-section">
-        <div class="subsection-header">
-            <h4 class="subsection-title">
-                <i class="fas fa-users"></i> Métricas Individuales de Asesores
-                <span class="admin-badge">Vista Detallada</span>
-            </h4>
-            <div class="subsection-filters">
-                <select id="filtro-performance" class="form-select">
-                    <option value="todos">Todos los asesores</option>
-                    <option value="excellent">Excelente</option>
-                    <option value="good">Bueno</option>
-                    <option value="average">Regular</option>
-                    <option value="needs-improvement">Necesita Mejora</option>
-                </select>
-
-                <select id="ordenar-por" class="form-select">
-                    <option value="performance">Por Rendimiento</option>
-                    <option value="total">Por Total de Reclutas</option>
-                    <option value="nombre">Por Nombre</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- 🎯 INSIGHTS RÁPIDOS -->
-        <div class="insights-container">
-            <div class="insight-card top-performers">
-                <h5><i class="fas fa-trophy"></i> Top Performers</h5>
-                <div id="top-performers">
-                    <div class="loading-placeholder">
-                        <i class="fas fa-trophy fa-spin"></i>
-                        <p>Cargando top performers...</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="insight-card needs-improvement">
-                <h5><i class="fas fa-exclamation-triangle"></i> Necesitan Mejora</h5>
-                <div id="needs-improvement">
-                    <div class="loading-placeholder">
-                        <i class="fas fa-chart-line fa-spin"></i>
-                        <p>Analizando rendimiento...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="asesores-metricas" class="asesores-metricas-container card-content">
-            <div class="loading-placeholder">
-                <i class="fas fa-users fa-spin"></i>
-                <p>Cargando métricas de asesores...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- 📈 GRÁFICOS Y ANÁLISIS -->
-    <div class="stats-section charts-section">
-        <h4 class="subsection-title">
-            <i class="fas fa-chart-pie"></i> Análisis Visual
-        </h4>
-
-        <div class="charts-grid">
-            <!-- 🥧 GRÁFICO DE DISTRIBUCIÓN -->
-            <div class="chart-card">
-                <div class="chart-header">
-                    <h5>Distribución por Estado</h5>
-                    <div class="chart-legend">
-                        <span class="legend-item verde">
-                            <span class="legend-color"></span> Activos
-                        </span>
-                        <span class="legend-item amarillo">
-                            <span class="legend-color"></span> En Proceso
-                        </span>
-                        <span class="legend-item rojo">
-                            <span class="legend-color"></span> Rechazados
-                        </span>
-                    </div>
-                </div>
-                <div id="grafico-distribucion" class="chart-container">
-                    <div class="loading-placeholder">
-                        <i class="fas fa-chart-pie fa-spin"></i>
-                        <p>Generando gráfico...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 📊 GRÁFICO COMPARATIVO - Solo Admin -->
-            <div class="chart-card admin-only">
-                <div class="chart-header">
-                    <h5>Comparativa de Asesores</h5>
-                    <small>Top 5 por tasa de éxito</small>
-                </div>
-                <div id="grafico-comparativa" class="chart-container">
-                    <div class="loading-placeholder">
-                        <i class="fas fa-chart-bar fa-spin"></i>
-                        <p>Generando comparativa...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 📈 TENDENCIAS TEMPORALES -->
-            <div class="chart-card">
-                <div class="chart-header">
-                    <h5>Tendencia Temporal</h5>
-                    <div class="time-filters">
-                        <button class="time-filter active" data-period="mensual">Mensual</button>
-                        <button class="time-filter" data-period="semanal">Semanal</button>
-                    </div>
-                </div>
-                <div id="grafico-tendencia" class="chart-container card-content">
-                    <div class="loading-placeholder">
-                        <i class="fas fa-chart-line fa-spin"></i>
-                        <p>Calculando tendencias...</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 🎯 KPIs PRINCIPALES -->
-            <div class="chart-card kpis-card">
-                <div class="chart-header">
-                    <h5>KPIs Principales</h5>
-                    <small>Indicadores clave de rendimiento</small>
-                </div>
-                <div class="kpis-grid">
-                    <div class="kpi-item">
-                        <div class="kpi-valor" id="kpi-conversion">---%</div>
-                        <div class="kpi-label">Tasa de Conversión</div>
-                        <div class="kpi-trend positive">
-                            <i class="fas fa-arrow-up"></i> +5.2%
-                        </div>
-                    </div>
-                    
-                    <div class="kpi-item">
-                        <div class="kpi-valor" id="kpi-tiempo-promedio">--- días</div>
-                        <div class="kpi-label">Tiempo Promedio</div>
-                        <div class="kpi-trend negative">
-                            <i class="fas fa-arrow-down"></i> -2.1%
-                        </div>
-                    </div>
-                    
-                    <div class="kpi-item">
-                        <div class="kpi-valor" id="kpi-satisfaccion">---%</div>
-                        <div class="kpi-label">Satisfacción</div>
-                        <div class="kpi-trend positive">
-                            <i class="fas fa-arrow-up"></i> +1.8%
-                        </div>
-                    </div>
-                    
-                    <div class="kpi-item admin-only">
-                        <div class="kpi-valor" id="kpi-productividad">---</div>
-                        <div class="kpi-label">Productividad Promedio</div>
-                        <div class="kpi-trend neutral">
-                            <i class="fas fa-equals"></i> Sin cambios
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 📋 TABLA DE ESTADÍSTICAS DETALLADAS - Solo Admin -->
-    <div class="stats-section admin-only" id="tabla-detallada-section">
-        <div class="subsection-header">
-            <h4 class="subsection-title">
-                <i class="fas fa-table"></i> Estadísticas Detalladas
-            </h4>
-            <div class="table-actions">
-                <button id="toggle-all-details" class="btn-secondary">
-                    <i class="fas fa-expand-alt"></i> Expandir Todo
-                </button>
-                <button id="export-table" class="btn-primary">
-                    <i class="fas fa-file-excel"></i> Exportar Tabla
-                </button>
-            </div>
-        </div>
-
-        <div class="table-responsive">
-            <table id="tabla-asesores-detalle" class="tabla-metricas">
-                <thead>
-                    <tr>
-                        <th>Ranking</th>
-                        <th>Asesor</th>
-                        <th>Total</th>
-                        <th class="verde">Activos</th>
-                        <th class="amarillo">En Proceso</th>
-                        <th class="rojo">Rechazados</th>
-                        <th>Tasa Éxito</th>
-                        <th>Performance</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Los datos se cargan dinámicamente -->
-                    <tr class="loading-row">
-                        <td colspan="9">
-                            <div class="loading-placeholder">
-                                <i class="fas fa-table fa-spin"></i>
-                                <p>Cargando tabla detallada...</p>
+                        <div class="kpi-content-v2">
+                            <div class="kpi-number" id="kpi-total-reclutas">--</div>
+                            <div class="kpi-label">Total Reclutas</div>
+                            <div class="kpi-trend" id="kpi-total-trend">
+                                <i class="fas fa-arrow-up"></i> +5.2%
                             </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
+                        </div>
+                    </div>
 
-<!-- 🎭 MODAL DETALLE DE ASESOR -->
-<div id="modal-detalle-asesor" class="modal">
-    <div class="modal-content modal-lg">
-        <div class="modal-header">
-            <h3 id="modal-asesor-nombre">Detalle del Asesor</h3>
-            <span class="close-modal">&times;</span>
-        </div>
+                    <div class="kpi-card-v2 conversion-rate">
+                        <div class="kpi-icon-v2">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="kpi-content-v2">
+                            <div class="kpi-number" id="kpi-conversion">--%</div>
+                            <div class="kpi-label">Tasa de Conversión</div>
+                            <div class="kpi-trend" id="kpi-conversion-trend">
+                                <i class="fas fa-arrow-up"></i> +2.1%
+                            </div>
+                        </div>
+                    </div>
 
-        <div class="modal-body">
-            <div id="detalle-asesor-content">
-                <!-- Contenido dinámico del detalle del asesor -->
+                    <div class="kpi-card-v2 active-teams">
+                        <div class="kpi-icon-v2">
+                            <i class="fas fa-users-cog"></i>
+                        </div>
+                        <div class="kpi-content-v2">
+                            <div class="kpi-number" id="kpi-teams">--</div>
+                            <div class="kpi-label">Equipos Activos</div>
+                            <div class="kpi-trend" id="kpi-teams-trend">
+                                <i class="fas fa-arrow-right"></i> Sin cambios
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card-v2 performance-global">
+                        <div class="kpi-icon-v2">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="kpi-content-v2">
+                            <div class="kpi-number" id="kpi-performance">--%</div>
+                            <div class="kpi-label">Performance Global</div>
+                            <div class="kpi-trend" id="kpi-performance-trend">
+                                <i class="fas fa-arrow-up"></i> +1.8%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distribución por Estados -->
+            <div class="distribucion-section">
+                <h4 class="section-title-v2">
+                    <i class="fas fa-chart-pie"></i> Distribución por Estados
+                </h4>
+                <div class="distribucion-grid">
+                    <div class="chart-container-v2">
+                        <div id="chart-distribucion-resumen" class="chart-placeholder">
+                            <div class="loading-placeholder">
+                                <i class="fas fa-chart-pie fa-spin"></i>
+                                <p>Generando gráfico de distribución...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="distribucion-stats">
+                        <div class="estado-stat verde">
+                            <div class="estado-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="estado-data">
+                                <span class="estado-count" id="resumen-activos">--</span>
+                                <span class="estado-label">Activos</span>
+                                <span class="estado-percentage" id="resumen-activos-pct">--%</span>
+                            </div>
+                        </div>
+                        <div class="estado-stat amarillo">
+                            <div class="estado-icon"><i class="fas fa-clock"></i></div>
+                            <div class="estado-data">
+                                <span class="estado-count" id="resumen-proceso">--</span>
+                                <span class="estado-label">En Proceso</span>
+                                <span class="estado-percentage" id="resumen-proceso-pct">--%</span>
+                            </div>
+                        </div>
+                        <div class="estado-stat rojo">
+                            <div class="estado-icon"><i class="fas fa-times-circle"></i></div>
+                            <div class="estado-data">
+                                <span class="estado-count" id="resumen-rechazados">--</span>
+                                <span class="estado-label">Rechazados</span>
+                                <span class="estado-percentage" id="resumen-rechazados-pct">--%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insights y Alertas Automáticas -->
+            <div class="insights-section">
+                <h4 class="section-title-v2">
+                    <i class="fas fa-lightbulb"></i> Insights Automáticos
+                </h4>
+                <div class="insights-grid-v2">
+                    <div class="insight-card-v2 alertas" id="alertas-container">
+                        <div class="insight-header">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h5>Alertas</h5>
+                        </div>
+                        <div class="insight-content" id="alertas-content">
+                            <div class="loading-placeholder">
+                                <i class="fas fa-search fa-spin"></i>
+                                <p>Analizando alertas...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="insight-card-v2 oportunidades" id="oportunidades-container">
+                        <div class="insight-header">
+                            <i class="fas fa-lightbulb"></i>
+                            <h5>Oportunidades</h5>
+                        </div>
+                        <div class="insight-content" id="oportunidades-content">
+                            <div class="loading-placeholder">
+                                <i class="fas fa-search fa-spin"></i>
+                                <p>Identificando oportunidades...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="insight-card-v2 destacados" id="destacados-container">
+                        <div class="insight-header">
+                            <i class="fas fa-star"></i>
+                            <h5>Destacados</h5>
+                        </div>
+                        <div class="insight-content" id="destacados-content">
+                            <div class="loading-placeholder">
+                                <i class="fas fa-search fa-spin"></i>
+                                <p>Evaluando performance...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="modal-footer">
-            <button type="button" class="btn-secondary close-modal">
-                <i class="fas fa-times"></i> Cerrar
-            </button>
-            <button type="button" class="btn-primary" id="export-asesor-detail">
-                <i class="fas fa-download"></i> Exportar Detalle
-            </button>
+        <!-- 👥 TAB 2: VISTA POR EQUIPOS -->
+        <div id="tab-content-equipos" class="tab-content-v2" data-tab="equipos" style="display: none;">
+            <!-- Controles de Filtrado -->
+            <div class="equipos-controls-section">
+                <div class="controls-row">
+                    <div class="filter-group">
+                        <label>Filtrar por:</label>
+                        <select id="filtro-equipos-v2" class="form-select-v2">
+                            <option value="todos">Todos los equipos</option>
+                            <option value="con-asesores">Solo con asesores</option>
+                            <option value="sin-asesores">Sin asesores asignados</option>
+                            <option value="alto-rendimiento">Alto rendimiento (>80%)</option>
+                        </select>
+                    </div>
+                    <div class="sort-group">
+                        <label>Ordenar por:</label>
+                        <select id="ordenar-equipos-v2" class="form-select-v2">
+                            <option value="performance">Rendimiento</option>
+                            <option value="team-size">Tamaño de equipo</option>
+                            <option value="total-reclutas">Total de reclutas</option>
+                            <option value="nombre">Nombre alfabético</option>
+                        </select>
+                    </div>
+                    <div class="view-group">
+                        <label>Vista:</label>
+                        <div class="view-toggle-v2">
+                            <button class="view-btn active" data-view="cards" id="view-cards">
+                                <i class="fas fa-th"></i> Cards
+                            </button>
+                            <button class="view-btn" data-view="table" id="view-table">
+                                <i class="fas fa-table"></i> Tabla
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumen de Equipos -->
+            <div class="equipos-summary-section">
+                <div class="summary-cards-grid">
+                    <div class="summary-card">
+                        <div class="summary-icon">
+                            <i class="fas fa-users-cog"></i>
+                        </div>
+                        <div class="summary-data">
+                            <div class="summary-number" id="total-gerentes">--</div>
+                            <div class="summary-label">Total Gerentes</div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon">
+                            <i class="fas fa-sitemap"></i>
+                        </div>
+                        <div class="summary-data">
+                            <div class="summary-number" id="equipos-activos">--</div>
+                            <div class="summary-label">Equipos Activos</div>
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="summary-data">
+                            <div class="summary-number" id="asesores-independientes">--</div>
+                            <div class="summary-label">Asesores Sin Equipo</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenedor de Equipos -->
+            <div id="equipos-container-v2" class="equipos-display-container">
+                <div class="loading-placeholder">
+                    <i class="fas fa-users fa-spin"></i>
+                    <p>Cargando estructura de equipos...</p>
+                </div>
+            </div>
         </div>
+
+        <!-- 🎯 TAB 3: ANÁLISIS INDIVIDUAL -->
+        <div id="tab-content-individual" class="tab-content-v2" data-tab="individual" style="display: none;">
+            <!-- Filtros de Asesores -->
+            <div class="individual-controls-section">
+                <div class="controls-row">
+                    <div class="filter-group">
+                        <label>Performance:</label>
+                        <select id="filtro-performance-v2" class="form-select-v2">
+                            <option value="todos">Todos los asesores</option>
+                            <option value="excelente">Excelente (>80%)</option>
+                            <option value="bueno">Bueno (60-80%)</option>
+                            <option value="regular">Regular (40-60%)</option>
+                            <option value="necesita-mejora">Necesita Mejora (<40%)</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Equipo:</label>
+                        <select id="filtro-equipo-v2" class="form-select-v2">
+                            <option value="todos">Todos los equipos</option>
+                            <option value="independientes">Asesores independientes</option>
+                            <!-- Se llenarán dinámicamente con los gerentes -->
+                        </select>
+                    </div>
+                    <div class="search-group">
+                        <label>Buscar:</label>
+                        <div class="search-input-container">
+                            <input type="text" id="buscar-asesor-v2" class="search-input-v2" placeholder="Buscar por nombre o email...">
+                            <i class="fas fa-search search-icon"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Performers & Needs Improvement -->
+            <div class="performance-highlights-section">
+                <div class="highlights-grid">
+                    <div class="highlight-card top-performers">
+                        <div class="highlight-header">
+                            <i class="fas fa-trophy"></i>
+                            <h4>Top Performers</h4>
+                        </div>
+                        <div id="top-performers-v2" class="highlight-content">
+                            <div class="loading-placeholder">
+                                <i class="fas fa-medal fa-spin"></i>
+                                <p>Identificando top performers...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="highlight-card needs-improvement">
+                        <div class="highlight-header">
+                            <i class="fas fa-hand-holding-heart"></i>
+                            <h4>Necesitan Apoyo</h4>
+                        </div>
+                        <div id="needs-improvement-v2" class="highlight-content">
+                            <div class="loading-placeholder">
+                                <i class="fas fa-hands-helping fa-spin"></i>
+                                <p>Analizando oportunidades de mejora...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid de Asesores Individuales -->
+            <div id="asesores-grid-v2" class="asesores-display-container">
+                <div class="loading-placeholder">
+                    <i class="fas fa-users fa-spin"></i>
+                    <p>Cargando métricas individuales...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 📈 TAB 4: TENDENCIAS & REPORTES -->
+        <div id="tab-content-tendencias" class="tab-content-v2" data-tab="tendencias" style="display: none;">
+            <!-- Controles de Período -->
+            <div class="tendencias-controls-section">
+                <div class="period-selector">
+                    <button class="period-btn active" data-period="mensual" id="period-mensual">
+                        <i class="fas fa-calendar-alt"></i> Mensual
+                    </button>
+                    <button class="period-btn" data-period="semanal" id="period-semanal">
+                        <i class="fas fa-calendar-week"></i> Semanal
+                    </button>
+                    <button class="period-btn" data-period="trimestral" id="period-trimestral">
+                        <i class="fas fa-calendar"></i> Trimestral
+                    </button>
+                </div>
+                <div class="export-options">
+                    <button class="btn-export" id="export-trends-pdf">
+                        <i class="fas fa-file-pdf"></i> Exportar PDF
+                    </button>
+                    <button class="btn-export" id="export-trends-excel">
+                        <i class="fas fa-file-excel"></i> Exportar Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Gráficos de Tendencias -->
+            <div class="tendencias-charts-section">
+                <div class="chart-row">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h4><i class="fas fa-chart-line"></i> Tendencia General</h4>
+                            <div class="chart-controls">
+                                <select id="chart-metric-selector" class="form-select-small">
+                                    <option value="total">Total Reclutas</option>
+                                    <option value="conversion">Tasa de Conversión</option>
+                                    <option value="activos">Solo Activos</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="chart-tendencia-general" class="chart-container-large">
+                            <div class="loading-placeholder">
+                                <i class="fas fa-chart-line fa-spin"></i>
+                                <p>Generando gráfico de tendencias...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-row">
+                    <div class="chart-card half">
+                        <div class="chart-header">
+                            <h4><i class="fas fa-chart-bar"></i> Comparativa por Equipo</h4>
+                        </div>
+                        <div id="chart-equipos-comparativa" class="chart-container-medium">
+                            <div class="loading-placeholder">
+                                <i class="fas fa-chart-bar fa-spin"></i>
+                                <p>Generando comparativa...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-card half">
+                        <div class="chart-header">
+                            <h4><i class="fas fa-chart-pie"></i> Distribución Temporal</h4>
+                        </div>
+                        <div id="chart-distribucion-temporal" class="chart-container-medium">
+                            <div class="loading-placeholder">
+                                <i class="fas fa-chart-pie fa-spin"></i>
+                                <p>Calculando distribución...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Datos Históricos -->
+            <div class="historical-data-section">
+                <h4 class="section-title-v2">
+                    <i class="fas fa-table"></i> Datos Históricos Detallados
+                </h4>
+                <div class="table-responsive-v2">
+                    <table id="historical-data-table" class="data-table-v2">
+                        <thead>
+                            <tr>
+                                <th>Período</th>
+                                <th>Total</th>
+                                <th>Activos</th>
+                                <th>En Proceso</th>
+                                <th>Rechazados</th>
+                                <th>Tasa Conversión</th>
+                                <th>Tendencia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="7" class="loading-cell">
+                                    <div class="loading-placeholder">
+                                        <i class="fas fa-table fa-spin"></i>
+                                        <p>Cargando datos históricos...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
+
 </div>
-
-<!-- 🚨 MENSAJE PARA ASESORES -->
-<div class="asesor-only-message" style="display: none;">
-    <div class="message-card info">
-        <div class="message-icon">
-            <i class="fas fa-info-circle"></i>
-        </div>
-        <div class="message-content">
-            <h4>Vista de Asesor</h4>
-            <p>Como asesor, puedes ver estadísticas relacionadas con tus reclutas asignados.</p>
-            <p>Para métricas globales y comparativas, contacta a tu administrador.</p>
-        </div>
-    </div>
-</div>
-
-<!-- 📊 CONTENEDOR PRINCIPAL PARA MÉTRICAS ADMIN -->
-<div id="metricas-admin-container" class="admin-only">
-    <!-- Todo el contenido de métricas administrativas se carga aquí -->
-</div>
-
-<link rel="stylesheet" href="/static/css/metricas-admin-extensiones.css">
-
-<style>
-/* ============================================================================ */
-/* 🎨 ESTILOS ESPECÍFICOS PARA MÉTRICAS ADMINISTRATIVAS */
-/* ============================================================================ */
-
-/* 📊 Grid de métricas globales */
-.metricas-grid-global {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-.metrica-global-card {
-    background: var(--card-bg, #ffffff);
-    border-radius: 12px;
-    padding: 1.5rem;
-    border: 1px solid var(--border-color, #e0e0e0);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    transition: all 0.3s ease;
-}
-
-.metrica-global-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-}
-
-.metrica-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    color: white;
-    background: linear-gradient(135deg, var(--primary-color, #3b82f6), var(--secondary-color, #1d4ed8));
-}
-
-.metrica-numero {
-    font-size: 2rem;
-    font-weight: bold;
-    color: var(--text-primary, #1f2937);
-    margin: 0;
-}
-
-/* 🎨 Estados con colores */
-.estado-badge {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 0.75rem;
-    border-radius: 8px;
-    min-width: 80px;
-}
-
-.estado-badge.verde {
-    background-color: rgba(16, 185, 129, 0.1);
-    border: 2px solid #10B981;
-    color: #047857;
-}
-
-.estado-badge.amarillo {
-    background-color: rgba(245, 158, 11, 0.1);
-    border: 2px solid #F59E0B;
-    color: #92400E;
-}
-
-.estado-badge.rojo {
-    background-color: rgba(239, 68, 68, 0.1);
-    border: 2px solid #EF4444;
-    color: #B91C1C;
-}
-
-.estado-count {
-    font-size: 1.25rem;
-    font-weight: bold;
-}
-
-.estado-label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    margin-top: 0.25rem;
-}
-
-/* 👥 Tarjetas de asesores */
-.asesores-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 1.5rem;
-    margin-top: 1rem;
-}
-
-.asesor-metrica-card {
-    background: white;
-    border-radius: 12px;
-    padding: 1.5rem;
-    border: 1px solid #e0e0e0;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-}
-
-.asesor-metrica-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: var(--performance-color);
-}
-
-.asesor-metrica-card.excellent::before { background: #059669; }
-.asesor-metrica-card.good::before { background: #10B981; }
-.asesor-metrica-card.average::before { background: #F59E0B; }
-.asesor-metrica-card.needs-improvement::before { background: #EF4444; }
-
-.asesor-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-}
-
-.asesor-info {
-    display: flex;
-    gap: 1rem;
-    flex: 1;
-}
-
-.asesor-avatar {
-    position: relative;
-    width: 50px;
-    height: 50px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.25rem;
-}
-
-.ranking-badge {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: #f59e0b;
-    color: white;
-    border-radius: 50%;
-    width: 20px;
-    height: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.7rem;
-    font-weight: bold;
-}
-
-.asesor-nombre {
-    margin: 0;
-    font-size: 1.1rem;
-    color: #1f2937;
-}
-
-.asesor-email {
-    margin: 0.25rem 0;
-    color: #6b7280;
-    font-size: 0.875rem;
-}
-
-.performance-badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.performance-badge.excellent { background: rgba(5, 150, 105, 0.1); color: #047857; }
-.performance-badge.good { background: rgba(16, 185, 129, 0.1); color: #065f46; }
-.performance-badge.average { background: rgba(245, 158, 11, 0.1); color: #92400e; }
-.performance-badge.needs-improvement { background: rgba(239, 68, 68, 0.1); color: #b91c1c; }
-
-.asesor-score {
-    text-align: center;
-}
-
-.score-valor {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: #1f2937;
-    display: block;
-}
-
-.score-label {
-    font-size: 0.75rem;
-    color: #6b7280;
-    text-transform: uppercase;
-}
-
-/* 📊 Estadísticas del asesor */
-.asesor-stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-}
-
-.stat-item {
-    text-align: center;
-    padding: 0.5rem;
-    border-radius: 6px;
-    background: #f9fafb;
-}
-
-.stat-item.total { background: rgba(107, 114, 128, 0.1); }
-.stat-item.verde { background: rgba(16, 185, 129, 0.1); }
-.stat-item.amarillo { background: rgba(245, 158, 11, 0.1); }
-.stat-item.rojo { background: rgba(239, 68, 68, 0.1); }
-
-.stat-numero {
-    display: block;
-    font-size: 1.25rem;
-    font-weight: bold;
-    color: #1f2937;
-}
-
-.stat-label {
-    font-size: 0.75rem;
-    color: #6b7280;
-    text-transform: uppercase;
-}
-
-.stat-porcentaje {
-    font-size: 0.7rem;
-    color: #9ca3af;
-    display: block;
-    margin-top: 0.25rem;
-}
-
-/* 📈 Barra de progreso */
-.asesor-progress {
-    margin-bottom: 1rem;
-}
-
-.progress-bar {
-    height: 8px;
-    background: #f3f4f6;
-    border-radius: 4px;
-    overflow: hidden;
-    display: flex;
-}
-
-.progress-fill {
-    height: 100%;
-    transition: width 0.3s ease;
-}
-
-.progress-fill.verde { background: #10B981; }
-.progress-fill.amarillo { background: #F59E0B; }
-.progress-fill.rojo { background: #EF4444; }
-
-/* 🎯 Acciones del asesor */
-.asesor-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.btn-detalle, .btn-contactar {
-    flex: 1;
-    padding: 0.5rem;
-    border-radius: 6px;
-    border: none;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-detalle {
-    background: #e0e7ff;
-    color: #3730a3;
-}
-
-.btn-detalle:hover {
-    background: #c7d2fe;
-}
-
-.btn-contactar {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.btn-contactar:hover {
-    background: #fde68a;
-}
-
-/* 🎭 Visibilidad por rol */
-.admin-only {
-    display: none;
-}
-
-.admin-view .admin-only {
-    display: block;
-}
-
-.asesor-view .asesor-only-message {
-    display: block !important;
-}
-
-/* 📱 Responsive */
-@media (max-width: 768px) {
-    .metricas-grid-global {
-        grid-template-columns: 1fr;
-    }
-    
-    .asesores-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .asesor-stats {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-/* 🎬 Animaciones */
-@keyframes slideInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.loading-placeholder {
-    text-align: center;
-    padding: 2rem;
-    color: #6b7280;
-}
-
-.loading-placeholder i {
-    font-size: 2rem;
-    margin-bottom: 1rem;
-    display: block;
-}
-
-.bar-chart-container {
-    display: flex;
-    justify-content: space-around;
-    align-items: flex-end;
-    height: 150px;
-    padding: 10px;
-    gap: 5px;
-}
-
-.bar-chart-bar-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex: 1;
-}
-
-.bar-chart-bar {
-    width: 50%;
-    background-color: #e0e0e0;
-    border-radius: 5px 5px 0 0;
-    display: flex;
-    flex-direction: column-reverse;
-}
-
-.bar-segment {
-    width: 100%;
-    transition: height 0.3s ease;
-}
-
-.bar-segment.verde { background-color: #10B981; }
-.bar-segment.amarillo { background-color: #F59E0B; }
-.bar-segment.rojo { background-color: #EF4444; }
-
-.bar-chart-label {
-    font-size: 10px;
-    color: #6b7280;
-    margin-top: 5px;
-    text-align: center;
-}
-</style>
+<!-- 🏁 FIN DEL TEMPLATE MÉTRICAS V2.0 -->
