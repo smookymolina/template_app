@@ -39,7 +39,7 @@ const MetricasAdmin = {
             return;
         }
 
-        if (!['admin', 'gerente'].includes(currentUser.rol)) {
+        if (!['admin'].includes(currentUser.rol)) {
             console.log(`⚠️ Usuario con rol ${currentUser.rol} no tiene acceso a métricas avanzadas`);
             return;
         }
@@ -221,7 +221,7 @@ const MetricasAdmin = {
             return;
         }
 
-        if (!['admin', 'gerente'].includes(currentUser.rol)) {
+        if (!['admin'].includes(currentUser.rol)) {
             console.log(`⚠️ Usuario con rol ${currentUser.rol} no tiene acceso a métricas avanzadas`);
             return;
         }

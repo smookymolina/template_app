@@ -1,0 +1,299 @@
+/* ============================================================================
+   🎯 ESTILOS ESPECÍFICOS PARA ESTADÍSTICAS DE GERENTE
+   Basado en el diseño de métricas avanzadas de admin pero simplificado
+   ============================================================================ */
+
+/* 🎨 VARIABLES PERSONALIZADAS PARA GERENTE */
+:root {
+    --gerente-primary: #4299e1;
+    --gerente-success: #48bb78;
+    --gerente-warning: #ed8936;
+    --gerente-danger: #f56565;
+    --gerente-info: #9f7aea;
+    --gerente-bg: #f7fafc;
+    --gerente-card-bg: #ffffff;
+    --gerente-border: #e2e8f0;
+    --gerente-text-primary: #2d3748;
+    --gerente-text-secondary: #718096;
+}
+
+/* 🎯 ESTILOS ESPECÍFICOS PARA ASESORES DEL GERENTE */
+.asesores-grid-v2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.asesor-card-v2 {
+    background: var(--gerente-card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--gerente-border);
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.asesor-card-v2:hover {
+    border-color: var(--gerente-primary);
+    box-shadow: 0 4px 16px rgba(66, 153, 225, 0.1);
+    transform: translateY(-2px);
+}
+
+.asesor-header-v2 {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--gerente-border);
+}
+
+.asesor-avatar-v2 {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--gerente-primary), var(--gerente-info));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.asesor-info-v2 {
+    flex: 1;
+    min-width: 0;
+}
+
+.asesor-info-v2 h5 {
+    margin: 0 0 4px 0;
+    color: var(--gerente-text-primary);
+    font-size: 16px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.asesor-info-v2 p {
+    margin: 0;
+    color: var(--gerente-text-secondary);
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.asesor-conversion-v2 {
+    flex-shrink: 0;
+}
+
+.conversion-badge-v2 {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    text-align: center;
+}
+
+.conversion-badge-v2.excelente {
+    background: linear-gradient(135deg, #48bb78, #38a169);
+}
+
+.conversion-badge-v2.bueno {
+    background: linear-gradient(135deg, #9f7aea, #805ad5);
+}
+
+.conversion-badge-v2.regular {
+    background: linear-gradient(135deg, #ed8936, #dd6b20);
+}
+
+.conversion-badge-v2.necesita-mejora {
+    background: linear-gradient(135deg, #f56565, #e53e3e);
+}
+
+.asesor-stats-v2 {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.stat-row-v2 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.stat-item-v2 {
+    text-align: center;
+    padding: 8px;
+    background: var(--gerente-bg);
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.stat-item-v2:hover {
+    background: var(--gerente-border);
+}
+
+.stat-value-v2 {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--gerente-text-primary);
+    margin-bottom: 2px;
+}
+
+.stat-label-v2 {
+    display: block;
+    font-size: 11px;
+    color: var(--gerente-text-secondary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* 📱 RESPONSIVE PARA GERENTE */
+@media (max-width: 768px) {
+    .asesores-grid-v2 {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .asesor-header-v2 {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+
+    .asesor-info-v2 {
+        text-align: center;
+    }
+
+    .stat-row-v2 {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .stat-item-v2 {
+        padding: 6px;
+    }
+
+    .stat-value-v2 {
+        font-size: 16px;
+    }
+
+    .stat-label-v2 {
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .asesor-card-v2 {
+        padding: 16px;
+    }
+
+    .conversion-badge-v2 {
+        padding: 3px 8px;
+        font-size: 11px;
+    }
+
+    .asesor-avatar-v2 {
+        width: 40px;
+        height: 40px;
+        font-size: 14px;
+    }
+
+    .asesor-info-v2 h5 {
+        font-size: 14px;
+    }
+
+    .asesor-info-v2 p {
+        font-size: 12px;
+    }
+}
+
+/* 📊 MENSAJE DE NO DATOS */
+.no-data-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--gerente-text-secondary);
+    background: var(--gerente-bg);
+    border-radius: 12px;
+    border: 2px dashed var(--gerente-border);
+}
+
+.no-data-message i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: var(--gerente-primary);
+    opacity: 0.6;
+}
+
+.no-data-message p {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* 🔧 AJUSTES ESPECÍFICOS PARA INTEGRACIÓN CON MÉTRICAS ADMIN */
+#estadisticas-section .asesores-display-container {
+    margin-top: 20px;
+}
+
+#estadisticas-section .equipos-section {
+    background: var(--gerente-card-bg);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+#estadisticas-section .chart-section {
+    background: var(--gerente-card-bg);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* 📊 GRÁFICOS ESPECÍFICOS PARA GERENTE */
+#distribucionGerenteChart,
+#rendimientoGerenteChart {
+    max-height: 300px;
+}
+
+.chart-container-v2 {
+    position: relative;
+    height: 300px;
+    margin-top: 15px;
+}
+
+/* 🎯 SOBRESCRIBIR ALGUNOS ESTILOS DE ADMIN PARA GERENTE */
+#estadisticas-section .section-title-v2 {
+    color: var(--gerente-text-primary);
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#estadisticas-section .section-title-v2 i {
+    color: var(--gerente-primary);
+}
+
+/* 🔄 LOADER PERSONALIZADO PARA GERENTE */
+#gerente-stats-loader .spinner-v2 {
+    border-color: var(--gerente-border);
+    border-left-color: var(--gerente-primary);
+}
+
+#gerente-stats-loader .loader-text {
+    color: var(--gerente-text-primary);
+}

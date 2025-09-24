@@ -1,0 +1,443 @@
+/* ============================================================================
+   🎯 ESTILOS ESPECÍFICOS PARA ESTADÍSTICAS DE ASESOR
+   Basado en el diseño de métricas avanzadas de admin pero personalizado
+   ============================================================================ */
+
+/* 🎨 VARIABLES PERSONALIZADAS PARA ASESOR */
+:root {
+    --asesor-primary: #6366F1;
+    --asesor-success: #10B981;
+    --asesor-warning: #F59E0B;
+    --asesor-danger: #EF4444;
+    --asesor-info: #3B82F6;
+    --asesor-purple: #8B5CF6;
+    --asesor-bg: #F8FAFC;
+    --asesor-card-bg: #ffffff;
+    --asesor-border: #E2E8F0;
+    --asesor-text-primary: #1E293B;
+    --asesor-text-secondary: #64748B;
+}
+
+/* 🎯 LAYOUT ESPECÍFICO PARA ASESOR */
+.asesor-dashboard-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 25px;
+    margin-bottom: 25px;
+}
+
+/* 📊 DISTRIBUCIÓN PERSONALIZADA */
+.distribucion-section {
+    background: var(--asesor-card-bg);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* 🎯 SECCIÓN DE OBJETIVOS */
+.objetivos-section {
+    background: var(--asesor-card-bg);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.objetivo-progress-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.objetivo-circular {
+    flex-shrink: 0;
+}
+
+.progress-ring {
+    position: relative;
+    width: 120px;
+    height: 120px;
+}
+
+.progress-ring svg {
+    transform: rotate(-90deg);
+    width: 120px;
+    height: 120px;
+}
+
+.progress-ring circle {
+    transition: stroke-dashoffset 0.8s ease-in-out;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.progress-text span {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--asesor-text-primary);
+}
+
+.progress-text small {
+    font-size: 12px;
+    color: var(--asesor-text-secondary);
+    margin-top: 4px;
+}
+
+.objetivo-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.objetivo-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: var(--asesor-bg);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.objetivo-item:hover {
+    background: var(--asesor-border);
+}
+
+.objetivo-label {
+    font-size: 14px;
+    color: var(--asesor-text-secondary);
+    font-weight: 500;
+}
+
+.objetivo-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--asesor-text-primary);
+}
+
+/* 🕒 RECLUTAS RECIENTES */
+.recientes-section {
+    background: var(--asesor-card-bg);
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.recientes-display-container {
+    margin-top: 20px;
+}
+
+.recientes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 15px;
+}
+
+.recluta-reciente-card {
+    background: var(--asesor-bg);
+    border-radius: 10px;
+    padding: 15px;
+    border-left: 4px solid var(--asesor-primary);
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.recluta-reciente-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+.recluta-info h5 {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--asesor-text-primary);
+}
+
+.recluta-info p {
+    margin: 0 0 6px 0;
+    font-size: 14px;
+    color: var(--asesor-text-secondary);
+}
+
+.recluta-info .folio {
+    font-size: 12px;
+    color: var(--asesor-primary);
+    font-weight: 500;
+    background: var(--asesor-primary)15;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.recluta-meta {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.estado-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.estado-badge.activo {
+    background: var(--asesor-success);
+    color: white;
+}
+
+.estado-badge.proceso {
+    background: var(--asesor-warning);
+    color: white;
+}
+
+.estado-badge.rechazado {
+    background: var(--asesor-danger);
+    color: white;
+}
+
+.tiempo {
+    font-size: 12px;
+    color: var(--asesor-text-secondary);
+    font-weight: 500;
+}
+
+/* 📊 GRÁFICOS ESPECÍFICOS PARA ASESOR */
+#distribucionAsesorChart,
+#rendimientoAsesorChart {
+    max-height: 300px;
+}
+
+.chart-container-v2 {
+    position: relative;
+    height: 300px;
+    margin-top: 15px;
+}
+
+/* 📱 KPIs PERSONALIZADOS PARA ASESOR */
+.kpi-card-v2.total-reclutas .kpi-icon-v2 {
+    background: linear-gradient(135deg, var(--asesor-primary), var(--asesor-purple));
+}
+
+.kpi-card-v2.activos-asesor .kpi-icon-v2 {
+    background: linear-gradient(135deg, var(--asesor-success), #059669);
+}
+
+.kpi-card-v2.conversion-asesor .kpi-icon-v2 {
+    background: linear-gradient(135deg, var(--asesor-info), #2563EB);
+}
+
+.kpi-card-v2.objetivo-mensual .kpi-icon-v2 {
+    background: linear-gradient(135deg, var(--asesor-warning), #D97706);
+}
+
+/* 🎯 SOBRESCRIBIR ESTILOS DE ADMIN PARA ASESOR */
+#estadisticas-section .section-title-v2 {
+    color: var(--asesor-text-primary);
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#estadisticas-section .section-title-v2 i {
+    color: var(--asesor-primary);
+}
+
+/* 🔄 LOADER PERSONALIZADO PARA ASESOR */
+#asesor-stats-loader .spinner-v2 {
+    border-color: var(--asesor-border);
+    border-left-color: var(--asesor-primary);
+}
+
+#asesor-stats-loader .loader-text {
+    color: var(--asesor-text-primary);
+}
+
+/* 📊 NO DATA MESSAGE */
+.no-data-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--asesor-text-secondary);
+    background: var(--asesor-bg);
+    border-radius: 12px;
+    border: 2px dashed var(--asesor-border);
+}
+
+.no-data-message i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: var(--asesor-primary);
+    opacity: 0.6;
+}
+
+.no-data-message p {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* 🎨 ANIMACIONES ESPECÍFICAS */
+.kpi-card-v2:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15);
+}
+
+.objetivo-item:hover {
+    transform: translateX(5px);
+}
+
+.recluta-reciente-card:hover .folio {
+    background: var(--asesor-primary);
+    color: white;
+}
+
+/* 📱 RESPONSIVE PARA ASESOR */
+@media (max-width: 1024px) {
+    .asesor-dashboard-row {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .objetivo-progress-container {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+
+    .objetivo-details {
+        width: 100%;
+        max-width: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .recientes-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .recluta-reciente-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .recluta-meta {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .objetivo-progress-container {
+        gap: 15px;
+    }
+
+    .progress-ring {
+        width: 100px;
+        height: 100px;
+    }
+
+    .progress-ring svg {
+        width: 100px;
+        height: 100px;
+    }
+
+    .progress-text span {
+        font-size: 20px;
+    }
+
+    .progress-text small {
+        font-size: 11px;
+    }
+}
+
+@media (max-width: 480px) {
+    .distribucion-section,
+    .objetivos-section,
+    .recientes-section,
+    .chart-section {
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .kpis-grid-v2 {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .kpi-card-v2 {
+        padding: 15px;
+    }
+
+    .kpi-number {
+        font-size: 24px;
+    }
+
+    .kpi-label {
+        font-size: 12px;
+    }
+
+    .recluta-reciente-card {
+        padding: 12px;
+    }
+
+    .recluta-info h5 {
+        font-size: 14px;
+    }
+
+    .recluta-info p {
+        font-size: 13px;
+    }
+}
+
+/* 🔧 AJUSTES FINALES DE INTEGRACIÓN */
+#estadisticas-section .chart-section {
+    background: var(--asesor-card-bg);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* 🎯 EFECTOS HOVER MEJORADOS */
+.estado-stat:hover {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+}
+
+.estado-stat:hover .estado-icon {
+    transform: rotate(5deg);
+    transition: transform 0.2s ease;
+}
+
+/* 🎨 GRADIENTES ADICIONALES */
+.progress-ring circle[stroke="#48bb78"] {
+    stroke: url(#progressGradient);
+}
+
+/* Definir gradiente para el progreso si es necesario */
+.chart-section svg defs linearGradient {
+    --gradient-start: var(--asesor-success);
+    --gradient-end: #059669;
+}

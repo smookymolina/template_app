@@ -1738,9 +1738,11 @@ function handleSpecialSections(sectionId) {
 function handleEstadisticasSection() {
     const currentUser = getCurrentUser();
     console.log('📊 Accediendo a estadísticas, usuario:', currentUser?.rol);
-    
+
     if (currentUser?.rol === 'admin') {
         setupEstadisticasForAdmin();
+    } else if (currentUser?.rol === 'gerente') {
+        setupEstadisticasForGerente();
     } else if (currentUser?.rol === 'asesor') {
         setupEstadisticasForAsesor();
     }
@@ -1785,12 +1787,24 @@ function setupEstadisticasForAdmin() {
 }
 
 /**
+ * ✅ CONFIGURAR ESTADÍSTICAS PARA GERENTE
+ */
+function setupEstadisticasForGerente() {
+    setTimeout(async () => {
+        console.log('🎯 Configurando estadísticas para gerente');
+        await loadGerenteStatsModule();
+        console.log('📊 Módulo de estadísticas de gerente cargado');
+    }, 200);
+}
+
+/**
  * ✅ CONFIGURAR ESTADÍSTICAS PARA ASESOR
  */
 function setupEstadisticasForAsesor() {
     setTimeout(async () => {
-        await loadMetricasAdminModule();
-        window.MetricasAdmin?.setupContainer?.();
+        console.log('🎯 Configurando estadísticas para asesor');
+        await loadAsesorStatsModule();
+        console.log('📊 Módulo de estadísticas de asesor cargado');
     }, 200);
 }
 
@@ -1981,6 +1995,88 @@ async function loadMetricasAdminModule() {
         const cssLink = document.createElement('link');
         cssLink.rel = 'stylesheet';
         cssLink.href = '/static/css/metricas-admin.css';
+        document.head.appendChild(cssLink);
+    });
+}
+
+/**
+ * ✅ CARGAR MÓDULO DE ESTADÍSTICAS PARA GERENTE
+ */
+async function loadGerenteStatsModule() {
+    return new Promise((resolve, reject) => {
+        if (window.GerenteStats) {
+            console.log('📊 Módulo GerenteStats ya está cargado');
+            resolve(window.GerenteStats);
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = '/static/js/gerente-stats.js';
+
+        script.onload = () => {
+            console.log('✅ Módulo GerenteStats cargado exitosamente');
+            if (window.GerenteStats) {
+                resolve(window.GerenteStats);
+            } else {
+                const error = 'GerenteStats no se definió después de la carga del script.';
+                console.error('❌ ' + error);
+                reject(new Error(error));
+            }
+        };
+
+        script.onerror = () => {
+            const error = 'Error al cargar el script de GerenteStats.';
+            console.error('❌ ' + error);
+            reject(new Error(error));
+        };
+
+        document.head.appendChild(script);
+
+        // También cargar estilos CSS específicos para gerentes
+        const cssLink = document.createElement('link');
+        cssLink.rel = 'stylesheet';
+        cssLink.href = '/static/css/gerente-stats.css';
+        document.head.appendChild(cssLink);
+    });
+}
+
+/**
+ * ✅ CARGAR MÓDULO DE ESTADÍSTICAS PARA ASESOR
+ */
+async function loadAsesorStatsModule() {
+    return new Promise((resolve, reject) => {
+        if (window.AsesorStats) {
+            console.log('📊 Módulo AsesorStats ya está cargado');
+            resolve(window.AsesorStats);
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = '/static/js/asesor-stats.js';
+
+        script.onload = () => {
+            console.log('✅ Módulo AsesorStats cargado exitosamente');
+            if (window.AsesorStats) {
+                resolve(window.AsesorStats);
+            } else {
+                const error = 'AsesorStats no se definió después de la carga del script.';
+                console.error('❌ ' + error);
+                reject(new Error(error));
+            }
+        };
+
+        script.onerror = () => {
+            const error = 'Error al cargar el script de AsesorStats.';
+            console.error('❌ ' + error);
+            reject(new Error(error));
+        };
+
+        document.head.appendChild(script);
+
+        // También cargar estilos CSS específicos para asesores
+        const cssLink = document.createElement('link');
+        cssLink.rel = 'stylesheet';
+        cssLink.href = '/static/css/asesor-stats.css';
         document.head.appendChild(cssLink);
     });
 }
