@@ -810,11 +810,20 @@ async function setupAdminModules() {
 
     // Se elimina el setTimeout para una inicialización más robusta y directa
     const estadisticasSection = document.getElementById('estadisticas-section');
-    if (estadisticasSection && window.initializeMetricasAdmin) {
+    if (estadisticasSection) {
         console.log('📈 Inicializando métricas administrativas directamente...');
-        window.initializeMetricasAdmin();
+        // ✅ PRIORIZAR MÉTRICAS V2
+        if (window.initializeMetricasAdminV2) {
+            console.log('🚀 Inicializando métricas admin V2 directamente');
+            window.initializeMetricasAdminV2();
+        } else if (window.initializeMetricasAdmin) {
+            console.warn('⚠️ Fallback a métricas V1 directamente');
+            window.initializeMetricasAdmin();
+        } else {
+            console.warn('⚠️ No se encontraron funciones de inicialización de métricas');
+        }
     } else {
-        console.warn('⚠️ No se pudo inicializar métricas: sección o función no encontrada.');
+        console.warn('⚠️ No se pudo inicializar métricas: sección no encontrada.');
     }
 
     // Iniciar tutorial de onboarding para la primera visita del admin
@@ -1743,8 +1752,15 @@ function handleEstadisticasSection() {
 function setupEstadisticasForAdmin() {
     setTimeout(async () => {
         await loadMetricasAdminModule();
-        window.initializeMetricasAdmin?.();
-        console.log('📈 Inicializando métricas admin para la sección');
+        // ✅ INICIALIZAR MÉTRICAS V2 PARA ADMIN
+        if (window.initializeMetricasAdminV2) {
+            console.log('🚀 Inicializando métricas admin V2 para la sección');
+            window.initializeMetricasAdminV2();
+        } else {
+            console.warn('⚠️ Fallback a métricas V1');
+            window.initializeMetricasAdmin?.();
+        }
+        console.log('📈 Métricas admin inicializadas para la sección');
 
         // Iniciar tutorial de métricas para admin
         const metricsTutorialCompleted = localStorage.getItem('admin_metrics_tutorial_completed');
