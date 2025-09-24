@@ -1099,25 +1099,20 @@ def get_dashboard_unificado():
 def _get_global_kpis():
     """Obtiene KPIs globales del sistema optimizados"""
     try:
-        # Query unificada para obtener todas las métricas globales de una vez
-        global_query = db.session.query(
+        # Query para métricas de reclutas
+        recluta_query = db.session.query(
             func.count(Recluta.id).label('total_reclutas'),
             func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('activos'),
             func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('en_proceso'),
-            func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rechazados'),
-            func.count(Usuario.id.distinct()).label('total_usuarios')
-        ).outerjoin(
-            Recluta, True  # Left join para incluir usuarios sin reclutas
-        ).filter(
-            Usuario.is_active == True
+            func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rechazados')
         ).first()
 
-        total_reclutas = global_query.total_reclutas or 0
-        activos = global_query.activos or 0
-        en_proceso = global_query.en_proceso or 0
-        rechazados = global_query.rechazados or 0
+        total_reclutas = recluta_query.total_reclutas or 0
+        activos = recluta_query.activos or 0
+        en_proceso = recluta_query.en_proceso or 0
+        rechazados = recluta_query.rechazados or 0
 
-        # Métricas adicionales por rol
+        # Query para métricas de usuarios
         usuarios_por_rol = db.session.query(
             Usuario.rol,
             func.count(Usuario.id).label('cantidad')

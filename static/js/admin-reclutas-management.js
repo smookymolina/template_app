@@ -180,18 +180,25 @@ const AdminReclutasManagement = {
                 <td>${new Date(recluta.fecha_registro).toLocaleDateString()}</td>
                 <td>
                     <div class="action-buttons">
-                        <select class="single-asesor-select" data-id="${recluta.id}">
+                        <select class="single-asesor-select" data-id="${recluta.id}"
+                                title="Selecciona un nuevo asesor para ${recluta.nombre}">
                             <option value="">Cambiar asesor...</option>
                             <option value="null" ${!recluta.asesor_id ? 'selected' : ''}>Sin asesor</option>
                             ${this.asesores.map(a =>
                                 `<option value="${a.id}" ${a.id == recluta.asesor_id ? 'selected' : ''}>${a.nombre}</option>`
                             ).join('')}
                         </select>
-                        <button class="btn-sm btn-warning single-assign" data-id="${recluta.id}">
-                            <i class="fas fa-user-edit"></i>
+                        <button class="btn-sm btn-warning single-assign"
+                                data-id="${recluta.id}"
+                                title="Asignar asesor seleccionado a ${recluta.nombre}"
+                                aria-label="Asignar asesor a ${recluta.nombre}">
+                            <i class="fas fa-user-edit" aria-hidden="true"></i>
                         </button>
-                        <button class="btn-sm btn-danger single-delete" data-id="${recluta.id}">
-                            <i class="fas fa-trash"></i>
+                        <button class="btn-sm btn-danger single-delete"
+                                data-id="${recluta.id}"
+                                title="Eliminar a ${recluta.nombre} permanentemente"
+                                aria-label="Eliminar a ${recluta.nombre}">
+                            <i class="fas fa-trash" aria-hidden="true"></i>
                         </button>
                     </div>
                 </td>
@@ -222,12 +229,42 @@ const AdminReclutasManagement = {
             });
         });
 
+        // Select de asesor - mostrar feedback visual
+        document.querySelectorAll('.single-asesor-select').forEach(select => {
+            select.addEventListener('change', (e) => {
+                const id = e.target.dataset.id;
+                const assignBtn = document.querySelector(`.single-assign[data-id="${id}"]`);
+
+                if (e.target.value !== '' && assignBtn) {
+                    // Destacar el botón cuando hay un cambio pendiente
+                    assignBtn.classList.add('btn-pending-change');
+                    assignBtn.style.animation = 'pulse 2s infinite';
+
+                    // Actualizar tooltip
+                    const selectedOption = e.target.options[e.target.selectedIndex];
+                    assignBtn.title = `Confirmar cambio a: ${selectedOption.text}`;
+                } else if (assignBtn) {
+                    assignBtn.classList.remove('btn-pending-change');
+                    assignBtn.style.animation = '';
+                    const recluta = this.reclutas.find(r => r.id === parseInt(id));
+                    assignBtn.title = `Asignar asesor seleccionado a ${recluta?.nombre || 'este recluta'}`;
+                }
+            });
+        });
+
         // Asignación individual
         document.querySelectorAll('.single-assign').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const id = parseInt(e.target.closest('.single-assign').dataset.id);
                 const select = document.querySelector(`.single-asesor-select[data-id="${id}"]`);
                 const asesorId = select.value === '' ? null : (select.value === 'null' ? null : parseInt(select.value));
+
+                if (select.value === '') {
+                    showError('Primero selecciona un asesor del dropdown');
+                    select.focus();
+                    return;
+                }
+
                 this.assignSingleRecluta(id, asesorId);
             });
         });
@@ -410,8 +447,16 @@ const AdminReclutasManagement = {
         const asesorName = asesorId === null || asesorId === undefined ? 'Sin asignar' :
                           this.asesores.find(a => a.id == asesorId)?.nombre || 'Desconocido';
 
+        const assignBtn = document.querySelector(`.single-assign[data-id="${reclutaId}"]`);
+        const originalText = assignBtn?.innerHTML;
+
         try {
-            this.showLoading();
+            // Feedback visual inmediato
+            if (assignBtn) {
+                assignBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                assignBtn.disabled = true;
+                assignBtn.style.opacity = '0.7';
+            }
 
             const response = await fetch(`/admin/reclutas/${reclutaId}/assign`, {
                 method: 'POST',
@@ -425,14 +470,37 @@ const AdminReclutasManagement = {
                 throw new Error(data.message || `HTTP ${response.status}`);
             }
 
+            // Animación de éxito
+            if (assignBtn) {
+                assignBtn.innerHTML = '<i class="fas fa-check"></i>';
+                assignBtn.style.background = '#28a745';
+                assignBtn.style.animation = 'buttonSuccess 0.6s ease';
+
+                setTimeout(() => {
+                    assignBtn.classList.remove('btn-pending-change');
+                    assignBtn.style.animation = '';
+                }, 600);
+            }
+
             showSuccess(`✅ Asesor cambiado a "${asesorName}"`);
-            await this.loadReclutas();
+
+            // Recargar datos después de un breve delay
+            setTimeout(async () => {
+                await this.loadReclutas();
+            }, 800);
 
         } catch (error) {
             console.error('❌ Error en asignación individual:', error);
             showError(`Error al asignar: ${error.message}`);
-        } finally {
-            this.hideLoading();
+
+            // Restaurar botón en caso de error
+            if (assignBtn && originalText) {
+                assignBtn.innerHTML = originalText;
+                assignBtn.disabled = false;
+                assignBtn.style.opacity = '1';
+                assignBtn.classList.remove('btn-pending-change');
+                assignBtn.style.animation = '';
+            }
         }
     },
 

@@ -1622,6 +1622,35 @@ td {
     text-overflow: ellipsis;
 }
 
+/* Color-coded calendar days based on interview count */
+.calendar-day.interview-count-1 {
+    background-color: rgba(40, 167, 69, 0.15) !important; /* Verde claro */
+    border-color: #28a745 !important;
+}
+
+.calendar-day.interview-count-2-4 {
+    background-color: rgba(255, 193, 7, 0.15) !important; /* Amarillo claro */
+    border-color: #ffc107 !important;
+}
+
+.calendar-day.interview-count-5-plus {
+    background-color: rgba(220, 53, 69, 0.15) !important; /* Rojo claro */
+    border-color: #dc3545 !important;
+}
+
+/* Hover states for interview count days */
+.calendar-day.interview-count-1:hover {
+    background-color: rgba(40, 167, 69, 0.25) !important;
+}
+
+.calendar-day.interview-count-2-4:hover {
+    background-color: rgba(255, 193, 7, 0.25) !important;
+}
+
+.calendar-day.interview-count-5-plus:hover {
+    background-color: rgba(220, 53, 69, 0.25) !important;
+}
+
 /* Configuración */
 .config-container {
     display: grid;

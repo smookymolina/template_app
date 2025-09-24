@@ -1739,14 +1739,14 @@ const Reclutas = {
      */
     loadGerentes: async function() {
         try {
-            const response = await fetch(`${CONFIG.API_URL}/usuarios/gerentes`);
+            const response = await fetch(`/admin/metricas/gerentes`);
             if (!response.ok) {
                 throw new Error(`Error HTTP: ${response.status}`);
             }
 
             const data = await response.json();
             if (data.success) {
-                this.gerentes = data.gerentes || [];
+                this.gerentes = data.gerentes_ranking || [];
                 this.renderGerenteFilterOptions();
                 this.updateGerenteFilterButtonLabel();
                 console.log(`✅ ${this.gerentes.length} gerentes cargados`);

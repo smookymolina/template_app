@@ -289,6 +289,9 @@ const Calendar = {
                 this.displayEventInCalendar(event);
             });
 
+            // Actualizar colores de todos los días después de cargar todos los eventos
+            this.updateAllDayColors();
+
             // Actualizar lista de próximas entrevistas
             this.updateUpcomingEventsList();
             console.log('Calendar: loadEvents - Proceso completado exitosamente.');
@@ -310,32 +313,35 @@ const Calendar = {
             console.warn('Calendar: displayEventInCalendar - Evento o fecha inválida.', event);
             return;
         }
-        
+
         const eventDate = new Date(event.fecha);
         const formattedDate = this.formatDateForDataset(eventDate);
-        
+
         // Buscar el div del día correspondiente
         const dayCell = document.querySelector(`.calendar-day[data-date="${formattedDate}"]`);
         if (!dayCell) {
             console.warn('Calendar: displayEventInCalendar - Celda del día no encontrada para fecha:', formattedDate);
             return;
         }
-        
+
         // Crear elemento del evento
         const eventElement = document.createElement('div');
         eventElement.className = 'calendar-event';
         eventElement.textContent = `${event.hora} - ${event.candidato_nombre || event.title}`;
         eventElement.dataset.eventId = event.id;
-        
+
         // Añadir evento al hacer clic para ver detalles
         eventElement.addEventListener('click', (e) => {
             e.stopPropagation(); // Evitar que se active el evento del día
             this.showEventOptions(eventElement, event);
         });
-        
+
         // Añadir evento al día
         dayCell.appendChild(eventElement);
         console.log('Calendar: displayEventInCalendar - Evento añadido a la celda.');
+
+        // Aplicar colores basados en el conteo de entrevistas después de agregar el evento
+        this.updateDayColorByInterviewCount(dayCell, formattedDate);
     },
     
     /**
@@ -975,11 +981,16 @@ const Calendar = {
     refreshCalendarEvents: async function() {
         console.log('Calendar: refreshCalendarEvents - Iniciando actualización completa');
 
-        // Limpiar todos los eventos del calendario
+        // Limpiar todos los eventos del calendario y resetear colores
         document.querySelectorAll('.calendar-event').forEach(el => {
             if (el.parentNode) {
                 el.parentNode.removeChild(el);
             }
+        });
+
+        // Remover clases de colores de los días
+        document.querySelectorAll('.calendar-day').forEach(dayCell => {
+            dayCell.classList.remove('interview-count-1', 'interview-count-2-4', 'interview-count-5-plus');
         });
 
         // Volver a cargar y mostrar eventos
@@ -1508,6 +1519,47 @@ const Calendar = {
 
         console.log('Calendar: applyRoleBasedFilters - Rol no reconocido, retornando array vacío');
         return events;
+    },
+
+    /**
+     * Actualiza el color de un día específico basado en el número de entrevistas
+     * @param {HTMLElement} dayCell - Elemento del día
+     * @param {string} formattedDate - Fecha en formato YYYY-MM-DD
+     */
+    updateDayColorByInterviewCount: function(dayCell, formattedDate) {
+        if (!dayCell) return;
+
+        // Contar eventos para este día
+        const eventsForDay = this.getEventsForDate(formattedDate);
+        const eventCount = eventsForDay.length;
+
+        // Remover clases de conteo existentes
+        dayCell.classList.remove('interview-count-1', 'interview-count-2-4', 'interview-count-5-plus');
+
+        // Aplicar clase basada en el conteo
+        if (eventCount === 1) {
+            dayCell.classList.add('interview-count-1');
+        } else if (eventCount >= 2 && eventCount <= 4) {
+            dayCell.classList.add('interview-count-2-4');
+        } else if (eventCount >= 5) {
+            dayCell.classList.add('interview-count-5-plus');
+        }
+
+        console.log(`Calendar: updateDayColorByInterviewCount - Día ${formattedDate}: ${eventCount} entrevistas`);
+    },
+
+    /**
+     * Actualiza los colores de todos los días del calendario
+     */
+    updateAllDayColors: function() {
+        const allDayCells = document.querySelectorAll('.calendar-day');
+        allDayCells.forEach(dayCell => {
+            const formattedDate = dayCell.dataset.date;
+            if (formattedDate) {
+                this.updateDayColorByInterviewCount(dayCell, formattedDate);
+            }
+        });
+        console.log('Calendar: updateAllDayColors - Colores actualizados para todos los días');
     },
 
     /**

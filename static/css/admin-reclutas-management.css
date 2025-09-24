@@ -196,52 +196,154 @@ Gestión avanzada exclusiva para administradores
 .action-buttons {
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
+    min-width: 280px;
+    justify-content: flex-start;
 }
 
 .single-asesor-select {
-    padding: 4px 8px;
+    padding: 6px 12px;
     border: 1px solid var(--border-color, #ddd);
-    border-radius: 3px;
-    font-size: 12px;
-    max-width: 120px;
+    border-radius: 4px;
+    font-size: 13px;
+    min-width: 160px;
+    max-width: 180px;
     background: var(--input-background, #fff);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.single-asesor-select:hover {
+    border-color: var(--primary-color, #007bff);
+    background: var(--input-hover-background, #f8f9fa);
+}
+
+.single-asesor-select:focus {
+    outline: none;
+    border-color: var(--primary-color, #007bff);
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
 }
 
 .btn-sm {
-    padding: 4px 8px;
-    font-size: 12px;
+    padding: 8px 12px;
+    font-size: 13px;
     border: none;
-    border-radius: 3px;
+    border-radius: 4px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 28px;
+    min-width: 36px;
+    min-height: 36px;
+    font-weight: 500;
+    position: relative;
 }
 
 .btn-sm:hover {
     transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.25);
 }
 
 .btn-sm.btn-warning {
     background: var(--warning-color, #ffc107);
     color: var(--warning-text, #212529);
+    border: 1px solid rgba(0,0,0,0.1);
 }
 
 .btn-sm.btn-warning:hover {
     background: var(--warning-hover, #e0a800);
+    box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
 }
 
 .btn-sm.btn-danger {
     background: var(--danger-color, #dc3545);
     color: white;
+    border: 1px solid rgba(0,0,0,0.1);
 }
 
 .btn-sm.btn-danger:hover {
     background: var(--danger-hover, #c82333);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+/* Tooltips para mejor UX */
+.btn-sm[title] {
+    position: relative;
+}
+
+.btn-sm[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* Mejorar la apariencia visual del grupo de acciones */
+.action-buttons::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--border-light, #eee);
+    opacity: 0.5;
+}
+
+/* Estado de cambio pendiente */
+.btn-pending-change {
+    background: linear-gradient(45deg, #ffc107, #ff8c00) !important;
+    border-color: #ff8c00 !important;
+    box-shadow: 0 0 15px rgba(255, 193, 7, 0.5) !important;
+}
+
+/* Animaciones */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7);
+    }
+    70% {
+        transform: scale(1.05);
+        box-shadow: 0 0 0 6px rgba(255, 193, 7, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 193, 7, 0);
+    }
+}
+
+@keyframes buttonSuccess {
+    0% {
+        transform: scale(1);
+        background: #28a745;
+    }
+    50% {
+        transform: scale(1.1);
+        background: #20c997;
+    }
+    100% {
+        transform: scale(1);
+        background: #28a745;
+    }
+}
+
+/* Mejora visual para estados focus */
+.single-asesor-select:focus {
+    outline: none;
+    border-color: var(--primary-color, #007bff) !important;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.25) !important;
+    transform: scale(1.02);
 }
 
 /* ===== PAGINACIÓN ===== */
@@ -410,12 +512,20 @@ input[type="checkbox"] {
     }
 
     .single-asesor-select {
-        max-width: 100px;
-        font-size: 11px;
+        min-width: 140px;
+        max-width: 160px;
+        font-size: 12px;
     }
 
     .action-buttons {
-        gap: 3px;
+        min-width: 250px;
+        gap: 6px;
+    }
+
+    .btn-sm {
+        min-width: 32px;
+        min-height: 32px;
+        padding: 6px 10px;
     }
 }
 
@@ -438,6 +548,15 @@ input[type="checkbox"] {
 
     .action-buttons {
         justify-content: center;
+        min-width: unset;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .single-asesor-select {
+        min-width: 120px;
+        width: 100%;
+        margin-bottom: 5px;
     }
 
     .admin-pagination {
