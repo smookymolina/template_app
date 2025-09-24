@@ -73,10 +73,10 @@ class MetricasAdminV2 {
         const ordenarEquipos = document.getElementById('ordenar-equipos-v2');
 
         if (filtroEquipos) {
-            filtroEquipos.addEventListener('change', () => this.filterEquipos());
+            filtroEquipos.addEventListener('change', () => this.filterEquipos()); // Placeholder
         }
         if (ordenarEquipos) {
-            ordenarEquipos.addEventListener('change', () => this.sortEquipos());
+            ordenarEquipos.addEventListener('change', () => this.sortEquipos()); // Placeholder
         }
 
         // Vista toggle (Cards vs Table)
@@ -90,15 +90,16 @@ class MetricasAdminV2 {
         // TAB INDIVIDUAL: Búsqueda y filtros
         const buscarAsesor = document.getElementById('buscar-asesor-v2');
         const filtroPerformance = document.getElementById('filtro-performance-v2');
+        const filtroEquipo = document.getElementById('filtro-equipo-v2');
 
         if (buscarAsesor) {
-            buscarAsesor.addEventListener('input', this.debounce(() => {
-                this.searchAsesores();
-            }, 300));
+            buscarAsesor.addEventListener('input', this.debounce(() => this.applyAsesoresFilters(), 300));
         }
-
         if (filtroPerformance) {
-            filtroPerformance.addEventListener('change', () => this.filterAsesores());
+            filtroPerformance.addEventListener('change', () => this.applyAsesoresFilters());
+        }
+        if (filtroEquipo) {
+            filtroEquipo.addEventListener('change', () => this.applyAsesoresFilters());
         }
 
         // TAB TENDENCIAS: Período y exportación
@@ -339,7 +340,53 @@ class MetricasAdminV2 {
             rechazadosPct.textContent = `${pct}%`;
         }
 
+        // Renderizar el gráfico de distribución
+        this.renderDistribucionChart(distribucion);
+
         console.log('📊 Distribución actualizada');
+    }
+
+    /**
+     * 📈 RENDERIZAR GRÁFICO DE DISTRIBUCIÓN (DONUT)
+     */
+    renderDistribucionChart(distribucion) {
+        const chartId = 'distribucion';
+        this.destroyChart(chartId);
+
+        const ctx = document.getElementById('distribucionChartCanvas').getContext('2d');
+        if (!ctx) return;
+
+        this.charts[chartId] = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Activos', 'En Proceso', 'Rechazados'],
+                datasets: [{
+                    data: [distribucion.activos, distribucion.en_proceso, distribucion.rechazados],
+                    backgroundColor: ['#10B981', '#F59E0B', '#EF4444'],
+                    borderColor: '#ffffff',
+                    borderWidth: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: '#1F2937',
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        padding: 10,
+                        cornerRadius: 6,
+                    }
+                }
+            }
+        });
+        console.log('📈 Gráfico de distribución renderizado');
     }
 
     /**
@@ -459,10 +506,6 @@ class MetricasAdminV2 {
                             <span>Top: ${equipo.top_asesor.nombre} (${equipo.top_asesor.tasa_exito}%)</span>
                         </div>
                     ` : ''}
-                    <div class="tendencia">
-                        <i class="fas fa-chart-line"></i>
-                        <span>${equipo.tendencia}</span>
-                    </div>
                 </div>
                 <div class="equipo-actions">
                     <button class="btn-details" onclick="metricasV2.viewEquipoDetails(${equipo.gerente.id})">
@@ -585,17 +628,64 @@ class MetricasAdminV2 {
      * 📈 RENDERIZAR GRÁFICOS DE TENDENCIAS
      */
     renderTrendsCharts(tendencias) {
-        // Placeholder para Chart.js integration
-        const chartContainer = document.getElementById('chart-tendencia-general');
-        if (chartContainer) {
-            chartContainer.innerHTML = `
-                <div class="chart-placeholder-content">
-                    <i class="fas fa-chart-line" style="font-size: 3rem; color: #e5e7eb; margin-bottom: 1rem;"></i>
-                    <p style="color: #9ca3af;">Gráfico de tendencias se renderizará aquí</p>
-                    <small style="color: #9ca3af;">Datos disponibles: ${tendencias.mensual.length} períodos</small>
-                </div>
-            `;
-        }
+        const chartId = 'tendencias';
+        this.destroyChart(chartId);
+
+        const ctx = document.getElementById('tendenciaChartCanvas').getContext('2d');
+        if (!ctx || !tendencias || !tendencias.mensual) return;
+
+        const labels = tendencias.mensual.map(p => p.periodo_nombre);
+        const data = {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Activos',
+                    data: tendencias.mensual.map(p => p.metricas.activos),
+                    backgroundColor: '#10B981',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'En Proceso',
+                    data: tendencias.mensual.map(p => p.metricas.proceso),
+                    backgroundColor: '#F59E0B',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Rechazados',
+                    data: tendencias.mensual.map(p => p.metricas.rechazados),
+                    backgroundColor: '#EF4444',
+                    borderRadius: 4,
+                }
+            ]
+        };
+
+        this.charts[chartId] = new Chart(ctx, {
+            type: 'bar',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        console.log('📈 Gráfico de tendencias renderizado');
     }
 
     /**
@@ -605,7 +695,13 @@ class MetricasAdminV2 {
         const tbody = document.querySelector('#historical-data-table tbody');
         if (!tbody || !monthlyData) return;
 
-        const html = monthlyData.map(periodo => `
+        const html = monthlyData.map((periodo, index) => {
+            const prevPeriodo = monthlyData[index - 1];
+            const trend = prevPeriodo ? periodo.metricas.tasa_conversion - prevPeriodo.metricas.tasa_conversion : 0;
+            const trendClass = this.getTrendClass(trend);
+            const trendIcon = trend > 0.1 ? 'fa-arrow-up' : (trend < -0.1 ? 'fa-arrow-down' : 'fa-arrow-right');
+
+            return `
             <tr>
                 <td>${periodo.periodo_nombre}</td>
                 <td>${periodo.metricas.total}</td>
@@ -614,12 +710,12 @@ class MetricasAdminV2 {
                 <td>${periodo.metricas.rechazados}</td>
                 <td>${periodo.metricas.tasa_conversion}%</td>
                 <td>
-                    <span class="trend-indicator ${this.getTrendClass(periodo.metricas.tasa_conversion)}">
-                        <i class="fas fa-arrow-up"></i> +2.1%
+                    <span class="trend-indicator ${trendClass}">
+                        <i class="fas ${trendIcon}"></i> ${trend.toFixed(1)}%
                     </span>
                 </td>
             </tr>
-        `).join('');
+        `}).join('');
 
         tbody.innerHTML = html;
     }
@@ -627,33 +723,108 @@ class MetricasAdminV2 {
     /**
      * 🔍 MÉTODOS DE FILTRADO Y BÚSQUEDA
      */
-    filterEquipos() {
-        const filtro = document.getElementById('filtro-equipos-v2')?.value;
-        console.log('🔍 Filtrando equipos por:', filtro);
-        // Implementar lógica de filtrado
-    }
+    applyAsesoresFilters() {
+        if (!this.dashboardData || !this.dashboardData.asesores_individuales) return;
 
-    sortEquipos() {
-        const orden = document.getElementById('ordenar-equipos-v2')?.value;
-        console.log('📊 Ordenando equipos por:', orden);
-        // Implementar lógica de ordenamiento
-    }
+        const searchQuery = document.getElementById('buscar-asesor-v2')?.value.toLowerCase() || '';
+        const performanceFilter = document.getElementById('filtro-performance-v2')?.value || 'todos';
+        const teamFilter = document.getElementById('filtro-equipo-v2')?.value || 'todos';
 
-    searchAsesores() {
-        const query = document.getElementById('buscar-asesor-v2')?.value;
-        console.log('🔍 Buscando asesores:', query);
-        // Implementar lógica de búsqueda
-    }
+        let filteredAsesores = this.dashboardData.asesores_individuales;
 
-    filterAsesores() {
-        const filtro = document.getElementById('filtro-performance-v2')?.value;
-        console.log('🔍 Filtrando asesores por performance:', filtro);
-        // Implementar lógica de filtrado
+        // 1. Filtrar por búsqueda
+        if (searchQuery) {
+            filteredAsesores = filteredAsesores.filter(asesor =>
+                (asesor.nombre && asesor.nombre.toLowerCase().includes(searchQuery)) ||
+                (asesor.email && asesor.email.toLowerCase().includes(searchQuery))
+            );
+        }
+
+        // 2. Filtrar por performance
+        if (performanceFilter !== 'todos') {
+            filteredAsesores = filteredAsesores.filter(asesor => {
+                const performanceClass = this.getPerformanceClass(asesor.metricas.tasa_exito);
+                return performanceClass === performanceFilter;
+            });
+        }
+
+        // 3. Filtrar por equipo
+        if (teamFilter !== 'todos') {
+            if (teamFilter === 'independientes') {
+                filteredAsesores = filteredAsesores.filter(asesor => !asesor.gerente_nombre);
+            } else {
+                const gerenteId = parseInt(teamFilter, 10);
+                const gerente = this.dashboardData.jerarquia.gerentes.find(g => g.id === gerenteId);
+                if (gerente) {
+                    const equipoNombres = [gerente.nombre].concat(gerente.asesores.map(a => a.nombre));
+                    filteredAsesores = filteredAsesores.filter(asesor => equipoNombres.includes(asesor.nombre));
+                }
+            }
+        }
+
+        this.renderAsesoresGrid(filteredAsesores);
     }
 
     switchView(view) {
         console.log('👀 Cambiando vista a:', view);
-        // Implementar cambio de vista (cards vs table)
+        document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`.view-btn[data-view="${view}"]`).classList.add('active');
+
+        if (view === 'table') {
+            this.renderEquiposTable(this.dashboardData.equipos);
+        } else {
+            this.renderEquiposGrid(this.dashboardData.equipos);
+        }
+    }
+
+    renderEquiposTable(equipos) {
+        const container = document.getElementById('equipos-container-v2');
+        if (!container || !equipos) return;
+
+        const tableHTML = `
+            <div class="table-responsive-v2">
+                <table class="data-table-v2 team-table">
+                    <thead>
+                        <tr>
+                            <th>Gerente</th>
+                            <th>Asesores</th>
+                            <th>Total Reclutas</th>
+                            <th>Tasa de Éxito</th>
+                            <th>Nivel</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${equipos.map(equipo => `
+                            <tr>
+                                <td>
+                                    <div class="gerente-info-cell">
+                                        <div class="gerente-avatar">
+                                            ${equipo.gerente.foto_url ? `<img src="${equipo.gerente.foto_url}" alt="${equipo.gerente.nombre}">` : `<div class="avatar-placeholder">${this.getInitials(equipo.gerente.nombre)}</div>`}
+                                        </div>
+                                        <div>
+                                            <strong>${equipo.gerente.nombre}</strong>
+                                            <small>${equipo.gerente.email}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>${equipo.equipo_stats.total_asesores}</td>
+                                <td>${equipo.equipo_stats.total_reclutas}</td>
+                                <td>${equipo.equipo_stats.tasa_exito}%</td>
+                                <td><span class="performance-badge ${this.getPerformanceClass(equipo.equipo_stats.tasa_exito)}">${equipo.equipo_stats.performance_level}</span></td>
+                                <td>
+                                    <div class="equipo-actions">
+                                        <button class="btn-details" onclick="metricasV2.viewEquipoDetails(${equipo.gerente.id})"><i class="fas fa-eye"></i></button>
+                                        <button class="btn-manage" onclick="metricasV2.manageEquipo(${equipo.gerente.id})"><i class="fas fa-cog"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        container.innerHTML = tableHTML;
     }
 
     switchPeriod(period) {
@@ -675,8 +846,10 @@ class MetricasAdminV2 {
         return 'needs-improvement';
     }
 
-    getTrendClass(percentage) {
-        return 'positive'; // Placeholder
+    getTrendClass(trendValue) {
+        if (trendValue > 0.1) return 'positive';
+        if (trendValue < -0.1) return 'negative';
+        return 'neutral';
     }
 
     animateNumber(element, targetValue) {
@@ -817,28 +990,266 @@ class MetricasAdminV2 {
 
     exportData() {
         console.log('📥 Exportando datos...');
-        // Implementar exportación
-        window.open('/admin/metricas/exportar', '_blank');
+        const exportBtn = document.getElementById('export-metricas-v2');
+        if (!exportBtn) return;
+
+        exportBtn.disabled = true;
+        exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando...';
+
+        fetch('/admin/metricas/exportar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ formato: 'csv' })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Error en la respuesta del servidor.');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = 'metricas_asesores.csv';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            console.log('✅ Exportación completada.');
+        })
+        .catch(error => {
+            console.error('❌ Error en la exportación:', error);
+            this.showError('No se pudo completar la exportación.');
+        })
+        .finally(() => {
+            exportBtn.disabled = false;
+            exportBtn.innerHTML = '<i class="fas fa-download"></i> Exportar';
+        });
     }
 
     viewEquipoDetails(gerenteId) {
         console.log('👁️ Ver detalles del equipo:', gerenteId);
-        // Implementar vista detallada del equipo
+        if (!this.dashboardData || !this.dashboardData.jerarquia) return;
+
+        const gerenteData = this.dashboardData.jerarquia.gerentes.find(g => g.id === gerenteId);
+        if (!gerenteData) {
+            this.showError('No se encontraron datos para este equipo.');
+            return;
+        }
+
+        this.createEquipoDetailsModal(gerenteData);
+    }
+
+    createEquipoDetailsModal(gerenteData) {
+        const existingModal = document.getElementById('equipo-details-modal');
+        if (existingModal) existingModal.remove();
+
+        const asesoresHTML = gerenteData.asesores.map(asesor => `
+            <div class="asesor-item-in-modal">
+                <span>${asesor.nombre}</span>
+                <span class="performance-badge ${this.getPerformanceClass(asesor.metricas.tasa_exito)}">${asesor.metricas.tasa_exito}%</span>
+            </div>
+        `).join('') || '<p>Este gerente no tiene asesores asignados.</p>';
+
+        const modalHTML = `
+            <div class="modal-overlay-v2" id="equipo-details-modal">
+                <div class="modal-content-v2 large">
+                    <div class="modal-header-v2">
+                        <h3>Equipo de ${gerenteData.nombre}</h3>
+                        <button class="close-btn-v2" id="close-equipo-modal">&times;</button>
+                    </div>
+                    <div class="modal-body-v2">
+                        <h4>Rendimiento del Equipo</h4>
+                        <div class="equipo-trend-chart">
+                            <canvas id="equipoTrendChartCanvas"></canvas>
+                        </div>
+                        <h4>Miembros del Equipo (${gerenteData.asesores.length})</h4>
+                        <div class="asesores-list-in-modal">
+                            ${asesoresHTML}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        this.renderEquipoTrendChart(gerenteData.asesores);
+
+        document.getElementById('close-equipo-modal').addEventListener('click', () => this.closeEquipoDetailsModal());
+        document.getElementById('equipo-details-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'equipo-details-modal') this.closeEquipoDetailsModal();
+        });
+    }
+
+    closeEquipoDetailsModal() {
+        const modal = document.getElementById('equipo-details-modal');
+        if (modal) modal.remove();
+    }
+
+    renderEquipoTrendChart(asesores) {
+        const ctx = document.getElementById('equipoTrendChartCanvas').getContext('2d');
+        if (!ctx) return;
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: asesores.map(a => a.nombre),
+                datasets: [{
+                    label: 'Tasa de Éxito (%)',
+                    data: asesores.map(a => a.metricas.tasa_exito),
+                    backgroundColor: asesores.map(a => this.getPerformanceColor(a.metricas.tasa_exito)),
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { beginAtZero: true, max: 100 }
+                }
+            }
+        });
+    }
+
+    getPerformanceColor(percentage) {
+        if (percentage >= 80) return 'rgba(16, 185, 129, 0.7)';
+        if (percentage >= 60) return 'rgba(52, 211, 153, 0.7)';
+        if (percentage >= 40) return 'rgba(245, 158, 11, 0.7)';
+        return 'rgba(239, 68, 68, 0.7)';
     }
 
     manageEquipo(gerenteId) {
         console.log('⚙️ Gestionar equipo:', gerenteId);
-        // Implementar gestión del equipo
+        alert('La funcionalidad para gestionar equipos desde esta pantalla está en desarrollo.\n\nPor ahora, puedes gestionar la jerarquía desde la sección correspondiente.');
     }
 
     viewAsesorDetails(asesorId) {
         console.log('👁️ Ver detalles del asesor:', asesorId);
-        // Implementar vista detallada del asesor
+        const endpoint = `/admin/metricas/asesor/${asesorId}/detalle`;
+
+        fetch(endpoint)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.createAsesorDetailsModal(data);
+                } else {
+                    this.showError(data.message || 'No se pudieron cargar los detalles.');
+                }
+            })
+            .catch(error => {
+                console.error('Error al cargar detalles del asesor:', error);
+                this.showError('Error de conexión al cargar detalles.');
+            });
+    }
+
+    createAsesorDetailsModal(data) {
+        // Eliminar modal existente si lo hay
+        const existingModal = document.getElementById('asesor-details-modal');
+        if (existingModal) existingModal.remove();
+
+        const asesor = data.asesor;
+        const metricas = data.metricas;
+        const tendencia = data.tendencia_mensual;
+
+        const modalHTML = `
+            <div class="modal-overlay-v2" id="asesor-details-modal">
+                <div class="modal-content-v2">
+                    <div class="modal-header-v2">
+                        <h3>Detalles de ${asesor.nombre}</h3>
+                        <button class="close-btn-v2" id="close-asesor-modal">&times;</button>
+                    </div>
+                    <div class="modal-body-v2">
+                        <div class="asesor-summary">
+                            <p><strong>Email:</strong> ${asesor.email}</p>
+                            <p><strong>Total Reclutas:</strong> ${metricas.total}</p>
+                            <p><strong>Tasa de Éxito:</strong> ${metricas.tasa_exito}%</p>
+                        </div>
+                        <div class="asesor-trend-chart">
+                            <h4>Tendencia Mensual</h4>
+                            <canvas id="asesorTrendChartCanvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Renderizar el gráfico de tendencia del asesor
+        this.renderAsesorTrendChart(tendencia);
+
+        // Añadir event listeners para cerrar
+        document.getElementById('close-asesor-modal').addEventListener('click', () => this.closeAsesorDetailsModal());
+        document.getElementById('asesor-details-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'asesor-details-modal') {
+                this.closeAsesorDetailsModal();
+            }
+        });
+    }
+
+    closeAsesorDetailsModal() {
+        const modal = document.getElementById('asesor-details-modal');
+        if (modal) modal.remove();
+        this.destroyChart('asesorTrend'); // Destruir el gráfico al cerrar
+    }
+
+    renderAsesorTrendChart(tendencia) {
+        const chartId = 'asesorTrend';
+        this.destroyChart(chartId); // Destruir gráfico anterior
+
+        const ctx = document.getElementById('asesorTrendChartCanvas').getContext('2d');
+        if (!ctx) return;
+
+        this.charts[chartId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: tendencia.map(t => t.mes_nombre),
+                datasets: [{
+                    label: 'Total Reclutas',
+                    data: tendencia.map(t => t.total),
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
     }
 
     destroy() {
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);
+        }
+        // Destruir todos los gráficos al salir
+        Object.keys(this.charts).forEach(chartId => {
+            this.destroyChart(chartId);
+        });
+    }
+
+    /**
+     * 💥 DESTRUIR UN GRÁFICO EXISTENTE PARA EVITAR FUGAS DE MEMORIA
+     */
+    destroyChart(chartId) {
+        if (this.charts[chartId]) {
+            this.charts[chartId].destroy();
+            delete this.charts[chartId];
+            console.log(`💥 Gráfico '${chartId}' destruido.`);
         }
     }
 }

@@ -1481,6 +1481,82 @@
     color: #9ca3af;
 }
 
+/* 🎭 MODAL STYLES */
+.modal-overlay-v2 {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s ease;
+}
+
+.modal-content-v2 {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 600px;
+    overflow: hidden;
+    animation: slideInUp 0.3s ease;
+}
+
+.modal-content-v2.large {
+    max-width: 800px;
+}
+
+.modal-header-v2 {
+    padding: 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header-v2 h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.close-btn-v2 {
+    background: transparent;
+    border: none;
+    font-size: 1.75rem;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.close-btn-v2:hover {
+    color: #374151;
+}
+
+.modal-body-v2 {
+    padding: 1.5rem;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.asesor-trend-chart {
+    position: relative;
+    height: 250px;
+    margin-top: 1.5rem;
+}
+
+@keyframes slideInUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+
 .empty-state i {
     font-size: 2rem;
     margin-bottom: 0.75rem;
@@ -1530,4 +1606,36 @@
         flex-direction: column;
         text-align: center;
     }
+}
+
+/* 📋 ESTILOS PARA LA VISTA DE TABLA DE EQUIPOS */
+.team-table .gerente-info-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.team-table .gerente-info-cell strong {
+    display: block;
+    color: #1e293b;
+}
+
+.team-table .gerente-info-cell small {
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.team-table .equipo-actions {
+    padding: 0;
+    justify-content: center;
+}
+
+.team-table .btn-details,
+.team-table .btn-manage {
+    padding: 0.5rem;
+}
+
+.team-table .btn-details i,
+.team-table .btn-manage i {
+    margin: 0;
 }

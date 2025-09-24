@@ -139,13 +139,8 @@
                     <i class="fas fa-chart-pie"></i> Distribución por Estados
                 </h4>
                 <div class="distribucion-grid">
-                    <div class="chart-container-v2">
-                        <div id="chart-distribucion-resumen" class="chart-placeholder">
-                            <div class="loading-placeholder">
-                                <i class="fas fa-chart-pie fa-spin"></i>
-                                <p>Generando gráfico de distribución...</p>
-                            </div>
-                        </div>
+                    <div class="chart-container-v2" id="chart-distribucion-resumen">
+                        <canvas id="distribucionChartCanvas"></canvas>
                     </div>
                     <div class="distribucion-stats">
                         <div class="estado-stat verde">
@@ -415,10 +410,7 @@
                             </div>
                         </div>
                         <div id="chart-tendencia-general" class="chart-container-large">
-                            <div class="loading-placeholder">
-                                <i class="fas fa-chart-line fa-spin"></i>
-                                <p>Generando gráfico de tendencias...</p>
-                            </div>
+                            <canvas id="tendenciaChartCanvas"></canvas>
                         </div>
                     </div>
                 </div>

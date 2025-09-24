@@ -1,7 +1,9 @@
 from flask_cors import cross_origin
-from flask import Blueprint, jsonify, request, current_app, render_template
+from flask import Blueprint, jsonify, request, current_app, render_template, make_response, url_for
 from sqlalchemy import func, case
 from flask_login import login_required, current_user
+import io
+import csv
 from models.usuario import Usuario
 from models.recluta import Recluta
 from models.entrevista import Entrevista
@@ -987,12 +989,10 @@ def test_user_creation():
 @admin_required
 def exportar_metricas():
     """
-    📥 NUEVA FUNCIONALIDAD: Exporta métricas en formato Excel/CSV
+    📥 NUEVA FUNCIONALIDAD: Exporta métricas en formato CSV
     """
     try:
-        formato = request.json.get('formato', 'excel')  # excel o csv
-        
-        # Reutilizar la lógica de métricas
+        # Obtener los datos de las métricas
         response = get_metricas_asesores()
         data = response.get_json()
         
@@ -1002,23 +1002,42 @@ def exportar_metricas():
                 "message": "Error al generar datos para exportación"
             }), 500
         
-        # Preparar datos para exportación
         metricas = data['metricas_asesores']
         
-        if formato == 'excel':
-            # Lógica para generar Excel (requiere openpyxl)
-            # Se implementaría aquí la generación del archivo Excel
-            pass
-        else:
-            # Lógica para generar CSV
-            # Se implementaría aquí la generación del archivo CSV
-            pass
+        # Crear un archivo CSV en memoria
+        output = io.StringIO()
+        writer = csv.writer(output)
         
-        return jsonify({
-            "success": True,
-            "message": f"Exportación en formato {formato} generada exitosamente",
-            "download_url": f"/admin/download/metricas.{formato}"
-        })
+        # Escribir la cabecera
+        writer.writerow([
+            'ID Asesor', 'Nombre', 'Email', 'Total Reclutas', 'Activos', 'En Proceso', 'Rechazados',
+            'Tasa de Éxito (%)', 'Tasa en Proceso (%)', 'Tasa de Rechazo (%)', 'Nivel de Performance'
+        ])
+        
+        # Escribir los datos de cada asesor
+        for asesor in metricas:
+            writer.writerow([
+                asesor['id'],
+                asesor['nombre'],
+                asesor['email'],
+                asesor['total_reclutas'],
+                asesor['estados']['verdes'],
+                asesor['estados']['amarillos'],
+                asesor['estados']['rojos'],
+                asesor['tasas']['exito'],
+                asesor['tasas']['proceso'],
+                asesor['tasas']['rechazo'],
+                asesor['performance']['nivel']
+            ])
+        
+        # Preparar la respuesta para descargar el archivo
+        output.seek(0)
+        response = make_response(output.getvalue())
+        response.headers["Content-Disposition"] = "attachment; filename=metricas_asesores.csv"
+        response.headers["Content-type"] = "text/csv"
+        
+        current_app.logger.info(f"✅ Exportación de métricas generada por {current_user.email}")
+        return response
         
     except Exception as e:
         current_app.logger.error(f"❌ Error al exportar métricas: {str(e)}")
@@ -1168,12 +1187,13 @@ def _get_jerarquia_optimizada():
         asesores_independientes = []
 
         for row in jerarquia_query:
+            foto_url_completa = url_for('main.serve_profile_image', filename=row.foto_url, _external=False) if row.foto_url else None
             usuario_data = {
                 "id": row.usuario_id,
                 "nombre": row.usuario_nombre,
                 "email": row.usuario_email,
                 "rol": row.usuario_rol,
-                "foto_url": row.foto_url,
+                "foto_url": foto_url_completa,
                 "metricas": {
                     "total": row.total_reclutas or 0,
                     "activos": row.reclutas_activos or 0,
@@ -1253,7 +1273,6 @@ def _get_equipos_metricas():
                         "performance_level": _calculate_team_performance_level(gerente["metricas_consolidadas"]["tasa_exito_equipo"])
                     },
                     "top_asesor": _get_top_asesor_del_equipo(gerente["asesores"]),
-                    "tendencia": _calculate_team_trend(gerente["id"])  # Placeholder para tendencia
                 })
 
         # Ordenar equipos por performance
@@ -1453,10 +1472,279 @@ def _get_top_asesor_del_equipo(asesores):
         "tasa_exito": top_asesor["metricas"]["tasa_exito"]
     }
 
-def _calculate_team_trend(gerente_id):
-    """Calcula la tendencia del equipo (placeholder)"""
-    # TODO: Implementar cálculo real de tendencia basado en datos históricos
-    import random
-    trends = ["↗️ +12%", "↘️ -3%", "➡️ Sin cambios", "↗️ +8%", "↗️ +15%"]
-    return random.choice(trends)
+# 🎯 =========================
+# GESTIÓN AVANZADA DE RECLUTAS - SOLO ADMIN
+# =========================
+
+@admin_bp.route('/reclutas/management', methods=['GET'])
+@admin_required
+def get_reclutas_management():
+    """
+    🔒 ADMIN ONLY: Obtiene todos los reclutas para gestión administrativa
+    """
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 50, type=int)
+        search = request.args.get('search', '')
+        estado = request.args.get('estado', '')
+        asesor_id = request.args.get('asesor_id', '', type=str)
+
+        # Base query - ADMIN puede ver TODOS los reclutas
+        query = Recluta.query
+
+        # Filtros
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                db.or_(
+                    Recluta.nombre.ilike(search_term),
+                    Recluta.email.ilike(search_term),
+                    Recluta.telefono.ilike(search_term),
+                    Recluta.folio.ilike(search_term)
+                )
+            )
+
+        if estado:
+            query = query.filter(Recluta.estado == estado)
+
+        if asesor_id:
+            if asesor_id == 'sin_asignar':
+                query = query.filter(Recluta.asesor_id.is_(None))
+            else:
+                query = query.filter(Recluta.asesor_id == int(asesor_id))
+
+        # Ordenar por fecha de registro (más recientes primero)
+        query = query.order_by(Recluta.fecha_registro.desc())
+
+        # Paginación
+        reclutas_paginados = query.paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
+        )
+
+        # Obtener lista de asesores para el dropdown
+        asesores = Usuario.query.filter_by(rol='asesor').all()
+        gerentes = Usuario.query.filter_by(rol='gerente').all()
+
+        # Serializar reclutas con información del asesor
+        reclutas_data = []
+        for recluta in reclutas_paginados.items:
+            recluta_info = recluta.serialize()
+            recluta_info['asesor_nombre'] = recluta.asesor.nombre if recluta.asesor else "Sin asignar"
+            recluta_info['asesor_email'] = recluta.asesor.email if recluta.asesor else ""
+            reclutas_data.append(recluta_info)
+
+        current_app.logger.info(f"✅ Admin consultó {len(reclutas_data)} reclutas para gestión")
+
+        return jsonify({
+            "success": True,
+            "reclutas": reclutas_data,
+            "pagination": {
+                "page": reclutas_paginados.page,
+                "pages": reclutas_paginados.pages,
+                "per_page": reclutas_paginados.per_page,
+                "total": reclutas_paginados.total,
+                "has_next": reclutas_paginados.has_next,
+                "has_prev": reclutas_paginados.has_prev
+            },
+            "asesores": [{"id": a.id, "nombre": a.nombre, "email": a.email} for a in asesores],
+            "gerentes": [{"id": g.id, "nombre": g.nombre, "email": g.email} for g in gerentes]
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en gestión de reclutas admin: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al obtener reclutas: {str(e)}"
+        }), 500
+
+@admin_bp.route('/reclutas/bulk-delete', methods=['POST'])
+@admin_required
+def bulk_delete_reclutas():
+    """
+    🔒 ADMIN ONLY: Elimina múltiples reclutas
+    """
+    try:
+        data = request.get_json()
+        recluta_ids = data.get('recluta_ids', [])
+
+        if not recluta_ids:
+            return jsonify({
+                "success": False,
+                "message": "No se proporcionaron IDs de reclutas"
+            }), 400
+
+        # Validar que todos los IDs existan
+        reclutas = Recluta.query.filter(Recluta.id.in_(recluta_ids)).all()
+
+        if len(reclutas) != len(recluta_ids):
+            return jsonify({
+                "success": False,
+                "message": "Algunos reclutas no existen"
+            }), 400
+
+        # Proceder con eliminación
+        folios_eliminados = []
+        nombres_eliminados = []
+
+        for recluta in reclutas:
+            folios_eliminados.append(recluta.folio)
+            nombres_eliminados.append(recluta.nombre)
+            db.session.delete(recluta)
+
+        db.session.commit()
+
+        current_app.logger.warning(
+            f"🗑️ ADMIN eliminó {len(reclutas)} reclutas: {', '.join(folios_eliminados)}"
+        )
+
+        return jsonify({
+            "success": True,
+            "message": f"Se eliminaron {len(reclutas)} reclutas exitosamente",
+            "eliminados": {
+                "cantidad": len(reclutas),
+                "folios": folios_eliminados,
+                "nombres": nombres_eliminados
+            }
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"❌ Error en eliminación masiva: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al eliminar reclutas: {str(e)}"
+        }), 500
+
+@admin_bp.route('/reclutas/bulk-assign', methods=['POST'])
+@admin_required
+def bulk_assign_asesor():
+    """
+    🔒 ADMIN ONLY: Asigna/reasigna asesor a múltiples reclutas
+    """
+    try:
+        data = request.get_json()
+        recluta_ids = data.get('recluta_ids', [])
+        nuevo_asesor_id = data.get('asesor_id')
+
+        if not recluta_ids:
+            return jsonify({
+                "success": False,
+                "message": "No se proporcionaron IDs de reclutas"
+            }), 400
+
+        # Validar asesor (puede ser None para desasignar)
+        if nuevo_asesor_id:
+            asesor = Usuario.query.filter_by(id=nuevo_asesor_id, rol='asesor').first()
+            if not asesor:
+                return jsonify({
+                    "success": False,
+                    "message": "El asesor especificado no existe"
+                }), 400
+            asesor_nombre = asesor.nombre
+        else:
+            asesor_nombre = "Sin asignar"
+
+        # Obtener reclutas
+        reclutas = Recluta.query.filter(Recluta.id.in_(recluta_ids)).all()
+
+        if len(reclutas) != len(recluta_ids):
+            return jsonify({
+                "success": False,
+                "message": "Algunos reclutas no existen"
+            }), 400
+
+        # Realizar asignación
+        cambios_realizados = []
+
+        for recluta in reclutas:
+            asesor_anterior = recluta.asesor.nombre if recluta.asesor else "Sin asignar"
+            recluta.asesor_id = nuevo_asesor_id
+
+            cambios_realizados.append({
+                "folio": recluta.folio,
+                "nombre": recluta.nombre,
+                "asesor_anterior": asesor_anterior,
+                "asesor_nuevo": asesor_nombre
+            })
+
+        db.session.commit()
+
+        current_app.logger.info(
+            f"👥 ADMIN reasignó {len(reclutas)} reclutas al asesor: {asesor_nombre}"
+        )
+
+        return jsonify({
+            "success": True,
+            "message": f"Se reasignaron {len(reclutas)} reclutas a {asesor_nombre}",
+            "cambios": cambios_realizados
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"❌ Error en asignación masiva: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al reasignar reclutas: {str(e)}"
+        }), 500
+
+@admin_bp.route('/reclutas/<int:recluta_id>/assign', methods=['POST'])
+@admin_required
+def assign_single_recluta(recluta_id):
+    """
+    🔒 ADMIN ONLY: Asigna asesor a un recluta individual
+    """
+    try:
+        data = request.get_json()
+        nuevo_asesor_id = data.get('asesor_id')
+
+        recluta = Recluta.query.get(recluta_id)
+        if not recluta:
+            return jsonify({
+                "success": False,
+                "message": "Recluta no encontrado"
+            }), 404
+
+        # Validar asesor
+        if nuevo_asesor_id:
+            asesor = Usuario.query.filter_by(id=nuevo_asesor_id, rol='asesor').first()
+            if not asesor:
+                return jsonify({
+                    "success": False,
+                    "message": "El asesor especificado no existe"
+                }), 400
+            asesor_nombre = asesor.nombre
+        else:
+            asesor_nombre = "Sin asignar"
+
+        asesor_anterior = recluta.asesor.nombre if recluta.asesor else "Sin asignar"
+        recluta.asesor_id = nuevo_asesor_id
+
+        db.session.commit()
+
+        current_app.logger.info(
+            f"👤 ADMIN cambió asesor de {recluta.folio}: {asesor_anterior} → {asesor_nombre}"
+        )
+
+        return jsonify({
+            "success": True,
+            "message": f"Asesor cambiado de '{asesor_anterior}' a '{asesor_nombre}'",
+            "cambio": {
+                "recluta": recluta.nombre,
+                "folio": recluta.folio,
+                "asesor_anterior": asesor_anterior,
+                "asesor_nuevo": asesor_nombre
+            }
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"❌ Error en asignación individual: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al asignar asesor: {str(e)}"
+        }), 500
+
+
 

@@ -229,7 +229,114 @@
                 </div>
             </div>
         </div>
-        
+
+        <!-- ✅ NUEVA SECCIÓN: Panel Administrativo de Reclutas (SOLO ADMIN) -->
+        <div id="admin-reclutas-management" class="dashboard-content-section" style="display: none;">
+            <div class="section-header">
+                <h2><i class="fas fa-tools"></i> Panel Administrativo de Reclutas</h2>
+                <p class="section-description">Gestión avanzada exclusiva para administradores: eliminar, reasignar y administrar reclutas en lote</p>
+            </div>
+
+            <!-- Controles superiores -->
+            <div class="admin-management-controls">
+                <div class="controls-row">
+                    <div class="search-filters">
+                        <div class="filter-group">
+                            <label for="admin-search">Buscar:</label>
+                            <input type="text" id="admin-search" placeholder="Nombre, email, teléfono, folio...">
+                        </div>
+                        <div class="filter-group">
+                            <label for="admin-estado-filter">Estado:</label>
+                            <select id="admin-estado-filter">
+                                <option value="">Todos</option>
+                                <option value="Activo">Activo</option>
+                                <option value="En proceso">En proceso</option>
+                                <option value="Rechazado">Rechazado</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="admin-asesor-filter">Asesor:</label>
+                            <select id="admin-asesor-filter">
+                                <option value="">Todos</option>
+                                <option value="sin_asignar">Sin asignar</option>
+                                <!-- Se poblará dinámicamente -->
+                            </select>
+                        </div>
+                        <button id="admin-apply-filters" class="btn-primary">
+                            <i class="fas fa-search"></i> Filtrar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Acciones en lote -->
+                <div class="bulk-actions" id="admin-bulk-actions" style="display: none;">
+                    <div class="selection-info">
+                        <span id="admin-selected-count">0 seleccionados</span>
+                        <button id="admin-select-all" class="btn-link">Seleccionar todos</button>
+                        <button id="admin-clear-selection" class="btn-link">Limpiar selección</button>
+                    </div>
+                    <div class="action-buttons">
+                        <select id="admin-bulk-asesor" class="bulk-asesor-select">
+                            <option value="">Seleccionar asesor...</option>
+                            <option value="null">Desasignar asesor</option>
+                            <!-- Se poblará dinámicamente -->
+                        </select>
+                        <button id="admin-bulk-assign" class="btn-warning">
+                            <i class="fas fa-user-edit"></i> Reasignar
+                        </button>
+                        <button id="admin-bulk-delete" class="btn-danger">
+                            <i class="fas fa-trash"></i> Eliminar Seleccionados
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de reclutas -->
+            <div class="admin-table-container">
+                <table id="admin-reclutas-table" class="admin-table">
+                    <thead>
+                        <tr>
+                            <th width="40">
+                                <input type="checkbox" id="admin-select-all-checkbox">
+                            </th>
+                            <th>Folio</th>
+                            <th>Nombre</th>
+                            <th>Email</th>
+                            <th>Teléfono</th>
+                            <th>Estado</th>
+                            <th>Asesor Actual</th>
+                            <th>Fecha Registro</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-reclutas-tbody">
+                        <!-- Se poblará dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div class="admin-pagination">
+                <div class="pagination-info">
+                    <span id="admin-pagination-info">Mostrando 0 - 0 de 0 reclutas</span>
+                </div>
+                <div class="pagination-controls">
+                    <button id="admin-prev-page" class="btn-secondary" disabled>
+                        <i class="fas fa-chevron-left"></i> Anterior
+                    </button>
+                    <span id="admin-page-info">Página 1 de 1</span>
+                    <button id="admin-next-page" class="btn-secondary" disabled>
+                        Siguiente <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading indicator -->
+            <div id="admin-loading" class="loading-indicator" style="display: none;">
+                <i class="fas fa-spinner fa-spin"></i> Cargando reclutas...
+            </div>
+        </div>
+
         <!-- Sección de configuración -->
         {% include 'components/seccion_configuracion.html' %}
     </div>

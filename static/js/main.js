@@ -1354,6 +1354,11 @@ function updateAdminNavigation() {
                 </a>
             </li>
             <li>
+                <a href="#" data-section="admin-reclutas-management">
+                    <i class="fas fa-tools"></i> Panel Administrativo
+                </a>
+            </li>
+            <li>
                 <a href="#" data-section="calendario-section">
                     <i class="fas fa-calendar-alt"></i> Calendario
                 </a>
