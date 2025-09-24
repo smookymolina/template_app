@@ -46,14 +46,14 @@ async function initializeApplication() {
     // 1. Inicializar componentes básicos
     await initializeBasicComponents();
     
-    // 2. Configurar usuario específico
-    await initializeUserSpecificFeatures();
-    
-    // 3. Configurar tracking público
+    // 2. Configurar tracking público (puede ejecutarse independientemente)
     initializePublicTracking();
     
-    // 4. Configurar autenticación
+    // 3. Configurar autenticación (primero autenticar)
     await initializeAuthentication();
+    
+    // 4. Configurar usuario específico (luego configurar características específicas del usuario)
+    await initializeUserSpecificFeatures();
     
     // 5. Configurar eventos de formularios
     setupFormEvents();
@@ -653,6 +653,11 @@ async function processLogin(usuario) {
     await initializeUserModules(usuario);
     // ✅ AGREGAR: Forzar actualización inmediata de funciones jerárquicas
     forceUpdateHierarchicalFeatures(usuario);
+
+    // ✅ NUEVO: Cargar configuraciones de usuario después del login
+    if (window.configManager) {
+        await window.configManager.loadSettingsForAuthenticatedUser();
+    }
 }
 
 /**

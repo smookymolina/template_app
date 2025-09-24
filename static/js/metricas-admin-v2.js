@@ -15,7 +15,7 @@ class MetricasAdminV2 {
         this.refreshInterval = null;
         this.charts = {};
 
-        this.init();
+        // this.init(); // Initialization will be controlled externally
     }
 
     /**
@@ -25,11 +25,19 @@ class MetricasAdminV2 {
         console.log('🎯 Iniciando Métricas Admin V2.0...');
 
         this.setupEventListeners();
-        this.setupAutoRefresh();
-        this.loadDashboardData();
+        // this.setupAutoRefresh(); // Moved to initializeMetricasAdminV2
+        // this.loadDashboardData(); // Moved to initializeMetricasAdminV2
 
         // Verificar si el CSS v2 está cargado
         this.ensureV2Styles();
+    }
+
+    // ✅ NUEVA FUNCIÓN: Inicializar y cargar datos para usuarios autenticados
+    async initializeMetricasAdminV2() {
+        console.log('🚀 Inicializando y cargando datos de Metricas Admin V2...');
+        this.init(); // Call the internal init to set up event listeners and styles
+        await this.loadDashboardData(); // Load data
+        this.setupAutoRefresh(); // Start auto-refresh after initial load
     }
 
     /**
@@ -419,12 +427,12 @@ class MetricasAdminV2 {
      */
     renderInsightsList(items, type) {
         if (!items || items.length === 0) {
-            return `
-                <div class="empty-state">
+            return (
+                `<div class="empty-state">
                     <i class="fas fa-check-circle"></i>
                     <p>Todo en orden</p>
-                </div>
-            `;
+                </div>`
+            );
         }
 
         const iconMap = {
@@ -433,8 +441,8 @@ class MetricasAdminV2 {
             success: 'fas fa-star'
         };
 
-        return items.map(item => `
-            <div class="insight-item ${type}">
+        return items.map(item => (
+            `<div class="insight-item ${type}">
                 <div class="insight-icon">
                     <i class="${iconMap[type]}"></i>
                 </div>
@@ -442,8 +450,8 @@ class MetricasAdminV2 {
                     <p>${item.mensaje}</p>
                     ${item.accion ? `<small>Acción: ${item.accion}</small>` : ''}
                 </div>
-            </div>
-        `).join('');
+            </div>`
+        )).join('');
     }
 
     /**
@@ -466,8 +474,8 @@ class MetricasAdminV2 {
         const container = document.getElementById('equipos-container-v2');
         if (!container || !equipos) return;
 
-        const html = equipos.map(equipo => `
-            <div class="equipo-card-v2" data-gerente-id="${equipo.gerente.id}">
+        const html = equipos.map(equipo => (
+            `<div class="equipo-card-v2" data-gerente-id="${equipo.gerente.id}">
                 <div class="equipo-header">
                     <div class="gerente-info">
                         <div class="gerente-avatar">
@@ -500,12 +508,12 @@ class MetricasAdminV2 {
                     </div>
                 </div>
                 <div class="equipo-details">
-                    ${equipo.top_asesor ? `
-                        <div class="top-asesor">
+                    ${equipo.top_asesor ? (
+                        `<div class="top-asesor">
                             <i class="fas fa-medal"></i>
                             <span>Top: ${equipo.top_asesor.nombre} (${equipo.top_asesor.tasa_exito}%)</span>
-                        </div>
-                    ` : ''}
+                        </div>`
+                    ) : ''}
                 </div>
                 <div class="equipo-actions">
                     <button class="btn-details" onclick="metricasV2.viewEquipoDetails(${equipo.gerente.id})">
@@ -516,7 +524,7 @@ class MetricasAdminV2 {
                     </button>
                 </div>
             </div>
-        `).join('');
+        `)).join('');
 
         container.innerHTML = html;
     }
@@ -530,8 +538,8 @@ class MetricasAdminV2 {
         const topContainer = document.getElementById('top-performers-v2');
 
         if (topContainer) {
-            topContainer.innerHTML = topPerformers.map(asesor => `
-                <div class="performer-item top">
+            topContainer.innerHTML = topPerformers.map(asesor => (
+                `<div class="performer-item top">
                     <div class="performer-avatar">
                         ${asesor.foto_url ?
                             `<img src="${asesor.foto_url}" alt="${asesor.nombre}">` :
@@ -543,8 +551,8 @@ class MetricasAdminV2 {
                         <p>${asesor.gerente_nombre || 'Independiente'}</p>
                         <div class="performance-score">${asesor.metricas.tasa_exito}%</div>
                     </div>
-                </div>
-            `).join('');
+                </div>`
+            )).join('');
         }
 
         // Needs Improvement (peores 5)
@@ -552,8 +560,8 @@ class MetricasAdminV2 {
         const improvementContainer = document.getElementById('needs-improvement-v2');
 
         if (improvementContainer) {
-            improvementContainer.innerHTML = needsImprovement.map(asesor => `
-                <div class="performer-item improvement">
+            improvementContainer.innerHTML = needsImprovement.map(asesor => (
+                `<div class="performer-item improvement">
                     <div class="performer-avatar">
                         ${asesor.foto_url ?
                             `<img src="${asesor.foto_url}" alt="${asesor.nombre}">` :
@@ -565,8 +573,8 @@ class MetricasAdminV2 {
                         <p>${asesor.gerente_nombre || 'Independiente'}</p>
                         <div class="performance-score low">${asesor.metricas.tasa_exito}%</div>
                     </div>
-                </div>
-            `).join('');
+                </div>`
+            )).join('');
         }
     }
 
@@ -577,8 +585,8 @@ class MetricasAdminV2 {
         const container = document.getElementById('asesores-grid-v2');
         if (!container || !asesores) return;
 
-        const html = asesores.map(asesor => `
-            <div class="asesor-card-v2" data-asesor-id="${asesor.id}">
+        const html = asesores.map(asesor => (
+            `<div class="asesor-card-v2" data-asesor-id="${asesor.id}">
                 <div class="asesor-header">
                     <div class="asesor-avatar">
                         ${asesor.foto_url ?
@@ -619,7 +627,7 @@ class MetricasAdminV2 {
                     </button>
                 </div>
             </div>
-        `).join('');
+        `)).join('');
 
         container.innerHTML = html;
     }
@@ -701,8 +709,8 @@ class MetricasAdminV2 {
             const trendClass = this.getTrendClass(trend);
             const trendIcon = trend > 0.1 ? 'fa-arrow-up' : (trend < -0.1 ? 'fa-arrow-down' : 'fa-arrow-right');
 
-            return `
-            <tr>
+            return (
+            `<tr>
                 <td>${periodo.periodo_nombre}</td>
                 <td>${periodo.metricas.total}</td>
                 <td>${periodo.metricas.activos}</td>
@@ -714,8 +722,8 @@ class MetricasAdminV2 {
                         <i class="fas ${trendIcon}"></i> ${trend.toFixed(1)}%
                     </span>
                 </td>
-            </tr>
-        `}).join('');
+            </tr>`
+        )}).join('');
 
         tbody.innerHTML = html;
     }
@@ -781,8 +789,8 @@ class MetricasAdminV2 {
         const container = document.getElementById('equipos-container-v2');
         if (!container || !equipos) return;
 
-        const tableHTML = `
-            <div class="table-responsive-v2">
+        const tableHTML = (
+            `<div class="table-responsive-v2">
                 <table class="data-table-v2 team-table">
                     <thead>
                         <tr>
@@ -795,8 +803,8 @@ class MetricasAdminV2 {
                         </tr>
                     </thead>
                     <tbody>
-                        ${equipos.map(equipo => `
-                            <tr>
+                        ${equipos.map(equipo => (
+                            `<tr>
                                 <td>
                                     <div class="gerente-info-cell">
                                         <div class="gerente-avatar">
@@ -818,12 +826,12 @@ class MetricasAdminV2 {
                                         <button class="btn-manage" onclick="metricasV2.manageEquipo(${equipo.gerente.id})"><i class="fas fa-cog"></i></button>
                                     </div>
                                 </td>
-                            </tr>
-                        `).join('')}
+                            </tr>`
+                        )).join('')}
                     </tbody>
                 </table>
             </div>
-        `;
+        `);
         container.innerHTML = tableHTML;
     }
 
@@ -904,8 +912,8 @@ class MetricasAdminV2 {
                 'tendencias': 'Tendencias & Reportes'
             };
 
-            breadcrumb.innerHTML = `
-                <nav class="breadcrumb-nav">
+            breadcrumb.innerHTML = (
+                `<nav class="breadcrumb-nav">
                     <span class="breadcrumb-item" onclick="metricasV2.switchTab('resumen')">
                         <i class="fas fa-home"></i> Dashboard
                     </span>
@@ -913,8 +921,8 @@ class MetricasAdminV2 {
                     <span class="breadcrumb-item active">
                         ${tabNames[tabName] || tabName}
                     </span>
-                </nav>
-            `;
+                </nav>`
+            );
             breadcrumb.style.display = 'block';
         }
     }
@@ -981,11 +989,11 @@ class MetricasAdminV2 {
             `<option value="${gerente.id}">Equipo de ${gerente.nombre}</option>`
         ).join('');
 
-        select.innerHTML = `
-            <option value="todos">Todos los equipos</option>
+        select.innerHTML = (
+            `<option value="todos">Todos los equipos</option>
             <option value="independientes">Asesores independientes</option>
             ${gerentesOptions}
-        `;
+        `);
     }
 
     exportData() {
@@ -1049,15 +1057,15 @@ class MetricasAdminV2 {
         const existingModal = document.getElementById('equipo-details-modal');
         if (existingModal) existingModal.remove();
 
-        const asesoresHTML = gerenteData.asesores.map(asesor => `
-            <div class="asesor-item-in-modal">
+        const asesoresHTML = gerenteData.asesores.map(asesor => (
+            `<div class="asesor-item-in-modal">
                 <span>${asesor.nombre}</span>
                 <span class="performance-badge ${this.getPerformanceClass(asesor.metricas.tasa_exito)}">${asesor.metricas.tasa_exito}%</span>
-            </div>
-        `).join('') || '<p>Este gerente no tiene asesores asignados.</p>';
+            </div>`
+        )).join('') || '<p>Este gerente no tiene asesores asignados.</p>';
 
-        const modalHTML = `
-            <div class="modal-overlay-v2" id="equipo-details-modal">
+        const modalHTML = (
+            `<div class="modal-overlay-v2" id="equipo-details-modal">
                 <div class="modal-content-v2 large">
                     <div class="modal-header-v2">
                         <h3>Equipo de ${gerenteData.nombre}</h3>
@@ -1075,7 +1083,7 @@ class MetricasAdminV2 {
                     </div>
                 </div>
             </div>
-        `;
+        `);
 
         document.body.insertAdjacentHTML('beforeend', modalHTML);
 
@@ -1160,8 +1168,8 @@ class MetricasAdminV2 {
         const metricas = data.metricas;
         const tendencia = data.tendencia_mensual;
 
-        const modalHTML = `
-            <div class="modal-overlay-v2" id="asesor-details-modal">
+        const modalHTML = (
+            `<div class="modal-overlay-v2" id="asesor-details-modal">
                 <div class="modal-content-v2">
                     <div class="modal-header-v2">
                         <h3>Detalles de ${asesor.nombre}</h3>
@@ -1180,7 +1188,7 @@ class MetricasAdminV2 {
                     </div>
                 </div>
             </div>
-        `;
+        `);
 
         document.body.insertAdjacentHTML('beforeend', modalHTML);
 
@@ -1260,14 +1268,30 @@ class MetricasAdminV2 {
 
 let metricasV2;
 
-// Inicializar cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
+// ✅ NUEVA FUNCIÓN: Inicializar MetricasAdminV2 externamente
+window.initializeMetricasAdminV2 = function() {
+    if (!metricasV2) {
         metricasV2 = new MetricasAdminV2();
-    });
-} else {
-    metricasV2 = new MetricasAdminV2();
-}
+    }
+    metricasV2.initializeMetricasAdminV2();
+};
+
+// ✅ NUEVA FUNCIÓN: Limpiar MetricasAdminV2 externamente
+window.cleanupMetricasAdminV2 = function() {
+    if (metricasV2) {
+        metricasV2.destroy();
+        metricasV2 = null; // Clear the instance
+    }
+};
+
+// Eliminar inicialización automática en DOMContentLoaded
+// if (document.readyState === 'loading') {
+//     document.addEventListener('DOMContentLoaded', () => {
+//         metricasV2 = new MetricasAdminV2();
+//     });
+// } else {
+//     metricasV2 = new MetricasAdminV2();
+// }
 
 // Cleanup al salir de la página
 window.addEventListener('beforeunload', () => {
