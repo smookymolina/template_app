@@ -12,6 +12,8 @@ from models.user_session import UserSession
 from models import db, DatabaseError
 from utils.security import check_ip_allowed
 from utils.validators import validate_usuario_data, ValidationError
+from utils.decorators import role_based_metrics_access, filter_metrics_data_by_role
+from utils.metrics_cache import metrics_cache_decorator
 from functools import wraps
 import os
 import logging
@@ -1047,7 +1049,8 @@ def exportar_metricas():
         }), 500
 
 @admin_bp.route('/metricas/dashboard-unificado', methods=['GET'])
-@admin_required
+@role_based_metrics_access
+@metrics_cache_decorator('dashboard_unificado', ['date_from', 'date_to', 'team_filter'])
 def get_dashboard_unificado():
     """
     🎯 NUEVO ENDPOINT UNIFICADO: Dashboard consolidado de métricas administrativas
@@ -1057,35 +1060,52 @@ def get_dashboard_unificado():
         JSON unificado con todas las métricas necesarias para el dashboard admin
     """
     try:
-        # 📊 OBTENER DATOS CONSOLIDADOS
+        # 📊 OBTENER FILTROS BASADOS EN ROL (inyectados por el decorador)
+        metrics_filter = getattr(request, 'metrics_filter', {})
+        user_role = metrics_filter.get('user_role', 'asesor')
+        accessible_user_ids = metrics_filter.get('accessible_user_ids', [])
+        accessible_recluta_ids = metrics_filter.get('accessible_recluta_ids', [])
+
+        # 📊 OBTENER DATOS CONSOLIDADOS FILTRADOS POR ROL
         dashboard_data = {
             "success": True,
             "timestamp": datetime.utcnow().isoformat(),
-            "version": "2.0-unified"
+            "version": "2.0-unified",
+            "user_role": user_role,
+            "filtered_scope": {
+                "accessible_users": len(accessible_user_ids),
+                "accessible_reclutas": len(accessible_recluta_ids)
+            }
         }
 
-        # 1. MÉTRICAS GLOBALES DEL SISTEMA
-        dashboard_data["global_kpis"] = _get_global_kpis()
+        # 1. MÉTRICAS GLOBALES DEL SISTEMA (filtradas según rol)
+        dashboard_data["global_kpis"] = _get_global_kpis_filtered(accessible_recluta_ids, user_role)
 
-        # 2. ESTRUCTURA JERÁRQUICA COMPLETA
-        dashboard_data["jerarquia"] = _get_jerarquia_optimizada()
+        # 2. ESTRUCTURA JERÁRQUICA COMPLETA (filtrada)
+        dashboard_data["jerarquia"] = _get_jerarquia_optimizada_filtered(accessible_user_ids, user_role)
 
-        # 3. MÉTRICAS DE EQUIPOS
-        dashboard_data["equipos"] = _get_equipos_metricas()
+        # 3. MÉTRICAS DE EQUIPOS (filtradas)
+        dashboard_data["equipos"] = _get_equipos_metricas_filtered(accessible_user_ids, user_role)
 
-        # 4. RANKING DE GERENTES
-        dashboard_data["gerentes_ranking"] = _get_gerentes_ranking()
+        # 4. RANKING DE GERENTES (filtrado)
+        dashboard_data["gerentes_ranking"] = _get_gerentes_ranking_filtered(accessible_user_ids, user_role)
 
-        # 5. MÉTRICAS INDIVIDUALES DE ASESORES
-        dashboard_data["asesores_individuales"] = _get_asesores_individuales()
+        # 5. MÉTRICAS INDIVIDUALES DE ASESORES (filtradas)
+        dashboard_data["asesores_individuales"] = _get_asesores_individuales_filtered(accessible_user_ids, user_role)
 
-        # 6. TENDENCIAS TEMPORALES
-        dashboard_data["tendencias"] = _get_tendencias_consolidadas()
+        # 6. TENDENCIAS TEMPORALES (filtradas)
+        dashboard_data["tendencias"] = _get_tendencias_consolidadas_filtered(accessible_recluta_ids, user_role)
 
-        # 7. INSIGHTS Y ALERTAS
-        dashboard_data["insights"] = _get_insights_automaticos(dashboard_data)
+        # 7. INSIGHTS Y ALERTAS (filtrados)
+        dashboard_data["insights"] = _get_insights_automaticos_filtered(dashboard_data, user_role)
 
-        current_app.logger.info(f"✅ Dashboard unificado generado exitosamente")
+        # 8. APLICAR FILTRADO ADICIONAL USANDO LA FUNCIÓN HELPER
+        dashboard_data = filter_metrics_data_by_role(dashboard_data, current_user)
+
+        current_app.logger.info(
+            f"✅ Dashboard unificado generado para rol {user_role} - "
+            f"Usuarios: {len(accessible_user_ids)}, Reclutas: {len(accessible_recluta_ids)}"
+        )
 
         return jsonify(dashboard_data)
 
@@ -1740,6 +1760,342 @@ def assign_single_recluta(recluta_id):
             "success": False,
             "message": f"Error al asignar asesor: {str(e)}"
         }), 500
+
+# ============================================================================
+# 🔐 FUNCIONES AUXILIARES FILTRADAS POR ROLES
+# ============================================================================
+
+def _get_global_kpis_filtered(accessible_recluta_ids, user_role):
+    """Obtiene KPIs globales filtrados según el rol del usuario"""
+    try:
+        if user_role == 'admin':
+            # Admin ve todos los KPIs sin filtrar
+            return _get_global_kpis()
+
+        if not accessible_recluta_ids:
+            return {
+                "total_reclutas": 0,
+                "distribucion_global": {"activos": 0, "en_proceso": 0, "rechazados": 0},
+                "tasas": {"conversion": 0, "proceso": 0, "rechazo": 0},
+                "usuarios": {"total_administradores": 0, "total_gerentes": 0, "total_asesores": 0, "total_activos": 0},
+                "performance_global": {"nivel": "Sin datos", "score": 0}
+            }
+
+        # Query filtrado por reclutas accesibles
+        recluta_query = db.session.query(
+            func.count(Recluta.id).label('total_reclutas'),
+            func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('activos'),
+            func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('en_proceso'),
+            func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('rechazados')
+        ).filter(Recluta.id.in_(accessible_recluta_ids)).first()
+
+        total_reclutas = recluta_query.total_reclutas or 0
+        activos = recluta_query.activos or 0
+        en_proceso = recluta_query.en_proceso or 0
+        rechazados = recluta_query.rechazados or 0
+
+        return {
+            "total_reclutas": total_reclutas,
+            "distribucion_global": {
+                "activos": activos,
+                "en_proceso": en_proceso,
+                "rechazados": rechazados
+            },
+            "tasas": {
+                "conversion": round(activos / total_reclutas * 100, 1) if total_reclutas > 0 else 0,
+                "proceso": round(en_proceso / total_reclutas * 100, 1) if total_reclutas > 0 else 0,
+                "rechazo": round(rechazados / total_reclutas * 100, 1) if total_reclutas > 0 else 0
+            },
+            "usuarios": _get_usuarios_count_filtered(user_role),
+            "performance_global": {
+                "nivel": _calculate_global_performance_level(activos, total_reclutas),
+                "score": round(activos / total_reclutas * 100, 1) if total_reclutas > 0 else 0
+            }
+        }
+    except Exception as e:
+        current_app.logger.error(f"Error en KPIs globales filtrados: {str(e)}")
+        return {"error": "Error al calcular KPIs"}
+
+def _get_usuarios_count_filtered(user_role):
+    """Obtiene conteo de usuarios filtrado según el rol"""
+    if user_role == 'admin':
+        usuarios_por_rol = db.session.query(
+            Usuario.rol,
+            func.count(Usuario.id).label('cantidad')
+        ).filter(Usuario.is_active == True).group_by(Usuario.rol).all()
+
+        roles_count = {rol.rol: rol.cantidad for rol in usuarios_por_rol}
+        return {
+            "total_administradores": roles_count.get('admin', 0),
+            "total_gerentes": roles_count.get('gerente', 0),
+            "total_asesores": roles_count.get('asesor', 0),
+            "total_activos": sum(roles_count.values())
+        }
+    else:
+        # Gerentes y asesores ven métricas limitadas
+        return {
+            "total_administradores": 0,  # No visible para no-admins
+            "total_gerentes": 1 if user_role == 'gerente' else 0,
+            "total_asesores": 1 if user_role == 'asesor' else 0,
+            "total_activos": 1
+        }
+
+def _get_jerarquia_optimizada_filtered(accessible_user_ids, user_role):
+    """Obtiene jerarquía organizacional filtrada según el rol"""
+    try:
+        if user_role == 'admin':
+            return _get_jerarquia_optimizada()
+
+        if not accessible_user_ids:
+            return {"gerentes": [], "asesores_independientes": []}
+
+        # Query filtrado por usuarios accesibles
+        jerarquia_query = db.session.query(
+            Usuario.id.label('usuario_id'),
+            Usuario.nombre.label('usuario_nombre'),
+            Usuario.email.label('usuario_email'),
+            Usuario.rol.label('usuario_rol'),
+            Usuario.foto_url,
+            Usuario.gerente_id,
+            func.count(Recluta.id).label('total_reclutas'),
+            func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('reclutas_activos'),
+            func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('reclutas_proceso'),
+            func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('reclutas_rechazados')
+        ).outerjoin(Recluta, Usuario.id == Recluta.asesor_id)\
+         .filter(Usuario.id.in_(accessible_user_ids))\
+         .filter(Usuario.is_active == True)\
+         .group_by(Usuario.id, Usuario.nombre, Usuario.email, Usuario.rol, Usuario.foto_url, Usuario.gerente_id)\
+         .all()
+
+        gerentes = {}
+        asesores_independientes = []
+
+        for row in jerarquia_query:
+            foto_url_completa = url_for('main.serve_profile_image', filename=row.foto_url, _external=False) if row.foto_url else None
+            usuario_data = {
+                "id": row.usuario_id,
+                "nombre": row.usuario_nombre,
+                "email": row.usuario_email,
+                "rol": row.usuario_rol,
+                "foto_url": foto_url_completa,
+                "metricas": {
+                    "total": row.total_reclutas or 0,
+                    "activos": row.reclutas_activos or 0,
+                    "proceso": row.reclutas_proceso or 0,
+                    "rechazados": row.reclutas_rechazados or 0,
+                    "tasa_exito": round((row.reclutas_activos or 0) / (row.total_reclutas or 1) * 100, 1)
+                }
+            }
+
+            if row.usuario_rol == 'gerente':
+                gerentes[row.usuario_id] = {
+                    **usuario_data,
+                    "asesores": [],
+                    "metricas_equipo": {"total": 0, "activos": 0, "proceso": 0, "rechazados": 0}
+                }
+            elif row.usuario_rol == 'asesor':
+                if row.gerente_id and row.gerente_id in accessible_user_ids:
+                    if row.gerente_id not in gerentes:
+                        # Si el gerente no está en la lista, añadirlo
+                        gerente = Usuario.query.get(row.gerente_id)
+                        if gerente:
+                            gerentes[row.gerente_id] = {
+                                "id": gerente.id,
+                                "nombre": gerente.nombre,
+                                "email": gerente.email,
+                                "rol": gerente.rol,
+                                "foto_url": url_for('main.serve_profile_image', filename=gerente.foto_url, _external=False) if gerente.foto_url else None,
+                                "asesores": [],
+                                "metricas": {"total": 0, "activos": 0, "proceso": 0, "rechazados": 0, "tasa_exito": 0},
+                                "metricas_equipo": {"total": 0, "activos": 0, "proceso": 0, "rechazados": 0}
+                            }
+
+                    gerentes[row.gerente_id]["asesores"].append(usuario_data)
+                    # Sumar métricas del asesor al equipo
+                    gerentes[row.gerente_id]["metricas_equipo"]["total"] += usuario_data["metricas"]["total"]
+                    gerentes[row.gerente_id]["metricas_equipo"]["activos"] += usuario_data["metricas"]["activos"]
+                    gerentes[row.gerente_id]["metricas_equipo"]["proceso"] += usuario_data["metricas"]["proceso"]
+                    gerentes[row.gerente_id]["metricas_equipo"]["rechazados"] += usuario_data["metricas"]["rechazados"]
+                else:
+                    asesores_independientes.append(usuario_data)
+
+        # Calcular métricas consolidadas para cada gerente
+        for gerente_id, gerente in gerentes.items():
+            total_equipo = gerente["metricas"]["total"] + gerente["metricas_equipo"]["total"]
+            activos_equipo = gerente["metricas"]["activos"] + gerente["metricas_equipo"]["activos"]
+
+            gerente["metricas_consolidadas"] = {
+                "total": total_equipo,
+                "activos": activos_equipo,
+                "tasa_exito_equipo": round(activos_equipo / total_equipo * 100, 1) if total_equipo > 0 else 0,
+                "total_asesores": len(gerente["asesores"])
+            }
+
+        return {
+            "gerentes": list(gerentes.values()),
+            "asesores_independientes": asesores_independientes
+        }
+
+    except Exception as e:
+        current_app.logger.error(f"Error en jerarquía filtrada: {str(e)}")
+        return {"gerentes": [], "asesores_independientes": []}
+
+def _get_equipos_metricas_filtered(accessible_user_ids, user_role):
+    """Obtiene métricas de equipos filtradas según el rol"""
+    try:
+        if user_role == 'admin':
+            return _get_equipos_metricas()
+        elif user_role == 'asesor':
+            # Asesores no ven métricas de equipos
+            return []
+
+        # Para gerentes, devolver solo su equipo
+        jerarquia = _get_jerarquia_optimizada_filtered(accessible_user_ids, user_role)
+        return jerarquia.get("gerentes", [])
+
+    except Exception as e:
+        current_app.logger.error(f"Error en equipos filtrados: {str(e)}")
+        return []
+
+def _get_gerentes_ranking_filtered(accessible_user_ids, user_role):
+    """Obtiene ranking de gerentes filtrado según el rol"""
+    try:
+        if user_role == 'admin':
+            return _get_gerentes_ranking()
+        elif user_role == 'asesor':
+            # Asesores no ven ranking de gerentes
+            return []
+
+        # Para gerentes, devolver solo su propio rendimiento
+        equipos = _get_equipos_metricas_filtered(accessible_user_ids, user_role)
+        if equipos:
+            # Convertir a formato de ranking
+            return [{
+                **equipo,
+                "posicion": 1,
+                "percentil": 100
+            } for equipo in equipos[:1]]  # Solo el primer equipo (el suyo)
+        return []
+
+    except Exception as e:
+        current_app.logger.error(f"Error en ranking filtrado: {str(e)}")
+        return []
+
+def _get_asesores_individuales_filtered(accessible_user_ids, user_role):
+    """Obtiene métricas individuales de asesores filtradas según el rol"""
+    try:
+        if user_role == 'admin':
+            return _get_asesores_individuales()
+
+        if not accessible_user_ids:
+            return []
+
+        # Query filtrado por usuarios accesibles
+        asesores_query = db.session.query(
+            Usuario.id,
+            Usuario.nombre,
+            Usuario.email,
+            Usuario.foto_url,
+            Usuario.gerente_id,
+            func.count(Recluta.id).label('total_reclutas'),
+            func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).label('reclutas_activos'),
+            func.sum(case((Recluta.estado == 'En proceso', 1), else_=0)).label('reclutas_proceso'),
+            func.sum(case((Recluta.estado == 'Rechazado', 1), else_=0)).label('reclutas_rechazados')
+        ).outerjoin(Recluta, Usuario.id == Recluta.asesor_id)\
+         .filter(Usuario.id.in_(accessible_user_ids))\
+         .filter(Usuario.rol == 'asesor')\
+         .filter(Usuario.is_active == True)\
+         .group_by(Usuario.id, Usuario.nombre, Usuario.email, Usuario.foto_url, Usuario.gerente_id)\
+         .order_by(func.sum(case((Recluta.estado == 'Activo', 1), else_=0)).desc())\
+         .all()
+
+        asesores_data = []
+        for asesor in asesores_query:
+            total = asesor.total_reclutas or 0
+            activos = asesor.reclutas_activos or 0
+
+            asesor_data = {
+                "id": asesor.id,
+                "nombre": asesor.nombre,
+                "email": asesor.email,
+                "foto_url": url_for('main.serve_profile_image', filename=asesor.foto_url, _external=False) if asesor.foto_url else None,
+                "gerente_id": asesor.gerente_id,
+                "metricas": {
+                    "total_reclutas": total,
+                    "activos": activos,
+                    "en_proceso": asesor.reclutas_proceso or 0,
+                    "rechazados": asesor.reclutas_rechazados or 0,
+                    "tasa_conversion": round(activos / total * 100, 1) if total > 0 else 0
+                },
+                "performance_level": _calculate_performance_level(activos, total)
+            }
+            asesores_data.append(asesor_data)
+
+        return asesores_data
+
+    except Exception as e:
+        current_app.logger.error(f"Error en asesores individuales filtrados: {str(e)}")
+        return []
+
+def _get_tendencias_consolidadas_filtered(accessible_recluta_ids, user_role):
+    """Obtiene tendencias temporales filtradas según el rol"""
+    try:
+        if user_role == 'admin':
+            return _get_tendencias_consolidadas()
+
+        if not accessible_recluta_ids:
+            return {"mensual": [], "semanal": [], "trimestral": []}
+
+        # Para simplificar, devolver estructura básica
+        # En implementación completa, aquí filtrarías las consultas temporales
+        return {
+            "mensual": [],
+            "semanal": [],
+            "trimestral": [],
+            "note": f"Tendencias basadas en {len(accessible_recluta_ids)} reclutas accesibles"
+        }
+
+    except Exception as e:
+        current_app.logger.error(f"Error en tendencias filtradas: {str(e)}")
+        return {"mensual": [], "semanal": [], "trimestral": []}
+
+def _get_insights_automaticos_filtered(dashboard_data, user_role):
+    """Obtiene insights automáticos filtrados según el rol"""
+    try:
+        if user_role == 'admin':
+            return _get_insights_automaticos(dashboard_data)
+
+        # Para roles no-admin, generar insights limitados
+        insights = {
+            "alertas": [],
+            "oportunidades": [],
+            "destacados": []
+        }
+
+        # Insights básicos basados en los datos filtrados
+        global_kpis = dashboard_data.get("global_kpis", {})
+        total_reclutas = global_kpis.get("total_reclutas", 0)
+
+        if user_role == 'gerente':
+            insights["destacados"].append({
+                "tipo": "info",
+                "titulo": "Vista de Gerente",
+                "mensaje": f"Gestionas {total_reclutas} reclutas en tu equipo",
+                "icono": "fa-users"
+            })
+        elif user_role == 'asesor':
+            insights["destacados"].append({
+                "tipo": "info",
+                "titulo": "Vista Personal",
+                "mensaje": f"Tienes {total_reclutas} reclutas asignados",
+                "icono": "fa-user"
+            })
+
+        return insights
+
+    except Exception as e:
+        current_app.logger.error(f"Error en insights filtrados: {str(e)}")
+        return {"alertas": [], "oportunidades": [], "destacados": []}
 
 
 

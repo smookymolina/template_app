@@ -14,6 +14,9 @@ class MetricasAdminV2 {
         this.isLoading = false;
         this.refreshInterval = null;
         this.charts = {};
+        this.userRole = null;
+        this.userPermissions = {};
+        this.filteredScope = {};
 
         // this.init(); // Initialization will be controlled externally
     }
@@ -188,9 +191,18 @@ class MetricasAdminV2 {
                 throw new Error(this.dashboardData.message || 'Error al cargar datos');
             }
 
-            console.log('✅ Dashboard unificado cargado:', this.dashboardData);
+            // 🔐 EXTRAER INFORMACIÓN DE ROL Y PERMISOS
+            this.userRole = this.dashboardData.user_role || 'asesor';
+            this.filteredScope = this.dashboardData.filtered_scope || {};
 
-            // Renderizar todos los tabs con los nuevos datos
+            console.log('✅ Dashboard unificado cargado:', this.dashboardData);
+            console.log('🔐 Rol del usuario:', this.userRole);
+            console.log('📊 Alcance filtrado:', this.filteredScope);
+
+            // 🎨 ADAPTAR UI SEGÚN ROL
+            this.adaptUIByRole();
+
+            // Renderizar todos los tabs con los nuevos datos filtrados
             this.renderAllTabs();
 
             // Actualizar timestamp
@@ -217,6 +229,231 @@ class MetricasAdminV2 {
         this.renderEquiposTab();
         this.renderIndividualTab();
         this.renderTendenciasTab();
+    }
+
+    /**
+     * 🔐 ADAPTAR UI SEGÚN ROL DEL USUARIO
+     */
+    adaptUIByRole() {
+        console.log(`🔐 Adaptando UI para rol: ${this.userRole}`);
+
+        // 🎛️ CONFIGURAR TABS VISIBLES SEGÚN ROL
+        this.configureTabsByRole();
+
+        // 🎨 PERSONALIZAR ELEMENTOS UI SEGÚN ROL
+        this.personalizeUIElements();
+
+        // 📊 CONFIGURAR CONTROLES DE EXPORTACIÓN
+        this.configureExportControls();
+
+        // 🎯 MOSTRAR INFORMACIÓN DE ALCANCE
+        this.displayFilteredScope();
+    }
+
+    /**
+     * 🎛️ CONFIGURAR TABS VISIBLES SEGÚN ROL
+     */
+    configureTabsByRole() {
+        const tabs = {
+            'resumen': document.getElementById('tab-resumen'),
+            'equipos': document.getElementById('tab-equipos'),
+            'individual': document.getElementById('tab-individual'),
+            'tendencias': document.getElementById('tab-tendencias')
+        };
+
+        const tabContents = {
+            'resumen': document.getElementById('tab-content-resumen'),
+            'equipos': document.getElementById('tab-content-equipos'),
+            'individual': document.getElementById('tab-content-individual'),
+            'tendencias': document.getElementById('tab-content-tendencias')
+        };
+
+        // 👑 ADMINISTRADOR: Todos los tabs visibles
+        if (this.userRole === 'admin') {
+            Object.values(tabs).forEach(tab => {
+                if (tab) {
+                    tab.style.display = 'flex';
+                    tab.classList.remove('disabled');
+                }
+            });
+            return;
+        }
+
+        // 👔 GERENTE: Resumen, Equipos, Individual, Tendencias (filtrado)
+        if (this.userRole === 'gerente') {
+            // Todos los tabs visibles pero con datos filtrados
+            Object.values(tabs).forEach(tab => {
+                if (tab) {
+                    tab.style.display = 'flex';
+                    tab.classList.remove('disabled');
+                }
+            });
+
+            // Actualizar textos para gerente
+            if (tabs.equipos) {
+                const equiposSpan = tabs.equipos.querySelector('span');
+                if (equiposSpan) equiposSpan.textContent = 'Mi Equipo';
+            }
+            return;
+        }
+
+        // 📈 ASESOR: Solo tab Individual (vista personal)
+        if (this.userRole === 'asesor') {
+            // Ocultar tabs no relevantes para asesores
+            ['equipos', 'tendencias'].forEach(tabName => {
+                if (tabs[tabName]) {
+                    tabs[tabName].style.display = 'none';
+                }
+                if (tabContents[tabName]) {
+                    tabContents[tabName].style.display = 'none';
+                }
+            });
+
+            // Asegurar que el tab Individual esté visible y activo
+            if (tabs.individual) {
+                tabs.individual.style.display = 'flex';
+                tabs.individual.classList.remove('disabled');
+            }
+
+            // Actualizar texto del tab Individual
+            if (tabs.individual) {
+                const individualSpan = tabs.individual.querySelector('span');
+                if (individualSpan) individualSpan.textContent = 'Mis Métricas';
+            }
+
+            // Cambiar al tab Individual si está en otro
+            if (this.currentTab !== 'individual' && this.currentTab !== 'resumen') {
+                this.switchTab('individual');
+            }
+        }
+    }
+
+    /**
+     * 🎨 PERSONALIZAR ELEMENTOS UI SEGÚN ROL
+     */
+    personalizeUIElements() {
+        // 📊 ACTUALIZAR TÍTULO PRINCIPAL
+        const headerTitle = document.querySelector('.section-header-v2 h3');
+        if (headerTitle) {
+            const roleLabels = {
+                'admin': 'Métricas Administrativas',
+                'gerente': 'Panel de Gestión',
+                'asesor': 'Mi Dashboard Personal'
+            };
+            headerTitle.innerHTML = `<i class="fas fa-chart-bar"></i> ${roleLabels[this.userRole] || 'Métricas'}`;
+        }
+
+        // 🔐 MOSTRAR BADGE DE ROL
+        this.showRoleBadge();
+
+        // 📝 PERSONALIZAR BREADCRUMB
+        const breadcrumb = document.getElementById('breadcrumb-home');
+        if (breadcrumb) {
+            const roleHome = {
+                'admin': 'Admin Dashboard',
+                'gerente': 'Panel Gerencial',
+                'asesor': 'Mi Dashboard'
+            };
+            breadcrumb.innerHTML = `<i class="fas fa-home"></i> ${roleHome[this.userRole] || 'Dashboard'}`;
+        }
+    }
+
+    /**
+     * 🏷️ MOSTRAR BADGE DE ROL
+     */
+    showRoleBadge() {
+        const headerMeta = document.querySelector('.header-meta');
+        if (!headerMeta) return;
+
+        // Remover badge existente
+        const existingBadge = headerMeta.querySelector('.role-badge');
+        if (existingBadge) existingBadge.remove();
+
+        // Crear nuevo badge
+        const roleBadge = document.createElement('span');
+        roleBadge.className = 'role-badge';
+
+        const roleInfo = {
+            'admin': { label: 'Administrador', color: '#dc3545' },
+            'gerente': { label: 'Gerente', color: '#fd7e14' },
+            'asesor': { label: 'Asesor', color: '#198754' }
+        };
+
+        const info = roleInfo[this.userRole] || { label: 'Usuario', color: '#6c757d' };
+        roleBadge.textContent = info.label;
+        roleBadge.style.backgroundColor = info.color;
+        roleBadge.style.color = 'white';
+        roleBadge.style.padding = '2px 8px';
+        roleBadge.style.borderRadius = '4px';
+        roleBadge.style.fontSize = '11px';
+        roleBadge.style.fontWeight = '600';
+        roleBadge.style.textTransform = 'uppercase';
+
+        headerMeta.appendChild(roleBadge);
+    }
+
+    /**
+     * 📊 CONFIGURAR CONTROLES DE EXPORTACIÓN
+     */
+    configureExportControls() {
+        const exportBtn = document.getElementById('export-metricas-v2');
+        const settingsBtn = document.getElementById('settings-metricas-v2');
+
+        if (this.userRole === 'admin') {
+            // Admin tiene acceso completo
+            if (exportBtn) {
+                exportBtn.style.display = 'flex';
+                exportBtn.title = 'Exportar todas las métricas';
+            }
+            if (settingsBtn) {
+                settingsBtn.style.display = 'flex';
+            }
+        } else if (this.userRole === 'gerente') {
+            // Gerente puede exportar datos de su equipo
+            if (exportBtn) {
+                exportBtn.style.display = 'flex';
+                exportBtn.title = 'Exportar métricas de mi equipo';
+            }
+            if (settingsBtn) {
+                settingsBtn.style.display = 'none';
+            }
+        } else {
+            // Asesor no puede exportar
+            if (exportBtn) {
+                exportBtn.style.display = 'none';
+            }
+            if (settingsBtn) {
+                settingsBtn.style.display = 'none';
+            }
+        }
+    }
+
+    /**
+     * 🎯 MOSTRAR INFORMACIÓN DE ALCANCE FILTRADO
+     */
+    displayFilteredScope() {
+        const headerMeta = document.querySelector('.header-meta');
+        if (!headerMeta || this.userRole === 'admin') return;
+
+        // Crear indicador de alcance
+        let scopeIndicator = headerMeta.querySelector('.scope-indicator');
+        if (!scopeIndicator) {
+            scopeIndicator = document.createElement('span');
+            scopeIndicator.className = 'scope-indicator';
+            scopeIndicator.style.fontSize = '12px';
+            scopeIndicator.style.color = '#6c757d';
+            scopeIndicator.style.marginLeft = '8px';
+            headerMeta.appendChild(scopeIndicator);
+        }
+
+        const accessibleUsers = this.filteredScope.accessible_users || 0;
+        const accessibleReclutas = this.filteredScope.accessible_reclutas || 0;
+
+        if (this.userRole === 'gerente') {
+            scopeIndicator.innerHTML = `<i class="fas fa-filter"></i> ${accessibleUsers} usuarios, ${accessibleReclutas} reclutas`;
+        } else if (this.userRole === 'asesor') {
+            scopeIndicator.innerHTML = `<i class="fas fa-user-check"></i> ${accessibleReclutas} reclutas propios`;
+        }
     }
 
     /**

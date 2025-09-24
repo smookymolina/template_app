@@ -585,13 +585,319 @@ def excel_upload_required(f):
                 "success": False,
                 "message": "Autenticación requerida"
             }), 401
-            
+
         if not hasattr(current_user, 'can_upload_excel') or not current_user.can_upload_excel():
             return jsonify({
                 "success": False,
                 "message": "Acceso denegado. Solo los administradores pueden subir archivos Excel."
             }), 403
-            
+
         return f(*args, **kwargs)
     return decorated_function
+
+# ============================================================================
+# 🎯 NUEVO: DECORADOR PARA MÉTRICAS CON FILTRADO BASADO EN ROLES
+# ============================================================================
+
+def role_based_metrics_access(f):
+    """
+    🔐 DECORADOR PRINCIPAL: Control de acceso a métricas basado en jerarquía de roles
+
+    RESTRICCIONES POR ROL:
+    - 👑 Administrador: Ve TODO sin restricciones
+    - 👔 Gerente: Ve métricas de sus asesores y reclutas asignados únicamente
+    - 📈 Asesor: Ve métricas de sus propios reclutas únicamente
+    """
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        try:
+            # 🔐 VERIFICAR AUTENTICACIÓN
+            if not current_user.is_authenticated:
+                current_app.logger.warning(f"🚫 Acceso no autenticado a métricas desde IP: {request.remote_addr}")
+                return jsonify({
+                    "success": False,
+                    "message": "Autenticación requerida para acceder a métricas",
+                    "error_code": "AUTH_REQUIRED"
+                }), 401
+
+            # 👥 VERIFICAR ROL VÁLIDO
+            if not hasattr(current_user, 'rol') or current_user.rol not in ['admin', 'gerente', 'asesor']:
+                current_app.logger.warning(
+                    f"🚫 Rol inválido para métricas: Usuario {current_user.email} "
+                    f"(rol: {getattr(current_user, 'rol', 'None')})"
+                )
+                return jsonify({
+                    "success": False,
+                    "message": "Rol no autorizado para acceder a métricas",
+                    "error_code": "ROLE_NOT_AUTHORIZED"
+                }), 403
+
+            # 📊 OBTENER DATOS ACCESIBLES SEGÚN ROL
+            accessible_user_ids = get_accessible_user_ids(current_user)
+            accessible_recluta_ids = get_accessible_recluta_ids(current_user)
+
+            # 📝 REGISTRAR ACCESO
+            current_app.logger.info(
+                f"✅ Acceso autorizado a métricas: Usuario {current_user.email} "
+                f"(rol: {current_user.rol}) - Usuarios accesibles: {len(accessible_user_ids)} "
+                f"- Reclutas accesibles: {len(accessible_recluta_ids)}"
+            )
+
+            # 🎯 INYECTAR DATOS DE FILTRADO EN LA REQUEST
+            request.metrics_filter = {
+                'user_role': current_user.rol,
+                'user_id': current_user.id,
+                'accessible_user_ids': accessible_user_ids,
+                'accessible_recluta_ids': accessible_recluta_ids,
+                'permissions': get_metricas_permissions(current_user)
+            }
+
+            # ✅ EJECUTAR FUNCIÓN ORIGINAL CON FILTROS
+            return f(*args, **kwargs)
+
+        except Exception as e:
+            current_app.logger.error(f"❌ Error en decorador role_based_metrics_access: {str(e)}")
+            return jsonify({
+                "success": False,
+                "message": "Error interno del servidor en verificación de permisos",
+                "error_code": "INTERNAL_ERROR"
+            }), 500
+
+    return decorated_function
+
+def get_accessible_user_ids(user):
+    """
+    🔍 OBTENER IDs de usuarios accesibles según jerarquía de roles
+
+    Args:
+        user: Usuario actual
+
+    Returns:
+        list: Lista de IDs de usuarios accesibles
+    """
+    try:
+        from models.usuario import Usuario
+
+        if user.rol == 'admin':
+            # 👑 ADMIN: Ve todos los usuarios
+            return [u.id for u in Usuario.query.filter(Usuario.is_active.is_(True)).all()]
+
+        elif user.rol == 'gerente':
+            # 👔 GERENTE: Ve sus asesores asignados + él mismo
+            accessible_ids = [user.id]  # Incluirse a sí mismo
+
+            # Obtener asesores asignados al gerente
+            asesores = Usuario.query.filter(
+                Usuario.gerente_id == user.id,
+                Usuario.rol == 'asesor',
+                Usuario.is_active.is_(True)
+            ).all()
+
+            accessible_ids.extend([asesor.id for asesor in asesores])
+            return accessible_ids
+
+        elif user.rol == 'asesor':
+            # 📈 ASESOR: Solo él mismo
+            return [user.id]
+
+        else:
+            return []
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en get_accessible_user_ids: {str(e)}")
+        return [user.id]  # Fallback: solo el usuario actual
+
+def get_accessible_recluta_ids(user):
+    """
+    🔍 OBTENER IDs de reclutas accesibles según jerarquía de roles
+
+    Args:
+        user: Usuario actual
+
+    Returns:
+        list: Lista de IDs de reclutas accesibles
+    """
+    try:
+        from models.recluta import Recluta
+
+        if user.rol == 'admin':
+            # 👑 ADMIN: Ve todos los reclutas
+            return [r.id for r in Recluta.query.all()]
+
+        elif user.rol == 'gerente':
+            # 👔 GERENTE: Ve reclutas de sus asesores asignados
+            accessible_user_ids = get_accessible_user_ids(user)
+
+            reclutas = Recluta.query.filter(
+                Recluta.asesor_id.in_(accessible_user_ids)
+            ).all()
+
+            return [r.id for r in reclutas]
+
+        elif user.rol == 'asesor':
+            # 📈 ASESOR: Solo sus propios reclutas
+            reclutas = Recluta.query.filter(
+                Recluta.asesor_id == user.id
+            ).all()
+
+            return [r.id for r in reclutas]
+
+        else:
+            return []
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en get_accessible_recluta_ids: {str(e)}")
+        return []
+
+def filter_metrics_data_by_role(data, user):
+    """
+    🎯 FILTRAR datos de métricas según el rol del usuario
+
+    Args:
+        data (dict): Datos de métricas sin filtrar
+        user: Usuario actual
+
+    Returns:
+        dict: Datos filtrados según permisos del usuario
+    """
+    try:
+        if user.rol == 'admin':
+            # 👑 ADMIN: Retornar datos completos sin filtrar
+            return data
+
+        # Obtener IDs accesibles
+        accessible_user_ids = get_accessible_user_ids(user)
+        accessible_recluta_ids = get_accessible_recluta_ids(user)
+
+        filtered_data = data.copy()
+
+        # Filtrar secciones específicas según el rol
+        if 'jerarquia' in filtered_data:
+            filtered_data['jerarquia'] = filter_jerarquia_data(
+                filtered_data['jerarquia'], accessible_user_ids
+            )
+
+        if 'equipos' in filtered_data:
+            filtered_data['equipos'] = filter_equipos_data(
+                filtered_data['equipos'], accessible_user_ids, user
+            )
+
+        if 'asesores_individuales' in filtered_data:
+            filtered_data['asesores_individuales'] = filter_asesores_data(
+                filtered_data['asesores_individuales'], accessible_user_ids
+            )
+
+        if 'global_kpis' in filtered_data and user.rol != 'admin':
+            # Recalcular KPIs globales solo con datos accesibles
+            filtered_data['global_kpis'] = recalculate_kpis_for_role(
+                accessible_recluta_ids, user
+            )
+
+        return filtered_data
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en filter_metrics_data_by_role: {str(e)}")
+        return data  # Fallback: retornar datos originales
+
+def filter_jerarquia_data(jerarquia_data, accessible_user_ids):
+    """Filtrar datos de jerarquía organizacional"""
+    try:
+        if not isinstance(jerarquia_data, list):
+            return jerarquia_data
+
+        filtered_jerarquia = []
+        for item in jerarquia_data:
+            if isinstance(item, dict) and 'id' in item:
+                if item['id'] in accessible_user_ids:
+                    # Filtrar asesores dentro del item si existe
+                    if 'asesores' in item:
+                        item['asesores'] = [
+                            asesor for asesor in item['asesores']
+                            if isinstance(asesor, dict) and asesor.get('id') in accessible_user_ids
+                        ]
+                    filtered_jerarquia.append(item)
+
+        return filtered_jerarquia
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en filter_jerarquia_data: {str(e)}")
+        return jerarquia_data
+
+def filter_equipos_data(equipos_data, accessible_user_ids, user):
+    """Filtrar datos de equipos según accesibilidad"""
+    try:
+        if user.rol == 'gerente':
+            # Gerente solo ve su propio equipo
+            if isinstance(equipos_data, list):
+                return [
+                    equipo for equipo in equipos_data
+                    if isinstance(equipo, dict) and equipo.get('gerente_id') == user.id
+                ]
+            elif isinstance(equipos_data, dict) and equipos_data.get('gerente_id') == user.id:
+                return equipos_data
+
+        return equipos_data
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en filter_equipos_data: {str(e)}")
+        return equipos_data
+
+def filter_asesores_data(asesores_data, accessible_user_ids):
+    """Filtrar datos de asesores individuales"""
+    try:
+        if isinstance(asesores_data, list):
+            return [
+                asesor for asesor in asesores_data
+                if isinstance(asesor, dict) and asesor.get('id') in accessible_user_ids
+            ]
+
+        return asesores_data
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en filter_asesores_data: {str(e)}")
+        return asesores_data
+
+def recalculate_kpis_for_role(accessible_recluta_ids, user):
+    """Recalcular KPIs globales solo con reclutas accesibles"""
+    try:
+        from models.recluta import Recluta
+        from sqlalchemy import func
+
+        if not accessible_recluta_ids:
+            return {
+                "total_reclutas": 0,
+                "activos": 0,
+                "en_proceso": 0,
+                "rechazados": 0,
+                "tasa_conversion": 0
+            }
+
+        # Consultar solo reclutas accesibles
+        reclutas_query = Recluta.query.filter(Recluta.id.in_(accessible_recluta_ids))
+
+        total_reclutas = reclutas_query.count()
+        activos = reclutas_query.filter(Recluta.estado == 'Activo').count()
+        en_proceso = reclutas_query.filter(Recluta.estado == 'En proceso').count()
+        rechazados = reclutas_query.filter(Recluta.estado == 'Rechazado').count()
+
+        tasa_conversion = (activos / total_reclutas * 100) if total_reclutas > 0 else 0
+
+        return {
+            "total_reclutas": total_reclutas,
+            "activos": activos,
+            "en_proceso": en_proceso,
+            "rechazados": rechazados,
+            "tasa_conversion": round(tasa_conversion, 2)
+        }
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en recalculate_kpis_for_role: {str(e)}")
+        return {
+            "total_reclutas": 0,
+            "activos": 0,
+            "en_proceso": 0,
+            "rechazados": 0,
+            "tasa_conversion": 0
+        }
 

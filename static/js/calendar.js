@@ -241,6 +241,14 @@ const Calendar = {
             events.forEach(event => {
                 const item = document.createElement('li');
                 item.className = 'interview-item-modal';
+                const actionsHTML = `
+                    <button class="btn-icon-small view-details-btn" title="Ver detalles"><i class="fas fa-eye"></i></button>
+                    ${this.canEditInterview(event) ?
+                        `<button class="btn-icon-small edit-interview-btn" title="Editar entrevista"><i class="fas fa-edit"></i></button>` : ''}
+                    ${this.canDeleteInterview(event) ?
+                        `<button class="btn-icon-small delete-interview-btn" title="Eliminar entrevista"><i class="fas fa-trash-alt"></i></button>` : ''}
+                `;
+
                 item.innerHTML = `
                     <div class="interview-time">${event.hora}</div>
                     <div class="interview-details">
@@ -248,14 +256,38 @@ const Calendar = {
                         <div class="interview-type">${event.tipo}</div>
                     </div>
                     <div class="interview-actions">
-                        <button class="btn-icon-small view-details-btn"><i class="fas fa-eye"></i></button>
+                        ${actionsHTML}
                     </div>
                 `;
-                item.querySelector('.view-details-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.viewEventDetails(event);
-                    UI.closeModal('day-interviews-modal');
-                });
+
+                // Event listeners for action buttons
+                const viewBtn = item.querySelector('.view-details-btn');
+                const editBtn = item.querySelector('.edit-interview-btn');
+                const deleteBtn = item.querySelector('.delete-interview-btn');
+
+                if (viewBtn) {
+                    viewBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.viewEventDetails(event);
+                        UI.closeModal('day-interviews-modal');
+                    });
+                }
+
+                if (editBtn) {
+                    editBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.editEvent(event);
+                        UI.closeModal('day-interviews-modal');
+                    });
+                }
+
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.confirmDeleteEvent(event);
+                        UI.closeModal('day-interviews-modal');
+                    });
+                }
                 list.appendChild(item);
             });
             modalBody.appendChild(list);
@@ -795,13 +827,38 @@ const Calendar = {
      */
     deleteEvent: async function(event) {
         try {
+            console.log('Calendar: deleteEvent - Eliminando entrevista:', event.id);
             await Api.deleteEntrevista(event.id);
+
+            // Mostrar notificación de éxito
             showSuccess('Entrevista eliminada correctamente');
+
+            // Remover inmediatamente de la lista local para feedback visual rápido
+            this.calendarEvents = this.calendarEvents.filter(e => e.id !== event.id);
+
+            // Actualizar conteos inmediatamente
+            const eventDate = event.fecha;
+            if (this.interviewCounts[eventDate]) {
+                this.interviewCounts[eventDate] = Math.max(0, this.interviewCounts[eventDate] - 1);
+                if (this.interviewCounts[eventDate] === 0) {
+                    delete this.interviewCounts[eventDate];
+                }
+            }
+
+            // Actualizar colores de días inmediatamente
+            this.updateAllDayColors();
+
+            // Actualizar lista de próximas entrevistas inmediatamente
+            this.updateUpcomingEventsList();
+
         } catch (error) {
+            console.error('Calendar: deleteEvent - Error:', error);
             showError('Error al eliminar la entrevista.');
         } finally {
-            // Actualizar vistas
-            await this.refreshCalendarEvents();
+            // Hacer actualización completa en background para asegurar sincronización
+            setTimeout(() => {
+                this.refreshCalendarEvents();
+            }, 100);
         }
     },
     
@@ -1047,12 +1104,18 @@ const Calendar = {
                         <i class="fas fa-edit"></i>
                      </button>` : ''
                 }
+                ${this.canDeleteInterview(event) ?
+                    `<button class="btn-icon-small delete-interview" title="Eliminar entrevista">
+                        <i class="fas fa-trash-alt"></i>
+                     </button>` : ''
+                }
             </div>
         `;
 
         // Añadir eventos para los botones de acción
         const viewBtn = eventItem.querySelector('.view-interview');
         const editBtn = eventItem.querySelector('.edit-interview');
+        const deleteBtn = eventItem.querySelector('.delete-interview');
 
         if (viewBtn) {
             viewBtn.addEventListener('click', (e) => {
@@ -1066,6 +1129,14 @@ const Calendar = {
                 e.stopPropagation();
                 console.log('Calendar: addEventToUpcomingList - Click en botón editar, evento:', event);
                 this.editEvent(event);
+            });
+        }
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                console.log('Calendar: addEventToUpcomingList - Click en botón eliminar, evento:', event);
+                this.confirmDeleteEvent(event);
             });
         }
 
@@ -1634,16 +1705,20 @@ const Calendar = {
         // Obtener el conteo directamente del objeto de conteos
         const eventCount = this.interviewCounts[formattedDate] || 0;
 
-        // Remover clases de conteo existentes
+        // Remover clases de conteo existentes y tooltips
         dayCell.classList.remove('interview-count-1', 'interview-count-2-4', 'interview-count-5-plus');
+        dayCell.removeAttribute('data-interview-tooltip');
 
-        // Aplicar clase basada en el conteo
+        // Aplicar clase y tooltip basado en el conteo
         if (eventCount === 1) {
             dayCell.classList.add('interview-count-1');
+            dayCell.setAttribute('data-interview-tooltip', '1 entrevista programada');
         } else if (eventCount >= 2 && eventCount <= 4) {
             dayCell.classList.add('interview-count-2-4');
+            dayCell.setAttribute('data-interview-tooltip', `${eventCount} entrevistas programadas`);
         } else if (eventCount >= 5) {
             dayCell.classList.add('interview-count-5-plus');
+            dayCell.setAttribute('data-interview-tooltip', `${eventCount} entrevistas programadas`);
         }
     },
 
