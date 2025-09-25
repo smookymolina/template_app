@@ -4,6 +4,7 @@ from werkzeug.utils import secure_filename
 from models import db, DatabaseError
 from models.recluta import Recluta
 from models.usuario import Usuario
+from models.notification import Notification
 from utils.decorators import admin_required, role_required, gerente_or_admin_required, gerente_required
 from models.entrevista import Entrevista  # Importación específica desde el módulo
 from models.evento_recluta import EventoRecluta
@@ -607,6 +608,22 @@ def add_entrevista():
         try:
             nueva.save()
             current_app.logger.info(f"Entrevista creada: {nueva.id} - Recluta: {nueva.recluta_id} - Fecha: {nueva.fecha}")
+
+            # Crear notificación para administradores si el usuario no es admin
+            if current_user.rol != 'admin':
+                try:
+                    recluta_nombre = recluta.nombre if recluta else 'Candidato desconocido'
+                    Notification.crear_notificacion_entrevista(
+                        accion='crear',
+                        usuario_origen_id=current_user.id,
+                        entrevista_id=nueva.id,
+                        recluta_nombre=recluta_nombre
+                    )
+                    current_app.logger.info(f"Notificación de entrevista creada enviada para entrevista {nueva.id}")
+                except Exception as notification_error:
+                    current_app.logger.error(f"Error creando notificación para entrevista {nueva.id}: {str(notification_error)}")
+                    # No fallar la creación de la entrevista por error en notificación
+
             return jsonify({"success": True, "entrevista": nueva.serialize()}), 201
         except DatabaseError as e:
             return jsonify({"success": False, "message": str(e)}), 500
@@ -658,6 +675,22 @@ def update_entrevista(id):
         try:
             entrevista.save()
             current_app.logger.info(f"Entrevista actualizada: {entrevista.id} - Fecha: {entrevista.fecha}")
+
+            # Crear notificación para administradores si el usuario no es admin
+            if current_user.rol != 'admin':
+                try:
+                    recluta_nombre = recluta.nombre if recluta else 'Candidato desconocido'
+                    Notification.crear_notificacion_entrevista(
+                        accion='actualizar',
+                        usuario_origen_id=current_user.id,
+                        entrevista_id=entrevista.id,
+                        recluta_nombre=recluta_nombre
+                    )
+                    current_app.logger.info(f"Notificación de entrevista actualizada enviada para entrevista {entrevista.id}")
+                except Exception as notification_error:
+                    current_app.logger.error(f"Error creando notificación para entrevista {entrevista.id}: {str(notification_error)}")
+                    # No fallar la actualización de la entrevista por error en notificación
+
             return jsonify({"success": True, "entrevista": entrevista.serialize()})
         except DatabaseError as e:
             return jsonify({"success": False, "message": str(e)}), 500
@@ -683,13 +716,30 @@ def delete_entrevista(id):
         if not recluta:
             return jsonify({"success": False, "message": "No tienes permisos para eliminar esta entrevista"}), 403
         
-        # Guardar información antes de eliminar para el log
+        # Guardar información antes de eliminar para el log y notificación
         entrevista_info = f"ID: {entrevista.id}, Recluta: {entrevista.recluta_id}, Fecha: {entrevista.fecha}"
-        
+        entrevista_id = entrevista.id
+        recluta_nombre = recluta.nombre if recluta else 'Candidato desconocido'
+
         # Eliminar entrevista
         try:
             entrevista.delete()
             current_app.logger.info(f"Entrevista eliminada: {entrevista_info}")
+
+            # Crear notificación para administradores si el usuario no es admin
+            if current_user.rol != 'admin':
+                try:
+                    Notification.crear_notificacion_entrevista(
+                        accion='eliminar',
+                        usuario_origen_id=current_user.id,
+                        entrevista_id=entrevista_id,
+                        recluta_nombre=recluta_nombre
+                    )
+                    current_app.logger.info(f"Notificación de entrevista eliminada enviada para entrevista {entrevista_id}")
+                except Exception as notification_error:
+                    current_app.logger.error(f"Error creando notificación para entrevista eliminada {entrevista_id}: {str(notification_error)}")
+                    # No fallar la eliminación por error en notificación
+
             return jsonify({"success": True, "message": "Entrevista eliminada correctamente"})
         except DatabaseError as e:
             return jsonify({"success": False, "message": str(e)}), 500

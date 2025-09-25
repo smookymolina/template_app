@@ -118,6 +118,7 @@ def register_blueprints(app):
     from routes.admin import admin_bp
     from routes.gerente_stats import gerente_stats_bp
     from routes.asesor_stats import asesor_stats_bp
+    from routes.notifications import notifications_bp
 
     # Registrar blueprints principales
     app.register_blueprint(main_bp)
@@ -126,6 +127,7 @@ def register_blueprints(app):
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(gerente_stats_bp)
     app.register_blueprint(asesor_stats_bp)
+    app.register_blueprint(notifications_bp, url_prefix='/api')
     
     # Tutorial blueprint (opcional, solo si existe el archivo)
     try:

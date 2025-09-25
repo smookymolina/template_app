@@ -2,9 +2,42 @@
 <div id="calendario-section" class="dashboard-content-section">
     <div class="section-header">
         <h3><i class="fas fa-calendar-alt"></i> Calendario de Entrevistas</h3>
-        <button class="btn-primary" id="add-event-button">
-            <i class="fas fa-plus"></i> Nueva Entrevista
-        </button>
+        <div class="header-actions">
+            <!-- Notification Bell (Admin Only) -->
+            <div class="notification-bell-container nav-admin-only" id="notification-bell">
+                <button class="notification-bell-btn" id="notification-bell-btn" title="Notificaciones">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notification-badge">0</span>
+                </button>
+
+                <!-- Notification Dropdown -->
+                <div class="notification-dropdown" id="notification-dropdown">
+                    <div class="notification-header">
+                        <h4>Notificaciones</h4>
+                        <div class="notification-actions">
+                            <button class="btn-text" id="mark-all-read-btn" title="Marcar todas como leídas">
+                                <i class="fas fa-check-double"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="notification-list" id="notification-list">
+                        <div class="notification-empty">
+                            <i class="fas fa-bell-slash"></i>
+                            <p>No hay notificaciones</p>
+                        </div>
+                    </div>
+
+                    <div class="notification-footer">
+                        <button class="btn-text" id="view-all-notifications">Ver todas</button>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-primary" id="add-event-button">
+                <i class="fas fa-plus"></i> Nueva Entrevista
+            </button>
+        </div>
     </div>
     
     <div class="calendar-container">

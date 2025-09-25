@@ -8,8 +8,10 @@ import Timeline from './timeline.js';
 import { showNotification, showError, showSuccess } from './notifications.js';
 import Tutorial from './tutorial.js';
 import Jerarquia from './jerarquia.js';
+import NotificationBell from './notification-bell.js';
 
 let MetricasAdmin = null;
+let notificationBell = null;
 
 // Estado global de la aplicación
 let appState = {
@@ -89,7 +91,7 @@ function initModalTriggers() {
  */
 async function initializeUserSpecificFeatures() {
     const currentUser = getCurrentUser();
-    
+
     if (currentUser?.rol === 'admin') {
         console.log('👑 Usuario administrador detectado - Preparando métricas avanzadas');
         await handleAdminUserInitialization();
@@ -97,7 +99,10 @@ async function initializeUserSpecificFeatures() {
         console.log('👥 Usuario asesor detectado - Configurando vista simplificada');
         hideAdminFeatures();
     }
-    
+
+    // Inicializar campanita de notificaciones
+    initializeNotificationBell();
+
     // Actualizar navegación según rol (para todos los usuarios)
     updateNavigationByRole(currentUser);
 }
@@ -3084,7 +3089,45 @@ document.addEventListener('userSettingsChanged', function(event) {
     }
 });
 
+/**
+ * ✅ INICIALIZAR CAMPANITA DE NOTIFICACIONES
+ */
+function initializeNotificationBell() {
+    try {
+        console.log('🔔 Inicializando campanita de notificaciones...');
+
+        // Limpiar instancia anterior si existe
+        if (notificationBell) {
+            notificationBell.destroy();
+        }
+
+        // Crear nueva instancia
+        notificationBell = new NotificationBell();
+
+        console.log('✅ Campanita de notificaciones inicializada');
+
+    } catch (error) {
+        console.error('❌ Error al inicializar campanita de notificaciones:', error);
+    }
+}
+
+/**
+ * ✅ LIMPIAR CAMPANITA DE NOTIFICACIONES (llamada durante logout)
+ */
+function cleanupNotificationBell() {
+    if (notificationBell) {
+        notificationBell.destroy();
+        notificationBell = null;
+    }
+}
+
+// Agregar limpieza de notificaciones al evento de logout existente
+document.addEventListener('userLoggedOut', function(event) {
+    cleanupNotificationBell();
+});
+
 console.log('✅ main.js cargado completamente - Sistema de folio restaurado');
 console.log('🔧 Integración de métricas administrativas completada');
 console.log('🎯 Todas las funciones de validación y debug disponibles');
 console.log('🔄 Listeners de eventos de limpieza y sincronización agregados');
+console.log('🔔 Sistema de notificaciones integrado');
