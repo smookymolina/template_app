@@ -107,6 +107,9 @@ const Calendar = {
     monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
     dayNames: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'],
     monthShortNames: ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'],
+
+    // PASO 1: Variable para almacenar la referencia del event listener activo
+    activeOutsideClickHandler: null,
     
     /**
      * Inicializa el calendario
@@ -302,6 +305,7 @@ const Calendar = {
     },
 
     showDayOptionsSubModal: function(targetElement, date) {
+        // PASO 2: Cerrar cualquier modal previo y limpiar listeners anteriores
         this.closeDayOptionsSubModal();
 
         const template = document.getElementById('day-options-submodal-template');
@@ -334,8 +338,9 @@ const Calendar = {
         subModal.style.left = `${rect.left}px`;
         subModal.style.top = `${rect.bottom + 5}px`; // 5px offset
 
-        // Event listeners
+        // PASO 3: Event listeners mejorados con manejo de propagación
         subModal.addEventListener('click', (e) => {
+            e.stopPropagation(); // Evitar que el click se propague al documento
             const actionTarget = e.target.closest('.day-option');
             if (actionTarget) {
                 const action = actionTarget.dataset.action;
@@ -349,14 +354,29 @@ const Calendar = {
             }
         });
 
-        // Outside click handler
+        // PASO 4: Manejo mejorado del click fuera del modal con timeout adecuado
+        this.activeOutsideClickHandler = (e) => {
+            // Verificar que el click no sea dentro del submodal o en el elemento target
+            if (!subModal.contains(e.target) && !targetElement.contains(e.target)) {
+                this.closeDayOptionsSubModal();
+            }
+        };
+
+        // PASO 5: Usar timeout más largo para evitar cierre inmediato y sin { once: true }
         setTimeout(() => {
-            document.addEventListener('click', this.closeDayOptionsSubModal.bind(this), { once: true });
-        }, 0);
-        subModal.addEventListener('click', e => e.stopPropagation());
+            if (this.activeOutsideClickHandler) {
+                document.addEventListener('click', this.activeOutsideClickHandler);
+            }
+        }, 100); // Aumentar timeout a 100ms
     },
 
     closeDayOptionsSubModal: function() {
+        // PASO 2 (continuación): Limpiar event listener anterior para evitar múltiples handlers
+        if (this.activeOutsideClickHandler) {
+            document.removeEventListener('click', this.activeOutsideClickHandler);
+            this.activeOutsideClickHandler = null;
+        }
+
         const subModal = document.getElementById('day-options-submodal-instance');
         if (subModal) {
             subModal.remove();

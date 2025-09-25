@@ -658,6 +658,9 @@ async function processLogin(usuario) {
     if (window.configManager) {
         await window.configManager.loadSettingsForAuthenticatedUser();
     }
+
+    // Mostrar la sección por defecto después de que todo esté listo
+    showSection('reclutas-section');
 }
 
 /**
