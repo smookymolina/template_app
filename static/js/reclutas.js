@@ -461,17 +461,19 @@ const Reclutas = {
             welcomeDiv.className = 'admin-welcome';
             welcomeDiv.style.cssText = `
                 background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-                color: white;
+                color: white !important;
                 padding: 15px;
                 border-radius: var(--border-radius);
                 margin-bottom: 20px;
                 text-align: center;
+                border: 2px solid transparent;
+                box-shadow: var(--shadow-sm);
             `;
             welcomeDiv.innerHTML = `
-                <h4><i class="fas fa-crown"></i> Panel de Administrador</h4>
-                <p>Gestiona todos los reclutas, asigna asesores y supervisa el proceso completo de reclutamiento.</p>
+                <h4 style="color: white !important; margin: 0 0 8px 0;"><i class="fas fa-crown"></i> Panel de Administrador</h4>
+                <p style="color: white !important; margin: 0; opacity: 0.95;">Gestiona todos los reclutas, asigna asesores y supervisa el proceso completo de reclutamiento.</p>
             `;
-            
+
             const sectionHeader = reclutasSection.querySelector('.section-header');
             if (sectionHeader && sectionHeader.nextSibling) {
                 reclutasSection.insertBefore(welcomeDiv, sectionHeader.nextSibling);
@@ -486,17 +488,19 @@ const Reclutas = {
             welcomeDiv.className = 'gerente-welcome';
             welcomeDiv.style.cssText = `
                 background: linear-gradient(135deg, #f59e0b, #d97706);
-                color: white;
+                color: white !important;
                 padding: 15px;
                 border-radius: var(--border-radius);
                 margin-bottom: 20px;
                 text-align: center;
+                border: 2px solid transparent;
+                box-shadow: var(--shadow-sm);
             `;
             welcomeDiv.innerHTML = `
-                <h4><i class="fas fa-user-tie"></i> Panel de Gerente</h4>
-                <p>Supervisa el proceso completo de reclutamiento y gestiona asesores. Tienes acceso a métricas globales y distribución.</p>
+                <h4 style="color: white !important; margin: 0 0 8px 0;"><i class="fas fa-user-tie"></i> Panel de Gerente</h4>
+                <p style="color: white !important; margin: 0; opacity: 0.95;">Supervisa el proceso completo de reclutamiento y gestiona asesores. Tienes acceso a métricas globales y distribución.</p>
             `;
-            
+
             const sectionHeader = reclutasSection.querySelector('.section-header');
             if (sectionHeader && sectionHeader.nextSibling) {
                 reclutasSection.insertBefore(welcomeDiv, sectionHeader.nextSibling);
@@ -511,17 +515,19 @@ const Reclutas = {
             welcomeDiv.className = 'asesor-welcome';
             welcomeDiv.style.cssText = `
                 background: linear-gradient(135deg, #28a745, #20c997);
-                color: white;
+                color: white !important;
                 padding: 15px;
                 border-radius: var(--border-radius);
                 margin-bottom: 20px;
                 text-align: center;
+                border: 2px solid transparent;
+                box-shadow: var(--shadow-sm);
             `;
             welcomeDiv.innerHTML = `
-                <h4><i class="fas fa-handshake"></i> Panel de Asesor</h4>
-                <p>Gestiona tus reclutas asignados y programa entrevistas para tus candidatos.</p>
+                <h4 style="color: white !important; margin: 0 0 8px 0;"><i class="fas fa-handshake"></i> Panel de Asesor</h4>
+                <p style="color: white !important; margin: 0; opacity: 0.95;">Gestiona tus reclutas asignados y programa entrevistas para tus candidatos.</p>
             `;
-            
+
             const sectionHeader = reclutasSection.querySelector('.section-header');
             if (sectionHeader && sectionHeader.nextSibling) {
                 reclutasSection.insertBefore(welcomeDiv, sectionHeader.nextSibling);

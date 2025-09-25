@@ -9,6 +9,7 @@ import { showNotification, showError, showSuccess } from './notifications.js';
 import Tutorial from './tutorial.js';
 import Jerarquia from './jerarquia.js';
 import NotificationBell from './notification-bell.js';
+import WelcomePanelFix from './welcome-panel-fix.js';
 
 let MetricasAdmin = null;
 let notificationBell = null;

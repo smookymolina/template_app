@@ -2536,9 +2536,129 @@ body.admin-view #reclutas-table td:last-child {
     .admin-welcome,
     .gerente-welcome,
     .asesor-welcome {
-        background: none !important;
-        color: black !important;
-        border: 1px solid black;
+        background: var(--light-color) !important;
+        color: var(--text-color) !important;
+        border: 2px solid var(--primary-color) !important;
+        box-shadow: var(--shadow-sm) !important;
+    }
+
+    /* Asegurar contraste específico para cada panel */
+    .admin-welcome {
+        border-color: var(--primary-color) !important;
+        background: linear-gradient(135deg, rgba(0, 123, 255, 0.1), rgba(0, 86, 179, 0.05)) !important;
+    }
+
+    .gerente-welcome {
+        border-color: #f59e0b !important;
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(217, 119, 6, 0.05)) !important;
+    }
+
+    .asesor-welcome {
+        border-color: #28a745 !important;
+        background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(32, 201, 151, 0.05)) !important;
+    }
+
+    /* Forzar estilos de texto para todos los elementos internos */
+    .admin-welcome h4,
+    .gerente-welcome h4,
+    .asesor-welcome h4 {
+        color: var(--text-color) !important;
+        font-weight: 600 !important;
+    }
+
+    .admin-welcome p,
+    .gerente-welcome p,
+    .asesor-welcome p {
+        color: var(--text-color) !important;
+        opacity: 0.8 !important;
+    }
+
+    /* Para modo oscuro específico en móviles */
+    body.dark-mode .admin-welcome,
+    body.dark-mode .gerente-welcome,
+    body.dark-mode .asesor-welcome {
+        background: rgba(30, 30, 44, 0.95) !important;
+        color: var(--text-color) !important;
+        border: 2px solid var(--primary-color) !important;
+    }
+
+    body.dark-mode .admin-welcome h4,
+    body.dark-mode .gerente-welcome h4,
+    body.dark-mode .asesor-welcome h4 {
+        color: var(--text-color) !important;
+    }
+
+    body.dark-mode .admin-welcome p,
+    body.dark-mode .gerente-welcome p,
+    body.dark-mode .asesor-welcome p {
+        color: var(--text-color) !important;
+        opacity: 0.85 !important;
+    }
+}
+
+/* ===== ESTILOS ADICIONALES PARA PANELES DE BIENVENIDA ===== */
+
+/* Estilos base para todos los paneles de bienvenida (desktop) */
+.admin-welcome,
+.gerente-welcome,
+.asesor-welcome {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Asegurar que los estilos inline no sean sobreescritos */
+.admin-welcome h4,
+.gerente-welcome h4,
+.asesor-welcome h4 {
+    color: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.admin-welcome p,
+.gerente-welcome p,
+.asesor-welcome p {
+    color: inherit;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Para pantallas normales, mantener el diseño original */
+@media (min-width: 577px) {
+    .admin-welcome,
+    .gerente-welcome,
+    .asesor-welcome {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)) !important;
+        color: white !important;
+    }
+
+    .admin-welcome {
+        background: linear-gradient(135deg, var(--primary-color), var(--primary-dark)) !important;
+    }
+
+    .gerente-welcome {
+        background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+    }
+
+    .asesor-welcome {
+        background: linear-gradient(135deg, #28a745, #20c997) !important;
+    }
+
+    .admin-welcome h4,
+    .gerente-welcome h4,
+    .asesor-welcome h4 {
+        color: white !important;
+    }
+
+    .admin-welcome p,
+    .gerente-welcome p,
+    .asesor-welcome p {
+        color: white !important;
+        opacity: 0.95;
     }
 }
 
