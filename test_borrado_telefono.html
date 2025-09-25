@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Específico - Borrado Teléfono</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 700px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .modal-simulation {
+            border: 2px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            background: #fafafa;
+            margin: 20px 0;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+        .test-steps {
+            background: #e8f4ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 5px solid #007bff;
+        }
+        .debug-panel {
+            background: #2d3748;
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+        .debug-panel .debug-item {
+            margin: 5px 0;
+        }
+        .debug-panel .label {
+            color: #63b3ed;
+            font-weight: bold;
+        }
+        .debug-panel .value {
+            color: #68d391;
+        }
+        .action-log {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        .log-entry {
+            padding: 2px 0;
+            border-bottom: 1px solid #2d3748;
+        }
+        .log-entry.deleting {
+            color: #feb2b2;
+        }
+        .log-entry.typing {
+            color: #9ae6b4;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔬 Test Específico: Borrado de Teléfono</h1>
+
+        <div class="test-steps">
+            <h3>📋 Pasos de Prueba del Problema:</h3>
+            <ol>
+                <li><strong>Escribir número completo:</strong> <code>5551234567</code></li>
+                <li><strong>Intentar borrar completamente:</strong> Usar Backspace repetidamente</li>
+                <li><strong>Observar:</strong> ¿Se detiene el borrado en algún punto?</li>
+                <li><strong>Posiciones críticas:</strong> Probar borrar desde diferentes posiciones</li>
+                <li><strong>Borrado rápido:</strong> Mantener Backspace presionado</li>
+            </ol>
+        </div>
+
+        <div class="modal-simulation">
+            <h3>🔘 Simulación del Modal (Campo Original)</h3>
+            <label for="test-telefono">📱 Campo de Teléfono del Modal:</label>
+            <input type="tel" id="test-telefono" placeholder="(555) 123-4567" required style="">
+        </div>
+
+        <div class="debug-panel">
+            <div class="debug-item">
+                <span class="label">Estado actual:</span>
+                <span class="value" id="current-state">Listo para prueba</span>
+            </div>
+            <div class="debug-item">
+                <span class="label">Valor del campo:</span>
+                <span class="value" id="field-value">-</span>
+            </div>
+            <div class="debug-item">
+                <span class="label">Solo números:</span>
+                <span class="value" id="numbers-only">-</span>
+            </div>
+            <div class="debug-item">
+                <span class="label">Longitud números:</span>
+                <span class="value" id="numbers-length">0</span>
+            </div>
+            <div class="debug-item">
+                <span class="label">Posición cursor:</span>
+                <span class="value" id="cursor-position">0</span>
+            </div>
+            <div class="debug-item">
+                <span class="label">Está borrando:</span>
+                <span class="value" id="is-deleting">false</span>
+            </div>
+
+            <div class="action-log" id="action-log">
+                <div class="log-entry">📊 Log de acciones - Listo para pruebas</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // IMPLEMENTACIÓN EXACTA DE LA FUNCIÓN MEJORADA
+        function setupTelefonoMaskTest(input) {
+            let isProcessing = false;
+            let lastFormattedValue = '';
+            let actionCounter = 0;
+
+            const log = (message, type = 'info') => {
+                actionCounter++;
+                const logElement = document.getElementById('action-log');
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `${actionCounter.toString().padStart(3, '0')} | ${new Date().toLocaleTimeString()} | ${message}`;
+                logElement.appendChild(entry);
+                logElement.scrollTop = logElement.scrollHeight;
+            };
+
+            const updateDebug = (value, numbers, cursor, deleting) => {
+                document.getElementById('field-value').textContent = value || '-';
+                document.getElementById('numbers-only').textContent = numbers || '-';
+                document.getElementById('numbers-length').textContent = numbers.length;
+                document.getElementById('cursor-position').textContent = cursor;
+                document.getElementById('is-deleting').textContent = deleting;
+                document.getElementById('current-state').textContent = deleting ? 'BORRANDO' : 'ESCRIBIENDO';
+            };
+
+            // FUNCIÓN MEJORADA: Detecta si el usuario está borrando
+            const isDeleting = (oldValue, newValue, oldCursor) => {
+                const oldNumbers = oldValue.replace(/\D/g, '');
+                const newNumbers = newValue.replace(/\D/g, '');
+                return newNumbers.length < oldNumbers.length;
+            };
+
+            // FUNCIÓN MEJORADA: Formato inteligente que respeta el borrado
+            const smartFormatPhone = (value, cursorPos, wasDeleting = false) => {
+                const numbers = value.replace(/\D/g, '');
+                const len = numbers.length;
+
+                log(`smartFormatPhone: input="${value}", cursor=${cursorPos}, deleting=${wasDeleting}, numbers="${numbers}"`, wasDeleting ? 'deleting' : 'typing');
+
+                // Si está vacío, devolver vacío
+                if (len === 0) {
+                    log('Resultado: Campo vacío', 'deleting');
+                    return { formatted: '', cursorPos: 0, numbers: '' };
+                }
+
+                let formatted = numbers;
+                let adjustedCursor = cursorPos;
+
+                // Formato según longitud - MÁS PERMISIVO AL BORRAR
+                if (len >= 6) {
+                    formatted = `(${numbers.substr(0, 3)}) ${numbers.substr(3, 3)}-${numbers.substr(6)}`;
+                    log(`Formato completo aplicado: "${formatted}"`);
+                } else if (len >= 3) {
+                    formatted = `(${numbers.substr(0, 3)}) ${numbers.substr(3)}`;
+                    log(`Formato parcial aplicado: "${formatted}"`);
+                } else if (len >= 1) {
+                    // MEJORA: Mantener formato parcial solo si NO se está borrando
+                    if (!wasDeleting && len <= 3) {
+                        formatted = numbers; // Sin formato para facilitar borrado
+                        log(`Sin formato (facilita borrado): "${formatted}"`);
+                    }
+                }
+
+                // MEJORA: Cálculo de cursor más inteligente
+                if (wasDeleting) {
+                    // Al borrar, mantener cursor en posición lógica
+                    const numbersBefore = value.substring(0, cursorPos).replace(/\D/g, '').length;
+                    let newCursorPos = 0;
+                    let numbersCount = 0;
+
+                    for (let i = 0; i < formatted.length && numbersCount < numbersBefore; i++) {
+                        if (/\d/.test(formatted[i])) {
+                            numbersCount++;
+                        }
+                        newCursorPos = i + 1;
+                    }
+                    adjustedCursor = newCursorPos;
+                    log(`Cursor ajustado para borrado: ${adjustedCursor}`, 'deleting');
+                } else {
+                    // Al escribir, poner cursor al final
+                    adjustedCursor = formatted.length;
+                    log(`Cursor al final: ${adjustedCursor}`, 'typing');
+                }
+
+                const result = { formatted, cursorPos: adjustedCursor, numbers };
+                log(`Resultado final: formatted="${result.formatted}", cursor=${result.cursorPos}, numbers="${result.numbers}"`);
+                return result;
+            };
+
+            // Evento principal mejorado
+            input.addEventListener('input', function(e) {
+                if (isProcessing) {
+                    log('⚠️ Evento bloqueado - ya procesando');
+                    return;
+                }
+                isProcessing = true;
+
+                const currentValue = e.target.value;
+                const currentCursor = e.target.selectionStart;
+
+                log(`=== INPUT EVENT === Valor: "${currentValue}", Cursor: ${currentCursor}`);
+
+                // Detectar si está borrando
+                const deleting = isDeleting(lastFormattedValue, currentValue, currentCursor);
+
+                log(`Detectado borrado: ${deleting} (anterior: "${lastFormattedValue}")`);
+
+                // Formatear con contexto de borrado
+                const result = smartFormatPhone(currentValue, currentCursor, deleting);
+
+                // Actualizar campo
+                if (result.formatted !== currentValue) {
+                    log(`Actualizando campo: "${currentValue}" -> "${result.formatted}"`);
+                    e.target.value = result.formatted;
+
+                    // Restaurar cursor con mejor precisión
+                    requestAnimationFrame(() => {
+                        try {
+                            e.target.setSelectionRange(result.cursorPos, result.cursorPos);
+                            log(`Cursor restaurado en posición: ${result.cursorPos}`);
+                        } catch (error) {
+                            log(`❌ Error ajustando cursor: ${error.message}`);
+                        }
+                    });
+                } else {
+                    log('Sin cambios en el campo');
+                }
+
+                // Guardar estado para próxima comparación
+                lastFormattedValue = result.formatted;
+
+                // Actualizar debug
+                updateDebug(result.formatted, result.numbers, result.cursorPos, deleting);
+
+                isProcessing = false;
+                log('=== FIN INPUT EVENT ===');
+            });
+
+            // Eventos de navegación para debug
+            input.addEventListener('keydown', function(e) {
+                log(`KEYDOWN: ${e.key} (${e.keyCode})`);
+
+                const key = e.key;
+                const isNumber = /^\d$/.test(key);
+                const isBackspace = key === 'Backspace';
+                const isDelete = key === 'Delete';
+                const isArrow = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key);
+                const isTab = key === 'Tab';
+                const isEnter = key === 'Enter';
+                const isEscape = key === 'Escape';
+                const isCtrlCmd = e.ctrlKey || e.metaKey;
+                const isHome = key === 'Home';
+                const isEnd = key === 'End';
+
+                // Permitir todas las teclas de navegación y borrado
+                if (isNumber || isBackspace || isDelete || isArrow || isTab || isEnter || isEscape || isHome || isEnd) {
+                    log(`✅ Tecla permitida: ${key}`);
+                    return; // Permitir
+                }
+
+                // Permitir combinaciones con Ctrl/Cmd
+                if (isCtrlCmd) {
+                    log(`✅ Combinación Ctrl permitida: ${key}`);
+                    return; // Permitir Ctrl+A, Ctrl+C, etc.
+                }
+
+                // Bloquear cualquier otra tecla
+                log(`❌ Tecla bloqueada: ${key}`);
+                e.preventDefault();
+            });
+
+            input.addEventListener('click', function(e) {
+                updateDebug(e.target.value, e.target.value.replace(/\D/g, ''), e.target.selectionStart, false);
+            });
+
+            // Configuración inicial
+            input.placeholder = '(555) 123-4567';
+            input.removeAttribute('maxlength'); // Remover maxlength que puede interferir
+            lastFormattedValue = input.value || '';
+
+            log('🚀 Campo de teléfono inicializado con función mejorada');
+        }
+
+        // Inicializar cuando cargue la página
+        document.addEventListener('DOMContentLoaded', function() {
+            const telefonoInput = document.getElementById('test-telefono');
+            setupTelefonoMaskTest(telefonoInput);
+
+            console.log('✅ Test de borrado de teléfono iniciado');
+        });
+    </script>
+</body>
+</html>

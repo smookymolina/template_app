@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Límite 10 Dígitos Teléfono</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 700px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        .test-container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 18px;
+            font-family: monospace;
+            box-sizing: border-box;
+            margin: 10px 0;
+        }
+        .restriction-info {
+            background: #e3f2fd;
+            border: 2px solid #2196f3;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        .test-case {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 4px solid #28a745;
+        }
+        .debug-info {
+            background: #1a1a2e;
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+        .debug-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            padding: 3px 0;
+        }
+        .debug-label { color: #64b5f6; }
+        .debug-value { color: #81c784; font-weight: bold; }
+        .status-ok { color: #4caf50; }
+        .status-limit { color: #ff9800; }
+        .status-blocked { color: #f44336; }
+        .button-test {
+            background: #2196f3;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 13px;
+        }
+        .button-test:hover { background: #1976d2; }
+        .button-test.danger { background: #f44336; }
+        .button-test.warning { background: #ff9800; }
+        .log-area {
+            background: #263238;
+            color: #eceff1;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+        }
+        .log-success { color: #4caf50; }
+        .log-warning { color: #ff9800; }
+        .log-error { color: #f44336; }
+        .log-info { color: #2196f3; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🚫 Test: Restricción a 10 Dígitos</h1>
+
+        <div class="restriction-info">
+            <h3>📏 Restricciones Implementadas:</h3>
+            <ul>
+                <li><strong>Máximo 10 dígitos:</strong> No permite escribir el dígito 11</li>
+                <li><strong>Formateo automático:</strong> (555) 123-4567 máximo</li>
+                <li><strong>Validación en keydown:</strong> Previene entrada antes de que se escriba</li>
+                <li><strong>Validación en input:</strong> Corta cadena a 10 dígitos máximo</li>
+                <li><strong>Validación en paste:</strong> Limita texto pegado a 10 dígitos</li>
+            </ul>
+        </div>
+
+        <label for="test-telefono" style="font-weight: 600; display: block; margin: 15px 0 5px 0;">
+            📱 Campo de Teléfono con Restricción:
+        </label>
+        <input type="tel" id="test-telefono" placeholder="(555) 123-4567" required>
+
+        <div class="test-case">
+            <h4>🧪 Casos de Prueba Automática:</h4>
+
+            <button class="button-test" onclick="testExact10()">
+                ✅ Test: Exactamente 10 dígitos
+            </button>
+
+            <button class="button-test warning" onclick="testOver10()">
+                ⚠️ Test: Intentar escribir 15 dígitos
+            </button>
+
+            <button class="button-test danger" onclick="testPasteLong()">
+                📋 Test: Pegar número muy largo
+            </button>
+
+            <button class="button-test" onclick="testTypingLimit()">
+                ⌨️ Test: Escribir hasta límite
+            </button>
+
+            <button class="button-test" onclick="resetField()" style="background: #607d8b;">
+                🔄 Reset Campo
+            </button>
+        </div>
+
+        <div class="debug-info">
+            <div style="color: #ffab40; font-weight: bold; margin-bottom: 10px;">📊 Estado en Tiempo Real:</div>
+
+            <div class="debug-row">
+                <span class="debug-label">Valor del campo:</span>
+                <span class="debug-value" id="field-value">-</span>
+            </div>
+
+            <div class="debug-row">
+                <span class="debug-label">Solo números:</span>
+                <span class="debug-value" id="numbers-only">-</span>
+            </div>
+
+            <div class="debug-row">
+                <span class="debug-label">Cantidad de dígitos:</span>
+                <span class="debug-value" id="digit-count">0</span>
+            </div>
+
+            <div class="debug-row">
+                <span class="debug-label">Estado de límite:</span>
+                <span class="debug-value" id="limit-status">OK</span>
+            </div>
+
+            <div class="debug-row">
+                <span class="debug-label">Última acción:</span>
+                <span class="debug-value" id="last-action">Inicializado</span>
+            </div>
+
+            <div class="log-area" id="log-area">
+                <div class="log-entry log-info">🚀 Sistema iniciado - Test de límite de 10 dígitos</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testInput;
+        let logCounter = 0;
+
+        // IMPLEMENTACIÓN EXACTA DE LA FUNCIÓN CON RESTRICCIÓN DE 10 DÍGITOS
+        function setupTelefonoMaskTest(input) {
+            if (input.dataset.telefonoMaskApplied === 'true') {
+                log('⚠️ Máscara ya aplicada, saltando...', 'warning');
+                return;
+            }
+
+            let isProcessing = false;
+            let lastFormattedValue = '';
+
+            log('🔧 Aplicando máscara con restricción de 10 dígitos...', 'success');
+
+            const isDeleting = (oldValue, newValue, oldCursor) => {
+                const oldNumbers = oldValue.replace(/\D/g, '');
+                const newNumbers = newValue.replace(/\D/g, '');
+                return newNumbers.length < oldNumbers.length;
+            };
+
+            const smartFormatPhone = (value, cursorPos, wasDeleting = false) => {
+                // RESTRICCIÓN ESTRICTA: Limitar a exactamente 10 dígitos
+                const numbers = value.replace(/\D/g, '').substring(0, 10);
+                const len = numbers.length;
+
+                if (len > 10) {
+                    log(`🚫 RESTRICCIÓN: Cortando de ${value.replace(/\D/g, '').length} a 10 dígitos`, 'error');
+                }
+
+                if (len === 0) {
+                    return { formatted: '', cursorPos: 0, numbers: '' };
+                }
+
+                let formatted = numbers;
+                let adjustedCursor = cursorPos;
+
+                if (len >= 7) {
+                    formatted = `(${numbers.substr(0, 3)}) ${numbers.substr(3, 3)}-${numbers.substr(6)}`;
+                } else if (len >= 4 && !wasDeleting) {
+                    formatted = `(${numbers.substr(0, 3)}) ${numbers.substr(3)}`;
+                } else if (len >= 3 && !wasDeleting) {
+                    formatted = `(${numbers.substr(0, 3)})${numbers.substr(3)}`;
+                } else {
+                    formatted = numbers;
+                }
+
+                if (wasDeleting) {
+                    const numbersBefore = value.substring(0, cursorPos).replace(/\D/g, '').length;
+                    let newCursorPos = 0;
+                    let numbersCount = 0;
+
+                    for (let i = 0; i < formatted.length && numbersCount < numbersBefore; i++) {
+                        if (/\d/.test(formatted[i])) {
+                            numbersCount++;
+                        }
+                        newCursorPos = i + 1;
+                    }
+                    adjustedCursor = newCursorPos;
+                } else {
+                    adjustedCursor = formatted.length;
+                }
+
+                return { formatted, cursorPos: adjustedCursor, numbers };
+            };
+
+            // Evento input
+            input.addEventListener('input', function(e) {
+                if (isProcessing) return;
+                isProcessing = true;
+
+                const currentValue = e.target.value;
+                const currentCursor = e.target.selectionStart;
+                const deleting = isDeleting(lastFormattedValue, currentValue, currentCursor);
+                const result = smartFormatPhone(currentValue, currentCursor, deleting);
+
+                if (result.formatted !== currentValue) {
+                    e.target.value = result.formatted;
+
+                    requestAnimationFrame(() => {
+                        try {
+                            e.target.setSelectionRange(result.cursorPos, result.cursorPos);
+                        } catch (error) {
+                            log(`❌ Error cursor: ${error.message}`, 'warning');
+                        }
+                    });
+                }
+
+                lastFormattedValue = result.formatted;
+                updateDebugUI(result.formatted, result.numbers);
+
+                isProcessing = false;
+            });
+
+            // Evento keydown con restricción
+            input.addEventListener('keydown', function(e) {
+                const key = e.key;
+                const isNumber = /^\d$/.test(key);
+                const isBackspace = key === 'Backspace';
+                const isDelete = key === 'Delete';
+                const isArrow = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key);
+                const isTab = key === 'Tab';
+                const isEnter = key === 'Enter';
+                const isEscape = key === 'Escape';
+                const isCtrlCmd = e.ctrlKey || e.metaKey;
+                const isHome = key === 'Home';
+                const isEnd = key === 'End';
+
+                // RESTRICCIÓN: Verificar límite de 10 dígitos antes de permitir números
+                if (isNumber) {
+                    const currentNumbers = e.target.value.replace(/\D/g, '');
+                    const hasSelection = e.target.selectionStart !== e.target.selectionEnd;
+
+                    if (currentNumbers.length >= 10 && !hasSelection) {
+                        log(`🚫 BLOQUEADO: Intento de escribir dígito ${key} - límite alcanzado (${currentNumbers.length}/10)`, 'error');
+                        e.preventDefault();
+                        updateLastAction('Entrada bloqueada');
+                        return false;
+                    }
+
+                    log(`✅ Permitiendo dígito: ${key} (${currentNumbers.length + 1}/10)`, 'info');
+                    updateLastAction(`Escribiendo: ${key}`);
+                    return;
+                }
+
+                if (isBackspace || isDelete || isArrow || isTab || isEnter || isEscape || isHome || isEnd) {
+                    if (isBackspace || isDelete) {
+                        log(`🗑️ Permitiendo borrado: ${key}`, 'info');
+                        updateLastAction(`Borrando`);
+                    }
+                    return;
+                }
+
+                if (isCtrlCmd) {
+                    log(`✅ Combinación Ctrl permitida: ${key}`, 'info');
+                    return;
+                }
+
+                log(`❌ Tecla bloqueada: ${key}`, 'warning');
+                e.preventDefault();
+            });
+
+            // Evento paste con restricción
+            input.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                const allNumbers = paste.replace(/\D/g, '');
+                const numbers = allNumbers.substring(0, 10);
+
+                if (allNumbers.length > 10) {
+                    log(`📋 PASTE LIMITADO: ${allNumbers.length} → 10 dígitos`, 'warning');
+                } else {
+                    log(`📋 Paste OK: ${numbers.length} dígitos`, 'success');
+                }
+
+                if (numbers) {
+                    const result = smartFormatPhone(numbers, numbers.length, false);
+                    e.target.value = result.formatted;
+                    lastFormattedValue = result.formatted;
+                    updateDebugUI(result.formatted, result.numbers);
+
+                    requestAnimationFrame(() => {
+                        e.target.setSelectionRange(result.formatted.length, result.formatted.length);
+                    });
+                }
+
+                updateLastAction(`Pegado: ${numbers.length} dígitos`);
+            });
+
+            // Configuración inicial
+            input.placeholder = '(555) 123-4567';
+            input.removeAttribute('maxlength');
+            lastFormattedValue = input.value || '';
+            input.dataset.telefonoMaskApplied = 'true';
+
+            log('✅ Máscara aplicada con restricción de 10 dígitos', 'success');
+            updateDebugUI('', '');
+        }
+
+        // Funciones de utilidad
+        function log(message, type = 'info') {
+            logCounter++;
+            const logArea = document.getElementById('log-area');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `${logCounter.toString().padStart(3, '0')} | ${new Date().toLocaleTimeString()} | ${message}`;
+            logArea.appendChild(entry);
+            logArea.scrollTop = logArea.scrollHeight;
+
+            // Mantener solo últimas 50 entradas
+            while (logArea.children.length > 50) {
+                logArea.removeChild(logArea.firstChild);
+            }
+        }
+
+        function updateDebugUI(value, numbers) {
+            document.getElementById('field-value').textContent = value || '-';
+            document.getElementById('numbers-only').textContent = numbers || '-';
+            document.getElementById('digit-count').textContent = numbers.length || 0;
+
+            const limitStatus = document.getElementById('limit-status');
+            if (numbers.length === 10) {
+                limitStatus.textContent = 'LÍMITE ALCANZADO';
+                limitStatus.className = 'debug-value status-limit';
+            } else if (numbers.length > 10) {
+                limitStatus.textContent = 'EXCEDIDO (ERROR)';
+                limitStatus.className = 'debug-value status-blocked';
+            } else {
+                limitStatus.textContent = `OK (${numbers.length}/10)`;
+                limitStatus.className = 'debug-value status-ok';
+            }
+        }
+
+        function updateLastAction(action) {
+            document.getElementById('last-action').textContent = action;
+        }
+
+        // Tests automatizados
+        function testExact10() {
+            log('🧪 TEST: Escribiendo exactamente 10 dígitos', 'info');
+            testInput.value = '';
+            simulateTyping('5551234567', () => {
+                const numbers = testInput.value.replace(/\D/g, '');
+                if (numbers.length === 10) {
+                    log('✅ TEST PASADO: 10 dígitos exactos aceptados', 'success');
+                } else {
+                    log(`❌ TEST FALLADO: Esperado 10, obtenido ${numbers.length}`, 'error');
+                }
+            });
+        }
+
+        function testOver10() {
+            log('🧪 TEST: Intentando escribir 15 dígitos (debe limitarse a 10)', 'warning');
+            testInput.value = '';
+            simulateTyping('555123456789012', () => {
+                const numbers = testInput.value.replace(/\D/g, '');
+                if (numbers.length === 10) {
+                    log('✅ TEST PASADO: Limitado correctamente a 10 dígitos', 'success');
+                } else {
+                    log(`❌ TEST FALLADO: Esperado 10, obtenido ${numbers.length}`, 'error');
+                }
+            });
+        }
+
+        function testPasteLong() {
+            log('🧪 TEST: Pegando número muy largo', 'warning');
+            testInput.value = '';
+            testInput.focus();
+
+            // Simular paste event
+            const pasteEvent = new ClipboardEvent('paste', {
+                clipboardData: new DataTransfer()
+            });
+            pasteEvent.clipboardData.setData('text', '123456789012345678901234567890');
+            testInput.dispatchEvent(pasteEvent);
+
+            setTimeout(() => {
+                const numbers = testInput.value.replace(/\D/g, '');
+                if (numbers.length === 10) {
+                    log('✅ TEST PASADO: Paste limitado correctamente a 10 dígitos', 'success');
+                } else {
+                    log(`❌ TEST FALLADO: Esperado 10, obtenido ${numbers.length}`, 'error');
+                }
+            }, 100);
+        }
+
+        function testTypingLimit() {
+            log('🧪 TEST: Escribiendo hasta alcanzar límite', 'info');
+            testInput.value = '';
+
+            let currentNumber = '';
+            const addDigit = () => {
+                if (currentNumber.length < 12) { // Intentar 12, debe limitarse a 10
+                    const digit = Math.floor(Math.random() * 10);
+                    currentNumber += digit;
+
+                    // Simular keydown
+                    const keyEvent = new KeyboardEvent('keydown', { key: digit.toString() });
+                    testInput.dispatchEvent(keyEvent);
+
+                    // Si no fue bloqueado, agregar al input
+                    if (!keyEvent.defaultPrevented) {
+                        testInput.value += digit;
+                        testInput.dispatchEvent(new Event('input'));
+                    }
+
+                    setTimeout(addDigit, 200);
+                } else {
+                    const numbers = testInput.value.replace(/\D/g, '');
+                    if (numbers.length === 10) {
+                        log('✅ TEST PASADO: Escritura limitada correctamente', 'success');
+                    } else {
+                        log(`❌ TEST FALLADO: Límite no respetado - ${numbers.length} dígitos`, 'error');
+                    }
+                }
+            };
+
+            addDigit();
+        }
+
+        function resetField() {
+            log('🔄 RESET: Limpiando campo', 'info');
+            testInput.value = '';
+            testInput.dispatchEvent(new Event('input'));
+            updateDebugUI('', '');
+            updateLastAction('Reset');
+            testInput.focus();
+        }
+
+        function simulateTyping(text, callback) {
+            let i = 0;
+            const typeNext = () => {
+                if (i < text.length) {
+                    const digit = text[i];
+
+                    // Simular keydown primero
+                    const keyEvent = new KeyboardEvent('keydown', { key: digit });
+                    testInput.dispatchEvent(keyEvent);
+
+                    // Solo agregar si no fue bloqueado
+                    if (!keyEvent.defaultPrevented) {
+                        testInput.value += digit;
+                        testInput.dispatchEvent(new Event('input'));
+                    }
+
+                    i++;
+                    setTimeout(typeNext, 100);
+                } else if (callback) {
+                    callback();
+                }
+            };
+            typeNext();
+        }
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            testInput = document.getElementById('test-telefono');
+            setupTelefonoMaskTest(testInput);
+
+            log('🚀 Test de límite 10 dígitos iniciado', 'success');
+            log('📋 Usa los botones para ejecutar casos de prueba', 'info');
+
+            updateDebugUI('', '');
+            updateLastAction('Iniciado');
+        });
+    </script>
+</body>
+</html>

@@ -2932,58 +2932,217 @@ const Reclutas = {
     },
 
     /**
-     * 📱 NUEVA FUNCIÓN: Configurar máscara de teléfono
+     * 📱 FUNCIÓN ULTRA-MEJORADA: Configurar máscara de teléfono - SOLUCIÓN DEFINITIVA PARA BORRADO
+     * Problema específico: Al borrar dígitos, llega un punto donde no permite continuar borrando
+     * PASO 1: Evitar event listeners duplicados
      */
     setupTelefonoMask: function(input) {
-        input.addEventListener('input', function(e) {
-            // Obtener solo números
-            let value = e.target.value.replace(/\D/g, '');
+        // PROTECCIÓN: Evitar aplicar múltiples veces la máscara
+        if (input.dataset.telefonoMaskApplied === 'true') {
+            console.log('⚠️ Máscara de teléfono ya aplicada, saltando...');
+            return;
+        }
 
-            // Limitar a 10 dígitos
-            value = value.substring(0, 10);
+        let isProcessing = false;
+        let lastFormattedValue = '';
 
-            // Formatear como (XXX) XXX-XXXX
-            if (value.length >= 6) {
-                value = `(${value.substring(0, 3)}) ${value.substring(3, 6)}-${value.substring(6)}`;
-            } else if (value.length >= 3) {
-                value = `(${value.substring(0, 3)}) ${value.substring(3)}`;
+        console.log('🔧 Aplicando máscara de teléfono mejorada...');
+
+        // FUNCIÓN MEJORADA: Detecta si el usuario está borrando
+        const isDeleting = (oldValue, newValue, oldCursor) => {
+            const oldNumbers = oldValue.replace(/\D/g, '');
+            const newNumbers = newValue.replace(/\D/g, '');
+            return newNumbers.length < oldNumbers.length;
+        };
+
+        // FUNCIÓN MEJORADA: Formato inteligente que respeta el borrado
+        const smartFormatPhone = (value, cursorPos, wasDeleting = false) => {
+            // RESTRICCIÓN ESTRICTA: Limitar a exactamente 10 dígitos
+            const numbers = value.replace(/\D/g, '').substring(0, 10);
+            const len = numbers.length;
+
+            // Si está vacío, devolver vacío
+            if (len === 0) {
+                return { formatted: '', cursorPos: 0, numbers: '' };
             }
 
-            e.target.value = value;
+            let formatted = numbers;
+            let adjustedCursor = cursorPos;
 
-            // Validación visual en tiempo real
-            const cleanValue = value.replace(/\D/g, '');
-            if (cleanValue.length === 10) {
-                e.target.style.borderColor = '#28a745'; // Verde
-                e.target.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
-            } else if (cleanValue.length > 0) {
-                e.target.style.borderColor = '#ffc107'; // Amarillo
-                e.target.style.boxShadow = '0 0 0 0.2rem rgba(255, 193, 7, 0.25)';
+            // PASO 3: Formato según longitud - SOLUCIÓN ESPECÍFICA PARA BORRADO DESPUÉS DE 6 DÍGITOS
+            if (len >= 7) {
+                // Solo aplicar formato completo si hay 7+ dígitos
+                formatted = `(${numbers.substr(0, 3)}) ${numbers.substr(3, 3)}-${numbers.substr(6)}`;
+            } else if (len >= 4 && !wasDeleting) {
+                // Formato intermedio solo al escribir, no al borrar
+                formatted = `(${numbers.substr(0, 3)}) ${numbers.substr(3)}`;
+            } else if (len >= 3 && !wasDeleting) {
+                // Formato básico solo al escribir
+                formatted = `(${numbers.substr(0, 3)})${numbers.substr(3)}`;
             } else {
-                e.target.style.borderColor = '';
-                e.target.style.boxShadow = '';
+                // SOLUCIÓN CLAVE: Al borrar o con pocos dígitos, mantener solo números
+                formatted = numbers;
             }
-        });
 
-        // Permitir solo números, backspace, delete, tab, escape, enter
+            // MEJORA: Cálculo de cursor más inteligente
+            if (wasDeleting) {
+                // Al borrar, mantener cursor en posición lógica
+                const numbersBefore = value.substring(0, cursorPos).replace(/\D/g, '').length;
+                let newCursorPos = 0;
+                let numbersCount = 0;
+
+                for (let i = 0; i < formatted.length && numbersCount < numbersBefore; i++) {
+                    if (/\d/.test(formatted[i])) {
+                        numbersCount++;
+                    }
+                    newCursorPos = i + 1;
+                }
+                adjustedCursor = newCursorPos;
+            } else {
+                // Al escribir, poner cursor al final
+                adjustedCursor = formatted.length;
+            }
+
+            return { formatted, cursorPos: adjustedCursor, numbers };
+        };
+
+        // Evento principal mejorado
+        input.addEventListener('input', function(e) {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            const currentValue = e.target.value;
+            const currentCursor = e.target.selectionStart;
+
+            // Detectar si está borrando
+            const deleting = isDeleting(lastFormattedValue, currentValue, currentCursor);
+
+            // Formatear con contexto de borrado
+            const result = smartFormatPhone(currentValue, currentCursor, deleting);
+
+            // Actualizar campo
+            if (result.formatted !== currentValue) {
+                e.target.value = result.formatted;
+
+                // Restaurar cursor con mejor precisión
+                requestAnimationFrame(() => {
+                    try {
+                        e.target.setSelectionRange(result.cursorPos, result.cursorPos);
+                    } catch (error) {
+                        // Fallback silencioso
+                        console.debug('Cursor adjustment failed:', error);
+                    }
+                });
+            }
+
+            // Guardar estado para próxima comparación
+            lastFormattedValue = result.formatted;
+
+            // Feedback visual
+            this.updatePhoneVisualFeedback(e.target, result.numbers);
+
+            isProcessing = false;
+        }.bind(this));
+
+        // Evento keydown ultra-simplificado
         input.addEventListener('keydown', function(e) {
-            // Permitir: backspace, delete, tab, escape, enter
-            if ([46, 8, 9, 27, 13].indexOf(e.keyCode) !== -1 ||
-                // Permitir Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
-                (e.keyCode === 65 && e.ctrlKey === true) ||
-                (e.keyCode === 67 && e.ctrlKey === true) ||
-                (e.keyCode === 86 && e.ctrlKey === true) ||
-                (e.keyCode === 88 && e.ctrlKey === true)) {
-                return;
+            const key = e.key;
+            const isNumber = /^\d$/.test(key);
+            const isBackspace = key === 'Backspace';
+            const isDelete = key === 'Delete';
+            const isArrow = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key);
+            const isTab = key === 'Tab';
+            const isEnter = key === 'Enter';
+            const isEscape = key === 'Escape';
+            const isCtrlCmd = e.ctrlKey || e.metaKey;
+            const isHome = key === 'Home';
+            const isEnd = key === 'End';
+
+            // RESTRICCIÓN: Verificar límite de 10 dígitos antes de permitir números
+            if (isNumber) {
+                const currentNumbers = e.target.value.replace(/\D/g, '');
+                const hasSelection = e.target.selectionStart !== e.target.selectionEnd;
+
+                // Si ya tiene 10 dígitos y no hay selección, bloquear
+                if (currentNumbers.length >= 10 && !hasSelection) {
+                    e.preventDefault();
+                    return false;
+                }
+                return; // Permitir el número
             }
-            // Asegurar que solo sean números
-            if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
-                e.preventDefault();
+
+            // Permitir teclas de navegación y borrado
+            if (isBackspace || isDelete || isArrow || isTab || isEnter || isEscape || isHome || isEnd) {
+                return; // Permitir
             }
+
+            // Permitir combinaciones con Ctrl/Cmd
+            if (isCtrlCmd) {
+                return; // Permitir Ctrl+A, Ctrl+C, etc.
+            }
+
+            // Bloquear cualquier otra tecla
+            e.preventDefault();
         });
 
-        // Placeholder dinámico
+        // Evento paste simplificado
+        input.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text');
+            const numbers = paste.replace(/\D/g, '').substring(0, 10);
+
+            if (numbers) {
+                const result = smartFormatPhone(numbers, numbers.length, false);
+                e.target.value = result.formatted;
+                lastFormattedValue = result.formatted;
+                this.updatePhoneVisualFeedback(e.target, result.numbers);
+
+                requestAnimationFrame(() => {
+                    e.target.setSelectionRange(result.formatted.length, result.formatted.length);
+                });
+            }
+        }.bind(this));
+
+        // Limpiar estado al perder foco
+        input.addEventListener('blur', function(e) {
+            const numbers = e.target.value.replace(/\D/g, '');
+            if (numbers.length === 0) {
+                this.updatePhoneVisualFeedback(e.target, '');
+                lastFormattedValue = '';
+            }
+        }.bind(this));
+
+        // Configuración inicial
         input.placeholder = '(555) 123-4567';
+        input.removeAttribute('maxlength'); // Remover maxlength que puede interferir
+        lastFormattedValue = input.value || '';
+
+        // PASO 2: Marcar como inicializado para evitar duplicación
+        input.dataset.telefonoMaskApplied = 'true';
+        console.log('✅ Máscara de teléfono aplicada correctamente');
+    },
+
+    /**
+     * Función auxiliar para feedback visual del teléfono
+     */
+    updatePhoneVisualFeedback: function(input, numbers) {
+        // Reset estilos
+        input.style.borderColor = '';
+        input.style.boxShadow = '';
+
+        if (numbers.length === 10) {
+            // Verde - Válido
+            input.style.borderColor = '#28a745';
+            input.style.boxShadow = '0 0 0 0.2rem rgba(40, 167, 69, 0.25)';
+        } else if (numbers.length > 0 && numbers.length < 10) {
+            // Amarillo - En progreso
+            input.style.borderColor = '#ffc107';
+            input.style.boxShadow = '0 0 0 0.2rem rgba(255, 193, 7, 0.25)';
+        } else if (numbers.length === 0) {
+            // Sin estilo - Vacío
+            input.style.borderColor = '';
+            input.style.boxShadow = '';
+        }
     },
 
     /**
@@ -3083,7 +3242,18 @@ const Reclutas = {
         if (picPreview) {
             picPreview.innerHTML = '<i class="fas fa-user-circle"></i>';
         }
-        
+
+        // PASO 4: Resetear estado del campo teléfono al abrir modal
+        const telefonoInput = document.getElementById('recluta-telefono');
+        if (telefonoInput) {
+            // Limpiar estilos de validación
+            telefonoInput.style.borderColor = '';
+            telefonoInput.style.boxShadow = '';
+            // Resetear valor
+            telefonoInput.value = '';
+            console.log('🧹 Campo teléfono reseteado');
+        }
+
         // Si es admin, asegurar que los selectores estén poblados
         if (this.userRole === 'admin') {
             this.populateUserSelectors();
@@ -3501,7 +3671,7 @@ const Reclutas = {
         const sortedData = [...this.currentTimelineData].sort((a, b) => new Date(a.date) - new Date(b.date));
         
         const html = sortedData.map(item => {
-            const formattedDate = new Date(item.date).toLocaleDateString('es-ES');
+            const formattedDate = new Date(item.date).toLocaleDateString('es-ES', { timeZone: 'UTC' });
             const statusIcons = {
                 completed: 'fas fa-check-circle',
                 pending: 'fas fa-clock',
@@ -3560,6 +3730,13 @@ const Reclutas = {
     /**
      * Agrega un nuevo evento de timeline
      */
+    getTodayDateString: function() {
+        const today = new Date();
+        const offset = today.getTimezoneOffset();
+        const todayWithOffset = new Date(today.getTime() - (offset * 60 * 1000));
+        return todayWithOffset.toISOString().split('T')[0];
+    },
+
     addTimelineItem: function() {
         this.currentEditingTimelineId = null;
         
@@ -3570,7 +3747,7 @@ const Reclutas = {
         if (formTitle) formTitle.textContent = 'Agregar Evento de Timeline';
         
         // Limpiar campos
-        document.getElementById('event-date').value = '';
+        document.getElementById('event-date').value = this.getTodayDateString();
         document.getElementById('event-status').value = 'pending';
         document.getElementById('event-title').value = '';
         document.getElementById('event-description').value = '';
@@ -3598,7 +3775,7 @@ const Reclutas = {
         const formTitle = document.getElementById('form-title');
         if (formTitle) formTitle.textContent = 'Editar Evento de Timeline';
         
-        document.getElementById('event-date').value = item.date;
+        document.getElementById('event-date').value = item.date.split('T')[0];
         document.getElementById('event-status').value = item.status;
         document.getElementById('event-title').value = item.title;
         document.getElementById('event-description').value = item.description || '';
