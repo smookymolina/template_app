@@ -3775,7 +3775,9 @@ const Reclutas = {
         const formTitle = document.getElementById('form-title');
         if (formTitle) formTitle.textContent = 'Editar Evento de Timeline';
         
-        document.getElementById('event-date').value = item.date.split('T')[0];
+        // Asegurar que la fecha se muestre correctamente (formato local)
+        const eventDate = new Date(item.date + 'T12:00:00');
+        document.getElementById('event-date').value = eventDate.toISOString().split('T')[0];
         document.getElementById('event-status').value = item.status;
         document.getElementById('event-title').value = item.title;
         document.getElementById('event-description').value = item.description || '';
@@ -3792,7 +3794,11 @@ const Reclutas = {
      * Guarda un evento de timeline (nuevo o editado)
      */
     saveTimelineItem: function() {
-        const date = document.getElementById('event-date').value;
+        // Obtener fecha y asegurar formato correcto (evitar problemas de zona horaria + 1 día)
+        const dateInput = document.getElementById('event-date').value;
+        const dateObj = dateInput ? new Date(dateInput + 'T12:00:00') : new Date();
+        dateObj.setDate(dateObj.getDate() + 1);
+        const date = dateObj.toISOString().split('T')[0];
         const status = document.getElementById('event-status').value;
         const title = document.getElementById('event-title').value;
         const description = document.getElementById('event-description').value;
@@ -3890,7 +3896,11 @@ window.addRecluta = function() {
 // Exponer reclutaManager para uso en onclick del HTML
 // Métodos API para persistir eventos (nuevos, no invasivos)
 Reclutas.saveTimelineItemApi = async function() {
-    const date = document.getElementById('event-date').value;
+    // Obtener fecha y asegurar formato correcto (evitar problemas de zona horaria + 1 día)
+    const dateInput = document.getElementById('event-date').value;
+    const dateObj = dateInput ? new Date(dateInput + 'T12:00:00') : new Date();
+    dateObj.setDate(dateObj.getDate() + 1);
+    const date = dateObj.toISOString().split('T')[0];
     const status = document.getElementById('event-status').value;
     const title = document.getElementById('event-title').value;
     const description = document.getElementById('event-description').value;
@@ -4166,29 +4176,29 @@ Reclutas.resetUploadState = function() {
 // Función mejorada para vista previa de documentos
 Reclutas.previewDocument = function(url, nombre) {
     try {
-        // Abrir en nueva ventana con características específicas para PDF
+        // Construir la URL completa y segura para la vista previa
+        const previewUrl = new URL(`/uploads/${url}`, window.location.origin);
+
+        // Abrir en nueva ventana
         const previewWindow = window.open(
-            `/uploads/${url}`, 
+            previewUrl.href, 
             'document-preview', 
             'width=1000,height=800,scrollbars=yes,resizable=yes,toolbar=no,location=no,status=no'
         );
         
         if (!previewWindow) {
-            // Fallback si se bloquea popup
-            const link = document.createElement('a');
-            link.href = `/uploads/${url}`;
-            link.target = '_blank';
-            link.rel = 'noopener noreferrer';
-            link.click();
+            // Fallback si el popup es bloqueado
+            showError('El navegador bloqueó la ventana de vista previa. Habilite los popups para este sitio.');
+            // Como alternativa, se puede intentar una redirección directa:
+            // window.location.href = previewUrl.href;
         } else {
             previewWindow.document.title = `Vista Previa: ${nombre}`;
         }
         
-        // Mostrar notificación de éxito
         showSuccess(`Abriendo vista previa de "${nombre}"`);
     } catch (e) {
         console.error('Error al abrir vista previa:', e);
-        showError('No se pudo abrir la vista previa del documento');
+        showError('No se pudo abrir la vista previa del documento. Verifique la consola para más detalles.');
     }
 };
 

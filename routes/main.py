@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, send_file, current_app, redirect, url_for, request, jsonify
 from flask_login import login_required
 import io
+import os
 from PIL import Image, ImageDraw
 from models.recluta import Recluta
 
@@ -190,3 +191,9 @@ def serve_profile_image(filename):
     """Sirve las imágenes de perfil de forma segura."""
     from flask import send_from_directory
     return send_from_directory(current_app.config['PROFILE_IMG_FOLDER'], filename)
+
+@main_bp.route('/uploads/<path:path>')
+def serve_uploads(path):
+    """Sirve archivos de la carpeta de uploads."""
+    from flask import send_from_directory
+    return send_from_directory(os.path.join(current_app.root_path, 'uploads'), path)

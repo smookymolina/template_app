@@ -4,7 +4,8 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'una-clave-secreta-muy-dificil-de-adivinar'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///app.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    PROFILE_IMG_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'uploads', 'profile_images')
+    UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'uploads')
+    PROFILE_IMG_FOLDER = os.path.join(UPLOAD_FOLDER, 'profile_images')
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
     SEED_DEV_USERS = os.environ.get('SEED_DEV_USERS', 'false').lower() == 'true'
 
