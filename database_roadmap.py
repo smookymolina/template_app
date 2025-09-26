@@ -27,6 +27,8 @@ import json
 import sqlite3
 import bcrypt
 from contextlib import contextmanager
+from sqlalchemy.engine import make_url
+from sqlalchemy import MetaData, text
 
 # Configurar logging
 logging.basicConfig(
@@ -67,20 +69,31 @@ class DatabaseRoadmap:
         """Inicializar el roadmap de la base de datos"""
         self.app = None
         self.db_path = None
+        self.db_uri = None
+        self.db_url = None
 
     def initialize_app(self):
         """🚀 Inicializar la aplicación Flask"""
         try:
             self.app = create_app()
 
-            # Obtener ruta de la base de datos
-            db_uri = self.app.config.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///app.db')
-            if db_uri.startswith('sqlite:///'):
-                self.db_path = db_uri.replace('sqlite:///', '')
-                if not os.path.isabs(self.db_path):
-                    self.db_path = os.path.join(os.path.dirname(__file__), self.db_path)
+            self.db_uri = self.app.config.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///app.db')
+            try:
+                self.db_url = make_url(self.db_uri)
+            except Exception as parse_error:
+                logger.warning(f'No se pudo interpretar la URI de base de datos: {parse_error}')
+                self.db_url = None
 
-            logger.info(f"✅ Aplicación inicializada. DB: {self.db_path}")
+            if self.db_url and self.db_url.get_backend_name() == 'sqlite':
+                self.db_path = self.db_url.database
+                if self.db_path and not os.path.isabs(self.db_path):
+                    self.db_path = os.path.join(os.path.dirname(__file__), self.db_path)
+            else:
+                self.db_path = None
+
+            backend = self.db_url.get_backend_name() if self.db_url else 'desconocido'
+            database_name = self.db_url.database if self.db_url else 'sin definir'
+            logger.info(f'Aplicacion inicializada. Backend: {backend}. Base: {database_name}')
             return True
 
         except Exception as e:
@@ -515,27 +528,47 @@ class DatabaseRoadmap:
         logger.info("=" * 60)
 
         try:
+            backend = self.db_url.get_backend_name() if self.db_url else None
+
             if not backup_path:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                backup_path = f"backup_database_{timestamp}.db"
+                extension = 'db' if backend == 'sqlite' else 'json'
+                backup_path = f"backup_database_{timestamp}.{extension}"
 
-            if not self.db_path:
-                logger.error("❌ Ruta de base de datos no definida")
+            if backend == 'sqlite':
+                if not self.db_path:
+                    logger.error('Ruta de base de datos no definida para SQLite')
+                    return False
+
+                if not os.path.exists(self.db_path):
+                    logger.error(f'Base de datos no encontrada: {self.db_path}')
+                    return False
+
+                import shutil
+                shutil.copy2(self.db_path, backup_path)
+
+                backup_size = os.path.getsize(backup_path)
+                logger.info(f'Backup creado: {backup_path} ({backup_size:,} bytes)')
+                return True
+
+            if not self.db_url:
+                logger.error('No se pudo determinar la conexion de base de datos para el backup')
                 return False
 
-            if not os.path.exists(self.db_path):
-                logger.error(f"❌ Base de datos no encontrada: {self.db_path}")
-                return False
+            dump = {}
+            with self.app_context():
+                metadata = MetaData()
+                metadata.reflect(bind=db.engine)
+                for table in metadata.sorted_tables:
+                    result = db.session.execute(table.select())
+                    dump[table.name] = [dict(row._mapping) for row in result]
 
-            # Crear backup (para SQLite)
-            import shutil
-            shutil.copy2(self.db_path, backup_path)
+            with open(backup_path, 'w', encoding='utf-8') as backup_file:
+                json.dump(dump, backup_file, default=str, indent=2)
 
             backup_size = os.path.getsize(backup_path)
-            logger.info(f"✅ Backup creado: {backup_path} ({backup_size:,} bytes)")
-
+            logger.info(f'Backup logico creado: {backup_path} ({backup_size:,} bytes)')
             return True
-
         except Exception as e:
             logger.error(f"❌ Error creando backup: {e}")
             return False
@@ -575,13 +608,21 @@ class DatabaseRoadmap:
                 else:
                     logger.info("   ✅ No hay analytics antiguos para limpiar")
 
-                # Optimizar base de datos (SQLite)
-                if self.db_path and self.db_path.endswith('.db'):
-                    logger.info("⚡ Optimizando base de datos...")
+                backend = self.db_url.get_backend_name() if self.db_url else None
+                if backend == 'sqlite' and self.db_path and self.db_path.endswith('.db'):
+                    logger.info('   Optimizando base de datos SQLite...')
                     with sqlite3.connect(self.db_path) as conn:
-                        conn.execute("VACUUM")
-                        conn.execute("ANALYZE")
-                    logger.info("   ✅ Base de datos optimizada")
+                        conn.execute('VACUUM')
+                        conn.execute('ANALYZE')
+                    logger.info('   Base de datos SQLite optimizada')
+                elif backend == 'mysql':
+                    logger.info('   Optimizando tablas MySQL...')
+                    inspector = db.inspect(db.engine)
+                    tables = inspector.get_table_names()
+                    for table in tables:
+                        db.session.execute(text(f'OPTIMIZE TABLE {table}'))
+                    db.session.commit()
+                    logger.info(f'   {len(tables)} tablas MySQL optimizadas')
 
                 logger.info("✅ MANTENIMIENTO COMPLETADO")
                 return True

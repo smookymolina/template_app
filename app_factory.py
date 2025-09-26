@@ -4,6 +4,7 @@ import logging
 import os
 from config import config
 from models import db
+from sqlalchemy.exc import OperationalError
 from models.usuario import Usuario
 from flask_cors import CORS
 
@@ -225,15 +226,35 @@ def initialize_database(app):
     """Inicializa la base de datos y crea datos iniciales si es entorno de desarrollo."""
     # Importar modelos necesarios
     from models.usuario import Usuario
-    
-    # Crear tablas de la base de datos
-    db.create_all()
-    app.logger.info('Tablas de base de datos creadas/verificadas')
 
-    # Usar una variable de entorno o configuración para decidir si crear usuarios
-    # Aquí usamos FLASK_ENV que ya está configurado en la app
-    if app.config.get('FLASK_ENV') == 'development' and app.config.get('SEED_DEV_USERS'):
-        crear_usuarios_desarrollo(app)
+    try:
+        # Crear tablas de la base de datos
+        db.create_all()
+
+        # Determinar qué tipo de base de datos se está usando
+        db_uri = app.config['SQLALCHEMY_DATABASE_URI']
+        if 'mysql' in db_uri:
+            app.logger.info('Tablas MySQL creadas/verificadas')
+        else:
+            app.logger.info('Tablas SQLite creadas/verificadas (fallback automatico)')
+
+        # Usar una variable de entorno o configuración para decidir si crear usuarios
+        # Aquí usamos FLASK_ENV que ya está configurado en la app
+        if app.config.get('FLASK_ENV') == 'development' and app.config.get('SEED_DEV_USERS'):
+            crear_usuarios_desarrollo(app)
+    except OperationalError as exc:
+        app.logger.error(
+            'No se pudo inicializar la base de datos: %s. '
+            '\n\n🔧 SOLUCIONES POSIBLES:'
+            '\n1. Instalar MySQL: https://dev.mysql.com/downloads/installer/'
+            '\n2. Iniciar MySQL: net start mysql'
+            '\n3. Ejecutar script: python init_db.py'
+            '\n4. Verificar credenciales en archivo .env'
+            '\n5. La app usará SQLite automáticamente como fallback',
+            exc
+        )
+        if app.config.get('TESTING'):
+            raise
 
 def crear_usuarios_desarrollo(app):
     """Crea un conjunto de usuarios por defecto para el entorno de desarrollo."""

@@ -46,6 +46,7 @@ Flask-Mail==0.9.1
 
 # 🗄️ MIGRACIONES DE BASE DE DATOS
 Flask-Migrate==4.0.5
+PyMySQL==1.1.0
 
 # 📋 VALIDACIONES AVANZADAS
 marshmallow==3.20.1

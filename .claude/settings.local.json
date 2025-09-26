@@ -28,7 +28,9 @@
       "Bash(dir:*)",
       "Bash(pip install:*)",
       "Bash(pip show:*)",
-      "Bash(pip freeze)"
+      "Bash(pip freeze)",
+      "Bash(sc query:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []
