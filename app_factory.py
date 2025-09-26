@@ -220,6 +220,13 @@ def register_request_hooks(app):
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         response.headers['X-XSS-Protection'] = '1; mode=block'
+
+        # Asegurar que el encoding UTF-8 esté correctamente configurado
+        if response.mimetype == 'text/html':
+            response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        elif response.mimetype == 'application/json':
+            response.headers['Content-Type'] = 'application/json; charset=utf-8'
+
         return response
 
 def initialize_database(app):

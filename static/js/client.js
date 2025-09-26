@@ -591,14 +591,34 @@ const Client = {
             }
         };
 
+        // Normaliza fechas ISO (YYYY-MM-DD) para evitar desfases por zona horaria
+        const parseDate = (dateStr) => {
+            if (!dateStr) return null;
+            if (dateStr instanceof Date) return dateStr;
+            if (typeof dateStr === 'string') {
+                const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (match) {
+                    const year = Number(match[1]);
+                    const month = Number(match[2]);
+                    const day = Number(match[3]);
+                    return new Date(year, month - 1, day);
+                }
+            }
+            const parsed = new Date(dateStr);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        };
+
         // Función para formatear fecha
         const formatDate = (dateStr) => {
             try {
-                return new Date(dateStr).toLocaleDateString('es-ES', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                });
+                const parsedDate = parseDate(dateStr);
+                return parsedDate
+                    ? parsedDate.toLocaleDateString('es-ES', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    })
+                    : dateStr;
             } catch (e) {
                 return dateStr;
             }

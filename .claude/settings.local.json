@@ -30,7 +30,9 @@
       "Bash(pip show:*)",
       "Bash(pip freeze)",
       "Bash(sc query:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(timeout:*)",
+      "Bash(del fix_encoding.py simple_fix.py)"
     ],
     "deny": [],
     "ask": []

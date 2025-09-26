@@ -3800,10 +3800,13 @@ const Reclutas = {
      * Guarda un evento de timeline (nuevo o editado)
      */
     saveTimelineItem: function() {
-        // Obtener fecha y asegurar formato correcto (evitar problemas de zona horaria + 1 día)
+        // Obtener fecha y asegurar formato correcto (evitar que la zona horaria cambie el dia elegido)
         const dateInput = document.getElementById('event-date').value;
         const dateObj = dateInput ? new Date(dateInput + 'T12:00:00') : new Date();
-        dateObj.setDate(dateObj.getDate() + 1);
+        if (Number.isNaN(dateObj.getTime())) {
+            showError('La fecha seleccionada no es valida');
+            return;
+        }
         const date = dateObj.toISOString().split('T')[0];
         const status = document.getElementById('event-status').value;
         const title = document.getElementById('event-title').value;
@@ -3902,10 +3905,13 @@ window.addRecluta = function() {
 // Exponer reclutaManager para uso en onclick del HTML
 // Métodos API para persistir eventos (nuevos, no invasivos)
 Reclutas.saveTimelineItemApi = async function() {
-    // Obtener fecha y asegurar formato correcto (evitar problemas de zona horaria + 1 día)
+    // Obtener fecha y asegurar formato correcto (evitar que la zona horaria cambie el dia elegido)
     const dateInput = document.getElementById('event-date').value;
     const dateObj = dateInput ? new Date(dateInput + 'T12:00:00') : new Date();
-    dateObj.setDate(dateObj.getDate() + 1);
+    if (Number.isNaN(dateObj.getTime())) {
+        showError('La fecha seleccionada no es valida');
+        return;
+    }
     const date = dateObj.toISOString().split('T')[0];
     const status = document.getElementById('event-status').value;
     const title = document.getElementById('event-title').value;
