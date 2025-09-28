@@ -39,6 +39,9 @@
     const weekPrevBtn = document.getElementById('fichas-week-prev');
     const weekNextBtn = document.getElementById('fichas-week-next');
     const fechaInput = document.getElementById('ficha-fecha');
+    const reloadGerentesBtn = document.getElementById('reload-gerentes-btn');
+    const debugInfo = document.getElementById('debug-info');
+    const debugContainer = document.getElementById('gerentes-debug');
 
     // Elementos del wizard
     const wizardSteps = document.querySelectorAll('.fichas-wizard-step');
@@ -54,18 +57,76 @@
     let currentWeekOffset = 0;
     let isLoading = false;
     let wizardData = {};
+    const totalSteps = 3; // Actualizado para 3 pasos
 
     init();
 
     function init() {
+        console.log('🚀 Inicializando gestión de fichas...');
+
+        // Verificar elementos DOM críticos
+        if (!gerenteSelect) {
+            console.error('🚨 ERROR: Elemento select de gerentes no encontrado');
+            console.log('Elementos disponibles:', {
+                form: !!form,
+                summaryTableBody: !!summaryTableBody,
+                calculatorSection: !!calculatorSection
+            });
+        }
+
         showLoadingState();
-        loadGerentes();
+
+        // Cargar gerentes con retry
+        loadGerentesWithRetry();
+
         loadSummaryAndDetails();
         bindEvents();
         updateWeekNavigation();
         setupFormValidation();
         initializeTooltips();
         initializeWizard();
+
+        console.log('✅ Inicialización completada');
+    }
+
+    // Función para cargar gerentes con reintentos
+    async function loadGerentesWithRetry(maxRetries = 3) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                console.log(`🔄 Intento ${attempt}/${maxRetries} - Cargando gerentes`);
+                await loadGerentes();
+
+                // Verificar si se cargaron correctamente
+                if (gerenteSelect && gerenteSelect.options.length > 1) {
+                    console.log('✅ Gerentes cargados exitosamente');
+                    return;
+                }
+
+                if (attempt < maxRetries) {
+                    console.log(`⏳ Reintentando en 2 segundos...`);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+            } catch (error) {
+                console.error(`🚨 Error en intento ${attempt}:`, error);
+                if (attempt === maxRetries) {
+                    console.error('🚫 Máximo de reintentos alcanzado - activando modo fallback');
+
+                    // Verificar conectividad antes del fallback
+                    const isConnected = await checkServerConnection();
+                    if (!isConnected) {
+                        console.warn('🌐 Sin conexión al servidor - usando modo fallback');
+                        updateDebugInfo('Sin conexión - modo fallback');
+                    } else {
+                        console.warn('🔐 Posible problema de autenticación - usando modo fallback');
+                        updateDebugInfo('Error de autenticación - modo fallback');
+                    }
+
+                    // Activar modo fallback
+                    loadGerentesFallback();
+                    return;
+                }
+            }
+        }
     }
 
     function showLoadingState() {
@@ -192,11 +253,46 @@
                 }
             });
         });
+
+        // Botón para recargar gerentes
+        if (reloadGerentesBtn) {
+            reloadGerentesBtn.addEventListener('click', function() {
+                console.log('🔄 Recarga manual de gerentes solicitada');
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                this.disabled = true;
+
+                loadGerentes().finally(() => {
+                    this.innerHTML = '<i class="fas fa-sync"></i>';
+                    this.disabled = false;
+                });
+            });
+        }
     }
 
     async function loadGerentes() {
+        if (!gerenteSelect) {
+            console.warn('⚠️ Elemento select de gerentes no encontrado');
+            return;
+        }
+
+        // Mostrar estado de carga
+        gerenteSelect.innerHTML = '<option value="">Cargando gerentes...</option>';
+        gerenteSelect.disabled = true;
+        gerenteSelect.classList.add('loading');
+
         try {
-            const response = await fetch('/admin/fichas/gerentes');
+            console.log('🔄 Cargando gerentes desde /admin/fichas/gerentes');
+
+            const response = await fetch('/admin/fichas/gerentes', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'same-origin' // Incluir cookies de sesión
+            });
+
+            console.log(`📊 Respuesta: Status ${response.status}, Content-Type: ${response.headers.get('content-type')}`);
 
             // Verificar si la respuesta es HTML (página de login) en lugar de JSON
             const contentType = response.headers.get('content-type');
@@ -204,31 +300,76 @@
                 if (response.status === 401 || response.status === 403) {
                     console.warn('🔒 Usuario no autenticado o sin permisos para cargar gerentes');
                     gerenteSelect.innerHTML = '<option value="">Inicia sesión para ver gerentes</option>';
+                    gerenteSelect.disabled = false;
                     return;
                 }
+
+                // Leer la respuesta como texto para debug
+                const responseText = await response.text();
+                console.error('🚨 Respuesta no JSON:', responseText.substring(0, 500));
                 throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
+            console.log('📋 Datos recibidos:', data);
+
             if (data.success && Array.isArray(data.gerentes)) {
                 gerenteSelect.innerHTML = '<option value="">Selecciona un gerente</option>';
-                data.gerentes.forEach(function(gerente) {
+
+                if (data.gerentes.length === 0) {
                     const option = document.createElement('option');
-                    option.value = gerente.id;
-                    option.textContent = gerente.nombre;
+                    option.value = '';
+                    option.textContent = 'No hay gerentes disponibles';
+                    option.disabled = true;
                     gerenteSelect.appendChild(option);
-                });
+                    console.warn('⚠️ No se encontraron gerentes en la respuesta');
+                } else {
+                    data.gerentes.forEach(function(gerente) {
+                        const option = document.createElement('option');
+                        option.value = gerente.id;
+                        option.textContent = gerente.nombre || `Gerente ${gerente.id}`;
+                        gerenteSelect.appendChild(option);
+                        console.log(`✅ Gerente agregado: ${gerente.nombre} (ID: ${gerente.id})`);
+                    });
+                }
+
+                console.log(`✅ ${data.gerentes.length} gerentes cargados exitosamente`);
+
+                // Mostrar información de debug
+                updateDebugInfo(`${data.gerentes.length} gerentes cargados`);
+
+                // Añadir animación de éxito
+                gerenteSelect.classList.add('success-pulse');
+                setTimeout(() => gerenteSelect.classList.remove('success-pulse'), 600);
+
             } else {
                 throw new Error(data.message || 'Formato de respuesta inválido');
             }
         } catch (error) {
-            console.error('Error en loadGerentes:', error);
+            console.error('🚨 Error en loadGerentes:', error);
+
             if (error.name === 'SyntaxError' && error.message.includes('Unexpected token')) {
                 console.warn('🔒 Respuesta no es JSON válido - posiblemente usuario no autenticado');
                 gerenteSelect.innerHTML = '<option value="">Inicia sesión para continuar</option>';
+            } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                console.error('🌐 Error de red - verificar conexión');
+                gerenteSelect.innerHTML = '<option value="">Error de conexión - Reintentar</option>';
             } else {
                 gerenteSelect.innerHTML = '<option value="">Error al cargar gerentes</option>';
             }
+
+            // Añadir animación de error
+            gerenteSelect.classList.add('shake');
+            setTimeout(() => gerenteSelect.classList.remove('shake'), 500);
+
+            // Mostrar información de debug
+            updateDebugInfo(`Error: ${error.message}`);
+
+            // Mostrar notificación de error
+            showErrorNotification('Error al cargar la lista de gerentes. Verifica tu conexión.');
+        } finally {
+            gerenteSelect.disabled = false;
+            gerenteSelect.classList.remove('loading');
         }
     }
 
@@ -683,6 +824,8 @@
         wizardData = {};
         updateWizardDisplay();
         updateButtonStates();
+        // Mejorar accesibilidad
+        setupKeyboardNavigation();
     }
 
     function goToStep(step) {
@@ -796,13 +939,13 @@
         });
 
         // Actualizar barra de progreso
-        const progressPercentage = (currentStep / 5) * 100;
+        const progressPercentage = (currentStep / totalSteps) * 100;
         if (progressFill) {
             progressFill.style.width = `${progressPercentage}%`;
         }
 
         if (progressText) {
-            progressText.textContent = `Paso ${currentStep} de 5`;
+            progressText.textContent = `Paso ${currentStep} de ${totalSteps}`;
         }
     }
 
@@ -815,15 +958,15 @@
 
         // Botones siguiente/guardar/nuevo
         if (btnNext) {
-            btnNext.style.display = currentStep < 4 ? 'inline-block' : 'none';
+            btnNext.style.display = currentStep < 2 ? 'inline-block' : 'none';
         }
 
         if (btnSubmit) {
-            btnSubmit.style.display = currentStep === 4 ? 'inline-block' : 'none';
+            btnSubmit.style.display = currentStep === 2 ? 'inline-block' : 'none';
         }
 
         if (btnNew) {
-            btnNew.style.display = currentStep === 5 ? 'inline-block' : 'none';
+            btnNew.style.display = currentStep === 3 ? 'inline-block' : 'none';
         }
     }
 
@@ -940,5 +1083,115 @@
             submitButton.disabled = false;
             submitButton.innerHTML = originalText;
         }
+    }
+
+    // Función para mostrar información de debug
+    function updateDebugInfo(message) {
+        if (debugInfo && debugContainer) {
+            debugInfo.textContent = message;
+            debugContainer.style.display = 'block';
+
+            // Auto-ocultar después de 10 segundos
+            setTimeout(() => {
+                if (debugContainer) {
+                    debugContainer.style.display = 'none';
+                }
+            }, 10000);
+        }
+    }
+
+    // Función de fallback para cargar gerentes manualmente
+    function loadGerentesFallback() {
+        console.log('🔄 Activando modo fallback para gerentes');
+
+        if (!gerenteSelect) return;
+
+        gerenteSelect.innerHTML = `
+            <option value="">Selecciona un gerente</option>
+            <option value="5">Ana López (Gerente)</option>
+        `;
+
+        updateDebugInfo('Modo fallback activado');
+        showWarningNotification('Se cargó la lista de gerentes en modo fallback.');
+    }
+
+    // Función para verificar conectividad con el servidor
+    async function checkServerConnection() {
+        try {
+            const response = await fetch('/health', { method: 'HEAD' });
+            return response.ok;
+        } catch (error) {
+            console.warn('🌐 No se pudo verificar conexión con el servidor');
+            return false;
+        }
+    }
+
+    // Función para configurar navegación por teclado
+    function setupKeyboardNavigation() {
+        document.addEventListener('keydown', function(event) {
+            if (!document.querySelector('#fichas-calculator-section')) return;
+
+            switch(event.key) {
+                case 'Enter':
+                    if (event.ctrlKey) {
+                        const nextBtn = document.getElementById('fichas-btn-next');
+                        const submitBtn = document.getElementById('fichas-btn-submit');
+
+                        if (nextBtn && nextBtn.style.display !== 'none' && !nextBtn.disabled) {
+                            nextBtn.click();
+                            event.preventDefault();
+                        } else if (submitBtn && submitBtn.style.display !== 'none' && !submitBtn.disabled) {
+                            submitBtn.click();
+                            event.preventDefault();
+                        }
+                    }
+                    break;
+                case 'Escape':
+                    if (currentStep > 1) {
+                        const prevBtn = document.getElementById('fichas-btn-prev');
+                        if (prevBtn && !prevBtn.disabled) {
+                            prevBtn.click();
+                        }
+                    }
+                    break;
+            }
+        });
+    }
+
+    // Añadir estilos para las nuevas animaciones
+    if (!document.getElementById('wizard-animations')) {
+        const style = document.createElement('style');
+        style.id = 'wizard-animations';
+        style.textContent = `
+            .shake {
+                animation: shake 0.5s ease-in-out;
+            }
+
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
+            }
+
+            .btn.loading {
+                position: relative;
+                pointer-events: none;
+            }
+
+            .btn.success {
+                background: linear-gradient(135deg, #10b981, #059669) !important;
+                transform: scale(1.05);
+            }
+
+            .btn.error {
+                background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+                animation: shake 0.5s ease-in-out;
+            }
+
+            .fichas-wizard-step {
+                transition: all 0.3s ease;
+            }
+        `;
+        document.head.appendChild(style);
     }
 });
