@@ -1730,7 +1730,13 @@ function showTargetSection(sectionId) {
  * ✅ MANEJAR SECCIONES ESPECIALES
  */
 function handleSpecialSections(sectionId) {
-    if (sectionId === 'estadisticas-section') {
+    if (sectionId === 'reclutas-section') {
+        // Forzar la recarga de datos cada vez que se visita la sección
+        if (Reclutas && typeof Reclutas.loadAndDisplayReclutas === 'function') {
+            console.log('🔄 Recargando datos de la sección de reclutas...');
+            Reclutas.loadAndDisplayReclutas();
+        }
+    } else if (sectionId === 'estadisticas-section') {
         handleEstadisticasSection();
     } else if (sectionId === 'calendario-section') {
         handleCalendarioSection();

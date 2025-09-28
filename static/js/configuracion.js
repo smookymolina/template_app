@@ -20,18 +20,107 @@ class ConfigurationManager {
 
     // ✅ NUEVA FUNCIÓN: Cargar configuraciones solo para usuarios autenticados
     async loadSettingsForAuthenticatedUser() {
-        console.log('🔄 Intentando cargar configuraciones para usuario autenticado...');
+        console.log('ConfigurationManager: intentando cargar configuraciones para usuario autenticado...');
         this.showLoader();
+        const loaderText = document.querySelector('#configuracion-loader .loader-text');
+        if (loaderText) loaderText.textContent = 'Cargando configuracion y usuarios...';
+
         try {
-            if (window.Auth && window.Auth.isAuthenticated()) {
-                await this.loadUserSettings();
-                await this.loadActiveSessions();
-            } else {
-                console.log('⚠️ Usuario no autenticado, no se cargan configuraciones.');
+            const currentUser = await this.resolveCurrentUser();
+
+            if (!currentUser) {
+                console.log('ConfigurationManager: usuario no autenticado, no se cargan configuraciones.');
+                return;
             }
+
+            const tasks = [
+                this.loadUserSettings(),
+                this.loadActiveSessions()
+            ];
+
+            if (currentUser.rol === 'admin') {
+                const manager = await this.ensureUserManagerReady();
+
+                if (manager && typeof manager.loadUsers === 'function') {
+                    let adminUser = currentUser;
+
+                    if (typeof manager.waitForAdminUser === 'function') {
+                        adminUser = await manager.waitForAdminUser();
+                    }
+
+                    if (adminUser && adminUser.rol === 'admin') {
+                        tasks.push(manager.loadUsers(adminUser));
+                    }
+                } else {
+                    console.log('ConfigurationManager: userAccountManager no disponible, se omitio la carga de usuarios.');
+                }
+            }
+
+            await Promise.all(tasks);
         } finally {
+            if (loaderText) loaderText.textContent = 'Cargando configuracion...';
             this.hideLoader();
         }
+    }
+
+    async resolveCurrentUser() {
+        if (window.Auth && window.Auth.currentUser) {
+            return window.Auth.currentUser;
+        }
+
+        try {
+            const stored = localStorage.getItem('user_data');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (window.Auth && typeof window.Auth.updateUserData === 'function') {
+                    window.Auth.updateUserData(parsed);
+                } else if (window.Auth) {
+                    window.Auth.currentUser = parsed;
+                }
+                return parsed;
+            }
+        } catch (error) {
+            console.warn('ConfigurationManager: no se pudo leer user_data almacenado', error);
+        }
+
+        if (window.Auth && typeof window.Auth.checkAuth === 'function') {
+            try {
+                return await window.Auth.checkAuth();
+            } catch (error) {
+                console.warn('ConfigurationManager: error verificando autenticacion', error);
+            }
+        }
+
+        return null;
+    }
+
+    async ensureUserManagerReady(maxWait = 2500) {
+        if (window.userAccountManager && window.userAccountManager.ready) {
+            return window.userAccountManager;
+        }
+
+        return new Promise(resolve => {
+            let settled = false;
+
+            const cleanup = () => {
+                if (settled) return;
+                settled = true;
+                document.removeEventListener('userAccountManagerReady', onReady);
+                clearTimeout(timerId);
+            };
+
+            const onReady = () => {
+                cleanup();
+                resolve(window.userAccountManager || null);
+            };
+
+            const timerId = setTimeout(() => {
+                cleanup();
+                resolve(window.userAccountManager || null);
+            }, maxWait);
+
+            document.addEventListener('userAccountManagerReady', onReady, { once: true });
+        });
     }
 
     bindElements() {
@@ -581,21 +670,29 @@ class ConfigurationManager {
     }
 
     displayActiveSessions(sessions) {
+        // Actualizar contador de sesiones
+        const sessionsCount = document.getElementById('sessions-count');
+        if (sessionsCount) {
+            const count = sessions.length;
+            sessionsCount.textContent = `${count} sesión${count !== 1 ? 'es' : ''}`;
+        }
+
         if (sessions.length === 0) {
-            this.activeSessionsContainer.innerHTML = '<p>No hay sesiones activas</p>';
+            this.activeSessionsContainer.innerHTML = '<div class="no-sessions">No hay sesiones activas</div>';
             return;
         }
-        
-        const sessionsHTML = sessions.map(session => `
-            <div class="session-item">
+
+        const sessionsHTML = sessions.map((session, index) => `
+            <div class="session-item fade-in" style="animation-delay: ${index * 0.1}s">
                 <div class="session-info">
                     <strong>IP:</strong> ${session.ip_address || 'N/A'}<br>
-                    <strong>Navegador:</strong> ${session.user_agent || 'N/A'}<br>
-                    <strong>Inicio:</strong> ${new Date(session.created_at).toLocaleString('es-ES')}
+                    <strong>Navegador:</strong> ${this.truncateUserAgent(session.user_agent) || 'N/A'}<br>
+                    <strong>Inicio:</strong> ${new Date(session.created_at).toLocaleString('es-ES')}<br>
+                    <strong>Ubicación:</strong> ${session.location || 'Desconocida'}
                 </div>
                 <div class="session-actions">
-                    ${session.is_current ? 
-                        '<span class="current-session">Sesión actual</span>' : 
+                    ${session.is_current ?
+                        '<span class="current-session">Sesión actual</span>' :
                         `<button class="btn-sm btn-danger" onclick="window.configManager?.terminateSession('${session.id}')">
                             <i class="fas fa-sign-out-alt"></i> Cerrar
                         </button>`
@@ -603,8 +700,37 @@ class ConfigurationManager {
                 </div>
             </div>
         `).join('');
-        
+
         this.activeSessionsContainer.innerHTML = sessionsHTML;
+    }
+
+    truncateUserAgent(userAgent) {
+        if (!userAgent) return 'N/A';
+
+        // Extraer información más legible del user agent
+        const browserInfo = this.parseBrowserInfo(userAgent);
+        return browserInfo || userAgent.substring(0, 50) + (userAgent.length > 50 ? '...' : '');
+    }
+
+    parseBrowserInfo(userAgent) {
+        if (!userAgent) return 'Desconocido';
+
+        const browsers = [
+            { name: 'Chrome', pattern: /Chrome\/(\d+)/ },
+            { name: 'Firefox', pattern: /Firefox\/(\d+)/ },
+            { name: 'Safari', pattern: /Safari\/(\d+)/ },
+            { name: 'Edge', pattern: /Edg\/(\d+)/ },
+            { name: 'Opera', pattern: /Opera\/(\d+)/ }
+        ];
+
+        for (const browser of browsers) {
+            const match = userAgent.match(browser.pattern);
+            if (match) {
+                return `${browser.name} ${match[1]}`;
+            }
+        }
+
+        return 'Navegador desconocido';
     }
 
     async terminateSession(sessionId) {
@@ -779,6 +905,12 @@ class ConfigurationManager {
         const loader = document.getElementById('configuracion-loader');
         if (loader) {
             loader.style.display = 'flex';
+
+            const progressFill = document.getElementById('configuracion-progress-fill');
+            if (progressFill) {
+                progressFill.style.width = '0%';
+                setTimeout(() => progressFill.style.width = '100%', 100);
+            }
         }
     }
 
@@ -850,5 +982,35 @@ window.debugConfigManager = function() {
 
 // Exponer globalmente para debugging
 window.ConfigurationManager = ConfigurationManager;
+
+// ===== FUNCIÓN GLOBAL PARA CONTROLAR EL DESPLEGABLE DE SESIONES =====
+window.toggleActiveSessionsDropdown = function() {
+    const dropdown = document.getElementById('active-sessions-dropdown');
+    const header = document.querySelector('.sessions-header');
+    const chevron = document.getElementById('sessions-chevron');
+
+    if (!dropdown || !header) return;
+
+    const isExpanded = dropdown.classList.contains('expanded');
+
+    if (isExpanded) {
+        // Contraer
+        dropdown.classList.remove('expanded');
+        dropdown.classList.add('collapsed');
+        header.classList.remove('expanded');
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+    } else {
+        // Expandir
+        dropdown.classList.remove('collapsed');
+        dropdown.classList.add('expanded');
+        header.classList.add('expanded');
+        if (chevron) chevron.style.transform = 'rotate(180deg)';
+
+        // Cargar sesiones si no se han cargado
+        if (window.configManager && typeof window.configManager.loadActiveSessions === 'function') {
+            window.configManager.loadActiveSessions();
+        }
+    }
+};
 
 console.log('✅ configuracion.js cargado - Módulo de configuración listo');

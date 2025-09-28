@@ -1,0 +1,94 @@
+/* ==========================================================================
+   LOADER OVERLAY V2 - Estilos para superposición de carga reutilizable
+   ========================================================================== */
+
+.loader-overlay-v2 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050; /* Alto z-index para estar sobre otros elementos */
+    flex-direction: column;
+    transition: opacity 0.3s ease;
+    backdrop-filter: blur(3px); /* Efecto de desenfoque para el fondo */
+}
+
+body.dark-mode .loader-overlay-v2 {
+    background-color: rgba(24, 25, 36, 0.85); /* Fondo oscuro semitransparente */
+}
+
+.loader-content-v2 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    padding: 25px 35px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+body.dark-mode .loader-content-v2 {
+    background-color: #2D3748; /* Color de tarjeta en modo oscuro */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.spinner-v2 {
+    width: 55px;
+    height: 55px;
+    border: 6px solid var(--primary-light, #e9f2f9);
+    border-top-color: var(--primary-color, #007bff);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+body.dark-mode .spinner-v2 {
+    border-color: #4A5568;
+    border-top-color: var(--primary-color, #007bff);
+}
+
+.loader-text {
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--text-color, #333);
+}
+
+body.dark-mode .loader-text {
+    color: #E2E8F0;
+}
+
+.loader-progress {
+    width: 180px;
+    height: 8px;
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+body.dark-mode .loader-progress {
+    background-color: #4A5568;
+}
+
+.progress-bar-v2 {
+    width: 100%;
+    height: 100%;
+}
+
+.progress-fill-v2 {
+    width: 0%;
+    height: 100%;
+    background-color: var(--primary-color, #007bff);
+    border-radius: 4px;
+    transition: width 0.5s ease-out;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

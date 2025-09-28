@@ -1590,23 +1590,26 @@ const Reclutas = {
      */
     init: async function() {
         try {
-            console.log('Iniciando módulo de reclutas...');
-            
+            console.log('🚀 Iniciando gestión de reclutas...');
+
             // Asegurarse de tener información actualizada de rol antes de configurar UI
             await this.fetchUserRoleAndPermissions();
-            
+
             // Configurar la UI según el rol
             this.configureUIForRole();
-            
+
             // Cargar gerentes y asesores si es necesario
             if (this.userRole === 'admin') {
                 await this.populateUserSelectors();
             }
-            
+
             // Inicializar eventos de la interfaz
             this.initFilters();
             this.initAddReclutaForm();
-            
+
+            // Cargar datos iniciales
+            await this.loadAndDisplayReclutas();
+
             // Eventos de teclado para modales
             document.addEventListener('keydown', function(e) {
                 // Cerrar submodal con Escape
@@ -1622,7 +1625,47 @@ const Reclutas = {
             
         } catch (error) {
             console.error('Error al inicializar módulo de reclutas:', error);
+            this.hideReclutasLoader(); // Asegurarse de ocultar el loader en caso de error de inicialización
             throw new Error('Error al inicializar reclutas: ' + error.message);
+        }
+    },
+
+    /**
+     * Muestra el overlay de carga para la sección de reclutas.
+     */
+    showReclutasLoader: function() {
+        const loader = document.getElementById('reclutas-loader');
+        if (loader) {
+            loader.style.display = 'flex';
+            const progressFill = document.getElementById('reclutas-progress-fill');
+            if (progressFill) {
+                progressFill.style.transition = 'none';
+                progressFill.style.width = '0%';
+                setTimeout(() => {
+                    progressFill.style.transition = 'width 8s cubic-bezier(0.25, 1, 0.5, 1)';
+                    progressFill.style.width = '90%';
+                }, 50);
+            }
+        }
+    },
+
+    /**
+     * Oculta el overlay de carga de la sección de reclutas.
+     */
+    hideReclutasLoader: function() {
+        const loader = document.getElementById('reclutas-loader');
+        if (loader) {
+            const progressFill = document.getElementById('reclutas-progress-fill');
+            if (progressFill) {
+                progressFill.style.transition = 'width 0.4s ease-out';
+                progressFill.style.width = '100%';
+            }
+            setTimeout(() => {
+                loader.style.display = 'none';
+                if (progressFill) {
+                    progressFill.style.width = '0%';
+                }
+            }, 400);
         }
     },
 
@@ -1892,46 +1935,45 @@ const Reclutas = {
      * Carga y muestra la lista de reclutas
      */
     loadAndDisplayReclutas: async function() {
+        this.showReclutasLoader();
         try {
-            console.log('Reclutas: loadAndDisplayReclutas - Cargando reclutas...');
+            console.log('📊 Cargando y actualizando dashboard de reclutas...');
             const container = document.getElementById('reclutas-list');
-            
+
             if (!container) {
                 console.warn('Reclutas: loadAndDisplayReclutas - Contenedor #reclutas-list no encontrado.');
                 return;
             }
-            
-            container.innerHTML = '<tr><td colspan="8" style="text-align:center"><i class="fas fa-spinner fa-spin"></i> Cargando reclutas...</td></tr>';
-            
+
             const reclutas = await this.loadReclutas();
             console.log('Reclutas: loadAndDisplayReclutas - Reclutas cargados:', reclutas);
-            
+
             // AGREGAR: Obtener rol del usuario desde la respuesta
             if (this.lastApiResponse && this.lastApiResponse.user_role) {
                 this.userRole = this.lastApiResponse.user_role;
                 this.configureUIForRole();
             }
-            
+
             this.renderReclutasTable(container);
             this.updatePagination();
-            
-            console.log(`Reclutas: Se cargaron ${reclutas.length} reclutas`);
+
+            console.log(`✅ Dashboard actualizado: ${reclutas.length} reclutas cargados`);
             return reclutas;
         } catch (error) {
-            console.error('Reclutas: loadAndDisplayReclutas - Error al cargar y mostrar reclutas:', error);
-                
+            console.error('❌ Error al cargar dashboard de reclutas:', error);
+
             // Mostrar mensaje de error en la tabla
             const container = document.getElementById('reclutas-list');
             if (container) {
                 container.innerHTML = `
                     <tr>
-                        <td colspan="7" class="text-center">
-                            <i class="fas fa-exclamation-circle text-danger"></i> 
+                        <td colspan="9" class="text-center">
+                            <i class="fas fa-exclamation-circle text-danger"></i>
                             Error al cargar reclutas: ${error.message}. <button class="btn-link retry-load">Reintentar</button>
                         </td>
                     </tr>
                 `;
-                
+
                 // Añadir evento para reintentar carga
                 const retryButton = container.querySelector('.retry-load');
                 if (retryButton) {
@@ -1941,6 +1983,8 @@ const Reclutas = {
             
             showError('Error al cargar reclutas: ' + error.message);
             throw error;
+        } finally {
+            this.hideReclutasLoader();
         }
     },
 
@@ -1968,9 +2012,14 @@ const Reclutas = {
             return;
         }
         
-        this.reclutas.forEach(recluta => {
+        this.reclutas.forEach((recluta, index) => {
             const row = document.createElement('tr');
-            
+
+            // Agregar clase para alternar colores de filas
+            if (index % 2 === 0) {
+                row.classList.add('even');
+            }
+
             const badgeClass = this.getEstadoBadgeClass(recluta.estado);
             const fotoUrl = this.getFotoUrl(recluta.foto_url);
             
@@ -2002,6 +2051,14 @@ const Reclutas = {
             this.setupActionButtons(row, recluta.id);
             container.appendChild(row);
         });
+
+        // Actualizar colores y estilos después de renderizar
+        setTimeout(() => {
+            this.updateDashboardColors();
+            this.updateStats();
+        }, 100);
+
+        console.log(`✅ Se renderizaron ${this.reclutas.length} filas con estilos actualizados`);
     },
 
     /**
@@ -2624,9 +2681,9 @@ const Reclutas = {
             
             // Actualizar la vista de detalles
             this.viewRecluta(this.currentReclutaId);
-            
-            // Recargar la lista
-            this.loadAndDisplayReclutas();
+
+            // Recargar dashboard completo
+            this.refreshDashboard();
             
         } catch (error) {
             console.error('Error al guardar cambios:', error);
@@ -2722,8 +2779,8 @@ const Reclutas = {
             if (success) {
                 showSuccess('Recluta eliminado con éxito');
                 this.currentReclutaId = null;
-                await this.loadAndDisplayReclutas(); // Recargar la lista
-                
+                await this.refreshDashboard(); // Recargar dashboard completo
+
                 // Cerrar modal de detalles si está abierto
                 if (typeof UI !== 'undefined' && UI.closeModal) {
                     UI.closeModal('view-recluta-modal');
@@ -2868,7 +2925,7 @@ const Reclutas = {
         if (filterEstado) {
             filterEstado.addEventListener('change', () => {
                 this.filterByEstado(filterEstado.value);
-                this.loadAndDisplayReclutas();
+                this.refreshDashboard();
             });
         }
 
@@ -2878,7 +2935,7 @@ const Reclutas = {
             sortBy.addEventListener('change', () => {
                 const [field, order] = sortBy.value.split('-');
                 this.sortBy(field, order);
-                this.loadAndDisplayReclutas();
+                this.refreshDashboard();
             });
         }
     },
@@ -3504,8 +3561,8 @@ const Reclutas = {
                 picPreview.innerHTML = '<i class="fas fa-user-circle"></i>';
             }
             
-            // Recargar lista de reclutas
-            await this.loadAndDisplayReclutas();
+            // Recargar dashboard completo
+            await this.refreshDashboard();
 
         } catch (error) {
             console.error('❌ Error al guardar recluta:', error);
@@ -3526,6 +3583,132 @@ const Reclutas = {
                 saveButton.disabled = false;
             }
         }
+    },
+
+    /**
+     * 🔄 SISTEMA DE LOADER PARA GESTIÓN DE RECLUTAS
+     */
+    showReclutasLoader: function() {
+        const loader = document.getElementById('reclutas-loader');
+        if (loader) {
+            loader.style.display = 'flex';
+            console.log('📊 Loader de reclutas mostrado');
+
+            // Animar barra de progreso
+            const progressFill = document.getElementById('reclutas-progress-fill');
+            if (progressFill) {
+                progressFill.style.width = '0%';
+                setTimeout(() => {
+                    progressFill.style.width = '100%';
+                }, 100);
+            }
+        }
+    },
+
+    hideReclutasLoader: function() {
+        const loader = document.getElementById('reclutas-loader');
+        if (loader) {
+            setTimeout(() => {
+                loader.style.display = 'none';
+                console.log('✅ Loader de reclutas ocultado');
+            }, 500);
+        }
+    },
+
+    /**
+     * 🎨 ACTUALIZAR COLORES Y ESTILOS DEL DASHBOARD
+     */
+    updateDashboardColors: function() {
+        console.log('🎨 Actualizando colores del dashboard de reclutas...');
+
+        // Actualizar colores de estados
+        const estadoBadges = document.querySelectorAll('.estado-badge');
+        estadoBadges.forEach(badge => {
+            const estado = badge.textContent.trim().toLowerCase();
+            badge.classList.remove('estado-activo', 'estado-proceso', 'estado-rechazado');
+
+            switch(estado) {
+                case 'activo':
+                    badge.classList.add('estado-activo');
+                    break;
+                case 'en proceso':
+                    badge.classList.add('estado-proceso');
+                    break;
+                case 'rechazado':
+                    badge.classList.add('estado-rechazado');
+                    break;
+            }
+        });
+
+        // Actualizar estilos de filas de tabla
+        const tableRows = document.querySelectorAll('#reclutas-table tbody tr');
+        tableRows.forEach((row, index) => {
+            row.classList.toggle('even', index % 2 === 0);
+        });
+
+        console.log('✅ Colores del dashboard actualizados');
+    },
+
+    /**
+     * 📊 REFRESCAR DASHBOARD COMPLETO
+     */
+    refreshDashboard: async function() {
+        console.log('🔄 Refrescando dashboard completo de reclutas...');
+
+        try {
+            this.showReclutasLoader();
+
+            // Recargar datos principales
+            await this.loadAndDisplayReclutas();
+
+            // Actualizar filtros si es admin
+            if (this.userRole === 'admin') {
+                await this.populateUserSelectors();
+            }
+
+            // Actualizar colores y estilos
+            this.updateDashboardColors();
+
+            // Actualizar estadísticas si existe el componente
+            if (typeof this.updateStats === 'function') {
+                this.updateStats();
+            }
+
+            this.hideReclutasLoader();
+            console.log('✅ Dashboard de reclutas refrescado completamente');
+
+        } catch (error) {
+            console.error('❌ Error al refrescar dashboard:', error);
+            this.hideReclutasLoader();
+            showError('Error al refrescar el dashboard: ' + error.message);
+        }
+    },
+
+    /**
+     * 📈 ACTUALIZAR ESTADÍSTICAS (placeholder para extensiones futuras)
+     */
+    updateStats: function() {
+        if (!this.reclutas || this.reclutas.length === 0) return;
+
+        const stats = {
+            total: this.reclutas.length,
+            activos: this.reclutas.filter(r => r.estado === 'Activo').length,
+            proceso: this.reclutas.filter(r => r.estado === 'En proceso').length,
+            rechazados: this.reclutas.filter(r => r.estado === 'Rechazado').length
+        };
+
+        console.log('📊 Estadísticas actualizadas:', stats);
+
+        // Actualizar elementos DOM si existen
+        const totalElement = document.getElementById('total-reclutas-stat');
+        const activosElement = document.getElementById('activos-reclutas-stat');
+        const procesoElement = document.getElementById('proceso-reclutas-stat');
+        const rechazadosElement = document.getElementById('rechazados-reclutas-stat');
+
+        if (totalElement) totalElement.textContent = stats.total;
+        if (activosElement) activosElement.textContent = stats.activos;
+        if (procesoElement) procesoElement.textContent = stats.proceso;
+        if (rechazadosElement) rechazadosElement.textContent = stats.rechazados;
     },
 
     /**

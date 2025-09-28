@@ -9,6 +9,7 @@ class UserAccountManager {
         this.submitBtn = null;
         this.modal = null;
         this.isSubmitting = false;
+        this.ready = false;
         this.init();
     }
 
@@ -17,6 +18,8 @@ class UserAccountManager {
         this.bindElements();
         this.bindEvents();
         this.setupValidation();
+        this.ready = true;
+        document.dispatchEvent(new CustomEvent('userAccountManagerReady', { detail: { timestamp: Date.now() } }));
         console.log('✅ UserAccountManager inicializado correctamente');
         
         // Cargar lista inicial de usuarios
@@ -411,19 +414,25 @@ class UserAccountManager {
         console.log('❌ Modal cerrado');
     }
 
-    async refreshUserList() {
-        console.log('🔄 Actualizando lista de usuarios...');
-        
+    async refreshUserList(prevalidatedUser = null) {
+        console.log('UserAccountManager: actualizando lista de usuarios...');
+
         const loadingElement = document.getElementById('loading-users');
         const listElement = document.getElementById('users-list');
         const noUsersElement = document.getElementById('no-users');
 
         if (!loadingElement || !listElement || !noUsersElement) {
-            console.warn('⚠️ Elementos de lista de usuarios no encontrados');
+            console.warn('UserAccountManager: elementos de lista de usuarios no encontrados');
             return;
         }
 
-        // Mostrar loading
+        const adminUser = prevalidatedUser || await this.waitForAdminUser();
+        if (!adminUser || adminUser.rol !== 'admin') {
+            console.log('UserAccountManager: sin privilegios, cancelando carga de usuarios');
+            this.handleUnauthorizedAccess();
+            return;
+        }
+
         loadingElement.style.display = 'block';
         listElement.style.display = 'none';
         noUsersElement.style.display = 'none';
@@ -444,7 +453,7 @@ class UserAccountManager {
                 throw new Error(result.message || 'Error al cargar usuarios');
             }
         } catch (error) {
-            console.error('❌ Error cargando usuarios:', error);
+            console.error('�?O Error cargando usuarios:', error);
             this.showNotification('Error al cargar la lista de usuarios', 'error');
             noUsersElement.innerHTML = '<p>Error al cargar usuarios. Intenta nuevamente.</p>';
             noUsersElement.style.display = 'block';
@@ -1098,27 +1107,97 @@ class UserAccountManager {
         }
     }
 
-    loadInitialUsersList() {
-        // Cargar lista solo si el usuario está autenticado y es administrador
-        const container = document.getElementById('users-list-container');
-        const adminSection = document.getElementById('user-administration-section');
-
-        // Verificar que existe el container y que el usuario está autenticado
-        if (container && window.Auth && window.Auth.isAuthenticated()) {
-            // Verificar que el usuario es administrador
-            const currentUser = window.Auth.currentUser;
-            if (currentUser && currentUser.rol === 'admin') {
-                console.log('📋 Cargando lista inicial de usuarios...');
-                // Pequeño delay para asegurar que todos los elementos estén listos
-                setTimeout(() => {
-                    this.refreshUserList();
-                }, 100);
-            } else {
-                console.log('⏭️ Usuario no es administrador - no se cargan usuarios');
+    getStoredUser() {
+        try {
+            const stored = localStorage.getItem('user_data');
+            if (!stored) {
+                return null;
             }
-        } else {
-            console.log('⏭️ Saltando carga de usuarios - usuario no autenticado o container no disponible');
+            return JSON.parse(stored);
+        } catch (error) {
+            console.warn('UserAccountManager: no se pudo leer user_data almacenado', error);
+            return null;
         }
+    }
+
+    async waitForAdminUser(maxAttempts = 10, interval = 150) {
+        const auth = window.Auth;
+        const storedUser = this.getStoredUser();
+
+        if (auth && auth.currentUser && auth.currentUser.rol === 'admin') {
+            return auth.currentUser;
+        }
+
+        if ((!auth || !auth.currentUser) && storedUser && storedUser.rol) {
+            if (auth && typeof auth.updateUserData === 'function') {
+                auth.updateUserData(storedUser);
+            } else if (auth) {
+                auth.currentUser = storedUser;
+            }
+        }
+
+        if (auth) {
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                if (auth.currentUser && auth.currentUser.rol) {
+                    return auth.currentUser;
+                }
+                await new Promise(resolve => setTimeout(resolve, interval));
+            }
+
+            if (typeof auth.checkAuth === 'function') {
+                try {
+                    const user = await auth.checkAuth();
+                    if (user && user.rol) {
+                        return user;
+                    }
+                } catch (error) {
+                    console.warn('UserAccountManager: error verificando sesion', error);
+                }
+            }
+        }
+
+        if (storedUser && storedUser.rol) {
+            return storedUser;
+        }
+
+        return null;
+    }
+
+    handleUnauthorizedAccess(message = 'No tienes permisos para administrar usuarios.') {
+        const loadingElement = document.getElementById('loading-users');
+        const listElement = document.getElementById('users-list');
+        const noUsersElement = document.getElementById('no-users');
+
+        if (loadingElement) {
+            loadingElement.style.display = 'none';
+        }
+        if (listElement) {
+            listElement.style.display = 'none';
+        }
+        if (noUsersElement) {
+            noUsersElement.innerHTML = `<p>${message}</p>`;
+            noUsersElement.style.display = 'block';
+        }
+    }
+
+    async loadInitialUsersList() {
+        const container = document.getElementById('users-list-container');
+
+        if (!container) {
+            console.log('UserAccountManager: no se encontro users-list-container');
+            return;
+        }
+
+        const adminUser = await this.waitForAdminUser();
+
+        if (!adminUser || adminUser.rol !== 'admin') {
+            console.log('UserAccountManager: usuario sin privilegios de administrador, no se cargan usuarios');
+            this.handleUnauthorizedAccess();
+            return;
+        }
+
+        console.log('UserAccountManager: cargando lista inicial de usuarios...');
+        await this.refreshUserList(adminUser);
     }
     
     // MÉTODO ADICIONAL: Re-inicializar si es necesario
@@ -1128,6 +1207,10 @@ class UserAccountManager {
         this.bindEvents();
         this.setupValidation();
         console.log('✅ Re-inicialización completada');
+    }
+
+    loadUsers(prevalidatedUser = null) {
+        return this.refreshUserList(prevalidatedUser);
     }
     
     // MÉTODO DE DEBUG: Verificar estado actual

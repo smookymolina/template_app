@@ -407,49 +407,49 @@ action: 'highlight',
         }
     ],
 
-    // 📚 PASOS DEL TUTORIAL PARA MÉTRICAS DE ADMINISTRADOR (V2)
+    // 📚 PASOS DEL TUTORIAL PARA MÉTRICAS DE ADMINISTRADOR (V2.0)
     adminMetricsTutorialSteps: [
         {
             id: 'metrics-v2-step-1',
-            target: '#tab-content-resumen .kpi-grid-v2',
-            title: '📊 Resumen General V2',
-            description: '¡Bienvenido a las nuevas métricas! Esta es la pestaña de Resumen, donde encontrarás los indicadores clave (KPIs) más importantes de un vistazo.',
+            target: '#tab-content-resumen .kpis-grid-v2, #tab-content-resumen',
+            title: '📊 Dashboard de Métricas V2.0',
+            description: '¡Bienvenido al nuevo dashboard de métricas! Esta es la pestaña de Resumen General, donde puedes ver todos los KPIs principales y estadísticas globales de un vistazo.',
             position: 'bottom',
             action: 'highlight',
             nextButton: 'Comenzar'
         },
         {
             id: 'metrics-v2-step-2',
-            target: ".tab-button-v2[data-tab='equipos']",
+            target: "#tab-equipos, .tab-button-v2[data-tab='equipos']",
             title: '👥 Vista por Equipos',
-            description: 'Haz clic aquí para analizar el rendimiento por equipos. Podrás comparar gerentes y ver la performance de sus asesores.',
+            description: 'Haz clic en esta pestaña para analizar el rendimiento por equipos. Podrás ver la estructura jerárquica, comparar gerentes y analizar la performance de cada equipo.',
             position: 'bottom',
             action: 'highlight',
             nextButton: 'Siguiente'
         },
         {
             id: 'metrics-v2-step-3',
-            target: ".tab-button-v2[data-tab='individual']",
+            target: "#tab-individual, .tab-button-v2[data-tab='individual']",
             title: '🎯 Análisis Individual',
-            description: 'En esta pestaña puedes ver las métricas detalladas de cada asesor, buscar, filtrar y encontrar los de mejor y peor rendimiento.',
+            description: 'Esta pestaña te permite ver métricas detalladas de cada asesor individual. Puedes buscar, filtrar por performance y identificar top performers y asesores que necesitan apoyo.',
             position: 'bottom',
             action: 'highlight',
             nextButton: 'Siguiente'
         },
         {
             id: 'metrics-v2-step-4',
-            target: ".tab-button-v2[data-tab='tendencias']",
-            title: '📈 Tendencias e Historial',
-            description: 'Explora las tendencias a lo largo del tiempo con gráficos interactivos y tablas de datos históricos para entender la evolución del reclutamiento.',
+            target: "#tab-tendencias, .tab-button-v2[data-tab='tendencias']",
+            title: '📈 Tendencias y Reportes',
+            description: 'Explora las tendencias históricas con gráficos interactivos, datos temporales y herramientas de exportación para generar reportes profesionales.',
             position: 'bottom',
             action: 'highlight',
             nextButton: 'Siguiente'
         },
         {
             id: 'metrics-v2-step-5',
-            target: '.header-actions-v2',
-            title: '⚙️ Acciones Globales',
-            description: 'Desde aquí puedes refrescar los datos manualmente para ver la información más actualizada y exportar las métricas para tus reportes. ¡Has completado el tour!',
+            target: '.header-actions-v2, #refresh-metricas-v2',
+            title: '⚙️ Herramientas de Gestión',
+            description: 'Desde esta barra superior puedes refrescar los datos manualmente, exportar métricas completas y acceder a configuraciones avanzadas. ¡Ya dominas las métricas V2.0!',
             position: 'bottom',
             action: 'highlight',
             nextButton: '¡Finalizar!'
@@ -549,10 +549,10 @@ action: 'highlight',
             this.config.storageKey = 'sistema_reclutas_tutorial_completed_configuracion';
             console.log('✅ Tutorial de configuración detectado');
         } else if (this.isMetricsPage()) {
-            this.config.tutorialType = 'admin_metrics';
+            this.config.tutorialType = 'admin_metrics_v2';
             this.steps = this.adminMetricsTutorialSteps;
-            this.config.storageKey = 'sistema_reclutas_tutorial_completed_admin_metrics';
-            console.log('✅ Tutorial de métricas de admin detectado');
+            this.config.storageKey = 'sistema_reclutas_tutorial_completed_admin_metrics_v2';
+            console.log('✅ Tutorial de métricas V2.0 detectado');
         } else {
             console.log('⚠️ Página no reconocida para tutorial, tutorial no disponible');
             return;
@@ -611,12 +611,17 @@ isTrackingPage() {
         }
     },
 
-    // 🔍 VERIFICAR SI ES PÁGINA DE MÉTRICAS (V2)
+    // 🔍 VERIFICAR SI ES PÁGINA DE MÉTRICAS (V2.0)
     isMetricsPage() {
         try {
-            // Check for the main section ID and a specific V2 element like a tab button
-            return document.getElementById('estadisticas-section') !== null &&
-                   document.querySelector('.tab-button-v2') !== null;
+            // Check for the main section ID and V2.0 specific elements
+            const hasMainSection = document.getElementById('estadisticas-section') !== null;
+            const hasV2Elements = document.querySelector('.tab-button-v2') !== null ||
+                                 document.querySelector('.kpis-grid-v2') !== null ||
+                                 document.querySelector('.header-actions-v2') !== null;
+            const hasVersionBadge = document.querySelector('.version-badge') !== null;
+
+            return hasMainSection && (hasV2Elements || hasVersionBadge);
         } catch (e) {
             console.warn('Error checking admin metrics page:', e.message);
             return false;
@@ -2041,6 +2046,24 @@ Tutorial.startConfiguracionTutorial = function() {
                 console.log('✅ Tutorial de configuración marcado como completado.');
             } catch (e) {
                 console.error('Error al marcar el tutorial de configuración como completado:', e);
+            }
+        }
+    });
+};
+
+// 🚀 FUNCIÓN PARA INICIAR EL TUTORIAL DE MÉTRICAS V2.0
+Tutorial.startMetricasV2Tutorial = function() {
+    this.startTutorial({
+        type: 'admin_metrics_v2',
+        steps: this.adminMetricsTutorialSteps,
+        storageKey: 'admin_metrics_v2_tutorial_completed',
+        force: true,
+        onComplete: () => {
+            try {
+                localStorage.setItem('admin_metrics_v2_tutorial_completed', 'true');
+                console.log('✅ Tutorial de métricas V2.0 marcado como completado.');
+            } catch (e) {
+                console.error('Error al marcar el tutorial de métricas V2.0 como completado:', e);
             }
         }
     });

@@ -9,6 +9,11 @@
         <div class="loader-content-v2">
             <div class="spinner-v2"></div>
             <p class="loader-text">Cargando configuración...</p>
+            <div class="loader-progress">
+                <div class="progress-bar-v2">
+                    <div id="configuracion-progress-fill" class="progress-fill-v2"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -143,10 +148,20 @@
                 </div>
                 
                 <div class="config-section">
-                    <h5>Sesiones activas</h5>
-                    <div id="active-sessions">
-                        <!-- Las sesiones activas se cargarán aquí mediante JavaScript -->
-                        <p>No hay información de sesiones disponible</p>
+                    <div class="sessions-header" onclick="toggleActiveSessionsDropdown()">
+                        <h5>
+                            <i class="fas fa-desktop"></i> Sesiones activas
+                            <i id="sessions-chevron" class="fas fa-chevron-down chevron-icon"></i>
+                        </h5>
+                        <span id="sessions-count" class="sessions-count">0 sesiones</span>
+                    </div>
+                    <div id="active-sessions-dropdown" class="sessions-dropdown collapsed">
+                        <div id="active-sessions">
+                            <!-- Las sesiones activas se cargarán aquí mediante JavaScript -->
+                            <div class="sessions-loading">
+                                <i class="fas fa-spinner fa-spin"></i> Cargando sesiones...
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

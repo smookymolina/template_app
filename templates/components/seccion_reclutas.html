@@ -7,10 +7,23 @@
                 <input type="text" id="search-reclutas" placeholder="Buscar reclutas...">
                 <i class="fas fa-search"></i>
             </div>
-            
+
             <button class="btn-primary" id="open-add-recluta-modal">
                 <i class="fas fa-user-plus"></i> Agregar Nuevo Recluta
             </button>
+        </div>
+    </div>
+
+    <!-- 🔄 LOADER PARA GESTIÓN DE RECLUTAS -->
+    <div id="reclutas-loader" class="loader-overlay-v2" style="display: none;">
+        <div class="loader-content-v2">
+            <div class="spinner-v2"></div>
+            <p class="loader-text">Cargando gestión de reclutas...</p>
+            <div class="loader-progress">
+                <div class="progress-bar-v2">
+                    <div id="reclutas-progress-fill" class="progress-fill-v2"></div>
+                </div>
+            </div>
         </div>
     </div>
     
