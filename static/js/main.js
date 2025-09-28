@@ -1865,7 +1865,11 @@ function setupCalendarioForAsesor() {
 function handleConfiguracionSection() {
     const currentUser = getCurrentUser();
     console.log('⚙️ Accediendo a configuración, usuario:', currentUser?.rol);
-    
+
+    if (window.configManager) {
+        window.configManager.loadSettingsForAuthenticatedUser();
+    }
+
     if (currentUser?.rol === 'admin') {
         setupConfiguracionForAdmin();
     } else if (currentUser?.rol === 'asesor') {

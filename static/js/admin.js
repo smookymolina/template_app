@@ -514,6 +514,9 @@ class UserAccountManager {
                     <button class="btn-sm btn-warning" onclick="window.userAccountManager?.editUser(${user.id})" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
+                    <button class="btn-sm btn-danger" onclick="window.userAccountManager?.deleteUser(${user.id})" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             </div>
         `;
@@ -821,6 +824,182 @@ class UserAccountManager {
 
             passwordInput.addEventListener('input', validatePasswords);
             passwordConfirmInput.addEventListener('input', validatePasswords);
+        }
+    }
+
+    async deleteUser(userId) {
+        console.log(`🗑️ Eliminar usuario ${userId}`);
+
+        try {
+            // Primero obtener datos del usuario para mostrar en la confirmación
+            const response = await fetch(`/admin/usuarios/${userId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                const usuario = result.usuario;
+                this.showDeleteConfirmationModal(usuario);
+            } else {
+                this.showNotification(result.message || 'Error al obtener datos del usuario', 'error');
+            }
+        } catch (error) {
+            console.error('❌ Error al obtener datos del usuario para eliminación:', error);
+            this.showNotification('Error de conexión al obtener datos del usuario', 'error');
+        }
+    }
+
+    showDeleteConfirmationModal(usuario) {
+        const modalHTML = `
+            <div class="modal fade" id="delete-user-modal" tabindex="-1" role="dialog" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title" id="deleteUserModalLabel">
+                                <i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" onclick="this.closest('.modal').remove()">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="delete-warning">
+                                <div class="alert alert-danger">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <strong>¡Advertencia!</strong> Esta acción no se puede deshacer.
+                                </div>
+
+                                <p>¿Estás seguro de que deseas eliminar el siguiente usuario?</p>
+
+                                <div class="user-info-to-delete">
+                                    <div class="user-avatar-small">
+                                        ${usuario.foto_url ?
+                                            `<img src="${usuario.foto_url}" alt="Foto de perfil" class="profile-image-small">` :
+                                            '<i class="fas fa-user-circle"></i>'
+                                        }
+                                    </div>
+                                    <div class="user-details-small">
+                                        <strong>${usuario.nombre || 'Sin nombre'}</strong><br>
+                                        <span class="text-muted">${usuario.email}</span><br>
+                                        <span class="role-badge ${this.getRoleBadgeClass(usuario.rol)}">${this.getRoleDisplayName(usuario.rol)}</span>
+                                    </div>
+                                </div>
+
+                                <div class="confirmation-input mt-3">
+                                    <label for="delete-confirmation-input">
+                                        Para confirmar, escribe <strong>ELIMINAR</strong> en el campo:
+                                    </label>
+                                    <input type="text" class="form-control" id="delete-confirmation-input" placeholder="Escribe ELIMINAR para confirmar">
+                                    <div class="error-message" id="delete-confirmation-error"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                            <button type="button" class="btn btn-danger" id="confirm-delete-btn" onclick="window.userAccountManager?.confirmDeleteUser(${usuario.id})">
+                                <i class="fas fa-trash"></i> Eliminar Usuario
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remover modal existente si existe
+        const existingModal = document.getElementById('delete-user-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Agregar modal al DOM
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Mostrar modal
+        const modal = document.getElementById('delete-user-modal');
+        modal.style.display = 'block';
+        modal.classList.add('show');
+        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+
+        // Configurar validación del campo de confirmación
+        this.setupDeleteConfirmation();
+
+        console.log('✅ Modal de confirmación de eliminación mostrado');
+    }
+
+    setupDeleteConfirmation() {
+        const confirmationInput = document.getElementById('delete-confirmation-input');
+        const confirmButton = document.getElementById('confirm-delete-btn');
+        const errorElement = document.getElementById('delete-confirmation-error');
+
+        if (!confirmationInput || !confirmButton || !errorElement) return;
+
+        // Inicialmente deshabilitar el botón
+        confirmButton.disabled = true;
+        confirmButton.classList.add('disabled');
+
+        confirmationInput.addEventListener('input', () => {
+            const value = confirmationInput.value.trim().toUpperCase();
+
+            if (value === 'ELIMINAR') {
+                confirmButton.disabled = false;
+                confirmButton.classList.remove('disabled');
+                errorElement.style.display = 'none';
+                confirmationInput.classList.remove('error');
+            } else {
+                confirmButton.disabled = true;
+                confirmButton.classList.add('disabled');
+                if (value.length > 0) {
+                    errorElement.textContent = 'Debes escribir exactamente "ELIMINAR"';
+                    errorElement.style.display = 'block';
+                    confirmationInput.classList.add('error');
+                }
+            }
+        });
+    }
+
+    async confirmDeleteUser(userId) {
+        const confirmationInput = document.getElementById('delete-confirmation-input');
+        const confirmButton = document.getElementById('confirm-delete-btn');
+
+        if (!confirmationInput || confirmationInput.value.trim().toUpperCase() !== 'ELIMINAR') {
+            this.showNotification('Debes escribir "ELIMINAR" para confirmar', 'error');
+            return;
+        }
+
+        // Mostrar estado de carga
+        confirmButton.disabled = true;
+        confirmButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Eliminando...';
+
+        try {
+            const response = await fetch(`/admin/usuarios/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                this.showNotification('Usuario eliminado correctamente', 'success');
+                document.getElementById('delete-user-modal').remove();
+                this.refreshUserList(); // Actualizar la lista
+            } else {
+                this.showNotification(result.message || 'Error al eliminar usuario', 'error');
+                confirmButton.disabled = false;
+                confirmButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar Usuario';
+            }
+        } catch (error) {
+            console.error('❌ Error al eliminar usuario:', error);
+            this.showNotification('Error de conexión al eliminar usuario', 'error');
+            confirmButton.disabled = false;
+            confirmButton.innerHTML = '<i class="fas fa-trash"></i> Eliminar Usuario';
         }
     }
 

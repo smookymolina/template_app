@@ -21,12 +21,16 @@ class ConfigurationManager {
     // ✅ NUEVA FUNCIÓN: Cargar configuraciones solo para usuarios autenticados
     async loadSettingsForAuthenticatedUser() {
         console.log('🔄 Intentando cargar configuraciones para usuario autenticado...');
-        // Verificar si el usuario está autenticado antes de cargar
-        if (window.Auth && window.Auth.isAuthenticated()) {
-            await this.loadUserSettings();
-            await this.loadActiveSessions(); // Cargar sesiones activas también
-        } else {
-            console.log('⚠️ Usuario no autenticado, no se cargan configuraciones.');
+        this.showLoader();
+        try {
+            if (window.Auth && window.Auth.isAuthenticated()) {
+                await this.loadUserSettings();
+                await this.loadActiveSessions();
+            } else {
+                console.log('⚠️ Usuario no autenticado, no se cargan configuraciones.');
+            }
+        } finally {
+            this.hideLoader();
         }
     }
 
@@ -769,6 +773,22 @@ class ConfigurationManager {
         }
 
         console.log('✅ ConfigurationManager reseteado a valores por defecto');
+    }
+
+    showLoader() {
+        const loader = document.getElementById('configuracion-loader');
+        if (loader) {
+            loader.style.display = 'flex';
+        }
+    }
+
+    hideLoader() {
+        const loader = document.getElementById('configuracion-loader');
+        if (loader) {
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 500); 
+        }
     }
 
     // Método de debug
