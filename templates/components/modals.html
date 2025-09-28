@@ -808,30 +808,57 @@ function openTimelineModalSafely() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    let reclutasModuleReady = false;
+
+    // Escuchar el evento personalizado del módulo reclutas
+    document.addEventListener('reclutasModuleLoaded', function(event) {
+        console.log('✅ Evento reclutasModuleLoaded recibido:', event.detail);
+        reclutasModuleReady = true;
+    });
+
     // Verificar que los objetos necesarios estén disponibles
     function checkRecrutasAvailability() {
-        const maxAttempts = 10;
+        const maxAttempts = 30; // Aumentado el número de intentos
         let attempts = 0;
-        
+
         const checkInterval = setInterval(() => {
             attempts++;
-            
-            if ((window.Reclutas && window.Reclutas.openTimelineModal) || 
+
+            // Verificar si el módulo está listo o si los objetos están disponibles
+            if (reclutasModuleReady ||
+                (window.Reclutas && window.Reclutas.openTimelineModal) ||
                 (window.reclutaManager && window.reclutaManager.openTimelineModal)) {
-                console.log('Objeto Reclutas/reclutaManager disponible');
+                console.log('✅ Objeto Reclutas/reclutaManager disponible después de', attempts, 'intentos');
                 clearInterval(checkInterval);
                 return;
             }
-            
+
+            // Log cada 10 intentos para reducir spam
+            if (attempts % 10 === 0) {
+                console.log(`🔍 Buscando objetos Reclutas... intento ${attempts}/${maxAttempts}`);
+                console.log('📊 Estado:', {
+                    'reclutasModuleReady': reclutasModuleReady,
+                    'window.Reclutas': !!window.Reclutas,
+                    'window.reclutaManager': !!window.reclutaManager
+                });
+            }
+
             if (attempts >= maxAttempts) {
-                console.warn('No se pudo encontrar el objeto Reclutas/reclutaManager después de varios intentos');
+                console.warn('⚠️ No se pudo encontrar el objeto Reclutas/reclutaManager después de', maxAttempts, 'intentos');
+                console.log('🔍 Estado final:', {
+                    'reclutasModuleReady': reclutasModuleReady,
+                    'window.Reclutas': !!window.Reclutas,
+                    'window.reclutaManager': !!window.reclutaManager,
+                    'window.Reclutas.openTimelineModal': !!(window.Reclutas && window.Reclutas.openTimelineModal),
+                    'window.reclutaManager.openTimelineModal': !!(window.reclutaManager && window.reclutaManager.openTimelineModal)
+                });
                 clearInterval(checkInterval);
             }
-        }, 500);
+        }, 200); // Checks más frecuentes
     }
-    
-    // Iniciar verificación
-    checkRecrutasAvailability();
+
+    // Iniciar verificación después de un pequeño delay
+    setTimeout(checkRecrutasAvailability, 100);
     
     // Modal de ver recluta - eventos de botones
     const viewModal = document.getElementById('view-recluta-modal');

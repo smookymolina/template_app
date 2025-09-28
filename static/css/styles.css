@@ -5589,3 +5589,196 @@ body.dark-mode .asesores-section {
         font-size: 11px;
     }
 }
+
+/* ===== ESTILOS PARA MODALES DE ADMINISTRACIÓN DE USUARIOS ===== */
+
+/* Modal de detalles de usuario */
+.user-details-container {
+    padding: 10px;
+}
+
+.user-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background-color: var(--light-color);
+    border-radius: var(--border-radius);
+}
+
+.dark-mode .user-header {
+    background-color: #252836;
+}
+
+.user-avatar-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    margin-right: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--border-color);
+    font-size: 40px;
+    color: var(--text-light);
+    overflow: hidden;
+}
+
+.profile-image-large {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.user-basic-info h4 {
+    margin: 0 0 5px 0;
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.user-basic-info .user-email {
+    margin: 0 0 10px 0;
+    color: var(--text-light);
+    font-size: 14px;
+}
+
+.user-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+}
+
+@media (max-width: 768px) {
+    .user-info-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .user-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .user-avatar-large {
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+}
+
+.info-section {
+    background-color: #f8f9fa;
+    padding: 20px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.dark-mode .info-section {
+    background-color: #1e1e2c;
+    border-color: #4b4b4b;
+}
+
+.info-section h6 {
+    margin: 0 0 15px 0;
+    color: var(--primary-color);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.info-item {
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+}
+
+.info-item strong {
+    color: var(--text-color);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.info-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Modal de edición de usuario */
+#edit-user-modal .form-group {
+    margin-bottom: 20px;
+}
+
+#edit-user-modal .form-control {
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    transition: var(--transition);
+}
+
+#edit-user-modal .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    outline: none;
+}
+
+.dark-mode #edit-user-modal .form-control {
+    background-color: #252836;
+    border-color: #4b4b4b;
+    color: var(--text-color);
+}
+
+.password-section {
+    padding: 15px;
+    background-color: var(--light-color);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.dark-mode .password-section {
+    background-color: #252836;
+    border-color: #4b4b4b;
+}
+
+.error-message {
+    color: var(--danger-color);
+    font-size: 12px;
+    margin-top: 5px;
+    display: none;
+}
+
+/* Role badges */
+.role-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: white;
+}

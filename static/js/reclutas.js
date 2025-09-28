@@ -4412,11 +4412,24 @@ window.clickUploadZone = function() {
     }
 };
 
-window.reclutaManager = Reclutas;
-
-// Exportar y registrar globalmente para compatibilidad
+// Registrar globalmente para compatibilidad
 window.Reclutas = Reclutas;
 window.reclutaManager = Reclutas; // Alias unificado
+
+// Log para confirmar que el módulo se cargó correctamente
+console.log('✅ Módulo reclutas.js cargado correctamente');
+console.log('🔗 window.Reclutas disponible:', !!window.Reclutas);
+console.log('🔗 window.reclutaManager disponible:', !!window.reclutaManager);
+console.log('🔗 openTimelineModal disponible:', !!(window.Reclutas && window.Reclutas.openTimelineModal));
+
+// Disparar evento personalizado para notificar que el módulo está listo
+document.dispatchEvent(new CustomEvent('reclutasModuleLoaded', {
+    detail: {
+        module: 'reclutas',
+        timestamp: Date.now(),
+        version: '1.1'
+    }
+}));
 
 export default Reclutas;
 

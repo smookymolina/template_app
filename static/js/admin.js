@@ -539,14 +539,357 @@ class UserAccountManager {
         return names[rol] || 'Usuario';
     }
 
-    viewUser(userId) {
+    async viewUser(userId) {
         console.log(`👁️ Ver detalles del usuario ${userId}`);
-        this.showNotification('Función de ver usuario próximamente disponible', 'info');
+
+        try {
+            const response = await fetch(`/admin/usuarios/${userId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                this.showUserDetailsModal(result.usuario);
+            } else {
+                this.showNotification(result.message || 'Error al obtener detalles del usuario', 'error');
+            }
+        } catch (error) {
+            console.error('❌ Error al obtener detalles del usuario:', error);
+            this.showNotification('Error de conexión al obtener detalles', 'error');
+        }
     }
 
-    editUser(userId) {
+    showUserDetailsModal(usuario) {
+        const modalHTML = `
+            <div class="modal fade" id="user-details-modal" tabindex="-1" role="dialog" aria-labelledby="userDetailsModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="userDetailsModalLabel">
+                                <i class="fas fa-user"></i> Detalles del Usuario
+                            </h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="this.closest('.modal').remove()">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="user-details-container">
+                                <div class="user-header">
+                                    <div class="user-avatar-large">
+                                        ${usuario.foto_url ?
+                                            `<img src="${usuario.foto_url}" alt="Foto de perfil" class="profile-image-large">` :
+                                            '<i class="fas fa-user-circle"></i>'
+                                        }
+                                    </div>
+                                    <div class="user-basic-info">
+                                        <h4>${usuario.nombre || 'Sin nombre'}</h4>
+                                        <p class="user-email">${usuario.email}</p>
+                                        <span class="role-badge ${this.getRoleBadgeClass(usuario.rol)}">${this.getRoleDisplayName(usuario.rol)}</span>
+                                    </div>
+                                </div>
+
+                                <div class="user-info-grid">
+                                    <div class="info-section">
+                                        <h6><i class="fas fa-info-circle"></i> Información Personal</h6>
+                                        <div class="info-item">
+                                            <strong>ID:</strong> ${usuario.id}
+                                        </div>
+                                        <div class="info-item">
+                                            <strong>Nombre completo:</strong> ${usuario.nombre || 'No especificado'}
+                                        </div>
+                                        <div class="info-item">
+                                            <strong>Email:</strong> ${usuario.email}
+                                        </div>
+                                        <div class="info-item">
+                                            <strong>Teléfono:</strong> ${usuario.telefono || 'No especificado'}
+                                        </div>
+                                    </div>
+
+                                    <div class="info-section">
+                                        <h6><i class="fas fa-clock"></i> Información de Cuenta</h6>
+                                        <div class="info-item">
+                                            <strong>Rol:</strong> ${this.getRoleDisplayName(usuario.rol)}
+                                        </div>
+                                        <div class="info-item">
+                                            <strong>Fecha de creación:</strong> ${usuario.created_at ? new Date(usuario.created_at).toLocaleString('es-ES') : 'No disponible'}
+                                        </div>
+                                        <div class="info-item">
+                                            <strong>Último acceso:</strong> ${usuario.last_login ? new Date(usuario.last_login).toLocaleString('es-ES') : 'Nunca'}
+                                        </div>
+                                        <div class="info-item">
+                                            <strong>Estado:</strong> <span class="badge badge-success">Activo</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">
+                                <i class="fas fa-times"></i> Cerrar
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="window.userAccountManager?.editUser(${usuario.id}); this.closest('.modal').remove();">
+                                <i class="fas fa-edit"></i> Editar Usuario
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remover modal existente si existe
+        const existingModal = document.getElementById('user-details-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Agregar modal al DOM
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Mostrar modal
+        const modal = document.getElementById('user-details-modal');
+        modal.style.display = 'block';
+        modal.classList.add('show');
+        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+
+        console.log('✅ Modal de detalles de usuario mostrado');
+    }
+
+    async editUser(userId) {
         console.log(`✏️ Editar usuario ${userId}`);
-        this.showNotification('Función de editar usuario próximamente disponible', 'info');
+
+        try {
+            const response = await fetch(`/admin/usuarios/${userId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                this.showEditUserModal(result.usuario);
+            } else {
+                this.showNotification(result.message || 'Error al obtener datos del usuario', 'error');
+            }
+        } catch (error) {
+            console.error('❌ Error al obtener datos del usuario para edición:', error);
+            this.showNotification('Error de conexión al obtener datos', 'error');
+        }
+    }
+
+    showEditUserModal(usuario) {
+        const modalHTML = `
+            <div class="modal fade" id="edit-user-modal" tabindex="-1" role="dialog" aria-labelledby="editUserModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editUserModalLabel">
+                                <i class="fas fa-edit"></i> Editar Usuario
+                            </h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="this.closest('.modal').remove()">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form id="edit-user-form">
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="edit-user-nombre">Nombre completo *</label>
+                                            <input type="text" class="form-control" id="edit-user-nombre" value="${usuario.nombre || ''}" required>
+                                            <div class="error-message" id="edit-user-nombre-error"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="edit-user-email">Correo electrónico *</label>
+                                            <input type="email" class="form-control" id="edit-user-email" value="${usuario.email}" required>
+                                            <div class="error-message" id="edit-user-email-error"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="edit-user-telefono">Teléfono</label>
+                                            <input type="tel" class="form-control" id="edit-user-telefono" value="${usuario.telefono || ''}">
+                                            <div class="error-message" id="edit-user-telefono-error"></div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="edit-user-role">Rol *</label>
+                                            <select class="form-control" id="edit-user-role" required>
+                                                <option value="user" ${usuario.rol === 'user' ? 'selected' : ''}>Usuario</option>
+                                                <option value="asesor" ${usuario.rol === 'asesor' ? 'selected' : ''}>Asesor</option>
+                                                <option value="gerente" ${usuario.rol === 'gerente' ? 'selected' : ''}>Gerente</option>
+                                                <option value="admin" ${usuario.rol === 'admin' ? 'selected' : ''}>Administrador</option>
+                                            </select>
+                                            <div class="error-message" id="edit-user-role-error"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label>Cambiar contraseña (opcional)</label>
+                                            <div class="password-section">
+                                                <input type="password" class="form-control mb-2" id="edit-user-password" placeholder="Nueva contraseña (dejar vacío para mantener actual)">
+                                                <input type="password" class="form-control" id="edit-user-password-confirm" placeholder="Confirmar nueva contraseña">
+                                                <div class="error-message" id="edit-user-password-error"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <input type="hidden" id="edit-user-id" value="${usuario.id}">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove()">
+                                    <i class="fas fa-times"></i> Cancelar
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="save-user-changes-btn">
+                                    <i class="fas fa-save"></i> Guardar Cambios
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remover modal existente si existe
+        const existingModal = document.getElementById('edit-user-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Agregar modal al DOM
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        // Mostrar modal
+        const modal = document.getElementById('edit-user-modal');
+        modal.style.display = 'block';
+        modal.classList.add('show');
+        modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+
+        // Configurar eventos del formulario de edición
+        this.setupEditUserForm();
+
+        console.log('✅ Modal de edición de usuario mostrado');
+    }
+
+    setupEditUserForm() {
+        const form = document.getElementById('edit-user-form');
+        if (!form) return;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this.handleEditUserSubmit();
+        });
+
+        // Validación en tiempo real para contraseñas
+        const passwordInput = document.getElementById('edit-user-password');
+        const passwordConfirmInput = document.getElementById('edit-user-password-confirm');
+
+        if (passwordInput && passwordConfirmInput) {
+            const validatePasswords = () => {
+                const password = passwordInput.value;
+                const confirm = passwordConfirmInput.value;
+                const errorElement = document.getElementById('edit-user-password-error');
+
+                if (password && password.length < 6) {
+                    errorElement.textContent = 'La contraseña debe tener al menos 6 caracteres';
+                    errorElement.style.display = 'block';
+                    return false;
+                } else if (password && confirm && password !== confirm) {
+                    errorElement.textContent = 'Las contraseñas no coinciden';
+                    errorElement.style.display = 'block';
+                    return false;
+                } else {
+                    errorElement.style.display = 'none';
+                    return true;
+                }
+            };
+
+            passwordInput.addEventListener('input', validatePasswords);
+            passwordConfirmInput.addEventListener('input', validatePasswords);
+        }
+    }
+
+    async handleEditUserSubmit() {
+        const userId = document.getElementById('edit-user-id').value;
+        const nombre = document.getElementById('edit-user-nombre').value.trim();
+        const email = document.getElementById('edit-user-email').value.trim();
+        const telefono = document.getElementById('edit-user-telefono').value.trim();
+        const rol = document.getElementById('edit-user-role').value;
+        const password = document.getElementById('edit-user-password').value;
+        const passwordConfirm = document.getElementById('edit-user-password-confirm').value;
+
+        // Validaciones básicas
+        if (!nombre || !email || !rol) {
+            this.showNotification('Por favor completa todos los campos obligatorios', 'error');
+            return;
+        }
+
+        if (password && password.length < 6) {
+            this.showNotification('La contraseña debe tener al menos 6 caracteres', 'error');
+            return;
+        }
+
+        if (password && password !== passwordConfirm) {
+            this.showNotification('Las contraseñas no coinciden', 'error');
+            return;
+        }
+
+        const submitBtn = document.getElementById('save-user-changes-btn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+        try {
+            const updateData = {
+                nombre: nombre,
+                email: email,
+                telefono: telefono,
+                rol: rol
+            };
+
+            // Solo incluir contraseña si se proporcionó una nueva
+            if (password) {
+                updateData.password = password;
+            }
+
+            const response = await fetch(`/admin/usuarios/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updateData)
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.success) {
+                this.showNotification('Usuario actualizado correctamente', 'success');
+                document.getElementById('edit-user-modal').remove();
+                this.refreshUserList(); // Actualizar la lista
+            } else {
+                this.showNotification(result.message || 'Error al actualizar usuario', 'error');
+            }
+        } catch (error) {
+            console.error('❌ Error al actualizar usuario:', error);
+            this.showNotification('Error de conexión al actualizar usuario', 'error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';
+        }
     }
 
     showNotification(message, type = 'info') {
@@ -577,16 +920,25 @@ class UserAccountManager {
     }
 
     loadInitialUsersList() {
-        // Cargar lista solo si el usuario está autenticado y en la sección correcta
+        // Cargar lista solo si el usuario está autenticado y es administrador
         const container = document.getElementById('users-list-container');
-        const dashboardSection = document.getElementById('dashboard-section');
+        const adminSection = document.getElementById('user-administration-section');
 
-        // Verificar que el dashboard esté visible (usuario autenticado)
-        if (container && dashboardSection && dashboardSection.style.display !== 'none') {
-            console.log('📋 Cargando lista inicial de usuarios...');
-            this.refreshUserList();
+        // Verificar que existe el container y que el usuario está autenticado
+        if (container && window.Auth && window.Auth.isAuthenticated()) {
+            // Verificar que el usuario es administrador
+            const currentUser = window.Auth.currentUser;
+            if (currentUser && currentUser.rol === 'admin') {
+                console.log('📋 Cargando lista inicial de usuarios...');
+                // Pequeño delay para asegurar que todos los elementos estén listos
+                setTimeout(() => {
+                    this.refreshUserList();
+                }, 100);
+            } else {
+                console.log('⏭️ Usuario no es administrador - no se cargan usuarios');
+            }
         } else {
-            console.log('⏭️ Saltando carga de usuarios - usuario no autenticado o sección no visible');
+            console.log('⏭️ Saltando carga de usuarios - usuario no autenticado o container no disponible');
         }
     }
     
@@ -632,11 +984,17 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('sectionChanged', function(event) {
     if (event.detail && event.detail.section === 'configuracion-section') {
         console.log('📍 Cambiando a sección configuración');
-        
+
         // Re-inicializar si no existe o si faltan elementos
         if (!window.userAccountManager || !window.userAccountManager.submitBtn) {
             console.log('🔄 Re-inicializando UserAccountManager para sección configuración');
             window.userAccountManager = new UserAccountManager();
+        } else {
+            // Si ya existe, cargar usuarios inmediatamente
+            console.log('🔄 UserAccountManager ya existe, cargando usuarios...');
+            if (window.userAccountManager.loadInitialUsersList) {
+                window.userAccountManager.loadInitialUsersList();
+            }
         }
     }
 });

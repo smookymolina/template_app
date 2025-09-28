@@ -407,79 +407,52 @@ action: 'highlight',
         }
     ],
 
-    // 📚 PASOS DEL TUTORIAL PARA MÉTRICAS DE ADMINISTRADOR
+    // 📚 PASOS DEL TUTORIAL PARA MÉTRICAS DE ADMINISTRADOR (V2)
     adminMetricsTutorialSteps: [
         {
-            id: 'metrics-step-1',
-            target: '#estadisticas-section .section-header h3',
-            title: '📊 Bienvenido a las Métricas Avanzadas',
-            description: 'Este es tu panel de control para analizar el rendimiento. Aquí puedes ver un resumen global, el desempeño de tus asesores y tendencias clave.',
+            id: 'metrics-v2-step-1',
+            target: '#tab-content-resumen .kpi-grid-v2',
+            title: '📊 Resumen General V2',
+            description: '¡Bienvenido a las nuevas métricas! Esta es la pestaña de Resumen, donde encontrarás los indicadores clave (KPIs) más importantes de un vistazo.',
             position: 'bottom',
             action: 'highlight',
             nextButton: 'Comenzar'
         },
         {
-            id: 'metrics-step-2',
-            target: '#resumen-global',
-            title: '🌍 Resumen Global del Sistema',
-            description: 'Estos cards te dan una vista rápida de los indicadores más importantes: total de asesores, total de reclutas y la tasa de éxito general.',
+            id: 'metrics-v2-step-2',
+            target: ".tab-button-v2[data-tab='equipos']",
+            title: '👥 Vista por Equipos',
+            description: 'Haz clic aquí para analizar el rendimiento por equipos. Podrás comparar gerentes y ver la performance de sus asesores.',
             position: 'bottom',
             action: 'highlight',
             nextButton: 'Siguiente'
         },
         {
-            id: 'metrics-step-3',
-            target: '#refresh-metricas-btn',
-            title: '🔄 Actualizar Datos',
-            description: 'Haz clic en este botón en cualquier momento para recargar los datos y ver la información más reciente.',
-            position: 'left',
-            action: 'highlight',
-            nextButton: 'Siguiente'
-        },
-        {
-            id: 'metrics-step-4',
-            target: '#metricas-asesores-section',
-            title: '👥 Rendimiento por Asesor',
-            description: 'Aquí puedes ver el desempeño de cada asesor, incluyendo sus reclutas asignados, tasas de conversión y nivel de performance.',
-            position: 'top',
-            action: 'highlight',
-            nextButton: 'Siguiente'
-        },
-        {
-            id: 'metrics-step-5',
-            target: '.subsection-filters',
-            title: '🔍 Filtrar y Ordenar',
-            description: 'Usa estos controles para filtrar la lista de asesores por su nivel de performance o para ordenarlos por diferentes criterios como nombre o total de reclutas.',
+            id: 'metrics-v2-step-3',
+            target: ".tab-button-v2[data-tab='individual']",
+            title: '🎯 Análisis Individual',
+            description: 'En esta pestaña puedes ver las métricas detalladas de cada asesor, buscar, filtrar y encontrar los de mejor y peor rendimiento.',
             position: 'bottom',
             action: 'highlight',
             nextButton: 'Siguiente'
         },
         {
-            id: 'metrics-step-6',
-            target: '.charts-grid',
-            title: '📈 Gráficos Visuales',
-            description: 'Estos gráficos te ofrecen un análisis visual de la distribución de reclutas por estado y las tendencias de reclutamiento a lo largo del tiempo.',
-            position: 'top',
+            id: 'metrics-v2-step-4',
+            target: ".tab-button-v2[data-tab='tendencias']",
+            title: '📈 Tendencias e Historial',
+            description: 'Explora las tendencias a lo largo del tiempo con gráficos interactivos y tablas de datos históricos para entender la evolución del reclutamiento.',
+            position: 'bottom',
             action: 'highlight',
             nextButton: 'Siguiente'
         },
         {
-            id: 'metrics-step-7',
-            target: '#tabla-detallada-section',
-            title: '📋 Tabla Detallada',
-            description: 'Para un análisis más profundo, esta tabla te muestra todas las métricas de los asesores en un formato comparable. Puedes expandirla y exportarla.',
-            position: 'top',
+            id: 'metrics-v2-step-5',
+            target: '.header-actions-v2',
+            title: '⚙️ Acciones Globales',
+            description: 'Desde aquí puedes refrescar los datos manualmente para ver la información más actualizada y exportar las métricas para tus reportes. ¡Has completado el tour!',
+            position: 'bottom',
             action: 'highlight',
-            nextButton: 'Casi listo...'
-        },
-        {
-            id: 'metrics-step-8',
-            target: '#export-metricas-btn',
-            title: '📥 Exportar Datos',
-            description: 'Con este botón puedes exportar todas las métricas que ves en esta sección a un archivo Excel o CSV para tus propios reportes.',
-            position: 'left',
-            action: 'highlight',
-            nextButton: '¡Entendido!'
+            nextButton: '¡Finalizar!'
         }
     ],
 
@@ -575,6 +548,11 @@ action: 'highlight',
             this.steps = this.configuracionTutorialSteps;
             this.config.storageKey = 'sistema_reclutas_tutorial_completed_configuracion';
             console.log('✅ Tutorial de configuración detectado');
+        } else if (this.isMetricsPage()) {
+            this.config.tutorialType = 'admin_metrics';
+            this.steps = this.adminMetricsTutorialSteps;
+            this.config.storageKey = 'sistema_reclutas_tutorial_completed_admin_metrics';
+            console.log('✅ Tutorial de métricas de admin detectado');
         } else {
             console.log('⚠️ Página no reconocida para tutorial, tutorial no disponible');
             return;
@@ -629,6 +607,18 @@ isTrackingPage() {
                    document.getElementById('configuracion-section') !== null;
         } catch (e) {
             console.warn('Error checking configuracion page:', e.message);
+            return false;
+        }
+    },
+
+    // 🔍 VERIFICAR SI ES PÁGINA DE MÉTRICAS (V2)
+    isMetricsPage() {
+        try {
+            // Check for the main section ID and a specific V2 element like a tab button
+            return document.getElementById('estadisticas-section') !== null &&
+                   document.querySelector('.tab-button-v2') !== null;
+        } catch (e) {
+            console.warn('Error checking admin metrics page:', e.message);
             return false;
         }
     },
