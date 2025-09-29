@@ -261,6 +261,15 @@
                                         <label for="ficha-gerente-id">Gerente</label>
                                         <select class="form-control" id="ficha-gerente-id" required>
                                             <option value="">Selecciona un gerente</option>
+                                            {% if current_user.is_authenticated and current_user.is_admin() %}
+                                                {% if gerentes_list %}
+                                                    {% for gerente in gerentes_list %}
+                                                        <option value="{{ gerente.id }}">{{ gerente.nombre }}{% if gerente.email %} ({{ gerente.email }}){% endif %}</option>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <option value="" disabled>No hay gerentes disponibles</option>
+                                                {% endif %}
+                                            {% endif %}
                                         </select>
                                     </div>
                                     <button type="submit" class="btn btn-primary btn-block mt-3">
@@ -688,6 +697,10 @@
         console.log('Ã¢Å“â€¦ Sistema de tracking por folio inicializado correctamente');
     });
 </script>
+
+{% if current_user.is_authenticated and current_user.is_admin() %}
+  <script src="{{ url_for('static', filename='js/gestion_fichas.js') }}"></script>
+{% endif %}
 
 <!-- Photo Cropper Script -->
 <script src="{{ url_for('static', filename='js/photo-cropper.js') }}"></script>
