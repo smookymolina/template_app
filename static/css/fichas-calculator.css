@@ -1,5 +1,55 @@
 /* ===== CALCULADORA DE FICHAS SEMANALES - ESTILOS AVANZADOS ===== */
 
+/* Animaciones para efectos visuales */
+.success-pulse {
+    animation: successPulse 0.6s ease-in-out;
+}
+
+@keyframes successPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); background-color: var(--fichas-success); color: white; }
+    100% { transform: scale(1); }
+}
+
+.shake {
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Estados de carga mejorados */
+.loading {
+    position: relative;
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Estilos de debug mejorados */
+.gerentes-debug {
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.gerentes-debug small {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 /* Variables específicas para la calculadora */
 :root {
     --fichas-primary: #2563eb;
@@ -7,6 +57,7 @@
     --fichas-secondary: #64748b;
     --fichas-success: #059669;
     --fichas-warning: #d97706;
+    --fichas-error: #dc2626;
     --fichas-border: #e2e8f0;
     --fichas-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --fichas-shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);

@@ -141,7 +141,12 @@
                                         </button>
                                     </label>
                                     <select class="form-control ficha-input" id="ficha-gerente-id" required>
-                                        <option value="">Cargando gerentes...</option>
+                                        <option value="">Selecciona un gerente</option>
+                                        {% if current_user.is_admin() %}
+                                            {% for gerente in gerentes_list %}
+                                                <option value="{{ gerente.id }}">{{ gerente.nombre }}{% if gerente.email %} ({{ gerente.email }}){% endif %}</option>
+                                            {% endfor %}
+                                        {% endif %}
                                     </select>
                                     <small class="form-text text-muted">Selecciona el gerente asignado</small>
                                     <div class="gerentes-debug" id="gerentes-debug" style="display: none;">

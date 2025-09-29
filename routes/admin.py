@@ -1774,6 +1774,44 @@ def assign_single_recluta(recluta_id):
 # ============================================================================
 from models.ficha_deposito import FichaDeposito
 
+@admin_bp.route('/fichas/gerentes-fix', methods=['GET'])
+@admin_required
+def get_gerentes_para_fichas_fix():
+    """
+    Endpoint mejorado para obtener gerentes (versión corregida).
+    """
+    try:
+        current_app.logger.info(f"Solicitando gerentes para fichas desde usuario: {current_user.id} ({current_user.email})")
+
+        gerentes = Usuario.query.filter_by(rol='gerente', is_active=True).order_by(Usuario.nombre).all()
+        current_app.logger.info(f"Encontrados {len(gerentes)} gerentes activos")
+
+        gerentes_data = []
+        for gerente in gerentes:
+            gerentes_data.append({
+                'id': gerente.id,
+                'nombre': gerente.nombre or f'Usuario {gerente.id}',
+                'email': gerente.email,
+                'rol': gerente.rol
+            })
+
+        response = {
+            "success": True,
+            "gerentes": gerentes_data,
+            "total": len(gerentes_data)
+        }
+
+        current_app.logger.info(f"Respuesta enviada con {len(gerentes_data)} gerentes")
+        return jsonify(response)
+
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener lista de gerentes: {str(e)}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "message": "Error interno del servidor al obtener gerentes",
+            "error_type": type(e).__name__
+        }), 500
+
 @admin_bp.route('/fichas/gerentes', methods=['GET'])
 @admin_required
 def get_gerentes_para_fichas():

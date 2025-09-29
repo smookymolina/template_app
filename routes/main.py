@@ -137,11 +137,25 @@ def page_not_found(e):
 def index():
     """
     Ruta principal. Muestra la página de inicio/login.
-    
+
     Returns:
         Template HTML renderizado
     """
-    return render_template('index.html', include_components=True)
+    # Obtener lista de gerentes para la calculadora de fichas
+    gerentes_list = []
+    try:
+        from models.usuario import Usuario
+        from flask_login import current_user
+
+        # Solo cargar gerentes si el usuario está autenticado y es admin
+        if current_user.is_authenticated and current_user.is_admin():
+            gerentes_query = Usuario.query.filter_by(rol='gerente', is_active=True).order_by(Usuario.nombre)
+            gerentes_list = gerentes_query.all()
+            current_app.logger.info(f"Cargados {len(gerentes_list)} gerentes para la vista")
+    except Exception as e:
+        current_app.logger.error(f"Error al cargar gerentes para la vista: {str(e)}")
+
+    return render_template('index.html', include_components=True, gerentes_list=gerentes_list)
 
 @main_bp.route('/api/placeholder/<int:width>/<int:height>')
 def placeholder(width, height):

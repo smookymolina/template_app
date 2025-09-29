@@ -51,13 +51,21 @@ class Usuario(db.Model, UserMixin):
 
     def serialize(self):
         """Retorna una representación serializable del usuario con la URL completa de la foto."""
-        
+
         # Construir la URL de la foto solo si existe el nombre del archivo
+        foto_url_completa = None
         if self.foto_url:
-            # Usar url_for para generar la URL dinámicamente
-            foto_url_completa = url_for('main.serve_profile_image', filename=self.foto_url, _external=False)
-        else:
-            foto_url_completa = None
+            try:
+                # Usar url_for para generar la URL dinámicamente solo si tenemos un contexto de request
+                from flask import has_request_context
+                if has_request_context():
+                    foto_url_completa = url_for('main.serve_profile_image', filename=self.foto_url, _external=False)
+                else:
+                    # Fallback: construir URL manualmente sin contexto de request
+                    foto_url_completa = f'/uploads/profile_images/{self.foto_url}'
+            except Exception:
+                # Fallback en caso de error
+                foto_url_completa = f'/uploads/profile_images/{self.foto_url}'
 
         return {
             "id": self.id,

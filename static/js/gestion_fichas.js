@@ -57,7 +57,7 @@
     let currentWeekOffset = 0;
     let isLoading = false;
     let wizardData = {};
-    const totalSteps = 3; // Actualizado para 3 pasos
+    const totalSteps = 3; // Confirmado: 3 pasos (Datos, Confirmar, Completado)
 
     init();
 
@@ -91,14 +91,22 @@
 
     // Función para cargar gerentes con reintentos
     async function loadGerentesWithRetry(maxRetries = 3) {
+        // Verificar si los gerentes ya están pre-cargados en el HTML
+        if (gerenteSelect && gerenteSelect.options.length > 1) {
+            console.log('✅ Gerentes ya pre-cargados desde el servidor');
+            updateDebugInfo(`${gerenteSelect.options.length - 1} gerentes pre-cargados`);
+            return;
+        }
+
+        // Si no hay gerentes pre-cargados, intentar cargar via AJAX
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                console.log(`🔄 Intento ${attempt}/${maxRetries} - Cargando gerentes`);
+                console.log(`🔄 Intento ${attempt}/${maxRetries} - Cargando gerentes via AJAX`);
                 await loadGerentes();
 
                 // Verificar si se cargaron correctamente
                 if (gerenteSelect && gerenteSelect.options.length > 1) {
-                    console.log('✅ Gerentes cargados exitosamente');
+                    console.log('✅ Gerentes cargados exitosamente via AJAX');
                     return;
                 }
 
@@ -272,6 +280,7 @@
     async function loadGerentes() {
         if (!gerenteSelect) {
             console.warn('⚠️ Elemento select de gerentes no encontrado');
+            updateDebugInfo('Select de gerentes no encontrado en DOM');
             return;
         }
 
@@ -281,92 +290,108 @@
         gerenteSelect.classList.add('loading');
 
         try {
-            console.log('🔄 Cargando gerentes desde /admin/fichas/gerentes');
+            console.log('🔄 Cargando gerentes desde /admin/fichas/gerentes-fix');
 
-            const response = await fetch('/admin/fichas/gerentes', {
+            const response = await fetch('/admin/fichas/gerentes-fix', {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json',
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache'
                 },
                 credentials: 'same-origin' // Incluir cookies de sesión
             });
 
             console.log(`📊 Respuesta: Status ${response.status}, Content-Type: ${response.headers.get('content-type')}`);
 
-            // Verificar si la respuesta es HTML (página de login) en lugar de JSON
+            // Verificar si la respuesta es JSON válida
             const contentType = response.headers.get('content-type');
-            if (!response.ok || !contentType || !contentType.includes('application/json')) {
+            if (!response.ok) {
                 if (response.status === 401 || response.status === 403) {
                     console.warn('🔒 Usuario no autenticado o sin permisos para cargar gerentes');
                     gerenteSelect.innerHTML = '<option value="">Inicia sesión para ver gerentes</option>';
-                    gerenteSelect.disabled = false;
+                    updateDebugInfo('Sin permisos de administrador');
+                    showWarningNotification('Se requieren permisos de administrador para cargar gerentes.');
                     return;
                 }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
 
-                // Leer la respuesta como texto para debug
+            if (!contentType || !contentType.includes('application/json')) {
                 const responseText = await response.text();
-                console.error('🚨 Respuesta no JSON:', responseText.substring(0, 500));
-                throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
+                console.error('🚨 Respuesta no JSON:', responseText.substring(0, 200));
+                throw new Error('Respuesta del servidor no es JSON válido');
             }
 
             const data = await response.json();
             console.log('📋 Datos recibidos:', data);
 
-            if (data.success && Array.isArray(data.gerentes)) {
-                gerenteSelect.innerHTML = '<option value="">Selecciona un gerente</option>';
+            // Validar estructura de respuesta
+            if (!data.success) {
+                throw new Error(data.message || 'Error del servidor al obtener gerentes');
+            }
 
-                if (data.gerentes.length === 0) {
-                    const option = document.createElement('option');
-                    option.value = '';
-                    option.textContent = 'No hay gerentes disponibles';
-                    option.disabled = true;
-                    gerenteSelect.appendChild(option);
-                    console.warn('⚠️ No se encontraron gerentes en la respuesta');
-                } else {
-                    data.gerentes.forEach(function(gerente) {
+            if (!Array.isArray(data.gerentes)) {
+                throw new Error('La respuesta no contiene un array de gerentes válido');
+            }
+
+            // Limpiar y poblar el select
+            gerenteSelect.innerHTML = '<option value="">Selecciona un gerente</option>';
+
+            if (data.gerentes.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No hay gerentes disponibles';
+                option.disabled = true;
+                gerenteSelect.appendChild(option);
+                console.warn('⚠️ No se encontraron gerentes en la respuesta');
+                updateDebugInfo('No hay gerentes registrados');
+                showWarningNotification('No hay gerentes disponibles. Contacta al administrador.');
+            } else {
+                data.gerentes.forEach(function(gerente) {
+                    if (gerente.id && gerente.nombre) {
                         const option = document.createElement('option');
                         option.value = gerente.id;
-                        option.textContent = gerente.nombre || `Gerente ${gerente.id}`;
+                        option.textContent = `${gerente.nombre}` + (gerente.email ? ` (${gerente.email})` : '');
                         gerenteSelect.appendChild(option);
                         console.log(`✅ Gerente agregado: ${gerente.nombre} (ID: ${gerente.id})`);
-                    });
-                }
+                    } else {
+                        console.warn('⚠️ Gerente con datos incompletos:', gerente);
+                    }
+                });
 
                 console.log(`✅ ${data.gerentes.length} gerentes cargados exitosamente`);
-
-                // Mostrar información de debug
-                updateDebugInfo(`${data.gerentes.length} gerentes cargados`);
+                updateDebugInfo(`${data.gerentes.length} gerentes cargados correctamente`);
 
                 // Añadir animación de éxito
                 gerenteSelect.classList.add('success-pulse');
                 setTimeout(() => gerenteSelect.classList.remove('success-pulse'), 600);
-
-            } else {
-                throw new Error(data.message || 'Formato de respuesta inválido');
             }
         } catch (error) {
             console.error('🚨 Error en loadGerentes:', error);
 
+            // Manejar diferentes tipos de errores
+            let errorMessage = 'Error desconocido';
             if (error.name === 'SyntaxError' && error.message.includes('Unexpected token')) {
-                console.warn('🔒 Respuesta no es JSON válido - posiblemente usuario no autenticado');
-                gerenteSelect.innerHTML = '<option value="">Inicia sesión para continuar</option>';
+                errorMessage = 'Respuesta del servidor inválida';
+                gerenteSelect.innerHTML = '<option value="">Error: respuesta inválida del servidor</option>';
             } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                console.error('🌐 Error de red - verificar conexión');
-                gerenteSelect.innerHTML = '<option value="">Error de conexión - Reintentar</option>';
+                errorMessage = 'Sin conexión al servidor';
+                gerenteSelect.innerHTML = '<option value="">Sin conexión - Reintentar</option>';
             } else {
-                gerenteSelect.innerHTML = '<option value="">Error al cargar gerentes</option>';
+                errorMessage = error.message;
+                gerenteSelect.innerHTML = '<option value="">Error al cargar gerentes - Reintentar</option>';
             }
 
-            // Añadir animación de error
+            // Efectos visuales de error
             gerenteSelect.classList.add('shake');
             setTimeout(() => gerenteSelect.classList.remove('shake'), 500);
 
-            // Mostrar información de debug
-            updateDebugInfo(`Error: ${error.message}`);
+            // Actualizar información de debug
+            updateDebugInfo(`Error: ${errorMessage}`);
 
-            // Mostrar notificación de error
-            showErrorNotification('Error al cargar la lista de gerentes. Verifica tu conexión.');
+            // Mostrar notificación específica
+            showErrorNotification(`Error al cargar gerentes: ${errorMessage}`);
         } finally {
             gerenteSelect.disabled = false;
             gerenteSelect.classList.remove('loading');
@@ -829,14 +854,14 @@
     }
 
     function goToStep(step) {
-        if (step < 1 || step > 5) return;
+        if (step < 1 || step > totalSteps) return;
 
         currentStep = step;
         updateWizardDisplay();
         updateButtonStates();
 
-        // Si vamos al paso 4, actualizamos el resumen
-        if (step === 4) {
+        // Si vamos al paso 2 (confirmación), actualizamos el resumen
+        if (step === 2) {
             updateReviewSummary();
         }
     }
@@ -851,7 +876,7 @@
         if (validateCurrentStep()) {
             saveCurrentStepData();
 
-            if (currentStep < 5) {
+            if (currentStep < totalSteps) {
                 goToStep(currentStep + 1);
             }
         }
@@ -874,26 +899,32 @@
         // Validaciones específicas por paso
         switch (currentStep) {
             case 1:
-                // El paso 1 es opcional (fecha)
-                break;
-            case 2:
+                // Paso 1: Validar todos los campos requeridos
                 const nombre = document.getElementById('ficha-nombre-depositante')?.value?.trim();
                 const banco = document.getElementById('ficha-banco')?.value?.trim();
-                if (!nombre || !banco) {
-                    isValid = false;
-                    showWarningNotification('Completa todos los campos del depositante');
-                }
-                break;
-            case 3:
                 const monto = document.getElementById('ficha-monto')?.value;
                 const gerente = document.getElementById('ficha-gerente-id')?.value;
-                if (!monto || !gerente || parseFloat(monto) <= 0) {
+
+                if (!nombre) {
                     isValid = false;
-                    showWarningNotification('Verifica el monto y selecciona un gerente');
+                    showWarningNotification('El nombre del depositante es requerido');
+                    document.getElementById('ficha-nombre-depositante')?.focus();
+                } else if (!banco) {
+                    isValid = false;
+                    showWarningNotification('El banco es requerido');
+                    document.getElementById('ficha-banco')?.focus();
+                } else if (!monto || parseFloat(monto) <= 0) {
+                    isValid = false;
+                    showWarningNotification('El monto debe ser mayor a 0');
+                    document.getElementById('ficha-monto')?.focus();
+                } else if (!gerente) {
+                    isValid = false;
+                    showWarningNotification('Selecciona un gerente válido');
+                    document.getElementById('ficha-gerente-id')?.focus();
                 }
                 break;
-            case 4:
-                // Paso de confirmación, no requiere validación adicional
+            case 2:
+                // Paso 2: Confirmación, no requiere validación adicional
                 break;
         }
 
@@ -901,19 +932,14 @@
     }
 
     function saveCurrentStepData() {
-        switch (currentStep) {
-            case 1:
-                wizardData.fecha = document.getElementById('ficha-fecha')?.value || null;
-                break;
-            case 2:
-                wizardData.nombre_depositante = document.getElementById('ficha-nombre-depositante')?.value?.trim();
-                wizardData.banco = document.getElementById('ficha-banco')?.value?.trim();
-                break;
-            case 3:
-                wizardData.monto = document.getElementById('ficha-monto')?.value;
-                wizardData.gerente_id = document.getElementById('ficha-gerente-id')?.value;
-                wizardData.gerente_nombre = document.getElementById('ficha-gerente-id')?.selectedOptions[0]?.textContent;
-                break;
+        // En el paso 1 guardamos todos los datos del formulario
+        if (currentStep === 1) {
+            wizardData.fecha = document.getElementById('ficha-fecha')?.value || null;
+            wizardData.nombre_depositante = document.getElementById('ficha-nombre-depositante')?.value?.trim();
+            wizardData.banco = document.getElementById('ficha-banco')?.value?.trim();
+            wizardData.monto = document.getElementById('ficha-monto')?.value;
+            wizardData.gerente_id = document.getElementById('ficha-gerente-id')?.value;
+            wizardData.gerente_nombre = document.getElementById('ficha-gerente-id')?.selectedOptions[0]?.textContent;
         }
     }
 
@@ -958,7 +984,7 @@
 
         // Botones siguiente/guardar/nuevo
         if (btnNext) {
-            btnNext.style.display = currentStep < 2 ? 'inline-block' : 'none';
+            btnNext.style.display = currentStep === 1 ? 'inline-block' : 'none';
         }
 
         if (btnSubmit) {
@@ -971,7 +997,7 @@
     }
 
     function updateReviewSummary() {
-        // Actualizar resumen en el paso 4
+        // Actualizar resumen en el paso 2 (confirmación)
         const reviewFecha = document.getElementById('review-fecha');
         const reviewDepositante = document.getElementById('review-depositante');
         const reviewBanco = document.getElementById('review-banco');
@@ -1028,12 +1054,12 @@
     async function handleSubmitFicha(event) {
         event.preventDefault();
 
-        // Si no estamos en el paso 4, no hacer nada
-        if (currentStep !== 4) {
+        // Si no estamos en el paso 2, no hacer nada
+        if (currentStep !== 2) {
             return;
         }
 
-        // Guardar datos del paso actual
+        // Guardar datos del paso actual (aunque ya se guardaron en el paso 1)
         saveCurrentStepData();
 
         const submitButton = btnSubmit;
@@ -1070,8 +1096,8 @@
             if (response.ok && result.success) {
                 showSuccessNotification('¡Ficha registrada exitosamente!');
 
-                // Ir al paso 5 (resultado)
-                goToStep(5);
+                // Ir al paso 3 (resultado)
+                goToStep(3);
             } else {
                 throw new Error(result.message || 'Error al registrar la ficha');
             }
