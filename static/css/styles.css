@@ -1427,6 +1427,10 @@ body.admin-view #reclutas-table td:last-child {
 }
 
 /* ===== MODALES ===== */
+body.modal-open {
+    overflow: hidden;
+}
+
 .modal {
     display: none;
     position: fixed;

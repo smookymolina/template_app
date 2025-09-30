@@ -42,6 +42,11 @@
     const reloadGerentesBtn = document.getElementById('reload-gerentes-btn');
     const debugInfo = document.getElementById('debug-info');
     const debugContainer = document.getElementById('gerentes-debug');
+    const calculatorModal = document.getElementById('fichas-calculator-modal');
+    const openCalculatorBtn = document.getElementById('open-fichas-calculator');
+    const closeCalculatorBtn = document.getElementById('close-fichas-calculator');
+    const pageBody = document.body;
+    let lastFocusedElement = null;
 
     // Elementos del wizard
     const wizardSteps = document.querySelectorAll('.fichas-wizard-step');
@@ -59,6 +64,7 @@
     let wizardData = {};
     const totalSteps = 3; // Confirmado: 3 pasos (Datos, Confirmar, Completado)
 
+    setupCalculatorModal();
     init();
 
     function init() {
@@ -88,6 +94,87 @@
 
         console.log('✅ Inicialización completada');
     }
+
+    function setupCalculatorModal() {
+        if (!calculatorModal || !openCalculatorBtn) {
+            return;
+        }
+
+        openCalculatorBtn.addEventListener('click', openCalculatorModal);
+
+        if (closeCalculatorBtn) {
+            closeCalculatorBtn.addEventListener('click', closeCalculatorModal);
+            closeCalculatorBtn.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    closeCalculatorModal();
+                }
+            });
+        }
+
+        if (calculatorModal) {
+            calculatorModal.addEventListener('click', (event) => {
+                if (event.target === calculatorModal) {
+                    closeCalculatorModal();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && isCalculatorModalOpen()) {
+                closeCalculatorModal();
+            }
+        });
+    }
+
+    function openCalculatorModal() {
+        if (!calculatorModal) {
+            return;
+        }
+
+        lastFocusedElement = document.activeElement;
+        calculatorModal.style.display = 'block';
+        calculatorModal.setAttribute('aria-hidden', 'false');
+        pageBody.classList.add('modal-open');
+
+        requestAnimationFrame(() => {
+            const focusTarget = calculatorModal.querySelector('#ficha-nombre-depositante') ||
+                calculatorModal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+
+            if (focusTarget && typeof focusTarget.focus === 'function') {
+                try {
+                    focusTarget.focus({ preventScroll: true });
+                } catch (error) {
+                    focusTarget.focus();
+                }
+            }
+        });
+    }
+
+    function closeCalculatorModal() {
+        if (!calculatorModal) {
+            return;
+        }
+
+        calculatorModal.style.display = 'none';
+        calculatorModal.setAttribute('aria-hidden', 'true');
+        pageBody.classList.remove('modal-open');
+
+        if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
+            try {
+                lastFocusedElement.focus({ preventScroll: true });
+            } catch (error) {
+                lastFocusedElement.focus();
+            }
+        }
+    }
+
+    function isCalculatorModalOpen() {
+        return !!calculatorModal && calculatorModal.style.display === 'block';
+    }
+
+    window.openFichasCalculatorModal = openCalculatorModal;
+    window.closeFichasCalculatorModal = closeCalculatorModal;
 
     // Función para cargar gerentes con reintentos
     async function loadGerentesWithRetry(maxRetries = 3) {

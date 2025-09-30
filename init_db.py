@@ -100,6 +100,7 @@ def initialize_schema():
             from models.evento_recluta import EventoRecluta
             from models.recluta import Recluta
             from models.entrevista import Entrevista
+            from models.ficha_deposito import FichaDeposito
 
             print("✅ Modelos cargados correctamente")
             return True

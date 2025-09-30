@@ -10,6 +10,7 @@ from models.usuario import Usuario
 from models.recluta import Recluta
 from models.entrevista import Entrevista
 from models.evento_recluta import EventoRecluta
+from models.ficha_deposito import FichaDeposito
 from collections import defaultdict
 from models.user_session import UserSession
 from models import db, DatabaseError
