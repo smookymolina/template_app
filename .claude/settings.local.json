@@ -5,7 +5,8 @@
       "Bash(curl:*)",
       "Read(//c/Users/GIRTEC/Documents/**)",
       "Bash(pkill:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(pip install:*)"
     ],
     "deny": [],
     "ask": []

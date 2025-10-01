@@ -48,11 +48,53 @@
 
         // Inicializar componentes
         initModal();
+        initTabs();
         initWizard();
         bindEvents();
         loadInitialData();
 
         console.log('✅ Inicialización completada');
+    }
+
+    /**
+     * Inicializar sistema de pestañas
+     */
+    function initTabs() {
+        const tabContainer = document.querySelector('.fichas-tabs-header');
+        if (!tabContainer) {
+            console.warn('⚠️ Contenedor de pestañas no encontrado.');
+            return;
+        }
+
+        tabContainer.addEventListener('click', (e) => {
+            const tabButton = e.target.closest('.fichas-tab');
+            if (!tabButton) return;
+
+            e.preventDefault();
+            const tabName = tabButton.dataset.tab;
+            if (!tabName) return;
+
+            // Actualizar botones
+            tabContainer.querySelectorAll('.fichas-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            tabButton.classList.add('active');
+
+            // Actualizar contenido
+            const contentContainer = document.querySelector('.fichas-tabs-content');
+            if (contentContainer) {
+                contentContainer.querySelectorAll('.fichas-tab-pane').forEach(pane => {
+                    pane.classList.remove('active');
+                });
+                const activePane = contentContainer.querySelector(`#tab-${tabName}`);
+                if (activePane) {
+                    activePane.classList.add('active');
+                }
+            }
+            console.log(`Tab activada: ${tabName}`);
+        });
+
+        console.log('✅ Sistema de pestañas inicializado.');
     }
 
     /**
@@ -1248,14 +1290,131 @@
         elements.gerentesContainer.innerHTML = '';
 
         if (!Array.isArray(data) || data.length === 0) {
-            elements.gerentesContainer.innerHTML = '<p class="text-center text-muted">No hay datos</p>';
+            elements.gerentesContainer.innerHTML = '<p class="text-center text-muted">No hay datos para la semana seleccionada</p>';
             return;
         }
 
         data.forEach(item => {
-            const card = createSummaryCard(item, 'fa-user-tie');
+            const card = createGerenteCard(item);
             elements.gerentesContainer.appendChild(card);
         });
+
+        // Vincular eventos de clic
+        elements.gerentesContainer.querySelectorAll('.gerente-card-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const card = header.closest('.gerente-card');
+                toggleGerenteDetails(card);
+            });
+        });
+    }
+
+    /**
+     * Crear tarjeta de resumen para un gerente
+     */
+    function createGerenteCard(data) {
+        const card = document.createElement('div');
+        card.className = 'gerente-card';
+        card.dataset.gerenteId = data.gerente_id;
+
+        card.innerHTML = `
+            <div class="gerente-card-header" role="button" tabindex="0" aria-expanded="false">
+                <div class="gerente-info">
+                    <i class="fas fa-user-tie icon"></i>
+                    <span class="gerente-nombre">${escapeHTML(data.gerente_nombre)}</span>
+                </div>
+                <div class="gerente-stats">
+                    <div class="stat">
+                        <span class="stat-label">Fichas:</span>
+                        <span class="stat-value">${Number(data.total_fichas) || 0}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Monto:</span>
+                        <span class="stat-value">${formatCurrency(data.monto_total)}</span>
+                    </div>
+                </div>
+                <div class="gerente-toggle">
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+            </div>
+            <div class="gerente-card-details" style="display: none;">
+                <div class="details-loader">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando detalles...
+                </div>
+            </div>
+        `;
+        return card;
+    }
+
+    /**
+     * Mostrar/Ocultar detalles de un gerente
+     */
+    async function toggleGerenteDetails(card) {
+        const detailsContainer = card.querySelector('.gerente-card-details');
+        const header = card.querySelector('.gerente-card-header');
+        const isOpen = detailsContainer.style.display === 'block';
+
+        if (isOpen) {
+            detailsContainer.style.display = 'none';
+            header.setAttribute('aria-expanded', 'false');
+            card.classList.remove('open');
+        } else {
+            detailsContainer.style.display = 'block';
+            header.setAttribute('aria-expanded', 'true');
+            card.classList.add('open');
+
+            // Cargar detalles solo si no se han cargado antes
+            if (!detailsContainer.querySelector('.details-table')) {
+                const gerenteId = card.dataset.gerenteId;
+                const loader = detailsContainer.querySelector('.details-loader');
+                
+                try {
+                    const url = `/admin/fichas/gerente/${gerenteId}/details?week_offset=${currentWeekOffset}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+
+                    loader.style.display = 'none';
+
+                    if (data.success && data.details.length > 0) {
+                        detailsContainer.appendChild(createDetailsTable(data.details));
+                    } else {
+                        detailsContainer.innerHTML = '<p class="text-center text-muted">No hay fichas detalladas para este gerente.</p>';
+                    }
+                } catch (error) {
+                    console.error('Error cargando detalles:', error);
+                    loader.innerHTML = '<p class="text-center text-danger">Error al cargar los detalles.</p>';
+                }
+            }
+        }
+    }
+
+    /**
+     * Crear tabla de detalles de fichas
+     */
+    function createDetailsTable(details) {
+        const table = document.createElement('table');
+        table.className = 'details-table';
+        
+        table.innerHTML = `
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Depositante</th>
+                    <th>Banco</th>
+                    <th class="text-right">Monto</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${details.map(ficha => `
+                    <tr>
+                        <td>${new Date(ficha.fecha).toLocaleString('es-MX')}</td>
+                        <td>${escapeHTML(ficha.nombre_depositante)}</td>
+                        <td>${escapeHTML(ficha.banco)}</td>
+                        <td class="text-right">${formatCurrency(ficha.monto)}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        `;
+        return table;
     }
 
     /**

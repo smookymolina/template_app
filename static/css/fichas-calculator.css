@@ -2559,9 +2559,21 @@ button.loading.btn-success::after {
     box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
 }
 
-.fichas-tabs-content {
-    padding: 1.5rem;
-}
+    .fichas-tabs-content {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 0 0 8px 8px;
+        border: 1px solid #e0e0e0;
+        border-top: none;
+    }
+
+    .fichas-tab-pane {
+        display: none;
+    }
+
+    .fichas-tab-pane.active {
+        display: block;
+    }
 
 /* Formulario dentro del modal */
 .ficha-form-modern {
