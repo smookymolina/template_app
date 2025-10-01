@@ -421,18 +421,18 @@
                         <!-- Pestaña 1: Nueva Ficha -->
                         <div class="fichas-tab-pane active" id="tab-nueva-ficha">
                             <div class="ficha-form-container">
-                                <form id="form-add-ficha" class="ficha-form-modern">
+                                <form id="form-add-ficha-main" class="ficha-form-modern">
                                     <div class="form-row">
                                         <div class="form-col">
                                             <div class="form-group-modern">
-                                                <label for="ficha-nombre-depositante"><i class="fas fa-user"></i> Depositante</label>
-                                                <input type="text" class="form-control-modern" id="ficha-nombre-depositante" maxlength="150" placeholder="Nombre completo" required>
+                                                <label for="ficha-nombre-depositante-main"><i class="fas fa-user"></i> Depositante</label>
+                                                <input type="text" class="form-control-modern" id="ficha-nombre-depositante-main" name="nombre_depositante" maxlength="150" placeholder="Nombre completo" required>
                                             </div>
                                         </div>
                                         <div class="form-col">
                                             <div class="form-group-modern">
-                                                <label for="ficha-banco"><i class="fas fa-university"></i> Banco</label>
-                                                <input type="text" class="form-control-modern" id="ficha-banco" maxlength="100" placeholder="Ej: BBVA, Santander..." required>
+                                                <label for="ficha-banco-main"><i class="fas fa-university"></i> Banco</label>
+                                                <input type="text" class="form-control-modern" id="ficha-banco-main" name="banco" maxlength="100" placeholder="Ej: BBVA, Santander..." required>
                                             </div>
                                         </div>
                                     </div>
@@ -440,14 +440,14 @@
                                     <div class="form-row">
                                         <div class="form-col">
                                             <div class="form-group-modern">
-                                                <label for="ficha-monto"><i class="fas fa-dollar-sign"></i> Monto (MXN)</label>
-                                                <input type="number" class="form-control-modern" id="ficha-monto" step="0.01" min="0" placeholder="0.00" required>
+                                                <label for="ficha-monto-main"><i class="fas fa-dollar-sign"></i> Monto (MXN)</label>
+                                                <input type="number" class="form-control-modern" id="ficha-monto-main" name="monto" step="0.01" min="0" placeholder="0.00" required>
                                             </div>
                                         </div>
                                         <div class="form-col">
                                             <div class="form-group-modern">
-                                                <label for="ficha-gerente-id"><i class="fas fa-user-tie"></i> Gerente</label>
-                                                <select class="form-control-modern" id="ficha-gerente-id" required>
+                                                <label for="ficha-gerente-id-main"><i class="fas fa-user-tie"></i> Gerente</label>
+                                                <select class="form-control-modern" id="ficha-gerente-id-main" name="gerente_id" required>
                                                     <option value="">Seleccionar gerente...</option>
                                                     {% if current_user.is_authenticated and current_user.is_admin() %}
                                                         {% if gerentes_list %}
@@ -466,14 +466,14 @@
                                     <div class="form-row">
                                         <div class="form-col-full">
                                             <div class="form-group-modern">
-                                                <label for="ficha-fecha"><i class="fas fa-calendar"></i> Fecha del Depósito (opcional)</label>
-                                                <input type="datetime-local" class="form-control-modern" id="ficha-fecha">
+                                                <label for="ficha-fecha-main"><i class="fas fa-calendar"></i> Fecha del Depósito (opcional)</label>
+                                                <input type="datetime-local" class="form-control-modern" id="ficha-fecha-main" name="fecha">
                                                 <small class="form-hint">Si se deja vacío, se usará la fecha actual</small>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <button type="submit" class="btn-submit-modern btn-submit-ficha">
+                                    <button type="submit" class="btn-submit-modern btn-submit-ficha" id="btn-submit-ficha-main">
                                         <i class="fas fa-save"></i> Guardar Ficha
                                     </button>
                                 </form>

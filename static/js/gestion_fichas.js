@@ -1,1643 +1,1637 @@
-﻿(function() {
-    function initializeFichasCalculator() {
+/**
+ * ========================================================================
+ * GESTIÓN DE FICHAS - JavaScript Completamente Actualizado para Modal
+ * Compatible con el nuevo diseño HTML y CSS
+ * ========================================================================
+ */
+
+(function() {
+    'use strict';
+
+    // Variables globales
+    let currentStep = 1;
+    let currentWeekOffset = 0;
+    let isLoading = false;
+    let wizardData = {};
+    const TOTAL_STEPS = 5;
+
+    // Referencias a elementos DOM
+    const elements = {};
+
+    /**
+     * Inicializar la aplicación
+     */
+    function init() {
         if (window.__fichasCalculatorInitialized) {
-            return true;
+            return;
         }
 
-        const calculatorSection = document.getElementById('fichas-calculator-section');
-        if (!calculatorSection) {
-            return false;
+        // Verificar que la sección existe
+        const section = document.getElementById('fichas-calculator-section');
+        if (!section) {
+            console.log('⚠️ Sección de fichas no encontrada');
+            return;
         }
 
-        // Verificar si estamos en un contexto donde el usuario está autenticado
-        const gestionGerentesSection = document.getElementById('gestion-gerentes-section');
-
-        // Verificar que la sección esté disponible antes de continuar
-        if (!gestionGerentesSection) {
-            console.log('🔒 Sección de gerentes no disponible - omitiendo inicialización de gestión de fichas');
-            return false;
+        // Verificar permisos de admin
+        if (!document.querySelector('[data-admin-only]')) {
+            console.log('🔒 Sin permisos de administrador');
+            return;
         }
 
-        // Verificar si el usuario tiene permisos de admin (elemento solo visible para admin)
-        const adminOnlyElements = document.querySelectorAll('[data-admin-only]');
-        if (adminOnlyElements.length === 0) {
-            console.log('🔒 Usuario sin permisos de administrador - omitiendo inicialización de gestión de fichas');
-            return false;
-        }
+        console.log('🚀 Iniciando gestión de fichas con modal...');
 
         window.__fichasCalculatorInitialized = true;
 
-        const form = document.getElementById('form-add-ficha');
-        const gerenteSelect = document.getElementById('ficha-gerente-id');
-        const summaryTableBody = document.querySelector('#table-fichas-summary tbody');
-        const bankTableBody = document.querySelector('#table-fichas-bank tbody');
-        const detailsTableBody = document.querySelector('#table-fichas-details tbody');
-        const weekRangeSpan = document.getElementById('fichas-week-range');
-        const exportButton = document.getElementById('btn-export-fichas');
-        const totalCountEl = document.getElementById('fichas-total-count');
-        const totalAmountEl = document.getElementById('fichas-total-amount');
-        const weekPrevBtn = document.getElementById('fichas-week-prev');
-        const weekNextBtn = document.getElementById('fichas-week-next');
-        const fechaInput = document.getElementById('ficha-fecha');
-        const reloadGerentesBtn = document.getElementById('reload-gerentes-btn');
-        const debugInfo = document.getElementById('debug-info');
-        const debugContainer = document.getElementById('gerentes-debug');
-        const calculatorModal = document.getElementById('fichas-calculator-modal');
-        const openCalculatorBtn = document.getElementById('open-fichas-calculator');
-        const closeCalculatorBtn = document.getElementById('close-fichas-calculator');
-        const pageBody = document.body;
-        let lastFocusedElement = null;
+        // Cachear referencias DOM
+        cacheElements();
 
-        // Elementos del wizard
-        const wizardSteps = document.querySelectorAll('.fichas-wizard-step');
-        const stepNavigation = document.querySelectorAll('.fichas-step');
-        const progressFill = document.getElementById('fichas-progress-fill');
-        const progressText = document.getElementById('fichas-progress-text');
-        const btnPrev = document.getElementById('fichas-btn-prev');
-        const btnNext = document.getElementById('fichas-btn-next');
-        const btnSubmit = document.getElementById('fichas-btn-submit');
-        const btnNew = document.getElementById('fichas-btn-new');
+        // Inicializar componentes
+        initModal();
+        initWizard();
+        bindEvents();
+        loadInitialData();
 
-        let currentStep = 1;
-        let currentWeekOffset = 0;
-        let isLoading = false;
-        let wizardData = {};
-        const totalSteps = 3; // Confirmado: 3 pasos (Datos, Confirmar, Completado)
+        console.log('✅ Inicialización completada');
+    }
 
-        setupCalculatorModal();
-        init();
+    /**
+     * Cachear todas las referencias a elementos DOM
+     */
+    function cacheElements() {
+        console.log('🔄 Cacheando elementos DOM...');
 
-        function init() {
-            console.log('🚀 Inicializando gestión de fichas...');
+        // Modal
+        elements.modal = document.getElementById('fichas-modal');
+        elements.modalOverlay = document.getElementById('modal-overlay');
+        elements.openModalBtn = document.getElementById('open-fichas-modal');
+        elements.closeModalBtn = document.getElementById('close-fichas-modal');
 
-            // Verificar elementos DOM críticos
-            if (!gerenteSelect) {
-                console.error('🚨 ERROR: Elemento select de gerentes no encontrado');
-                console.log('Elementos disponibles:', {
-                    form: !!form,
-                    summaryTableBody: !!summaryTableBody,
-                    calculatorSection: !!calculatorSection
-                });
-            }
+        // Formulario
+        elements.form = document.getElementById('form-add-ficha');
+        elements.inputFecha = document.getElementById('ficha-fecha');
+        elements.inputMonto = document.getElementById('ficha-monto');
+        elements.inputDepositante = document.getElementById('ficha-nombre-depositante');
+        elements.inputBanco = document.getElementById('ficha-banco');
+        elements.selectGerente = document.getElementById('ficha-gerente-id');
+        elements.reloadGerentesBtn = document.getElementById('reload-gerentes-btn');
 
-            showLoadingState();
+        // Vista previa
+        elements.previewMonto = document.getElementById('preview-monto');
+        elements.previewDepositante = document.getElementById('preview-depositante');
+        elements.previewBanco = document.getElementById('preview-banco');
+        elements.previewGerente = document.getElementById('preview-gerente');
+        elements.previewFecha = document.getElementById('preview-fecha');
 
-            // Cargar gerentes con retry
-            loadGerentesWithRetry();
+        // Verificación paso 3
+        elements.verifyFecha = document.getElementById('verify-fecha');
+        elements.verifyMonto = document.getElementById('verify-monto');
+        elements.verifyDepositante = document.getElementById('verify-depositante');
+        elements.verifyBanco = document.getElementById('verify-banco');
+        elements.verifyGerente = document.getElementById('verify-gerente');
 
-            loadSummaryAndDetails();
-            bindEvents();
-            updateWeekNavigation();
-            setupFormValidation();
-            initializeTooltips();
-            initializeWizard();
-            initializeTabs(); // ✅ NUEVO: Inicializar sistema de pestañas
+        // Verificación final paso 4
+        elements.verifyFechaFinal = document.getElementById('verify-fecha-final');
+        elements.verifyMontoFinal = document.getElementById('verify-monto-final');
+        elements.verifyDepositanteFinal = document.getElementById('verify-depositante-final');
+        elements.verifyBancoFinal = document.getElementById('verify-banco-final');
+        elements.verifyGerenteFinal = document.getElementById('verify-gerente-final');
 
-            console.log('✅ Inicialización completada');
+        // Botones del wizard
+        elements.btnPrev = document.getElementById('btn-modal-prev');
+        elements.btnNext = document.getElementById('btn-modal-next');
+        elements.btnSubmit = document.getElementById('btn-modal-submit');
+        elements.btnCancel = document.getElementById('btn-modal-cancel');
+        elements.btnNew = document.getElementById('btn-modal-new');
+
+        // Indicador de progreso
+        elements.progressFill = document.getElementById('modal-progress-fill');
+        elements.steps = document.querySelectorAll('.modal-progress .step');
+        elements.wizardSteps = document.querySelectorAll('.wizard-step');
+
+        // Dashboard
+        elements.weekRange = document.getElementById('fichas-week-range');
+        elements.totalCount = document.getElementById('fichas-total-count');
+        elements.totalAmount = document.getElementById('fichas-total-amount');
+        elements.weekPrevBtn = document.getElementById('fichas-week-prev');
+        elements.weekNextBtn = document.getElementById('fichas-week-next');
+        elements.exportBtn = document.getElementById('btn-export-fichas');
+
+        // Contenedores
+        elements.gerentesContainer = document.getElementById('gerentes-cards-container');
+        elements.bancosContainer = document.getElementById('bancos-cards-container');
+        elements.detailsTable = document.getElementById('table-fichas-details');
+
+        // Verificar elementos críticos
+        console.log('✅ Elementos cacheados:', {
+            modal: !!elements.modal,
+            form: !!elements.form,
+            btnSubmit: !!elements.btnSubmit,
+            btnNext: !!elements.btnNext,
+            btnPrev: !!elements.btnPrev
+        });
+    }
+
+    /**
+     * Inicializar modal
+     */
+    function initModal() {
+        if (!elements.modal || !elements.openModalBtn) return;
+
+        // Abrir modal
+        elements.openModalBtn.addEventListener('click', openModal);
+
+        // Cerrar modal
+        if (elements.closeModalBtn) {
+            elements.closeModalBtn.addEventListener('click', closeModal);
         }
 
-        function setupCalculatorModal() {
-            if (!calculatorModal || !openCalculatorBtn) {
-                return;
+        if (elements.btnCancel) {
+            elements.btnCancel.addEventListener('click', closeModal);
+        }
+
+        // Cerrar con overlay
+        if (elements.modalOverlay) {
+            elements.modalOverlay.addEventListener('click', closeModal);
+        }
+
+        // Cerrar con ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isModalOpen()) {
+                closeModal();
             }
+        });
+    }
 
-            openCalculatorBtn.addEventListener('click', openCalculatorModal);
+    /**
+     * Abrir modal
+     */
+    function openModal() {
+        if (!elements.modal) return;
 
-            if (closeCalculatorBtn) {
-                closeCalculatorBtn.addEventListener('click', closeCalculatorModal);
-                closeCalculatorBtn.addEventListener('keydown', (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        closeCalculatorModal();
-                    }
-                });
+        elements.modal.style.display = 'flex';
+        document.body.classList.add('modal-open');
+        resetWizard();
+
+        // Focus en primer campo
+        setTimeout(() => {
+            if (elements.inputMonto) {
+                elements.inputMonto.focus();
             }
+        }, 300);
+    }
 
-            if (calculatorModal) {
-                calculatorModal.addEventListener('click', (event) => {
-                    if (event.target === calculatorModal) {
-                        closeCalculatorModal();
-                    }
-                });
-            }
+    /**
+     * Cerrar modal
+     */
+    function closeModal() {
+        if (!elements.modal) return;
 
-            document.addEventListener('keydown', (event) => {
-                if (event.key === 'Escape' && isCalculatorModalOpen()) {
-                    closeCalculatorModal();
-                }
+        elements.modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+        resetWizard();
+    }
+
+    /**
+     * Verificar si el modal está abierto
+     */
+    function isModalOpen() {
+        return elements.modal && elements.modal.style.display === 'flex';
+    }
+
+    /**
+     * Inicializar wizard
+     */
+    function initWizard() {
+        currentStep = 1;
+        updateWizardUI();
+    }
+
+    /**
+     * Vincular eventos
+     */
+    function bindEvents() {
+        // Navegación del wizard
+        if (elements.btnPrev) {
+            elements.btnPrev.addEventListener('click', () => goToStep(currentStep - 1));
+        }
+
+        if (elements.btnNext) {
+            elements.btnNext.addEventListener('click', handleNext);
+        }
+
+        if (elements.btnNew) {
+            elements.btnNew.addEventListener('click', () => {
+                closeModal();
+                setTimeout(() => openModal(), 300);
             });
         }
 
-        function openCalculatorModal() {
-            if (!calculatorModal) {
-                return;
-            }
-
-            lastFocusedElement = document.activeElement;
-            calculatorModal.style.display = 'block';
-            calculatorModal.setAttribute('aria-hidden', 'false');
-            pageBody.classList.add('modal-open');
-
-            requestAnimationFrame(() => {
-                const focusTarget = calculatorModal.querySelector('#ficha-nombre-depositante') ||
-                    calculatorModal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-
-                if (focusTarget && typeof focusTarget.focus === 'function') {
-                    try {
-                        focusTarget.focus({ preventScroll: true });
-                    } catch (error) {
-                        focusTarget.focus();
-                    }
-                }
-            });
+        // Submit del formulario - Event listener en el form
+        if (elements.form) {
+            elements.form.addEventListener('submit', handleSubmit);
         }
 
-        function closeCalculatorModal() {
-            if (!calculatorModal) {
-                return;
-            }
+        // Submit del formulario - Event listener directo en el botón
+        if (elements.btnSubmit) {
+            elements.btnSubmit.addEventListener('click', async (e) => {
+                console.log('🔘 Botón Guardar Ficha clickeado');
+                e.preventDefault();
+                e.stopPropagation();
 
-            calculatorModal.style.display = 'none';
-            calculatorModal.setAttribute('aria-hidden', 'true');
-            pageBody.classList.remove('modal-open');
-
-            if (lastFocusedElement && typeof lastFocusedElement.focus === 'function') {
-                try {
-                    lastFocusedElement.focus({ preventScroll: true });
-                } catch (error) {
-                    lastFocusedElement.focus();
-                }
-            }
-        }
-
-        function isCalculatorModalOpen() {
-            return !!calculatorModal && calculatorModal.style.display === 'block';
-        }
-
-        window.openFichasCalculatorModal = openCalculatorModal;
-        window.closeFichasCalculatorModal = closeCalculatorModal;
-
-        // Función para cargar gerentes con reintentos
-        async function loadGerentesWithRetry(maxRetries = 3) {
-            // Verificar si los gerentes ya están pre-cargados en el HTML
-            if (gerenteSelect && gerenteSelect.options.length > 1) {
-                console.log('✅ Gerentes ya pre-cargados desde el servidor');
-                updateDebugInfo(`${gerenteSelect.options.length - 1} gerentes pre-cargados`);
-                return;
-            }
-
-            // Si no hay gerentes pre-cargados, intentar cargar via AJAX
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    console.log(`🔄 Intento ${attempt}/${maxRetries} - Cargando gerentes via AJAX`);
-                    await loadGerentes();
-
-                    // Verificar si se cargaron correctamente
-                    if (gerenteSelect && gerenteSelect.options.length > 1) {
-                        console.log('✅ Gerentes cargados exitosamente via AJAX');
-                        return;
-                    }
-
-                    if (attempt < maxRetries) {
-                        console.log(`⏳ Reintentando en 2 segundos...`);
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                    }
-                } catch (error) {
-                    console.error(`🚨 Error en intento ${attempt}:`, error);
-                    if (attempt === maxRetries) {
-                        console.error('🚫 Máximo de reintentos alcanzado - activando modo fallback');
-
-                        // Verificar conectividad antes del fallback
-                        const isConnected = await checkServerConnection();
-                        if (!isConnected) {
-                            console.warn('🌐 Sin conexión al servidor - usando modo fallback');
-                            updateDebugInfo('Sin conexión - modo fallback');
-                        } else {
-                            console.warn('🔐 Posible problema de autenticación - usando modo fallback');
-                            updateDebugInfo('Error de autenticación - modo fallback');
-                        }
-
-                        // Activar modo fallback
-                        loadGerentesFallback();
-                        return;
-                    }
-                }
-            }
-        }
-
-        function showLoadingState() {
-            if (summaryTableBody) summaryTableBody.closest('.card').classList.add('loading-state');
-            if (bankTableBody) bankTableBody.closest('.card').classList.add('loading-state');
-            if (detailsTableBody) detailsTableBody.closest('.card').classList.add('loading-state');
-        }
-
-        function hideLoadingState() {
-            document.querySelectorAll('.loading-state').forEach(el => {
-                el.classList.remove('loading-state');
-            });
-        }
-
-        function setupFormValidation() {
-            const inputs = form.querySelectorAll('.ficha-input');
-            inputs.forEach(input => {
-                input.addEventListener('blur', validateField);
-                input.addEventListener('input', clearFieldError);
-                input.addEventListener('input', updateQuickReview);
-            });
-        }
-
-        function validateField(event) {
-            const field = event.target;
-            const value = field.value.trim();
-
-            clearFieldError(event);
-
-            if (field.hasAttribute('required') && !value) {
-                showFieldError(field, 'Este campo es obligatorio');
-                return false;
-            }
-
-            if (field.type === 'number' && value) {
-                const num = parseFloat(value);
-                if (isNaN(num) || num <= 0) {
-                    showFieldError(field, 'Debe ser un número mayor a 0');
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        function showFieldError(field, message) {
-            field.classList.add('is-invalid');
-            let errorDiv = field.parentNode.querySelector('.invalid-feedback');
-            if (!errorDiv) {
-                errorDiv = document.createElement('div');
-                errorDiv.className = 'invalid-feedback';
-                field.parentNode.appendChild(errorDiv);
-            }
-            errorDiv.textContent = message;
-        }
-
-        function clearFieldError(event) {
-            const field = event.target;
-            field.classList.remove('is-invalid');
-            const errorDiv = field.parentNode.querySelector('.invalid-feedback');
-            if (errorDiv) {
-                errorDiv.remove();
-            }
-        }
-
-        function updateQuickReview() {
-            const monto = document.getElementById('ficha-monto')?.value;
-            const depositante = document.getElementById('ficha-nombre-depositante')?.value;
-            const gerente = gerenteSelect?.selectedOptions[0]?.textContent;
-
-            document.getElementById('quick-review-monto').textContent = monto ? formatCurrency(monto) : '-';
-            document.getElementById('quick-review-depositante').textContent = depositante || '-';
-            document.getElementById('quick-review-gerente').textContent = gerente || '-';
-        }
-
-        function initializeTooltips() {
-            // Inicializar tooltips si Bootstrap está disponible
-            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
-                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                tooltipTriggerList.map(function (tooltipTriggerEl) {
-                    return new bootstrap.Tooltip(tooltipTriggerEl);
-                });
-            }
-        }
-
-        function bindEvents() {
-            // ✅ DETECTAR SI EXISTE WIZARD O USAR FORMULARIO SIMPLE
-            const hasWizard = wizardSteps && wizardSteps.length > 0;
-
-            if (form) {
-                if (hasWizard) {
-                    console.log('📝 Modo wizard detectado');
-                    form.addEventListener('submit', handleSubmitFichaWizard);
+                if (currentStep === 4) {
+                    console.log('✅ En paso 4, llamando a handleSubmit...');
+                    await handleSubmit(e);
                 } else {
-                    console.log('📝 Modo formulario simple detectado');
-                    form.addEventListener('submit', handleSubmitFichaSimple);
+                    console.warn('⚠️ No estás en el paso 4. Paso actual:', currentStep);
                 }
-            }
+            });
+        }
 
-            if (exportButton) {
-                exportButton.addEventListener('click', function() {
-                    window.location.href = '/admin/fichas/export';
-                });
-            }
+        // Vista previa y validación en tiempo real
+        if (elements.inputMonto) {
+            elements.inputMonto.addEventListener('input', () => {
+                updatePreview();
+                validateFieldRealTime(elements.inputMonto, 'monto');
+            });
+            elements.inputMonto.addEventListener('blur', () => {
+                validateFieldRealTime(elements.inputMonto, 'monto');
+            });
+        }
+        if (elements.inputDepositante) {
+            elements.inputDepositante.addEventListener('input', () => {
+                updatePreview();
+                validateFieldRealTime(elements.inputDepositante, 'text');
+            });
+            elements.inputDepositante.addEventListener('blur', () => {
+                validateFieldRealTime(elements.inputDepositante, 'text');
+            });
+        }
+        if (elements.inputBanco) {
+            elements.inputBanco.addEventListener('input', () => {
+                updatePreview();
+                validateFieldRealTime(elements.inputBanco, 'text');
+            });
+            elements.inputBanco.addEventListener('blur', () => {
+                validateFieldRealTime(elements.inputBanco, 'text');
+            });
+        }
+        if (elements.selectGerente) {
+            elements.selectGerente.addEventListener('change', () => {
+                updatePreview();
+                validateFieldRealTime(elements.selectGerente, 'select');
+            });
+        }
+        if (elements.inputFecha) {
+            elements.inputFecha.addEventListener('change', updatePreview);
+        }
 
-            if (weekPrevBtn) {
-                weekPrevBtn.addEventListener('click', function() {
-                    currentWeekOffset += 1;
+        // Navegación semanal
+        if (elements.weekPrevBtn) {
+            elements.weekPrevBtn.addEventListener('click', () => {
+                currentWeekOffset++;
+                loadSummaryAndDetails();
+            });
+        }
+
+        if (elements.weekNextBtn) {
+            elements.weekNextBtn.addEventListener('click', () => {
+                if (currentWeekOffset > 0) {
+                    currentWeekOffset--;
                     loadSummaryAndDetails();
-                    updateWeekNavigation();
-                });
-            }
+                }
+            });
+        }
 
-            if (weekNextBtn) {
-                weekNextBtn.addEventListener('click', function() {
-                    if (currentWeekOffset <= 0) {
-                        return;
+        // Exportar
+        if (elements.exportBtn) {
+            elements.exportBtn.addEventListener('click', handleExport);
+        }
+
+        // Recargar gerentes
+        if (elements.reloadGerentesBtn) {
+            elements.reloadGerentesBtn.addEventListener('click', loadGerentes);
+        }
+
+        // Botones de acción en headers
+        bindActionButtons();
+
+        // Búsquedas
+        bindSearchInputs();
+
+        // Ordenamiento de tabla
+        bindTableSort();
+
+        // Toggle de vistas
+        bindViewToggles();
+    }
+
+    /**
+     * Vincular botones de acción
+     */
+    function bindActionButtons() {
+        // Refresh gerentes
+        const btnRefreshGerentes = document.getElementById('btn-refresh-gerentes');
+        if (btnRefreshGerentes) {
+            btnRefreshGerentes.addEventListener('click', async () => {
+                btnRefreshGerentes.classList.add('loading');
+                await loadSummaryAndDetails();
+                btnRefreshGerentes.classList.remove('loading');
+                showNotification('Datos actualizados', 'success');
+            });
+        }
+
+        // Refresh bancos
+        const btnRefreshBancos = document.getElementById('btn-refresh-bancos');
+        if (btnRefreshBancos) {
+            btnRefreshBancos.addEventListener('click', async () => {
+                btnRefreshBancos.classList.add('loading');
+                await loadSummaryAndDetails();
+                btnRefreshBancos.classList.remove('loading');
+                showNotification('Datos actualizados', 'success');
+            });
+        }
+
+        // Expandir gerentes
+        const btnExpandGerentes = document.getElementById('btn-expand-gerentes');
+        if (btnExpandGerentes) {
+            btnExpandGerentes.addEventListener('click', () => {
+                const container = elements.gerentesContainer;
+                if (container) {
+                    container.classList.toggle('expanded');
+                    const icon = btnExpandGerentes.querySelector('i');
+                    if (container.classList.contains('expanded')) {
+                        icon.className = 'fas fa-compress-alt';
+                        btnExpandGerentes.title = 'Contraer';
+                    } else {
+                        icon.className = 'fas fa-expand-alt';
+                        btnExpandGerentes.title = 'Expandir todo';
                     }
-                    currentWeekOffset -= 1;
-                    loadSummaryAndDetails();
-                    updateWeekNavigation();
-                });
-            }
-
-            // Eventos del wizard (solo si existe)
-            if (hasWizard) {
-                if (btnPrev) {
-                    btnPrev.addEventListener('click', handlePrevStep);
                 }
-
-                if (btnNext) {
-                    btnNext.addEventListener('click', handleNextStep);
-                }
-
-                if (btnNew) {
-                    btnNew.addEventListener('click', resetWizard);
-                }
-
-                // Eventos para navegación directa en los pasos
-                stepNavigation.forEach(step => {
-                    step.addEventListener('click', function() {
-                        const targetStep = parseInt(this.dataset.step);
-                        if (targetStep <= currentStep || step.classList.contains('completed')) {
-                            goToStep(targetStep);
-                        }
-                    });
-                });
-            }
-
-            // Botón para recargar gerentes
-            if (reloadGerentesBtn) {
-                reloadGerentesBtn.addEventListener('click', function() {
-                    console.log('🔄 Recarga manual de gerentes solicitada');
-                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                    this.disabled = true;
-
-                    loadGerentes().finally(() => {
-                        this.innerHTML = '<i class="fas fa-sync"></i>';
-                        this.disabled = false;
-                    });
-                });
-            }
+            });
         }
 
-        async function loadGerentes() {
-            if (!gerenteSelect) {
-                console.warn('⚠️ Elemento select de gerentes no encontrado');
-                updateDebugInfo('Select de gerentes no encontrado en DOM');
-                return;
-            }
-
-            // Mostrar estado de carga
-            const spinner = document.getElementById('gerente-loading-spinner');
-            if (spinner) spinner.style.display = 'inline-block';
-            gerenteSelect.innerHTML = '<option value="">Cargando gerentes...</option>';
-            gerenteSelect.disabled = true;
-            gerenteSelect.classList.add('loading');
-
-            try {
-                console.log('🔄 Cargando gerentes desde /admin/fichas/gerentes-fix');
-
-                const response = await fetch('/admin/fichas/gerentes-fix', {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    },
-                    credentials: 'same-origin' // Incluir cookies de sesión
-                });
-
-                console.log(`📊 Respuesta: Status ${response.status}, Content-Type: ${response.headers.get('content-type')}`);
-
-                // Verificar si la respuesta es JSON válida
-                const contentType = response.headers.get('content-type');
-                if (!response.ok) {
-                    if (response.status === 401 || response.status === 403) {
-                        console.warn('🔒 Usuario no autenticado o sin permisos para cargar gerentes');
-                        gerenteSelect.innerHTML = '<option value="">Inicia sesión para ver gerentes</option>';
-                        updateDebugInfo('Sin permisos de administrador');
-                        showWarningNotification('Se requieren permisos de administrador para cargar gerentes.');
-                        return;
-                    }
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                if (!contentType || !contentType.includes('application/json')) {
-                    const responseText = await response.text();
-                    console.error('🚨 Respuesta no JSON:', responseText.substring(0, 200));
-                    throw new Error('Respuesta del servidor no es JSON válido');
-                }
-
-                const data = await response.json();
-                console.log('📋 Datos recibidos:', data);
-
-                // Validar estructura de respuesta
-                if (!data.success) {
-                    throw new Error(data.message || 'Error del servidor al obtener gerentes');
-                }
-
-                if (!Array.isArray(data.gerentes)) {
-                    throw new Error('La respuesta no contiene un array de gerentes válido');
-                }
-
-                // Limpiar y poblar el select
-                gerenteSelect.innerHTML = '<option value="">Selecciona un gerente</option>';
-
-                if (data.gerentes.length === 0) {
-                    const option = document.createElement('option');
-                    option.value = '';
-                    option.textContent = 'No hay gerentes disponibles';
-                    option.disabled = true;
-                    gerenteSelect.appendChild(option);
-                    console.warn('⚠️ No se encontraron gerentes en la respuesta');
-                    updateDebugInfo('No hay gerentes registrados');
-                    showWarningNotification('No hay gerentes disponibles. Contacta al administrador.');
-                } else {
-                    data.gerentes.forEach(function(gerente) {
-                        if (gerente.id && gerente.nombre) {
-                            const option = document.createElement('option');
-                            option.value = gerente.id;
-                            option.textContent = `${gerente.nombre}` + (gerente.email ? ` (${gerente.email})` : '');
-                            gerenteSelect.appendChild(option);
-                            console.log(`✅ Gerente agregado: ${gerente.nombre} (ID: ${gerente.id})`);
-                        } else {
-                            console.warn('⚠️ Gerente con datos incompletos:', gerente);
-                        }
-                    });
-
-                    console.log(`✅ ${data.gerentes.length} gerentes cargados exitosamente`);
-                    updateDebugInfo(`${data.gerentes.length} gerentes cargados correctamente`);
-
-                    // Añadir animación de éxito
-                    gerenteSelect.classList.add('success-pulse');
-                    setTimeout(() => gerenteSelect.classList.remove('success-pulse'), 600);
-                }
-            } catch (error) {
-                console.error('🚨 Error en loadGerentes:', error);
-
-                // Manejar diferentes tipos de errores
-                let errorMessage = 'Error desconocido';
-                if (error.name === 'SyntaxError' && error.message.includes('Unexpected token')) {
-                    errorMessage = 'Respuesta del servidor inválida';
-                    gerenteSelect.innerHTML = '<option value="">Error: respuesta inválida del servidor</option>';
-                } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-                    errorMessage = 'Sin conexión al servidor';
-                    gerenteSelect.innerHTML = '<option value="">Sin conexión - Reintentar</option>';
-                } else {
-                    errorMessage = error.message;
-                    gerenteSelect.innerHTML = '<option value="">Error al cargar gerentes - Reintentar</option>';
-                }
-
-                // Efectos visuales de error
-                gerenteSelect.classList.add('shake');
-                setTimeout(() => gerenteSelect.classList.remove('shake'), 500);
-
-                // Actualizar información de debug
-                updateDebugInfo(`Error: ${errorMessage}`);
-
-                // Mostrar notificación específica
-                showErrorNotification(`Error al cargar gerentes: ${errorMessage}`);
-            } finally {
-                gerenteSelect.disabled = false;
-                gerenteSelect.classList.remove('loading');
-                const spinner = document.getElementById('gerente-loading-spinner');
-                if (spinner) spinner.style.display = 'none';
-            }
+        // Ordenar bancos
+        const btnSortBancos = document.getElementById('btn-sort-bancos');
+        if (btnSortBancos) {
+            let sortAsc = true;
+            btnSortBancos.addEventListener('click', () => {
+                sortBancos(sortAsc);
+                sortAsc = !sortAsc;
+                const icon = btnSortBancos.querySelector('i');
+                icon.className = sortAsc ? 'fas fa-sort-amount-down' : 'fas fa-sort-amount-up';
+            });
         }
 
-        function getSummaryUrl() {
-            if (currentWeekOffset > 0) {
-                return `/admin/fichas/summary?week_offset=${currentWeekOffset}`;
-            }
-            return '/admin/fichas/summary';
+        // Filtrar detalles
+        const btnFilterDetails = document.getElementById('btn-filter-details');
+        if (btnFilterDetails) {
+            btnFilterDetails.addEventListener('click', () => {
+                showNotification('Función de filtros próximamente', 'info');
+            });
         }
 
-        async function loadSummaryAndDetails() {
-            if (isLoading) return;
-
-            isLoading = true;
-            showLoadingState();
-
-            try {
-                console.log('🔄 Cargando resumen de fichas...');
-                const response = await fetch(getSummaryUrl());
-
-                // Verificar si la respuesta es HTML (página de login) en lugar de JSON
-                const contentType = response.headers.get('content-type');
-                if (!response.ok || !contentType || !contentType.includes('application/json')) {
-                    if (response.status === 401 || response.status === 403) {
-                        console.warn('🔒 Usuario no autenticado o sin permisos para cargar resumen');
-                        return;
-                    }
-                    throw new Error(`Error HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const data = await response.json();
-                if (!data.success) {
-                    throw new Error(data.message || 'No fue posible obtener el resumen de fichas');
-                }
-
-                console.log('✅ Datos recibidos:', data);
-
-                // ✅ PASO 4: Actualizar datos con animaciones mejoradas
-                await updateWeekBanner(data.week_range);
-                await updateTotals(data.totals);
-
-                // ✅ Crear tarjetas visuales
-                createGerenteCards(data.summary);
-                createBancoCards(data.bank_breakdown);
-
-                // Actualizar tablas con efecto de fade
-                await Promise.all([
-                    populateTableWithAnimation(detailsTableBody, data.details, createDetailRow, 'No se han registrado fichas en la semana seleccionada.')
-                ]);
-
-                console.log('✅ Tablas y tarjetas actualizadas correctamente');
-            } catch (error) {
-                console.error('Error en loadSummaryAndDetails:', error);
-
-                if (error.name === 'SyntaxError' && error.message.includes('Unexpected token')) {
-                    console.warn('🔒 Respuesta no es JSON válido - posiblemente usuario no autenticado');
-                    await Promise.all([
-                        populateTable(summaryTableBody, [], createSummaryRow, 'Inicia sesión para ver los datos.'),
-                        populateTable(bankTableBody, [], createBankRow, 'Inicia sesión para ver los datos.'),
-                        populateTable(detailsTableBody, [], createDetailRow, 'Inicia sesión para ver los datos.')
-                    ]);
-                } else {
-                    await Promise.all([
-                        populateTable(summaryTableBody, [], createSummaryRow, 'Error al cargar datos. Intenta de nuevo.'),
-                        populateTable(bankTableBody, [], createBankRow, 'Error al cargar datos. Intenta de nuevo.'),
-                        populateTable(detailsTableBody, [], createDetailRow, 'Error al cargar datos. Intenta de nuevo.')
-                    ]);
-
-                    showErrorNotification('Error al cargar los datos. Por favor, intenta de nuevo.');
-                }
-
-                updateTotals(null);
-                if (weekRangeSpan) {
-                    weekRangeSpan.textContent = 'Error al cargar';
-                }
-            } finally {
-                isLoading = false;
-                hideLoadingState();
-            }
+        // Imprimir
+        const btnPrint = document.getElementById('btn-print-details');
+        if (btnPrint) {
+            btnPrint.addEventListener('click', () => {
+                window.print();
+            });
         }
 
-        function updateWeekBanner(weekRange) {
-            if (!weekRangeSpan) {
-                return;
-            }
-            if (!weekRange) {
-                weekRangeSpan.textContent = 'Sin datos';
-                return;
-            }
-            const label = weekRange.label || (weekRange.start && weekRange.end ? `${weekRange.start} al ${weekRange.end}` : 'Sin datos');
-            weekRangeSpan.textContent = label;
+        // Descargar PDF
+        const btnDownloadPdf = document.getElementById('btn-download-pdf');
+        if (btnDownloadPdf) {
+            btnDownloadPdf.addEventListener('click', () => {
+                showNotification('Generando PDF...', 'info');
+                // Aquí se implementaría la generación de PDF
+            });
+        }
+    }
+
+    /**
+     * Vincular inputs de búsqueda
+     */
+    function bindSearchInputs() {
+        // Búsqueda de gerentes
+        const searchGerentes = document.getElementById('search-gerentes');
+        if (searchGerentes) {
+            searchGerentes.addEventListener('input', debounce((e) => {
+                filterCards(elements.gerentesContainer, e.target.value);
+            }, 300));
         }
 
-        async function updateTotals(totals) {
-            const totalFichas = totals && typeof totals.total_fichas === 'number' ? totals.total_fichas : 0;
-            const montoTotal = totals && typeof totals.monto_total !== 'undefined' ? totals.monto_total : 0;
-
-            // Animar contadores con efectos visuales
-            if (totalCountEl) {
-                await animateCountUp(totalCountEl, totalFichas, 800);
-            }
-            if (totalAmountEl) {
-                await animateCountUp(totalAmountEl, montoTotal, 800);
-            }
+        // Búsqueda de bancos
+        const searchBancos = document.getElementById('search-bancos');
+        if (searchBancos) {
+            searchBancos.addEventListener('input', debounce((e) => {
+                filterCards(elements.bancosContainer, e.target.value);
+            }, 300));
         }
 
-        function updateWeekNavigation() {
-            if (weekNextBtn) {
-                weekNextBtn.disabled = currentWeekOffset <= 0;
-            }
+        // Búsqueda en detalles
+        const searchDetails = document.getElementById('search-details');
+        if (searchDetails) {
+            searchDetails.addEventListener('input', debounce((e) => {
+                filterTable(e.target.value);
+            }, 300));
         }
+    }
 
-        // ✅ FUNCIÓN PARA FORMULARIO SIMPLE (SIN WIZARD)
-        async function handleSubmitFichaSimple(event) {
-            event.preventDefault();
-            console.log('📝 Guardando ficha en modo simple...');
+    /**
+     * Filtrar tarjetas
+     */
+    function filterCards(container, searchTerm) {
+        if (!container) return;
 
-            // Validar formulario antes de enviar
-            if (!validateFormSimple()) {
-                showWarningNotification('Por favor, completa todos los campos requeridos correctamente.');
-                return;
-            }
+        const cards = container.querySelectorAll('.summary-card, .summary-list-item');
+        const term = searchTerm.toLowerCase().trim();
+        let visibleCount = 0;
 
-            const submitButton = form.querySelector('.btn-submit-ficha');
-            if (!submitButton) {
-                console.error('❌ Botón de submit no encontrado');
-                return;
-            }
+        cards.forEach(card => {
+            const title = card.querySelector('.summary-card-title, .summary-list-item-name');
+            const text = title ? title.textContent.toLowerCase() : '';
 
-            const originalText = submitButton.innerHTML;
-
-            // Mostrar estado de carga
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-
-            const payload = {
-                nombre_depositante: document.getElementById('ficha-nombre-depositante')?.value?.trim() || '',
-                banco: document.getElementById('ficha-banco')?.value?.trim() || '',
-                monto: document.getElementById('ficha-monto')?.value,
-                gerente_id: gerenteSelect?.value || null
-            };
-
-            const fechaValor = fechaInput?.value;
-            if (fechaValor) {
-                const fecha = new Date(fechaValor);
-                if (!isNaN(fecha.getTime())) {
-                    payload.fecha = fecha.toISOString();
-                }
-            }
-
-            if (!payload.gerente_id) {
-                showErrorNotification('Selecciona un gerente válido.');
-                submitButton.disabled = false;
-                submitButton.innerHTML = originalText;
-                return;
-            }
-
-            console.log('📤 Enviando payload:', payload);
-
-            try {
-                const response = await fetch('/admin/fichas', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await response.json();
-                console.log('📥 Respuesta recibida:', result);
-
-                if (response.ok && result.success) {
-                    // Notificación mejorada con detalles
-                    const fichaInfo = result.ficha;
-                    const montoFormateado = formatCurrency(fichaInfo?.monto || payload.monto);
-                    const mensaje = `¡Ficha registrada! ${montoFormateado} de ${payload.nombre_depositante}`;
-                    showSuccessNotification(mensaje);
-
-                    // Limpiar formulario con animación
-                    clearFormWithAnimation();
-
-                    // Recargar datos inmediatamente
-                    console.log('🔄 Recargando datos...');
-                    await loadSummaryAndDetails();
-                } else {
-                    throw new Error(result.message || 'Error al registrar la ficha');
-                }
-            } catch (error) {
-                console.error('❌ Error al enviar formulario de ficha:', error);
-                showErrorNotification(`Error: ${error.message}`);
-            } finally {
-                // Restaurar botón
-                submitButton.disabled = false;
-                submitButton.innerHTML = originalText;
-            }
-        }
-
-        // Función auxiliar para validar formulario simple
-        function validateFormSimple() {
-            const nombre = document.getElementById('ficha-nombre-depositante')?.value?.trim();
-            const banco = document.getElementById('ficha-banco')?.value?.trim();
-            const monto = document.getElementById('ficha-monto')?.value;
-            const gerente = gerenteSelect?.value;
-
-            console.log('🔍 Validando formulario:', { nombre, banco, monto, gerente });
-
-            if (!nombre) {
-                showWarningNotification('El nombre del depositante es requerido');
-                document.getElementById('ficha-nombre-depositante')?.focus();
-                return false;
-            }
-
-            if (!banco) {
-                showWarningNotification('El banco es requerido');
-                document.getElementById('ficha-banco')?.focus();
-                return false;
-            }
-
-            if (!monto || parseFloat(monto) <= 0) {
-                showWarningNotification('El monto debe ser mayor a 0');
-                document.getElementById('ficha-monto')?.focus();
-                return false;
-            }
-
-            if (!gerente) {
-                showWarningNotification('Selecciona un gerente válido');
-                gerenteSelect?.focus();
-                return false;
-            }
-
-            return true;
-        }
-
-        function populateTable(tableBody, data, createRowFn, noDataMessage) {
-            if (!tableBody) {
-                return;
-            }
-            tableBody.innerHTML = '';
-
-            if (Array.isArray(data) && data.length > 0) {
-                data.forEach(function(item) {
-                    tableBody.appendChild(createRowFn(item));
-                });
-                return;
-            }
-
-            const tr = document.createElement('tr');
-            const td = document.createElement('td');
-            const columnCount = tableBody.closest('table')?.querySelectorAll('thead th').length || 1;
-            td.colSpan = columnCount;
-            td.textContent = noDataMessage;
-            td.style.textAlign = 'center';
-            tr.appendChild(td);
-            tableBody.appendChild(tr);
-        }
-
-        // ✅ PASO 5: Función para poblar tabla con animación de entrada
-        async function populateTableWithAnimation(tableBody, data, createRowFn, noDataMessage) {
-            if (!tableBody) {
-                return;
-            }
-
-            // Aplicar efecto de fade out
-            tableBody.style.opacity = '0.3';
-            tableBody.style.transition = 'opacity 0.2s ease';
-
-            await new Promise(resolve => setTimeout(resolve, 200));
-
-            // Limpiar y poblar
-            tableBody.innerHTML = '';
-
-            if (Array.isArray(data) && data.length > 0) {
-                data.forEach(function(item, index) {
-                    const row = createRowFn(item);
-                    row.style.opacity = '0';
-                    row.style.transform = 'translateY(-10px)';
-                    row.style.transition = 'all 0.3s ease';
-                    tableBody.appendChild(row);
-
-                    // Animar entrada con delay escalonado
-                    setTimeout(() => {
-                        row.style.opacity = '1';
-                        row.style.transform = 'translateY(0)';
-                    }, index * 50);
-                });
+            if (text.includes(term)) {
+                card.style.display = '';
+                visibleCount++;
             } else {
-                const tr = document.createElement('tr');
-                const td = document.createElement('td');
-                const columnCount = tableBody.closest('table')?.querySelectorAll('thead th').length || 1;
-                td.colSpan = columnCount;
-                td.textContent = noDataMessage;
-                td.style.textAlign = 'center';
-                td.className = 'text-muted';
-                tr.appendChild(td);
-                tableBody.appendChild(tr);
+                card.style.display = 'none';
             }
+        });
 
-            // Restaurar opacidad de la tabla
-            tableBody.style.opacity = '1';
+        // Mostrar mensaje si no hay resultados
+        const existingMsg = container.querySelector('.no-results-message');
+        if (existingMsg) existingMsg.remove();
+
+        if (visibleCount === 0 && term) {
+            const msg = document.createElement('p');
+            msg.className = 'no-results-message text-center text-muted';
+            msg.textContent = 'No se encontraron resultados';
+            msg.style.padding = '2rem';
+            container.appendChild(msg);
         }
+    }
 
+    /**
+     * Filtrar tabla
+     */
+    function filterTable(searchTerm) {
+        if (!elements.detailsTable) return;
 
+        const rows = elements.detailsTable.querySelectorAll('tr');
+        const term = searchTerm.toLowerCase().trim();
+        let visibleCount = 0;
 
-        function createDetailRow(item) {
-            const tr = document.createElement('tr');
-            const fechaTexto = item.fecha ? new Date(item.fecha).toLocaleString() : '-';
-            tr.innerHTML = `
-                <td>${fechaTexto}</td>
-                <td>${escapeHTML(item.nombre_depositante)}</td>
-                <td>${escapeHTML(item.banco)}</td>
-                <td>${formatCurrency(item.monto)}</td>
-                <td>${escapeHTML(item.gerente_nombre)}</td>
-            `;
-            return tr;
-        }
-
-        function formatCurrency(value) {
-            const number = Number(value);
-            if (isNaN(number)) {
-                return value;
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(term)) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
             }
-            return number.toLocaleString('es-MX', {
-                style: 'currency',
-                currency: 'MXN'
+        });
+
+        // Actualizar contador
+        const resultsCount = document.getElementById('results-count');
+        if (resultsCount) {
+            resultsCount.textContent = `${visibleCount} ${visibleCount === 1 ? 'ficha' : 'fichas'}`;
+        }
+    }
+
+    /**
+     * Vincular ordenamiento de tabla
+     */
+    function bindTableSort() {
+        const sortableHeaders = document.querySelectorAll('.fichas-table th.sortable');
+
+        sortableHeaders.forEach(header => {
+            header.addEventListener('click', () => {
+                const column = header.dataset.column;
+                const currentSort = header.classList.contains('sorted-asc') ? 'asc' :
+                                   header.classList.contains('sorted-desc') ? 'desc' : 'none';
+
+                // Remover clases de todos los headers
+                sortableHeaders.forEach(h => {
+                    h.classList.remove('sorted-asc', 'sorted-desc');
+                });
+
+                // Determinar nueva dirección
+                let newSort = 'asc';
+                if (currentSort === 'asc') {
+                    newSort = 'desc';
+                    header.classList.add('sorted-desc');
+                } else {
+                    header.classList.add('sorted-asc');
+                }
+
+                // Ordenar tabla
+                sortTable(column, newSort);
             });
-        }
+        });
+    }
 
-        function escapeHTML(str) {
-            if (str === null || str === undefined) {
-                return '';
+    /**
+     * Ordenar tabla
+     */
+    function sortTable(column, direction) {
+        if (!elements.detailsTable) return;
+
+        const rows = Array.from(elements.detailsTable.querySelectorAll('tr'));
+        const columnIndex = {
+            'fecha': 0,
+            'depositante': 1,
+            'banco': 2,
+            'monto': 3,
+            'gerente': 4
+        }[column];
+
+        rows.sort((a, b) => {
+            const aVal = a.cells[columnIndex].textContent.trim();
+            const bVal = b.cells[columnIndex].textContent.trim();
+
+            let comparison = 0;
+            if (column === 'monto') {
+                // Ordenar montos numéricamente
+                const aNum = parseFloat(aVal.replace(/[^0-9.-]/g, ''));
+                const bNum = parseFloat(bVal.replace(/[^0-9.-]/g, ''));
+                comparison = aNum - bNum;
+            } else if (column === 'fecha') {
+                // Ordenar fechas
+                comparison = new Date(aVal) - new Date(bVal);
+            } else {
+                // Ordenar alfabéticamente
+                comparison = aVal.localeCompare(bVal);
             }
-            return str.toString()
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
 
-        // Funciones de notificación
-        function showSuccessNotification(message) {
-            showNotification(message, 'success');
-        }
+            return direction === 'asc' ? comparison : -comparison;
+        });
 
-        function showErrorNotification(message) {
-            showNotification(message, 'error');
-        }
+        // Reordenar filas en el DOM
+        elements.detailsTable.innerHTML = '';
+        rows.forEach(row => elements.detailsTable.appendChild(row));
+    }
 
-        function showWarningNotification(message) {
-            showNotification(message, 'warning');
-        }
+    /**
+     * Vincular toggles de vista
+     */
+    function bindViewToggles() {
+        const viewToggles = document.querySelectorAll('.btn-toggle');
 
-        function showNotification(message, type = 'info') {
-            // Crear elemento de notificación
-            const notification = document.createElement('div');
-            notification.className = `fichas-notification fichas-notification-${type}`;
+        viewToggles.forEach(toggle => {
+            toggle.addEventListener('click', () => {
+                const view = toggle.dataset.view;
+                const parent = toggle.closest('.content-card');
+                const container = parent.querySelector('.summary-grid');
 
-            const icon = type === 'success' ? 'check-circle' :
-                        type === 'error' ? 'exclamation-circle' :
-                        type === 'warning' ? 'exclamation-triangle' : 'info-circle';
+                if (!container) return;
 
-            notification.innerHTML = `
-                <div class="fichas-notification-content">
-                    <i class="fas fa-${icon}"></i>
-                    <span>${message}</span>
-                    <button class="fichas-notification-close" onclick="this.parentElement.parentElement.remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
+                // Actualizar botones activos
+                parent.querySelectorAll('.btn-toggle').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                toggle.classList.add('active');
+
+                // Cambiar vista
+                if (view === 'list') {
+                    container.classList.remove('summary-grid');
+                    container.classList.add('summary-list');
+                    convertToListView(container);
+                } else {
+                    container.classList.remove('summary-list');
+                    container.classList.add('summary-grid');
+                    // Recargar vista de tarjetas
+                    loadSummaryAndDetails();
+                }
+            });
+        });
+    }
+
+    /**
+     * Convertir a vista de lista
+     */
+    function convertToListView(container) {
+        const cards = container.querySelectorAll('.summary-card');
+
+        cards.forEach(card => {
+            const icon = card.querySelector('.summary-card-icon i').className;
+            const title = card.querySelector('.summary-card-title').textContent;
+            const fichas = card.querySelector('.summary-card-stat-value').textContent;
+            const monto = card.querySelectorAll('.summary-card-stat-value')[1].textContent;
+
+            const listItem = document.createElement('div');
+            listItem.className = 'summary-list-item';
+            listItem.innerHTML = `
+                <div class="summary-list-item-info">
+                    <div class="summary-list-item-icon">
+                        <i class="${icon}"></i>
+                    </div>
+                    <div class="summary-list-item-name">${title}</div>
+                </div>
+                <div class="summary-list-item-stats">
+                    <div class="summary-list-item-stat">
+                        <div class="summary-list-item-stat-label">Fichas</div>
+                        <div class="summary-list-item-stat-value">${fichas}</div>
+                    </div>
+                    <div class="summary-list-item-stat">
+                        <div class="summary-list-item-stat-label">Total</div>
+                        <div class="summary-list-item-stat-value">${monto}</div>
+                    </div>
                 </div>
             `;
 
-            // Agregar estilos si no existen
-            if (!document.getElementById('fichas-notification-styles')) {
-                const styles = document.createElement('style');
-                styles.id = 'fichas-notification-styles';
-                styles.textContent = `
-                    .fichas-notification {
-                        position: fixed;
-                        top: 20px;
-                        right: 20px;
-                        z-index: 9999;
-                        min-width: 300px;
-                        max-width: 400px;
-                        padding: 1rem;
-                        border-radius: 8px;
-                        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-                        transform: translateX(400px);
-                        transition: transform 0.3s ease, opacity 0.3s ease;
-                        opacity: 0;
-                    }
-
-                    .fichas-notification.show {
-                        transform: translateX(0);
-                        opacity: 1;
-                    }
-
-                    .fichas-notification-success {
-                        background: linear-gradient(135deg, #10b981, #059669);
-                        color: white;
-                    }
-
-                    .fichas-notification-error {
-                        background: linear-gradient(135deg, #ef4444, #dc2626);
-                        color: white;
-                    }
-
-                    .fichas-notification-warning {
-                        background: linear-gradient(135deg, #f59e0b, #d97706);
-                        color: white;
-                    }
-
-                    .fichas-notification-info {
-                        background: linear-gradient(135deg, #3b82f6, #2563eb);
-                        color: white;
-                    }
-
-                    .fichas-notification-content {
-                        display: flex;
-                        align-items: center;
-                        gap: 0.75rem;
-                    }
-
-                    .fichas-notification-content i:first-child {
-                        font-size: 1.25rem;
-                        flex-shrink: 0;
-                    }
-
-                    .fichas-notification-content span {
-                        flex-grow: 1;
-                        font-weight: 500;
-                    }
-
-                    .fichas-notification-close {
-                        background: none;
-                        border: none;
-                        color: currentColor;
-                        cursor: pointer;
-                        padding: 0.25rem;
-                        border-radius: 4px;
-                        transition: background-color 0.2s ease;
-                    }
-
-                    .fichas-notification-close:hover {
-                        background-color: rgba(255, 255, 255, 0.2);
-                    }
-                `;
-                document.head.appendChild(styles);
-            }
-
-            // Agregar al DOM
-            document.body.appendChild(notification);
-
-            // Mostrar con animación
-            setTimeout(() => {
-                notification.classList.add('show');
-            }, 100);
-
-            // Auto-remover después de 5 segundos
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.classList.remove('show');
-                    setTimeout(() => {
-                        if (notification.parentNode) {
-                            notification.remove();
-                        }
-                    }, 300);
-                }
-            }, 5000);
-        }
-
-        // Función mejorada para actualizar totales con animación
-        async function animateCountUp(element, finalValue, duration = 1000) {
-            if (!element) return;
-
-            const startValue = parseInt(element.textContent.replace(/[^\d]/g, '')) || 0;
-            const startTime = Date.now();
-
-            function updateCount() {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-
-                // Easing function (ease-out)
-                const easeProgress = 1 - Math.pow(1 - progress, 3);
-
-                const currentValue = Math.round(startValue + (finalValue - startValue) * easeProgress);
-
-                if (element.id === 'fichas-total-amount') {
-                    element.textContent = formatCurrency(currentValue);
-                } else {
-                    element.textContent = currentValue.toLocaleString();
-                }
-
-                if (progress < 1) {
-                    requestAnimationFrame(updateCount);
-                }
-            }
-
-            requestAnimationFrame(updateCount);
-        }
-
-        // Función para validar formulario completo
-        function validateForm() {
-            const inputs = form.querySelectorAll('.ficha-input[required]');
-            let isValid = true;
-
-            inputs.forEach(input => {
-                const event = { target: input };
-                if (!validateField(event)) {
-                    isValid = false;
-                }
-            });
-
-            return isValid;
-        }
-
-        // Función para limpiar formulario con animación
-        function clearFormWithAnimation() {
-            const inputs = form.querySelectorAll('.ficha-input');
-            inputs.forEach((input, index) => {
-                setTimeout(() => {
-                    input.style.transition = 'all 0.3s ease';
-                    input.style.transform = 'scale(0.95)';
-
-                    setTimeout(() => {
-                        input.value = '';
-                        input.style.transform = 'scale(1)';
-                        clearFieldError({ target: input });
-                    }, 150);
-                }, index * 50);
-            });
-        }
-
-        // ===== FUNCIONES DEL WIZARD DE 5 PASOS =====
-
-        function initializeWizard() {
-            currentStep = 1;
-            wizardData = {};
-            updateWizardDisplay();
-            updateButtonStates();
-            // Mejorar accesibilidad
-            setupKeyboardNavigation();
-        }
-
-        function goToStep(step) {
-            if (step < 1 || step > totalSteps) return;
-
-            currentStep = step;
-            updateWizardDisplay();
-            updateButtonStates();
-
-            // Si vamos al paso 2 (confirmación), actualizamos el resumen
-            if (step === 2) {
-                updateReviewSummary();
-            }
-        }
-
-        function handlePrevStep() {
-            if (currentStep > 1) {
-                goToStep(currentStep - 1);
-            }
-        }
-
-        function handleNextStep() {
-            if (validateCurrentStep()) {
-                saveCurrentStepData();
-
-                if (currentStep < totalSteps) {
-                    goToStep(currentStep + 1);
-                }
-            }
-        }
-
-        function validateCurrentStep() {
-            const currentStepEl = document.querySelector(`[data-step="${currentStep}"].fichas-wizard-step`);
-            if (!currentStepEl) return false;
-
-            const requiredInputs = currentStepEl.querySelectorAll('.ficha-input[required]');
-            let isValid = true;
-
-            requiredInputs.forEach(input => {
-                const event = { target: input };
-                if (!validateField(event)) {
-                    isValid = false;
-                }
-            });
-
-            // Validaciones específicas por paso
-            switch (currentStep) {
-                case 1:
-                    // Paso 1: Validar todos los campos requeridos
-                    const nombre = document.getElementById('ficha-nombre-depositante')?.value?.trim();
-                    const banco = document.getElementById('ficha-banco')?.value?.trim();
-                    const monto = document.getElementById('ficha-monto')?.value;
-                    const gerente = document.getElementById('ficha-gerente-id')?.value;
-
-                    if (!nombre) {
-                        isValid = false;
-                        showWarningNotification('El nombre del depositante es requerido');
-                        document.getElementById('ficha-nombre-depositante')?.focus();
-                    } else if (!banco) {
-                        isValid = false;
-                        showWarningNotification('El banco es requerido');
-                        document.getElementById('ficha-banco')?.focus();
-                    } else if (!monto || parseFloat(monto) <= 0) {
-                        isValid = false;
-                        showWarningNotification('El monto debe ser mayor a 0');
-                        document.getElementById('ficha-monto')?.focus();
-                    } else if (!gerente) {
-                        isValid = false;
-                        showWarningNotification('Selecciona un gerente válido');
-                        document.getElementById('ficha-gerente-id')?.focus();
-                    }
-                    break;
-                case 2:
-                    // Paso 2: Confirmación, no requiere validación adicional
-                    break;
-            }
-
-            return isValid;
-        }
-
-        function saveCurrentStepData() {
-            // En el paso 1 guardamos todos los datos del formulario
-            if (currentStep === 1) {
-                wizardData.fecha = document.getElementById('ficha-fecha')?.value || null;
-                wizardData.nombre_depositante = document.getElementById('ficha-nombre-depositante')?.value?.trim();
-                wizardData.banco = document.getElementById('ficha-banco')?.value?.trim();
-                wizardData.monto = document.getElementById('ficha-monto')?.value;
-                wizardData.gerente_id = document.getElementById('ficha-gerente-id')?.value;
-                wizardData.gerente_nombre = document.getElementById('ficha-gerente-id')?.selectedOptions[0]?.textContent;
-            }
-        }
-
-        function updateWizardDisplay() {
-            // Actualizar pasos visibles
-            wizardSteps.forEach(step => {
-                step.classList.remove('active');
-                if (parseInt(step.dataset.step) === currentStep) {
-                    step.classList.add('active');
-                }
-            });
-
-            // Actualizar navegación de pasos
-            stepNavigation.forEach(step => {
-                const stepNum = parseInt(step.dataset.step);
-                step.classList.remove('active', 'completed');
-
-                if (stepNum === currentStep) {
-                    step.classList.add('active');
-                } else if (stepNum < currentStep) {
-                    step.classList.add('completed');
-                }
-            });
-
-            // Actualizar barra de progreso
-            const progressPercentage = (currentStep / totalSteps) * 100;
-            if (progressFill) {
-                progressFill.style.width = `${progressPercentage}%`;
-            }
-
-            if (progressText) {
-                progressText.textContent = `Paso ${currentStep} de ${totalSteps}`;
-            }
-        }
-
-        function updateButtonStates() {
-            // Botón anterior
-            if (btnPrev) {
-                btnPrev.disabled = currentStep === 1;
-                btnPrev.style.display = currentStep === 1 ? 'none' : 'inline-block';
-            }
-
-            // Botones siguiente/guardar/nuevo
-            if (btnNext) {
-                btnNext.style.display = currentStep === 1 ? 'inline-block' : 'none';
-            }
-
-            if (btnSubmit) {
-                btnSubmit.style.display = currentStep === 2 ? 'inline-block' : 'none';
-            }
-
-            if (btnNew) {
-                btnNew.style.display = currentStep === 3 ? 'inline-block' : 'none';
-            }
-        }
-
-        function updateReviewSummary() {
-            // Actualizar resumen en el paso 2 (confirmación)
-            const reviewFecha = document.getElementById('review-fecha');
-            const reviewDepositante = document.getElementById('review-depositante');
-            const reviewBanco = document.getElementById('review-banco');
-            const reviewMonto = document.getElementById('review-monto');
-            const reviewGerente = document.getElementById('review-gerente');
-
-            if (reviewFecha) {
-                reviewFecha.textContent = wizardData.fecha ?
-                    new Date(wizardData.fecha).toLocaleDateString('es-MX') :
-                    'Fecha actual';
-            }
-
-            if (reviewDepositante) {
-                reviewDepositante.textContent = wizardData.nombre_depositante || '-';
-            }
-
-            if (reviewBanco) {
-                reviewBanco.textContent = wizardData.banco || '-';
-            }
-
-            if (reviewMonto) {
-                reviewMonto.textContent = wizardData.monto ?
-                    formatCurrency(wizardData.monto) : '-';
-            }
-
-            if (reviewGerente) {
-                reviewGerente.textContent = wizardData.gerente_nombre || '-';
-            }
-        }
-
-        function resetWizard() {
-            currentStep = 1;
-            wizardData = {};
-
-            // Limpiar formulario
-            if (form) {
-                form.reset();
-                const inputs = form.querySelectorAll('.ficha-input');
-                inputs.forEach(input => {
-                    clearFieldError({ target: input });
-                });
-            }
-
-            updateWizardDisplay();
-            updateButtonStates();
-
-            // Recargar datos después de registrar una ficha
-            setTimeout(() => {
-                loadSummaryAndDetails();
-            }, 500);
-        }
-
-        // ✅ FUNCIÓN PARA WIZARD (MODO DE 3 PASOS)
-        async function handleSubmitFichaWizard(event) {
-            event.preventDefault();
-
-            // Si no estamos en el paso 2, no hacer nada
-            if (currentStep !== 2) {
-                console.log('⚠️ No estamos en el paso 2, wizard requiere completar pasos previos');
-                return;
-            }
-
-            // Guardar datos del paso actual (aunque ya se guardaron en el paso 1)
-            saveCurrentStepData();
-
-            const submitButton = btnSubmit;
-            const originalText = submitButton.innerHTML;
-
-            // Mostrar estado de carga
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-
-            const payload = {
-                nombre_depositante: wizardData.nombre_depositante || '',
-                banco: wizardData.banco || '',
-                monto: wizardData.monto,
-                gerente_id: wizardData.gerente_id
+            card.replaceWith(listItem);
+        });
+    }
+
+    /**
+     * Ordenar bancos
+     */
+    function sortBancos(ascending) {
+        if (!elements.bancosContainer) return;
+
+        const cards = Array.from(elements.bancosContainer.querySelectorAll('.summary-card'));
+
+        cards.sort((a, b) => {
+            const aValue = parseInt(a.querySelector('.summary-card-stat-value').textContent);
+            const bValue = parseInt(b.querySelector('.summary-card-stat-value').textContent);
+
+            return ascending ? aValue - bValue : bValue - aValue;
+        });
+
+        elements.bancosContainer.innerHTML = '';
+        cards.forEach(card => elements.bancosContainer.appendChild(card));
+    }
+
+    /**
+     * Debounce function
+     */
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
             };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
 
-            if (wizardData.fecha) {
-                const fecha = new Date(wizardData.fecha);
-                if (!isNaN(fecha.getTime())) {
-                    payload.fecha = fecha.toISOString();
-                }
-            }
+    /**
+     * Ir a un paso específico
+     */
+    function goToStep(step) {
+        if (step < 1 || step > TOTAL_STEPS) return;
 
-            try {
-                const response = await fetch('/admin/fichas', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
+        currentStep = step;
+        updateWizardUI();
 
-                const result = await response.json();
-                if (response.ok && result.success) {
-                    // ✅ PASO 5: Notificación mejorada con detalles de la ficha guardada
-                    const fichaInfo = result.ficha;
-                    const montoFormateado = formatCurrency(fichaInfo?.monto || wizardData.monto);
-                    const mensaje = `¡Ficha registrada! ${montoFormateado} de ${wizardData.nombre_depositante}`;
-                    showSuccessNotification(mensaje);
-
-                    // ✅ PASO 3: Recargar datos inmediatamente después de guardar
-                    console.log('🔄 Recargando datos después de guardar ficha...');
-                    await loadSummaryAndDetails();
-
-                    // Ir al paso 3 (resultado)
-                    goToStep(3);
-                } else {
-                    throw new Error(result.message || 'Error al registrar la ficha');
-                }
-            } catch (error) {
-                console.error('Error al enviar formulario de ficha:', error);
-                showErrorNotification(`Error: ${error.message}`);
-            } finally {
-                // Restaurar botón
-                submitButton.disabled = false;
-                submitButton.innerHTML = originalText;
-            }
+        // Actualizar vistas previas según el paso
+        if (step === 2) {
+            // Mostrar vista previa del gerente y fecha
+            updatePreview();
+        } else if (step === 3) {
+            // Actualizar verificación paso 3
+            updateVerification();
+        } else if (step === 4) {
+            // Actualizar confirmación final paso 4
+            updateFinalVerification();
         }
+    }
 
-        // Función para mostrar información de debug
-        function updateDebugInfo(message) {
-            if (debugInfo && debugContainer) {
-                debugInfo.textContent = message;
-                debugContainer.style.display = 'block';
-
-                // Auto-ocultar después de 10 segundos
-                setTimeout(() => {
-                    if (debugContainer) {
-                        debugContainer.style.display = 'none';
-                    }
-                }, 10000);
-            }
-        }
-
-        // Función de fallback para cargar gerentes manualmente
-        function loadGerentesFallback() {
-            console.log('🔄 Activando modo fallback para gerentes');
-
-            if (!gerenteSelect) return;
-
-            gerenteSelect.innerHTML = `
-                <option value="">Selecciona un gerente</option>
-                <option value="5">Ana López (Gerente)</option>
-            `;
-
-            updateDebugInfo('Modo fallback activado');
-            showWarningNotification('Se cargó la lista de gerentes en modo fallback.');
-        }
-
-        // Función para verificar conectividad con el servidor
-        async function checkServerConnection() {
-            try {
-                const response = await fetch('/health', { method: 'HEAD' });
-                return response.ok;
-            } catch (error) {
-                console.warn('🌐 No se pudo verificar conexión con el servidor');
-                return false;
-            }
-        }
-
-        // Función para configurar navegación por teclado
-        function setupKeyboardNavigation() {
-            document.addEventListener('keydown', function(event) {
-                if (!document.querySelector('#fichas-calculator-section')) return;
-
-                switch(event.key) {
-                    case 'Enter':
-                        if (event.ctrlKey) {
-                            const nextBtn = document.getElementById('fichas-btn-next');
-                            const submitBtn = document.getElementById('fichas-btn-submit');
-
-                            if (nextBtn && nextBtn.style.display !== 'none' && !nextBtn.disabled) {
-                                nextBtn.click();
-                                event.preventDefault();
-                            } else if (submitBtn && submitBtn.style.display !== 'none' && !submitBtn.disabled) {
-                                submitBtn.click();
-                                event.preventDefault();
-                            }
-                        }
-                        break;
-                    case 'Escape':
-                        if (currentStep > 1) {
-                            const prevBtn = document.getElementById('fichas-btn-prev');
-                            if (prevBtn && !prevBtn.disabled) {
-                                prevBtn.click();
-                            }
-                        }
-                        break;
-                }
-            });
-        }
-
-        // Añadir estilos para las nuevas animaciones
-        if (!document.getElementById('wizard-animations')) {
-            const style = document.createElement('style');
-            style.id = 'wizard-animations';
-            style.textContent = `
-                .shake {
-                    animation: shake 0.5s ease-in-out;
-                }
-
-                @keyframes shake {
-                    0%, 100% { transform: translateX(0); }
-                    25% { transform: translateX(-5px); }
-                    75% { transform: translateX(5px); }
-                }
-
-                .btn.loading {
-                    position: relative;
-                    pointer-events: none;
-                }
-
-                .btn.success {
-                    background: linear-gradient(135deg, #10b981, #059669) !important;
-                    transform: scale(1.05);
-                }
-
-                .btn.error {
-                    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
-                    animation: shake 0.5s ease-in-out;
-                }
-
-                .fichas-wizard-step {
-                    transition: all 0.3s ease;
-                }
-
-                /* ✅ Estilos para loading state */
-                .loading-state {
-                    position: relative;
-                    pointer-events: none;
-                }
-
-                .loading-state::after {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: rgba(255, 255, 255, 0.7);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    z-index: 10;
-                }
-
-                .loading-state::before {
-                    content: '';
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    width: 40px;
-                    height: 40px;
-                    border: 3px solid #f3f3f3;
-                    border-top: 3px solid #3498db;
-                    border-radius: 50%;
-                    animation: spin 1s linear infinite;
-                    z-index: 11;
-                }
-
-                @keyframes spin {
-                    0% { transform: translate(-50%, -50%) rotate(0deg); }
-                    100% { transform: translate(-50%, -50%) rotate(360deg); }
-                }
-
-                /* Animación de entrada para filas de tabla */
-                @keyframes fadeInUp {
-                    from {
-                        opacity: 0;
-                        transform: translateY(-10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-
-                .success-pulse {
-                    animation: successPulse 0.6s ease;
-                }
-
-                @keyframes successPulse {
-                    0%, 100% {
-                        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-                    }
-                    50% {
-                        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
-                    }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-        // ✅ SISTEMA DE PESTAÑAS MODERNO
-        function initializeTabs() {
-            const tabs = document.querySelectorAll('.fichas-tab');
-            const tabPanes = document.querySelectorAll('.fichas-tab-pane');
-
-            if (tabs.length === 0) {
-                console.log('ℹ️ No se encontraron pestañas, omitiendo inicialización');
+    /**
+     * Manejar botón "Siguiente"
+     */
+    function handleNext() {
+        if (currentStep === 1) {
+            // Validar paso 1: Información básica
+            if (!validateStep1()) {
                 return;
             }
-
-            console.log('📑 Inicializando sistema de pestañas...');
-
-            tabs.forEach(tab => {
-                tab.addEventListener('click', function() {
-                    const targetTab = this.dataset.tab;
-
-                    // Remover active de todas las pestañas
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tabPanes.forEach(pane => pane.classList.remove('active'));
-
-                    // Activar pestaña seleccionada
-                    this.classList.add('active');
-                    const targetPane = document.getElementById(`tab-${targetTab}`);
-                    if (targetPane) {
-                        targetPane.classList.add('active');
-                    }
-
-                    console.log(`📑 Cambio a pestaña: ${targetTab}`);
-                });
-            });
-        }
-
-        // ✅ CREAR TARJETAS VISUALES PARA RESUMEN POR GERENTE
-        function createGerenteCards(data) {
-            const container = document.getElementById('gerentes-cards-container');
-            if (!container || !Array.isArray(data)) return;
-
-            container.innerHTML = '';
-
-            if (data.length === 0) {
-                container.innerHTML = '<p class="text-center text-muted">No hay datos de gerentes para esta semana</p>';
+            saveStepData();
+            goToStep(2);
+        } else if (currentStep === 2) {
+            // Validar paso 2: Gerente y fecha
+            if (!validateStep2()) {
                 return;
             }
+            saveStepData();
+            goToStep(3);
+        } else if (currentStep === 3) {
+            // Paso 3: Solo revisar, pasar al paso 4
+            saveStepData();
+            goToStep(4);
+        }
+    }
 
-            data.forEach((item, index) => {
-                const card = document.createElement('div');
-                card.className = 'summary-card';
-                card.style.animationDelay = `${index * 0.1}s`;
+    /**
+     * Validar campo en tiempo real
+     */
+    function validateFieldRealTime(field, type) {
+        if (!field) return;
 
-                card.innerHTML = `
-                    <div class="summary-card-header">
-                        <div class="summary-card-icon">
-                            <i class="fas fa-user-tie"></i>
-                        </div>
-                        <div class="summary-card-title">${escapeHTML(item.gerente_nombre)}</div>
-                    </div>
-                    <div class="summary-card-body">
-                        <div class="summary-card-stat">
-                            <span class="summary-card-stat-label">Fichas</span>
-                            <div class="summary-card-stat-value">${Number(item.total_fichas) || 0}</div>
-                        </div>
-                        <div class="summary-card-stat">
-                            <span class="summary-card-stat-label">Total</span>
-                            <div class="summary-card-stat-value">${formatCurrency(item.monto_total)}</div>
-                        </div>
-                    </div>
-                `;
+        let isValid = false;
+        const value = field.value?.trim();
 
-                container.appendChild(card);
-            });
+        switch (type) {
+            case 'monto':
+                isValid = value && parseFloat(value) > 0;
+                break;
+            case 'text':
+                isValid = value && value.length >= 2;
+                break;
+            case 'select':
+                isValid = value && value !== '';
+                break;
+            default:
+                isValid = value && value !== '';
         }
 
-        // ✅ CREAR TARJETAS VISUALES PARA RESUMEN POR BANCO
-        function createBancoCards(data) {
-            const container = document.getElementById('bancos-cards-container');
-            if (!container || !Array.isArray(data)) return;
+        // Remover clases anteriores
+        field.classList.remove('is-valid', 'is-invalid');
 
-            container.innerHTML = '';
-
-            if (data.length === 0) {
-                container.innerHTML = '<p class="text-center text-muted">No hay datos de bancos para esta semana</p>';
-                return;
+        // Solo agregar clases si el campo ha sido tocado
+        if (value || field === document.activeElement) {
+            if (isValid) {
+                field.classList.add('is-valid');
+            } else if (value !== '') {
+                field.classList.add('is-invalid');
             }
-
-            data.forEach((item, index) => {
-                const card = document.createElement('div');
-                card.className = 'summary-card';
-                card.style.animationDelay = `${index * 0.1}s`;
-                card.style.borderLeftColor = getRandomColor();
-
-                card.innerHTML = `
-                    <div class="summary-card-header">
-                        <div class="summary-card-icon" style="background: ${getRandomGradient()}">
-                            <i class="fas fa-university"></i>
-                        </div>
-                        <div class="summary-card-title">${escapeHTML(item.banco || 'Sin banco')}</div>
-                    </div>
-                    <div class="summary-card-body">
-                        <div class="summary-card-stat">
-                            <span class="summary-card-stat-label">Fichas</span>
-                            <div class="summary-card-stat-value">${Number(item.total_fichas) || 0}</div>
-                        </div>
-                        <div class="summary-card-stat">
-                            <span class="summary-card-stat-label">Total</span>
-                            <div class="summary-card-stat-value">${formatCurrency(item.monto_total)}</div>
-                        </div>
-                    </div>
-                `;
-
-                container.appendChild(card);
-            });
         }
 
-        // Función auxiliar para colores aleatorios
-        function getRandomColor() {
-            const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a'];
-            return colors[Math.floor(Math.random() * colors.length)];
+        return isValid;
+    }
+
+    /**
+     * Limpiar validaciones visuales
+     */
+    function clearFieldValidations() {
+        const fields = [
+            elements.inputMonto,
+            elements.inputDepositante,
+            elements.inputBanco,
+            elements.selectGerente
+        ];
+
+        fields.forEach(field => {
+            if (field) {
+                field.classList.remove('is-valid', 'is-invalid');
+            }
+        });
+    }
+
+    /**
+     * Validar paso 1 - Información Básica
+     */
+    function validateStep1() {
+        const monto = elements.inputMonto?.value;
+        const depositante = elements.inputDepositante?.value?.trim();
+        const banco = elements.inputBanco?.value?.trim();
+
+        if (!monto || parseFloat(monto) <= 0) {
+            showNotification('El monto debe ser mayor a 0', 'warning');
+            elements.inputMonto?.focus();
+            return false;
         }
 
-        function getRandomGradient() {
-            const gradients = [
-                'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-                'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-                'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-                'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-                'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
-            ];
-            return gradients[Math.floor(Math.random() * gradients.length)];
+        if (!depositante) {
+            showNotification('El nombre del depositante es requerido', 'warning');
+            elements.inputDepositante?.focus();
+            return false;
+        }
+
+        if (!banco) {
+            showNotification('El banco es requerido', 'warning');
+            elements.inputBanco?.focus();
+            return false;
         }
 
         return true;
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        if (initializeFichasCalculator()) {
-            return;
+    /**
+     * Validar paso 2 - Gerente y Fecha
+     */
+    function validateStep2() {
+        const gerente = elements.selectGerente?.value;
+
+        if (!gerente) {
+            showNotification('Selecciona un gerente responsable', 'warning');
+            elements.selectGerente?.focus();
+            return false;
         }
 
-        const observer = new MutationObserver(function(mutations, observerInstance) {
-            if (initializeFichasCalculator()) {
-                observerInstance.disconnect();
+        return true;
+    }
+
+    /**
+     * Guardar datos del paso actual
+     */
+    function saveStepData() {
+        wizardData = {
+            fecha: elements.inputFecha?.value || null,
+            monto: elements.inputMonto?.value,
+            nombre_depositante: elements.inputDepositante?.value?.trim(),
+            banco: elements.inputBanco?.value?.trim(),
+            gerente_id: elements.selectGerente?.value,
+            gerente_nombre: elements.selectGerente?.selectedOptions[0]?.textContent || ''
+        };
+    }
+
+    /**
+     * Actualizar vista previa
+     */
+    function updatePreview() {
+        const monto = elements.inputMonto?.value;
+        const depositante = elements.inputDepositante?.value?.trim();
+        const banco = elements.inputBanco?.value?.trim();
+        const gerente = elements.selectGerente?.selectedOptions[0]?.textContent;
+        const fecha = elements.inputFecha?.value;
+
+        // Paso 1: Previsualización básica
+        if (elements.previewMonto) {
+            elements.previewMonto.textContent = monto ? formatCurrency(monto) : '-';
+        }
+        if (elements.previewDepositante) {
+            elements.previewDepositante.textContent = depositante || '-';
+        }
+        if (elements.previewBanco) {
+            elements.previewBanco.textContent = banco || '-';
+        }
+
+        // Paso 2: Previsualización de gerente y fecha
+        if (elements.previewGerente) {
+            elements.previewGerente.textContent = gerente || '-';
+        }
+        if (elements.previewFecha) {
+            const fechaTexto = fecha ?
+                new Date(fecha + 'T00:00:00').toLocaleDateString('es-MX', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) :
+                'Fecha actual';
+            elements.previewFecha.textContent = fechaTexto;
+        }
+    }
+
+    /**
+     * Actualizar verificación paso 3
+     */
+    function updateVerification() {
+        if (elements.verifyFecha) {
+            const fecha = wizardData.fecha ?
+                new Date(wizardData.fecha + 'T00:00:00').toLocaleDateString('es-MX', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) :
+                'Fecha actual';
+            elements.verifyFecha.textContent = fecha;
+        }
+        if (elements.verifyMonto) {
+            elements.verifyMonto.textContent = formatCurrency(wizardData.monto);
+        }
+        if (elements.verifyDepositante) {
+            elements.verifyDepositante.textContent = wizardData.nombre_depositante;
+        }
+        if (elements.verifyBanco) {
+            elements.verifyBanco.textContent = wizardData.banco;
+        }
+        if (elements.verifyGerente) {
+            elements.verifyGerente.textContent = wizardData.gerente_nombre;
+        }
+    }
+
+    /**
+     * Actualizar verificación final paso 4
+     */
+    function updateFinalVerification() {
+        if (elements.verifyFechaFinal) {
+            const fecha = wizardData.fecha ?
+                new Date(wizardData.fecha + 'T00:00:00').toLocaleDateString('es-MX', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) :
+                'Fecha actual';
+            elements.verifyFechaFinal.textContent = fecha;
+        }
+        if (elements.verifyMontoFinal) {
+            elements.verifyMontoFinal.textContent = formatCurrency(wizardData.monto);
+        }
+        if (elements.verifyDepositanteFinal) {
+            elements.verifyDepositanteFinal.textContent = wizardData.nombre_depositante;
+        }
+        if (elements.verifyBancoFinal) {
+            elements.verifyBancoFinal.textContent = wizardData.banco;
+        }
+        if (elements.verifyGerenteFinal) {
+            elements.verifyGerenteFinal.textContent = wizardData.gerente_nombre;
+        }
+    }
+
+    /**
+     * Actualizar UI del wizard
+     */
+    function updateWizardUI() {
+        // Actualizar pasos activos
+        elements.wizardSteps.forEach((step, index) => {
+            if (index + 1 === currentStep) {
+                step.classList.add('active');
+            } else {
+                step.classList.remove('active');
             }
         });
 
-        observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+        // Actualizar indicadores de progreso
+        elements.steps.forEach((step, index) => {
+            step.classList.remove('active', 'completed');
+            const stepNum = index + 1;
+
+            if (stepNum === currentStep) {
+                step.classList.add('active');
+            } else if (stepNum < currentStep) {
+                step.classList.add('completed');
+            }
+        });
+
+        // Actualizar barra de progreso
+        const progress = (currentStep / TOTAL_STEPS) * 100;
+        if (elements.progressFill) {
+            elements.progressFill.style.width = `${progress}%`;
+        }
+
+        // Actualizar botones
+        updateButtons();
+    }
+
+    /**
+     * Actualizar estado de botones
+     */
+    function updateButtons() {
+        // Botón anterior
+        if (elements.btnPrev) {
+            if (currentStep === 1 || currentStep === 5) {
+                elements.btnPrev.style.display = 'none';
+            } else {
+                elements.btnPrev.style.display = 'flex';
+            }
+        }
+
+        // Botón siguiente
+        if (elements.btnNext) {
+            // Mostrar en pasos 1, 2 y 3
+            elements.btnNext.style.display = (currentStep >= 1 && currentStep <= 3) ? 'flex' : 'none';
+        }
+
+        // Botón submit (Guardar Ficha)
+        if (elements.btnSubmit) {
+            // Solo mostrar en paso 4 (confirmación final)
+            elements.btnSubmit.style.display = currentStep === 4 ? 'flex' : 'none';
+        }
+
+        // Botón cancelar
+        if (elements.btnCancel) {
+            // Mostrar en todos los pasos excepto el 5 (éxito)
+            elements.btnCancel.style.display = currentStep < 5 ? 'flex' : 'none';
+        }
+
+        // Botón nueva ficha
+        if (elements.btnNew) {
+            // Solo mostrar en paso 5 (éxito)
+            elements.btnNew.style.display = currentStep === 5 ? 'flex' : 'none';
+        }
+    }
+
+    /**
+     * Manejar submit del formulario
+     */
+    async function handleSubmit(e) {
+        console.log('🎯 handleSubmit llamado, paso actual:', currentStep);
+        e.preventDefault();
+
+        if (currentStep !== 4) {
+            console.warn('⚠️ Submit cancelado: no estás en el paso 4');
+            return;
+        }
+
+        console.log('✅ Procesando guardado de ficha...');
+        const btn = elements.btnSubmit;
+        const originalText = btn.innerHTML;
+
+        try {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+            const payload = {
+                nombre_depositante: wizardData.nombre_depositante,
+                banco: wizardData.banco,
+                monto: wizardData.monto,
+                gerente_id: wizardData.gerente_id
+            };
+
+            if (wizardData.fecha) {
+                const fecha = new Date(wizardData.fecha + 'T00:00:00');
+                if (!isNaN(fecha.getTime())) {
+                    payload.fecha = fecha.toISOString();
+                }
+            }
+
+            console.log('📤 Enviando payload:', payload);
+
+            const response = await fetch('/admin/fichas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            console.log('📥 Respuesta del servidor:', response.status, response.statusText);
+            const result = await response.json();
+            console.log('📊 Resultado:', result);
+
+            if (response.ok && result.success) {
+                showNotification('¡Ficha registrada exitosamente!', 'success');
+                goToStep(5);
+                await loadSummaryAndDetails();
+            } else {
+                throw new Error(result.message || 'Error al registrar');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showNotification('Error al guardar: ' + error.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }
+    }
+
+    /**
+     * Resetear wizard
+     */
+    function resetWizard() {
+        currentStep = 1;
+        wizardData = {};
+
+        if (elements.form) {
+            elements.form.reset();
+        }
+
+        clearFieldValidations();
+        updatePreview();
+        updateWizardUI();
+    }
+
+    /**
+     * Cargar datos iniciales
+     */
+    async function loadInitialData() {
+        await Promise.all([
+            loadGerentes(),
+            loadSummaryAndDetails()
+        ]);
+    }
+
+    /**
+     * Cargar gerentes
+     */
+    async function loadGerentes() {
+        if (!elements.selectGerente) return;
+
+        // Si ya hay gerentes precargados, no hacer nada
+        if (elements.selectGerente.options.length > 1) {
+            console.log('✅ Gerentes pre-cargados');
+            return;
+        }
+
+        try {
+            const response = await fetch('/admin/fichas/gerentes');
+            const data = await response.json();
+
+            if (data.success && Array.isArray(data.gerentes)) {
+                elements.selectGerente.innerHTML = '<option value="">Selecciona un gerente</option>';
+
+                data.gerentes.forEach(g => {
+                    const option = document.createElement('option');
+                    option.value = g.id;
+                    option.textContent = `${g.nombre}${g.email ? ` (${g.email})` : ''}`;
+                    elements.selectGerente.appendChild(option);
+                });
+
+                console.log(`✅ ${data.gerentes.length} gerentes cargados`);
+            }
+        } catch (error) {
+            console.error('Error cargando gerentes:', error);
+        }
+    }
+
+    /**
+     * Cargar resumen y detalles
+     */
+    async function loadSummaryAndDetails() {
+        if (isLoading) return;
+
+        isLoading = true;
+
+        try {
+            const url = currentWeekOffset > 0 ?
+                `/admin/fichas/summary?week_offset=${currentWeekOffset}` :
+                '/admin/fichas/summary';
+
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.success) {
+                updateWeekBanner(data.week_range);
+                updateTotals(data.totals);
+                renderGerenteCards(data.summary);
+                renderBancoCards(data.bank_breakdown);
+                renderDetailsTable(data.details);
+            }
+        } catch (error) {
+            console.error('Error cargando datos:', error);
+        } finally {
+            isLoading = false;
+            updateWeekNavigation();
+        }
+    }
+
+    /**
+     * Actualizar banner de semana
+     */
+    function updateWeekBanner(weekRange) {
+        if (!elements.weekRange) return;
+
+        const label = weekRange?.label ||
+            (weekRange?.start && weekRange?.end ?
+                `${weekRange.start} al ${weekRange.end}` :
+                'Sin datos');
+
+        elements.weekRange.textContent = label;
+    }
+
+    /**
+     * Actualizar totales
+     */
+    function updateTotals(totals) {
+        const count = totals?.total_fichas || 0;
+        const amount = totals?.monto_total || 0;
+
+        if (elements.totalCount) {
+            animateValue(elements.totalCount, count, false);
+        }
+        if (elements.totalAmount) {
+            animateValue(elements.totalAmount, amount, true);
+        }
+    }
+
+    /**
+     * Animar valor
+     */
+    function animateValue(element, finalValue, isCurrency) {
+        const duration = 800;
+        const startValue = 0;
+        const startTime = Date.now();
+
+        function update() {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easeProgress = 1 - Math.pow(1 - progress, 3);
+            const currentValue = Math.round(startValue + (finalValue - startValue) * easeProgress);
+
+            element.textContent = isCurrency ?
+                formatCurrency(currentValue) :
+                currentValue.toLocaleString();
+
+            if (progress < 1) {
+                requestAnimationFrame(update);
+            }
+        }
+
+        requestAnimationFrame(update);
+    }
+
+    /**
+     * Renderizar tarjetas de gerentes
+     */
+    function renderGerenteCards(data) {
+        if (!elements.gerentesContainer) return;
+
+        elements.gerentesContainer.innerHTML = '';
+
+        if (!Array.isArray(data) || data.length === 0) {
+            elements.gerentesContainer.innerHTML = '<p class="text-center text-muted">No hay datos</p>';
+            return;
+        }
+
+        data.forEach(item => {
+            const card = createSummaryCard(item, 'fa-user-tie');
+            elements.gerentesContainer.appendChild(card);
+        });
+    }
+
+    /**
+     * Renderizar tarjetas de bancos
+     */
+    function renderBancoCards(data) {
+        if (!elements.bancosContainer) return;
+
+        elements.bancosContainer.innerHTML = '';
+
+        if (!Array.isArray(data) || data.length === 0) {
+            elements.bancosContainer.innerHTML = '<p class="text-center text-muted">No hay datos</p>';
+            return;
+        }
+
+        data.forEach(item => {
+            const card = createSummaryCard({
+                gerente_nombre: item.banco || 'Sin banco',
+                total_fichas: item.total_fichas,
+                monto_total: item.monto_total
+            }, 'fa-university');
+            elements.bancosContainer.appendChild(card);
+        });
+    }
+
+    /**
+     * Crear tarjeta de resumen
+     */
+    function createSummaryCard(data, icon) {
+        const card = document.createElement('div');
+        card.className = 'summary-card';
+
+        card.innerHTML = `
+            <div class="summary-card-header">
+                <div class="summary-card-icon">
+                    <i class="fas ${icon}"></i>
+                </div>
+                <div class="summary-card-title">${escapeHTML(data.gerente_nombre)}</div>
+            </div>
+            <div class="summary-card-body">
+                <div class="summary-card-stat">
+                    <span class="summary-card-stat-label">Fichas</span>
+                    <div class="summary-card-stat-value">${Number(data.total_fichas) || 0}</div>
+                </div>
+                <div class="summary-card-stat">
+                    <span class="summary-card-stat-label">Total</span>
+                    <div class="summary-card-stat-value">${formatCurrency(data.monto_total)}</div>
+                </div>
+            </div>
+        `;
+
+        return card;
+    }
+
+    /**
+     * Renderizar tabla de detalles
+     */
+    function renderDetailsTable(data) {
+        if (!elements.detailsTable) return;
+
+        elements.detailsTable.innerHTML = '';
+
+        if (!Array.isArray(data) || data.length === 0) {
+            elements.detailsTable.innerHTML = '<tr><td colspan="5" style="text-align: center;">No hay fichas registradas</td></tr>';
+            updateResultsCount(0);
+            return;
+        }
+
+        data.forEach(item => {
+            const tr = document.createElement('tr');
+            const fecha = item.fecha ? new Date(item.fecha).toLocaleString('es-MX') : '-';
+
+            tr.innerHTML = `
+                <td>${fecha}</td>
+                <td>${escapeHTML(item.nombre_depositante)}</td>
+                <td>${escapeHTML(item.banco)}</td>
+                <td>${formatCurrency(item.monto)}</td>
+                <td>${escapeHTML(item.gerente_nombre)}</td>
+            `;
+
+            elements.detailsTable.appendChild(tr);
+        });
+
+        updateResultsCount(data.length);
+    }
+
+    /**
+     * Actualizar contador de resultados
+     */
+    function updateResultsCount(count) {
+        const resultsCount = document.getElementById('results-count');
+        if (resultsCount) {
+            resultsCount.textContent = `${count} ${count === 1 ? 'ficha' : 'fichas'}`;
+        }
+    }
+
+    /**
+     * Actualizar navegación semanal
+     */
+    function updateWeekNavigation() {
+        if (elements.weekNextBtn) {
+            elements.weekNextBtn.disabled = currentWeekOffset <= 0;
+        }
+    }
+
+    /**
+     * Formatear moneda
+     */
+    function formatCurrency(value) {
+        const num = Number(value);
+        if (isNaN(num)) return '$0.00';
+        return num.toLocaleString('es-MX', {
+            style: 'currency',
+            currency: 'MXN'
+        });
+    }
+
+    /**
+     * Escapar HTML
+     */
+    function escapeHTML(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    /**
+     * Manejar exportación de fichas
+     */
+    async function handleExport() {
+        const btn = elements.exportBtn;
+        if (!btn) return;
+
+        const originalHTML = btn.innerHTML;
+        const originalClass = btn.className;
+
+        try {
+            // Cambiar estado del botón
+            btn.disabled = true;
+            btn.classList.add('loading');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exportando...';
+
+            // Mostrar notificación de inicio
+            showNotification('Generando archivo Excel...', 'info');
+
+            // Crear un iframe oculto para la descarga
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            document.body.appendChild(iframe);
+
+            // Construir URL con parámetros
+            const url = currentWeekOffset > 0 ?
+                `/admin/fichas/export?week_offset=${currentWeekOffset}` :
+                '/admin/fichas/export';
+
+            // Iniciar descarga
+            iframe.src = url;
+
+            // Esperar un tiempo razonable para la descarga
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Limpiar iframe
+            setTimeout(() => {
+                document.body.removeChild(iframe);
+            }, 5000);
+
+            // Notificación de éxito
+            showNotification('¡Archivo exportado exitosamente!', 'success');
+
+        } catch (error) {
+            console.error('Error al exportar:', error);
+            showNotification('Error al exportar el archivo', 'error');
+        } finally {
+            // Restaurar botón
+            btn.disabled = false;
+            btn.classList.remove('loading');
+            btn.className = originalClass;
+            btn.innerHTML = originalHTML;
+        }
+    }
+
+    /**
+     * Mostrar notificación
+     */
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'times-circle'}"></i>
+                <span>${message}</span>
+                <button onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        // Agregar estilos si no existen
+        if (!document.getElementById('notification-styles')) {
+            const styles = document.createElement('style');
+            styles.id = 'notification-styles';
+            styles.textContent = `
+                .notification {
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 99999;
+                    min-width: 300px;
+                    padding: 1rem 1.5rem;
+                    border-radius: 8px;
+                    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+                    animation: slideIn 0.3s ease-out;
+                }
+                .notification-success { background: linear-gradient(135deg, #10b981, #059669); color: white; }
+                .notification-warning { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+                .notification-error { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+                .notification-content { display: flex; align-items: center; gap: 0.75rem; }
+                .notification button { background: none; border: none; color: white; cursor: pointer; }
+                @keyframes slideIn {
+                    from { transform: translateX(400px); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(styles);
+        }
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.animation = 'slideIn 0.3s ease-out reverse';
+            setTimeout(() => notification.remove(), 300);
+        }, 5000);
+    }
+
+    // Inicializar cuando el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+
+})();
+
+// ========================================================================
+// FORMULARIO PRINCIPAL EN INDEX.HTML (sin modal)
+// ========================================================================
+(function() {
+    'use strict';
+
+    const formMain = document.getElementById('form-add-ficha-main');
+    const btnSubmitMain = document.getElementById('btn-submit-ficha-main');
+
+    if (!formMain) {
+        console.log('⚠️ Formulario principal de fichas no encontrado');
+        return;
+    }
+
+    console.log('✅ Inicializando formulario principal de fichas');
+
+    // Event listener para el submit del formulario
+    formMain.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        console.log('🔘 Formulario principal de fichas enviado');
+
+        // Obtener datos del formulario
+        const formData = new FormData(formMain);
+        const monto = formData.get('monto');
+        const nombre_depositante = formData.get('nombre_depositante')?.trim();
+        const banco = formData.get('banco')?.trim();
+        const gerente_id = formData.get('gerente_id');
+        const fecha = formData.get('fecha');
+
+        // Validaciones
+        if (!monto || parseFloat(monto) <= 0) {
+            showNotificationMain('El monto debe ser mayor a 0', 'warning');
+            return;
+        }
+
+        if (!nombre_depositante || nombre_depositante.length < 2) {
+            showNotificationMain('El nombre del depositante es requerido', 'warning');
+            return;
+        }
+
+        if (!banco || banco.length < 2) {
+            showNotificationMain('El banco es requerido', 'warning');
+            return;
+        }
+
+        if (!gerente_id) {
+            showNotificationMain('Selecciona un gerente responsable', 'warning');
+            return;
+        }
+
+        // Preparar payload
+        const payload = {
+            nombre_depositante,
+            banco,
+            monto: parseFloat(monto),
+            gerente_id: parseInt(gerente_id)
+        };
+
+        // Agregar fecha si fue proporcionada
+        if (fecha) {
+            try {
+                const fechaObj = new Date(fecha);
+                if (!isNaN(fechaObj.getTime())) {
+                    payload.fecha = fechaObj.toISOString();
+                }
+            } catch (error) {
+                console.warn('Error al parsear fecha:', error);
+            }
+        }
+
+        console.log('📤 Enviando payload desde formulario principal:', payload);
+
+        // Deshabilitar botón durante el envío
+        const originalText = btnSubmitMain.innerHTML;
+        btnSubmitMain.disabled = true;
+        btnSubmitMain.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+
+        try {
+            const response = await fetch('/admin/fichas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            console.log('📥 Respuesta del servidor:', response.status, response.statusText);
+            const result = await response.json();
+            console.log('📊 Resultado:', result);
+
+            if (response.ok && result.success) {
+                showNotificationMain('¡Ficha registrada exitosamente!', 'success');
+                formMain.reset();
+
+                // Recargar datos si hay una función disponible
+                if (typeof window.loadSummaryAndDetails === 'function') {
+                    setTimeout(() => window.loadSummaryAndDetails(), 500);
+                } else {
+                    // Recargar la página después de 1.5 segundos
+                    setTimeout(() => location.reload(), 1500);
+                }
+            } else {
+                throw new Error(result.message || 'Error al registrar la ficha');
+            }
+        } catch (error) {
+            console.error('❌ Error al guardar ficha:', error);
+            showNotificationMain('Error: ' + error.message, 'error');
+        } finally {
+            btnSubmitMain.disabled = false;
+            btnSubmitMain.innerHTML = originalText;
+        }
     });
+
+    // Función auxiliar para mostrar notificaciones
+    function showNotificationMain(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 99999;
+            min-width: 300px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease-out;
+        `;
+
+        const bgColors = {
+            success: 'linear-gradient(135deg, #10b981, #059669)',
+            warning: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            error: 'linear-gradient(135deg, #ef4444, #dc2626)',
+            info: 'linear-gradient(135deg, #3b82f6, #2563eb)'
+        };
+
+        notification.style.background = bgColors[type] || bgColors.info;
+        notification.style.color = 'white';
+
+        const icon = type === 'success' ? 'check-circle' :
+                    type === 'warning' ? 'exclamation-triangle' :
+                    type === 'error' ? 'times-circle' : 'info-circle';
+
+        notification.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fas fa-${icon}"></i>
+                <span>${message}</span>
+                <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer; margin-left: auto;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.animation = 'slideIn 0.3s ease-out reverse';
+            setTimeout(() => notification.remove(), 300);
+        }, 5000);
+    }
+
+    console.log('✅ Formulario principal de fichas inicializado');
 })();

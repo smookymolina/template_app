@@ -18,132 +18,304 @@
     </div>
 
     {% if current_user.is_admin() %}
-    <div id="fichas-calculator-section" class="mt-5">
-        <div class="section-header fichas-header">
-            <div class="fichas-title-section">
-                <h2><i class="fas fa-file-invoice-dollar"></i> Registro de Fichas</h2>
-                <p>Registra y controla las fichas de depósito de los gerentes en un proceso guiado y eficiente.</p>
+    <!-- ========== SECCIÓN DE FICHAS REDISEÑADA DESDE CERO ========== -->
+    <div id="fichas-calculator-section" class="mt-5" data-admin-only>
+
+        <!-- 📊 Dashboard Principal -->
+        <div class="fichas-dashboard">
+            <div class="dashboard-header">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                    </div>
+                    <div class="header-text">
+                        <h2>Control de Fichas Semanal</h2>
+                        <p>Período: <strong>Jueves a Viernes</strong> (9 días) • Registra y visualiza depósitos</p>
+                    </div>
+                </div>
+                <button id="open-fichas-modal" class="btn-add-ficha">
+                    <i class="fas fa-plus-circle"></i> Nueva Ficha
+                </button>
             </div>
 
-            <!-- Panel de navegación semanal y totales -->
-            <div class="fichas-controls-panel">
-                <div class="week-navigation">
-                    <button id="fichas-week-prev" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-chevron-left"></i> Semana Anterior
+            <!-- Navegación Semanal y Métricas -->
+            <div class="dashboard-controls">
+                <div class="week-selector">
+                    <button id="fichas-week-prev" class="btn-week" title="Semana anterior">
+                        <i class="fas fa-chevron-left"></i>
                     </button>
-                    <span class="week-indicator">
-                        Semana: <strong id="fichas-week-range">Cargando...</strong>
-                    </span>
-                    <button id="fichas-week-next" class="btn btn-outline-primary btn-sm">
-                        Semana Siguiente <i class="fas fa-chevron-right"></i>
+                    <div class="week-display">
+                        <span class="week-label">Semana Actual</span>
+                        <strong id="fichas-week-range" class="week-range">Cargando...</strong>
+                    </div>
+                    <button id="fichas-week-next" class="btn-week" title="Semana siguiente" disabled>
+                        <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
 
-                <div class="totals-display">
-                    <div class="total-card">
-                        <div class="total-value" id="fichas-total-count">0</div>
-                        <div class="total-label">Total Fichas</div>
+                <div class="metrics-cards">
+                    <div class="metric-card">
+                        <div class="metric-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="metric-data">
+                            <span class="metric-value" id="fichas-total-count">0</span>
+                            <span class="metric-label">Fichas</span>
+                        </div>
                     </div>
-                    <div class="total-card">
-                        <div class="total-value" id="fichas-total-amount">$0.00</div>
-                        <div class="total-label">Monto Total</div>
+                    <div class="metric-card">
+                        <div class="metric-icon" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="metric-data">
+                            <span class="metric-value" id="fichas-total-amount">$0</span>
+                            <span class="metric-label">Monto Total</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección de Resúmenes -->
+            <div class="dashboard-content">
+                <div class="content-grid">
+                    <!-- Resumen por Gerente -->
+                    <div class="content-card" id="gerentes-section">
+                        <div class="card-header-custom">
+                            <h3><i class="fas fa-user-tie"></i> Por Gerente</h3>
+                            <div class="header-actions">
+                                <button id="btn-refresh-gerentes" class="btn-action" title="Actualizar datos">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                <button id="btn-expand-gerentes" class="btn-action" title="Expandir todo">
+                                    <i class="fas fa-expand-alt"></i>
+                                </button>
+                                <button id="btn-export-fichas" class="btn-action btn-export">
+                                    <i class="fas fa-download"></i> Exportar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body-custom">
+                            <div class="section-toolbar">
+                                <div class="search-box">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="search-gerentes" placeholder="Buscar gerente..." class="search-input">
+                                </div>
+                                <div class="view-toggle">
+                                    <button class="btn-toggle active" data-view="cards" title="Vista de tarjetas">
+                                        <i class="fas fa-th"></i>
+                                    </button>
+                                    <button class="btn-toggle" data-view="list" title="Vista de lista">
+                                        <i class="fas fa-list"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="gerentes-cards-container" class="summary-grid"></div>
+                        </div>
+                    </div>
+
+                    <!-- Resumen por Banco -->
+                    <div class="content-card" id="bancos-section">
+                        <div class="card-header-custom">
+                            <h3><i class="fas fa-university"></i> Por Banco</h3>
+                            <div class="header-actions">
+                                <button id="btn-refresh-bancos" class="btn-action" title="Actualizar datos">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                                <button id="btn-sort-bancos" class="btn-action" title="Ordenar">
+                                    <i class="fas fa-sort-amount-down"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body-custom">
+                            <div class="section-toolbar">
+                                <div class="search-box">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="search-bancos" placeholder="Buscar banco..." class="search-input">
+                                </div>
+                            </div>
+                            <div id="bancos-cards-container" class="summary-grid"></div>
+                        </div>
+                    </div>
+
+                    <!-- Detalle de Fichas -->
+                    <div class="content-card full-width" id="details-section">
+                        <div class="card-header-custom">
+                            <h3><i class="fas fa-list"></i> Detalle de la Semana</h3>
+                            <div class="header-actions">
+                                <button id="btn-filter-details" class="btn-action" title="Filtrar">
+                                    <i class="fas fa-filter"></i>
+                                </button>
+                                <button id="btn-print-details" class="btn-action" title="Imprimir">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                                <button id="btn-download-pdf" class="btn-action" title="Descargar PDF">
+                                    <i class="fas fa-file-pdf"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body-custom">
+                            <div class="section-toolbar">
+                                <div class="search-box">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="search-details" placeholder="Buscar en detalles..." class="search-input">
+                                </div>
+                                <div class="results-info">
+                                    <span id="results-count">0 fichas</span>
+                                </div>
+                            </div>
+                            <div class="table-container">
+                                <table class="fichas-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="sortable" data-column="fecha">
+                                                Fecha <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th class="sortable" data-column="depositante">
+                                                Depositante <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th class="sortable" data-column="banco">
+                                                Banco <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th class="sortable" data-column="monto">
+                                                Monto <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th class="sortable" data-column="gerente">
+                                                Gerente <i class="fas fa-sort"></i>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-fichas-details">
+                                        <!-- Dinámico -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="row">
-            <!-- Columna para proceso simplificado -->
-            <div class="col-lg-5">
-                <div class="card fichas-form-card">
-                    <div class="card-header fichas-wizard-header">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-plus-circle"></i> Registrar Nueva Ficha
-                        </h5>
-                        <p class="wizard-subtitle">Proceso simplificado en 3 pasos</p>
-
-                        <!-- Indicador de progreso simplificado -->
-                        <div class="fichas-progress-container">
-                            <div class="fichas-progress-bar">
-                                <div class="fichas-progress-fill" id="fichas-progress-fill"></div>
-                            </div>
-                            <span class="fichas-progress-text" id="fichas-progress-text">Paso 1 de 3</span>
+        <!-- ========== MODAL DE REGISTRO (NUEVO DISEÑO) ========== -->
+        <div id="fichas-modal" class="fichas-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" style="display: none;">
+            <div class="modal-overlay" id="modal-overlay"></div>
+            <div class="modal-container">
+                <!-- Header del Modal -->
+                <div class="modal-header">
+                    <div class="modal-header-content">
+                        <div class="modal-icon">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <div class="modal-title-section">
+                            <h2 id="modal-title">Registrar Nueva Ficha</h2>
+                            <p>Completa el formulario en 3 pasos • Semana actual: Jueves a Viernes</p>
                         </div>
                     </div>
+                    <button class="modal-close" id="close-fichas-modal" aria-label="Cerrar modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
 
-                    <div class="card-body">
-                        <!-- Navegación simplificada por pasos -->
-                        <div class="fichas-steps-nav">
-                            <div class="fichas-step" data-step="1">
-                                <div class="fichas-step-number">1</div>
-                                <div class="fichas-step-title">Información</div>
+                <!-- Indicador de Progreso - 5 PASOS -->
+                <div class="modal-progress">
+                    <div class="progress-steps">
+                        <div class="step active" data-step="1">
+                            <div class="step-number">1</div>
+                            <span class="step-label">Básico</span>
+                        </div>
+                        <div class="step-line"></div>
+                        <div class="step" data-step="2">
+                            <div class="step-number">2</div>
+                            <span class="step-label">Gerente</span>
+                        </div>
+                        <div class="step-line"></div>
+                        <div class="step" data-step="3">
+                            <div class="step-number">3</div>
+                            <span class="step-label">Revisar</span>
+                        </div>
+                        <div class="step-line"></div>
+                        <div class="step" data-step="4">
+                            <div class="step-number">4</div>
+                            <span class="step-label">Guardar</span>
+                        </div>
+                        <div class="step-line"></div>
+                        <div class="step" data-step="5">
+                            <div class="step-number">5</div>
+                            <span class="step-label">Éxito</span>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="modal-progress-fill" style="width: 20%;"></div>
+                    </div>
+                </div>
+
+                <!-- Body del Modal -->
+                <div class="modal-body">
+                    <form id="form-add-ficha">
+                        <!-- PASO 1: Información Básica -->
+                        <div class="wizard-step active" data-step="1">
+                            <div class="step-title">
+                                <i class="fas fa-coins"></i> Información Básica del Depósito
                             </div>
-                            <div class="fichas-step" data-step="2">
-                                <div class="fichas-step-number">2</div>
-                                <div class="fichas-step-title">Verificar</div>
+
+                            <div class="form-grid">
+                                <div class="form-field">
+                                    <label for="ficha-monto">
+                                        <i class="fas fa-dollar-sign"></i> Monto (MXN) *
+                                    </label>
+                                    <input type="number" class="input-field" id="ficha-monto" step="0.01" min="0" required placeholder="0.00">
+                                    <small>Cantidad en pesos mexicanos</small>
+                                </div>
+
+                                <div class="form-field">
+                                    <label for="ficha-nombre-depositante">
+                                        <i class="fas fa-user"></i> Nombre del Depositante *
+                                    </label>
+                                    <input type="text" class="input-field" id="ficha-nombre-depositante" required placeholder="Ej: Juan Pérez">
+                                </div>
+
+                                <div class="form-field full-width">
+                                    <label for="ficha-banco">
+                                        <i class="fas fa-university"></i> Banco *
+                                    </label>
+                                    <input type="text" class="input-field" id="ficha-banco" required placeholder="Ej: BBVA, Santander, Banorte">
+                                </div>
                             </div>
-                            <div class="fichas-step" data-step="3">
-                                <div class="fichas-step-number">3</div>
-                                <div class="fichas-step-title">Finalizado</div>
+
+                            <!-- Vista Previa Rápida -->
+                            <div class="quick-preview">
+                                <div class="preview-title">Vista Previa Rápida</div>
+                                <div class="preview-grid">
+                                    <div class="preview-item">
+                                        <span class="preview-label">Monto:</span>
+                                        <span class="preview-value" id="preview-monto">-</span>
+                                    </div>
+                                    <div class="preview-item">
+                                        <span class="preview-label">Depositante:</span>
+                                        <span class="preview-value" id="preview-depositante">-</span>
+                                    </div>
+                                    <div class="preview-item">
+                                        <span class="preview-label">Banco:</span>
+                                        <span class="preview-value" id="preview-banco">-</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <form id="form-add-ficha">
-                            <!-- Paso 1: Datos de la ficha -->
-                            <div class="fichas-wizard-step active" data-step="1">
-                                <div class="fichas-step-header">
-                                    <h6><i class="fas fa-edit"></i> Datos de la Ficha</h6>
-                                    <p class="text-muted">Completa toda la información necesaria</p>
-                                </div>
+                        <!-- PASO 2: Selección de Gerente y Fecha -->
+                        <div class="wizard-step" data-step="2">
+                            <div class="step-title">
+                                <i class="fas fa-user-tie"></i> Asignación y Fecha
+                            </div>
 
-                                <!-- Fecha -->
-                                <div class="form-row">
-                                    <div class="form-group col-md-6">
-                                        <label for="ficha-fecha">
-                                            <i class="fas fa-calendar"></i> Fecha
-                                        </label>
-                                        <input type="date" class="form-control ficha-input" id="ficha-fecha">
-                                        <small class="form-text text-muted">Deja vacío para usar fecha actual</small>
-                                    </div>
-                                    <div class="form-group col-md-6">
-                                        <label for="ficha-monto">
-                                            <i class="fas fa-dollar-sign"></i> Monto (MXN)
-                                        </label>
-                                        <input type="number" class="form-control ficha-input" id="ficha-monto" step="0.01" min="0" required>
-                                        <small class="form-text text-muted">Cantidad en pesos</small>
-                                    </div>
-                                </div>
-
-                                <!-- Depositante y Banco -->
-                                <div class="form-row">
-                                    <div class="form-group col-md-6">
-                                        <label for="ficha-nombre-depositante">
-                                            <i class="fas fa-user"></i> Depositante
-                                        </label>
-                                        <input type="text" class="form-control ficha-input" id="ficha-nombre-depositante" required>
-                                        <small class="form-text text-muted">Nombre completo</small>
-                                    </div>
-                                    <div class="form-group col-md-6">
-                                        <label for="ficha-banco">
-                                            <i class="fas fa-university"></i> Banco
-                                        </label>
-                                        <input type="text" class="form-control ficha-input" id="ficha-banco" required>
-                                        <small class="form-text text-muted">Institución bancaria</small>
-                                    </div>
-                                </div>
-
-                                <!-- Gerente -->
-                                <div class="form-group">
+                            <div class="form-grid">
+                                <div class="form-field full-width">
                                     <label for="ficha-gerente-id">
-                                        <i class="fas fa-user-tie"></i> Gerente Responsable
-                                        <button type="button" class="btn btn-sm btn-outline-secondary ml-2" id="reload-gerentes-btn" title="Recargar gerentes">
-                                            <i class="fas fa-sync"></i>
+                                        <i class="fas fa-user-tie"></i> Gerente Responsable *
+                                        <button type="button" class="btn-reload" id="reload-gerentes-btn" title="Recargar lista">
+                                            <i class="fas fa-sync-alt"></i>
                                         </button>
-                                        <div id="gerente-loading-spinner" class="spinner-border spinner-border-sm text-primary ml-2" role="status" style="display: none;">
-                                            <span class="sr-only">Cargando...</span>
-                                        </div>
                                     </label>
-                                    <select class="form-control ficha-input" id="ficha-gerente-id" required>
+                                    <select class="input-field" id="ficha-gerente-id" required>
                                         <option value="">Selecciona un gerente</option>
                                         {% if current_user.is_admin() %}
                                             {% for gerente in gerentes_list %}
@@ -151,169 +323,178 @@
                                             {% endfor %}
                                         {% endif %}
                                     </select>
-                                    <small class="form-text text-muted">Selecciona el gerente asignado</small>
-                                    <div class="gerentes-debug" id="gerentes-debug" style="display: none;">
-                                        <small class="text-info">Debug: <span id="debug-info"></span></small>
-                                    </div>
+                                    <small>Gerente a cargo de este depósito</small>
                                 </div>
 
-                                <!-- Quick Review -->
-                                <div class="fichas-quick-review">
-                                    <div class="quick-review-header">Vista Previa</div>
-                                    <div id="quick-review-content" class="quick-review-content">
-                                        <div class="review-item"><span class="review-label">Monto:</span><span class="review-value" id="quick-review-monto">-</span></div>
-                                        <div class="review-item"><span class="review-label">Depositante:</span><span class="review-value" id="quick-review-depositante">-</span></div>
-                                        <div class="review-item"><span class="review-label">Gerente:</span><span class="review-value" id="quick-review-gerente">-</span></div>
-                                    </div>
+                                <div class="form-field full-width">
+                                    <label for="ficha-fecha">
+                                        <i class="fas fa-calendar"></i> Fecha del Depósito
+                                    </label>
+                                    <input type="date" class="input-field" id="ficha-fecha">
+                                    <small>Opcional: deja vacío para usar la fecha actual</small>
                                 </div>
                             </div>
 
-                            <!-- Paso 2: Confirmación -->
-                            <div class="fichas-wizard-step" data-step="2">
-                                <div class="fichas-step-header">
-                                    <h6><i class="fas fa-check-circle"></i> Confirmar Datos</h6>
-                                    <p class="text-muted">Revisa la información antes de guardar</p>
-                                </div>
-
-                                <div class="fichas-summary-review">
-                                    <div class="review-card">
-                                        <div class="review-header">
-                                            <i class="fas fa-receipt"></i>
-                                            <span>Resumen de la Ficha</span>
-                                        </div>
-                                        <div class="review-content">
-                                            <div class="review-item">
-                                                <span class="review-label">Fecha:</span>
-                                                <span class="review-value" id="review-fecha">-</span>
-                                            </div>
-                                            <div class="review-item">
-                                                <span class="review-label">Monto:</span>
-                                                <span class="review-value highlight" id="review-monto">-</span>
-                                            </div>
-                                            <div class="review-item">
-                                                <span class="review-label">Depositante:</span>
-                                                <span class="review-value" id="review-depositante">-</span>
-                                            </div>
-                                            <div class="review-item">
-                                                <span class="review-label">Banco:</span>
-                                                <span class="review-value" id="review-banco">-</span>
-                                            </div>
-                                            <div class="review-item">
-                                                <span class="review-label">Gerente:</span>
-                                                <span class="review-value" id="review-gerente">-</span>
-                                            </div>
-                                        </div>
+                            <!-- Vista Previa del Gerente -->
+                            <div class="quick-preview">
+                                <div class="preview-title">Gerente Seleccionado</div>
+                                <div class="preview-grid">
+                                    <div class="preview-item">
+                                        <span class="preview-label">Gerente:</span>
+                                        <span class="preview-value" id="preview-gerente">-</span>
                                     </div>
-                                </div>
-
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle"></i>
-                                    <strong>Importante:</strong> Verifica que todos los datos sean correctos.
-                                </div>
-                            </div>
-
-                            <!-- Paso 3: Resultado -->
-                            <div class="fichas-wizard-step" data-step="3">
-                                <div class="fichas-step-header">
-                                    <h6><i class="fas fa-check-circle"></i> ¡Completado!</h6>
-                                    <p class="text-muted">Ficha registrada exitosamente</p>
-                                </div>
-
-                                <div class="fichas-success-result">
-                                    <div class="success-animation">
-                                        <i class="fas fa-check-circle"></i>
-                                    </div>
-                                    <div class="success-content">
-                                        <h5>¡Ficha Registrada!</h5>
-                                        <p>La información se ha guardado correctamente en el sistema.</p>
-                                        <div class="success-actions">
-                                            <button type="button" class="btn btn-primary" id="fichas-btn-new">
-                                                <i class="fas fa-plus"></i> Registrar Otra Ficha
-                                            </button>
-                                        </div>
+                                    <div class="preview-item">
+                                        <span class="preview-label">Fecha:</span>
+                                        <span class="preview-value" id="preview-fecha">Fecha actual</span>
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Botones de navegación simplificados -->
-                            <div class="fichas-wizard-controls">
-                                <button type="button" class="btn btn-outline-secondary" id="fichas-btn-prev">
-                                    <i class="fas fa-chevron-left"></i> Anterior
-                                </button>
-                                <button type="button" class="btn btn-primary" id="fichas-btn-next">
-                                    Continuar <i class="fas fa-chevron-right"></i>
-                                </button>
-                                <button type="submit" class="btn btn-success" id="fichas-btn-submit" style="display: none;">
-                                    <i class="fas fa-save"></i> Guardar Ficha
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Columna principal para resúmenes -->
-            <div class="col-lg-7">
-                <!-- Resumen por Gerente -->
-                <div class="card fichas-summary-card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-users-cog"></i> Resumen por Gerente
-                        </h5>
-                        <button id="btn-export-fichas" class="btn btn-success btn-sm">
-                            <i class="fas fa-file-excel"></i> Exportar Excel
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div id="gerentes-cards-container" class="summary-cards-container"></div>
-                    </div>
-                </div>
-
-                <!-- Resumen por Banco -->
-                <div class="card fichas-bank-card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-university"></i> Resumen por Banco
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="bancos-cards-container" class="summary-cards-container"></div>
-                    </div>
-                </div>
-
-                <!-- Detalle de Fichas -->
-                <div class="card fichas-details-card">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-list-alt"></i> Detalle de Fichas de la Semana
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive fichas-details-container">
-                            <table class="table table-sm table-striped fichas-table" id="table-fichas-details">
-                                <thead>
-                                    <tr>
-                                        <th><i class="fas fa-calendar"></i> Fecha</th>
-                                        <th><i class="fas fa-user"></i> Depositante</th>
-                                        <th><i class="fas fa-university"></i> Banco</th>
-                                        <th><i class="fas fa-dollar-sign"></i> Monto</th>
-                                        <th><i class="fas fa-user-tie"></i> Gerente</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Contenido dinámico -->
-                                </tbody>
-                            </table>
                         </div>
-                    </div>
+
+                        <!-- PASO 3: Revisión de Datos -->
+                        <div class="wizard-step" data-step="3">
+                            <div class="step-title">
+                                <i class="fas fa-clipboard-check"></i> Revisar Información
+                            </div>
+
+                            <div class="verification-card">
+                                <div class="verification-header">
+                                    <i class="fas fa-file-invoice-dollar"></i>
+                                    <span>Resumen Completo de la Ficha</span>
+                                </div>
+                                <div class="verification-body">
+                                    <div class="verify-item">
+                                        <span class="verify-label"><i class="fas fa-calendar-alt"></i> Fecha:</span>
+                                        <span class="verify-value" id="verify-fecha">-</span>
+                                    </div>
+                                    <div class="verify-item highlight">
+                                        <span class="verify-label"><i class="fas fa-money-bill-wave"></i> Monto:</span>
+                                        <span class="verify-value" id="verify-monto">-</span>
+                                    </div>
+                                    <div class="verify-item">
+                                        <span class="verify-label"><i class="fas fa-user"></i> Depositante:</span>
+                                        <span class="verify-value" id="verify-depositante">-</span>
+                                    </div>
+                                    <div class="verify-item">
+                                        <span class="verify-label"><i class="fas fa-university"></i> Banco:</span>
+                                        <span class="verify-value" id="verify-banco">-</span>
+                                    </div>
+                                    <div class="verify-item">
+                                        <span class="verify-label"><i class="fas fa-user-tie"></i> Gerente:</span>
+                                        <span class="verify-value" id="verify-gerente">-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="info-banner">
+                                <i class="fas fa-info-circle"></i>
+                                <div>
+                                    <strong>Importante:</strong> Verifica que todos los datos sean correctos antes de continuar.
+                                    Esta ficha será registrada para la semana actual (jueves a viernes).
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PASO 4: Confirmación Final -->
+                        <div class="wizard-step" data-step="4">
+                            <div class="step-title">
+                                <i class="fas fa-save"></i> Confirmación Final
+                            </div>
+
+                            <div class="confirmation-message">
+                                <div class="confirmation-icon">
+                                    <i class="fas fa-question-circle"></i>
+                                </div>
+                                <h3>¿Estás seguro de guardar esta ficha?</h3>
+                                <p>Una vez guardada, la información se registrará en el sistema y aparecerá en los reportes semanales.</p>
+                            </div>
+
+                            <div class="verification-card">
+                                <div class="verification-header">
+                                    <i class="fas fa-check-double"></i>
+                                    <span>Datos a Guardar</span>
+                                </div>
+                                <div class="verification-body">
+                                    <div class="verify-item">
+                                        <span class="verify-label"><i class="fas fa-calendar-alt"></i> Fecha:</span>
+                                        <span class="verify-value" id="verify-fecha-final">-</span>
+                                    </div>
+                                    <div class="verify-item highlight">
+                                        <span class="verify-label"><i class="fas fa-money-bill-wave"></i> Monto:</span>
+                                        <span class="verify-value" id="verify-monto-final">-</span>
+                                    </div>
+                                    <div class="verify-item">
+                                        <span class="verify-label"><i class="fas fa-user"></i> Depositante:</span>
+                                        <span class="verify-value" id="verify-depositante-final">-</span>
+                                    </div>
+                                    <div class="verify-item">
+                                        <span class="verify-label"><i class="fas fa-university"></i> Banco:</span>
+                                        <span class="verify-value" id="verify-banco-final">-</span>
+                                    </div>
+                                    <div class="verify-item">
+                                        <span class="verify-label"><i class="fas fa-user-tie"></i> Gerente:</span>
+                                        <span class="verify-value" id="verify-gerente-final">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PASO 5: Éxito -->
+                        <div class="wizard-step" data-step="5">
+                            <div class="success-container">
+                                <div class="success-icon">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <h3>¡Ficha Registrada Exitosamente!</h3>
+                                <p>La información ha sido guardada correctamente y ya está visible en los resúmenes de la semana.</p>
+
+                                <div class="success-stats">
+                                    <div class="success-stat">
+                                        <i class="fas fa-check"></i>
+                                        <span>Ficha creada</span>
+                                    </div>
+                                    <div class="success-stat">
+                                        <i class="fas fa-sync"></i>
+                                        <span>Dashboard actualizado</span>
+                                    </div>
+                                    <div class="success-stat">
+                                        <i class="fas fa-chart-line"></i>
+                                        <span>Reportes sincronizados</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Footer del Modal -->
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="btn-modal-prev" style="display: none;">
+                        <i class="fas fa-arrow-left"></i> Anterior
+                    </button>
+                    <div class="footer-spacer"></div>
+                    <button type="button" class="btn-secondary" id="btn-modal-cancel">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn-primary" id="btn-modal-next">
+                        Continuar <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button type="button" class="btn-success" id="btn-modal-submit" style="display: none;">
+                        <i class="fas fa-save"></i> Guardar Ficha
+                    </button>
+                    <button type="button" class="btn-primary" id="btn-modal-new" style="display: none;">
+                        <i class="fas fa-plus"></i> Nueva Ficha
+                    </button>
                 </div>
             </div>
         </div>
+
     </div>
     {% endif %}
 </div>
+
+<!-- CSS y JS -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/fichas-calculator.css') }}">
 {% if current_user.is_authenticated and current_user.is_admin() %}
 <script src="{{ url_for('static', filename='js/gestion_fichas.js') }}"></script>
 {% endif %}
-

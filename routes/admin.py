@@ -1904,7 +1904,7 @@ def add_ficha():
 @admin_bp.route('/fichas/summary', methods=['GET'])
 @admin_required
 def get_fichas_summary():
-    """Calcula y devuelve el resumen semanal de fichas (de jueves a miercoles)."""
+    """Calcula y devuelve el resumen semanal de fichas (de jueves a viernes - 9 días)."""
     try:
         reference_date_param = request.args.get('reference_date')
         week_offset = request.args.get('week_offset', default=0, type=int)
@@ -1922,12 +1922,15 @@ def get_fichas_summary():
         if week_offset:
             base_date = base_date - timedelta(weeks=week_offset)
 
-        weekday = base_date.weekday()
-        if weekday >= 3:
+        # Calcular inicio de semana (jueves)
+        weekday = base_date.weekday()  # 0=Lunes, 3=Jueves, 4=Viernes
+        if weekday >= 3:  # Si es jueves (3), viernes (4), sábado (5) o domingo (6)
             start_of_week = base_date - timedelta(days=weekday - 3)
-        else:
+        else:  # Si es lunes (0), martes (1) o miércoles (2)
             start_of_week = base_date - timedelta(days=weekday + 4)
-        end_of_week = start_of_week + timedelta(days=6)
+
+        # La semana es de jueves a viernes (9 días: jueves, viernes, sábado, domingo, lunes, martes, miércoles, jueves, viernes)
+        end_of_week = start_of_week + timedelta(days=8)
 
         start_of_week_dt = datetime.combine(start_of_week, datetime.min.time())
         end_of_week_dt = datetime.combine(end_of_week, datetime.max.time())
