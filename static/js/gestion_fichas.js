@@ -34,7 +34,7 @@
 
     // Variables globales
     let currentStep = 1;
-    let currentWeekOffset = 0;
+    let currentReferenceDate = new Date();
     let isLoading = false;
     let wizardData = {};
     const TOTAL_STEPS = 5;
@@ -181,6 +181,8 @@
         elements.totalAmount = document.getElementById('fichas-total-amount');
         elements.weekPrevBtn = document.getElementById('fichas-week-prev');
         elements.weekNextBtn = document.getElementById('fichas-week-next');
+        elements.weekDisplay = document.getElementById('fichas-week-display');
+        elements.datePicker = document.getElementById('fichas-date-picker');
         elements.exportBtn = document.getElementById('btn-export-fichas');
 
         // Contenedores
@@ -381,15 +383,38 @@
         // Navegación semanal
         if (elements.weekPrevBtn) {
             elements.weekPrevBtn.addEventListener('click', () => {
-                currentWeekOffset++;
+                currentReferenceDate.setDate(currentReferenceDate.getDate() - 7);
                 loadSummaryAndDetails();
             });
         }
 
         if (elements.weekNextBtn) {
             elements.weekNextBtn.addEventListener('click', () => {
-                if (currentWeekOffset > 0) {
-                    currentWeekOffset--;
+                currentReferenceDate.setDate(currentReferenceDate.getDate() + 7);
+                loadSummaryAndDetails();
+            });
+        }
+
+        // Selector de fecha por calendario
+        if (elements.weekDisplay) {
+            elements.weekDisplay.addEventListener('click', () => {
+                if (elements.datePicker) {
+                    try {
+                        elements.datePicker.showPicker();
+                    } catch (error) {
+                        // Fallback para navegadores más antiguos
+                        elements.datePicker.click();
+                    }
+                }
+            });
+        }
+
+        if (elements.datePicker) {
+            elements.datePicker.addEventListener('change', () => {
+                const selectedDate = elements.datePicker.value;
+                if (selectedDate) {
+                    // Usar T00:00:00 para evitar problemas de zona horaria
+                    currentReferenceDate = new Date(selectedDate + 'T00:00:00');
                     loadSummaryAndDetails();
                 }
             });
@@ -1263,15 +1288,14 @@
     /**
      * Cargar resumen y detalles
      */
-    window.loadSummaryAndDetails = async function() {
+    async function loadSummaryAndDetails() {
         if (isLoading) return;
 
         isLoading = true;
 
         try {
-            const url = currentWeekOffset > 0 ?
-                `/admin/fichas/summary?week_offset=${currentWeekOffset}` :
-                '/admin/fichas/summary';
+            const dateString = currentReferenceDate.toISOString().split('T')[0];
+            const url = `/admin/fichas/summary?reference_date_param=${dateString}`;
 
             const response = await fetch(url);
             const data = await response.json();
@@ -1581,7 +1605,16 @@
      */
     function updateWeekNavigation() {
         if (elements.weekNextBtn) {
-            elements.weekNextBtn.disabled = currentWeekOffset <= 0;
+            const today = new Date();
+            // Poner a cero la hora para comparar solo fechas
+            today.setHours(0, 0, 0, 0);
+            
+            // Clonar para no modificar la original
+            const refDate = new Date(currentReferenceDate);
+            refDate.setHours(0, 0, 0, 0);
+
+            // Deshabilitar si la fecha de referencia es mayor o igual a hoy
+            elements.weekNextBtn.disabled = refDate >= today;
         }
     }
 
