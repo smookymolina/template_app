@@ -21,8 +21,8 @@
     <div id="fichas-calculator-section" class="mt-5">
         <div class="section-header fichas-header">
             <div class="fichas-title-section">
-                <h2><i class="fas fa-calculator"></i> Calculadora de Fichas Semanales</h2>
-                <p>Registra y controla las fichas de depósito de los gerentes en un proceso guiado de 5 pasos.</p>
+                <h2><i class="fas fa-file-invoice-dollar"></i> Registro de Fichas</h2>
+                <p>Registra y controla las fichas de depósito de los gerentes en un proceso guiado y eficiente.</p>
             </div>
 
             <!-- Panel de navegación semanal y totales -->
@@ -58,7 +58,7 @@
                 <div class="card fichas-form-card">
                     <div class="card-header fichas-wizard-header">
                         <h5 class="card-title mb-0">
-                            <i class="fas fa-calculator"></i> Registrar Nueva Ficha
+                            <i class="fas fa-plus-circle"></i> Registrar Nueva Ficha
                         </h5>
                         <p class="wizard-subtitle">Proceso simplificado en 3 pasos</p>
 
@@ -76,15 +76,15 @@
                         <div class="fichas-steps-nav">
                             <div class="fichas-step" data-step="1">
                                 <div class="fichas-step-number">1</div>
-                                <div class="fichas-step-title">Datos</div>
+                                <div class="fichas-step-title">Información</div>
                             </div>
                             <div class="fichas-step" data-step="2">
                                 <div class="fichas-step-number">2</div>
-                                <div class="fichas-step-title">Confirmar</div>
+                                <div class="fichas-step-title">Verificar</div>
                             </div>
                             <div class="fichas-step" data-step="3">
                                 <div class="fichas-step-number">3</div>
-                                <div class="fichas-step-title">Completado</div>
+                                <div class="fichas-step-title">Finalizado</div>
                             </div>
                         </div>
 
@@ -139,6 +139,9 @@
                                         <button type="button" class="btn btn-sm btn-outline-secondary ml-2" id="reload-gerentes-btn" title="Recargar gerentes">
                                             <i class="fas fa-sync"></i>
                                         </button>
+                                        <div id="gerente-loading-spinner" class="spinner-border spinner-border-sm text-primary ml-2" role="status" style="display: none;">
+                                            <span class="sr-only">Cargando...</span>
+                                        </div>
                                     </label>
                                     <select class="form-control ficha-input" id="ficha-gerente-id" required>
                                         <option value="">Selecciona un gerente</option>
@@ -151,6 +154,16 @@
                                     <small class="form-text text-muted">Selecciona el gerente asignado</small>
                                     <div class="gerentes-debug" id="gerentes-debug" style="display: none;">
                                         <small class="text-info">Debug: <span id="debug-info"></span></small>
+                                    </div>
+                                </div>
+
+                                <!-- Quick Review -->
+                                <div class="fichas-quick-review">
+                                    <div class="quick-review-header">Vista Previa</div>
+                                    <div id="quick-review-content" class="quick-review-content">
+                                        <div class="review-item"><span class="review-label">Monto:</span><span class="review-value" id="quick-review-monto">-</span></div>
+                                        <div class="review-item"><span class="review-label">Depositante:</span><span class="review-value" id="quick-review-depositante">-</span></div>
+                                        <div class="review-item"><span class="review-label">Gerente:</span><span class="review-value" id="quick-review-gerente">-</span></div>
                                     </div>
                                 </div>
                             </div>
@@ -252,20 +265,7 @@
                         </button>
                     </div>
                     <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover fichas-table" id="table-fichas-summary">
-                                <thead>
-                                    <tr>
-                                        <th><i class="fas fa-user-tie"></i> Gerente</th>
-                                        <th><i class="fas fa-hashtag"></i> # Fichas</th>
-                                        <th><i class="fas fa-dollar-sign"></i> Monto Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Contenido dinámico -->
-                                </tbody>
-                            </table>
-                        </div>
+                        <div id="gerentes-cards-container" class="summary-cards-container"></div>
                     </div>
                 </div>
 
@@ -277,20 +277,7 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover fichas-table" id="table-fichas-bank">
-                                <thead>
-                                    <tr>
-                                        <th><i class="fas fa-university"></i> Banco</th>
-                                        <th><i class="fas fa-hashtag"></i> # Fichas</th>
-                                        <th><i class="fas fa-dollar-sign"></i> Monto Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Contenido dinámico -->
-                                </tbody>
-                            </table>
-                        </div>
+                        <div id="bancos-cards-container" class="summary-cards-container"></div>
                     </div>
                 </div>
 

@@ -404,8 +404,7 @@ const Reclutas = {
             this.setupAsesorFeatures();
         }
 
-        // Sincronizar controles visibles despues de aplicar configuraciones especificas
-        this.syncRoleBasedFilters();
+        this.ensureRoleVisualState();
     },
 
     /**
@@ -417,6 +416,9 @@ const Reclutas = {
         const dropdown = document.getElementById('filter-gerente-dropdown');
 
         if (!filterGroup) {
+            if (this.userRole === 'admin') {
+                requestAnimationFrame(() => this.syncRoleBasedFilters());
+            }
             return;
         }
 
@@ -463,14 +465,9 @@ const Reclutas = {
      */
 
     ensureRoleVisualState: function() {
-
         this.syncRoleBasedFilters();
-
         this.applyThemeStyles();
-
     },
-
-
 
     showAsesorColumn: function() {
         console.log('Mostrando columna de asesor');
@@ -1709,7 +1706,7 @@ const Reclutas = {
      * Muestra el overlay de carga para la sección de reclutas.
      */
     showReclutasLoader: function() {
-        this.syncRoleBasedFilters();
+        this.ensureRoleVisualState();
         const loader = document.getElementById('reclutas-loader');
         if (loader) {
             loader.style.display = 'flex';
@@ -1730,7 +1727,7 @@ const Reclutas = {
      * Oculta el overlay de carga de la sección de reclutas.
      */
     hideReclutasLoader: function() {
-        this.syncRoleBasedFilters();
+        this.ensureRoleVisualState();
         const loader = document.getElementById('reclutas-loader');
         if (loader) {
             const progressFill = document.getElementById('reclutas-progress-fill');
@@ -3691,6 +3688,7 @@ const Reclutas = {
      * 🔄 SISTEMA DE LOADER PARA GESTIÓN DE RECLUTAS
      */
     showReclutasLoader: function() {
+        this.ensureRoleVisualState();
         const loader = document.getElementById('reclutas-loader');
         if (loader) {
             loader.style.display = 'flex';
@@ -3708,6 +3706,7 @@ const Reclutas = {
     },
 
     hideReclutasLoader: function() {
+        this.ensureRoleVisualState();
         const loader = document.getElementById('reclutas-loader');
         if (loader) {
             setTimeout(() => {

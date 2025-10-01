@@ -505,6 +505,71 @@
     transform: translateY(0);
 }
 
+.summary-cards-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.summary-card {
+    background: var(--fichas-bg-secondary);
+    border-radius: var(--fichas-radius);
+    padding: 1rem;
+    border: 1px solid var(--fichas-border-light);
+    transition: var(--fichas-transition);
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.summary-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--fichas-shadow-md);
+}
+
+.summary-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.summary-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--fichas-primary-light);
+    color: var(--fichas-primary);
+    font-size: 1.2rem;
+}
+
+.summary-card-title {
+    font-weight: 600;
+    color: var(--fichas-text-primary);
+}
+
+.summary-card-body {
+    display: flex;
+    justify-content: space-between;
+}
+
+.summary-card-stat {
+    text-align: center;
+}
+
+.summary-card-stat-label {
+    font-size: 0.8rem;
+    color: var(--fichas-text-secondary);
+    margin-bottom: 0.25rem;
+}
+
+.summary-card-stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--fichas-text-primary);
+}
+
 /* Tablas mejoradas */
 .fichas-table {
     margin-bottom: 0;
@@ -603,7 +668,12 @@
     100% { transform: rotate(360deg); }
 }
 
-/* Responsive Design */
+@media (max-width: 992px) {
+    .summary-cards-container {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
 @media (max-width: 768px) {
     .fichas-header {
         padding: 1.5rem;
@@ -632,6 +702,10 @@
 
     .total-value {
         font-size: 1.25rem;
+    }
+
+    .summary-cards-container {
+        grid-template-columns: 1fr;
     }
 }
 
@@ -1117,6 +1191,38 @@
 .fichas-step.completed .fichas-step-title {
     color: var(--fichas-success);
     font-weight: 700;
+}
+
+/* Quick Review */
+.fichas-quick-review {
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--fichas-border);
+    padding-top: 1.5rem;
+}
+
+.quick-review-header {
+    font-weight: 600;
+    color: var(--fichas-secondary);
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.quick-review-content .review-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.quick-review-content .review-label {
+    color: var(--fichas-text-secondary);
+}
+
+.quick-review-content .review-value {
+    font-weight: 600;
+    color: var(--fichas-text-primary);
 }
 
 /* Pasos del wizard */

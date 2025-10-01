@@ -641,33 +641,27 @@ const AdminReclutasManagement = {
 // 🚀 INICIALIZACIÓN GLOBAL PARA INTEGRACIÓN CON NAVEGACIÓN
 window.AdminReclutasManagement = AdminReclutasManagement;
 
-// 🚀 AUTO-INICIALIZACIÓN CUANDO SE MUESTRA LA SECCIÓN
+// 🚀 AUTO-INICIALIZACIÓN ROBUSTA
 document.addEventListener('DOMContentLoaded', () => {
-    // Escuchar clics en navegación
-    document.addEventListener('click', (e) => {
-        const navLink = e.target.closest('a[data-section="admin-reclutas-management"]');
-        if (navLink) {
-            console.log('🔒 Navegando a Panel Administrativo...');
-            setTimeout(() => {
-                const section = document.getElementById('admin-reclutas-management');
-                if (section && section.style.display !== 'none' && !AdminReclutasManagement.isInitialized) {
-                    console.log('🚀 Inicializando Panel Administrativo...');
-                    AdminReclutasManagement.init();
-                    AdminReclutasManagement.isInitialized = true;
-                }
-            }, 100);
-        }
-    });
+    const section = document.getElementById('admin-reclutas-management');
+    
+    // Si la sección de administración de reclutas existe en la carga inicial de la página, inicializarla.
+    // Esto soluciona el problema de carga inicial después del login.
+    if (section && !AdminReclutasManagement.isInitialized) {
+        console.log('🚀 Inicializando Panel Administrativo de Reclutas al cargar la página...');
+        AdminReclutasManagement.init();
+        AdminReclutasManagement.isInitialized = true;
+    }
 
-    // También verificar si ya estamos en la sección
-    setTimeout(() => {
-        const section = document.getElementById('admin-reclutas-management');
-        if (section && section.style.display !== 'none' && !AdminReclutasManagement.isInitialized) {
-            console.log('🚀 Inicializando Panel Administrativo al cargar...');
+    // Adicionalmente, escuchar por cambios de sección si la app es una SPA (Single Page Application)
+    // para inicializar el panel si se navega a él dinámicamente.
+    document.addEventListener('sectionChanged', (event) => {
+        if (event.detail && event.detail.section === 'admin-reclutas-management' && !AdminReclutasManagement.isInitialized) {
+            console.log('🚀 Inicializando Panel Administrativo de Reclutas por evento sectionChanged...');
             AdminReclutasManagement.init();
             AdminReclutasManagement.isInitialized = true;
         }
-    }, 1000);
+    });
 });
 
 export default AdminReclutasManagement;

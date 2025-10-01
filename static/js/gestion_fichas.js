@@ -242,6 +242,7 @@
             inputs.forEach(input => {
                 input.addEventListener('blur', validateField);
                 input.addEventListener('input', clearFieldError);
+                input.addEventListener('input', updateQuickReview);
             });
         }
 
@@ -285,6 +286,16 @@
             if (errorDiv) {
                 errorDiv.remove();
             }
+        }
+
+        function updateQuickReview() {
+            const monto = document.getElementById('ficha-monto')?.value;
+            const depositante = document.getElementById('ficha-nombre-depositante')?.value;
+            const gerente = gerenteSelect?.selectedOptions[0]?.textContent;
+
+            document.getElementById('quick-review-monto').textContent = monto ? formatCurrency(monto) : '-';
+            document.getElementById('quick-review-depositante').textContent = depositante || '-';
+            document.getElementById('quick-review-gerente').textContent = gerente || '-';
         }
 
         function initializeTooltips() {
@@ -384,6 +395,8 @@
             }
 
             // Mostrar estado de carga
+            const spinner = document.getElementById('gerente-loading-spinner');
+            if (spinner) spinner.style.display = 'inline-block';
             gerenteSelect.innerHTML = '<option value="">Cargando gerentes...</option>';
             gerenteSelect.disabled = true;
             gerenteSelect.classList.add('loading');
@@ -494,6 +507,8 @@
             } finally {
                 gerenteSelect.disabled = false;
                 gerenteSelect.classList.remove('loading');
+                const spinner = document.getElementById('gerente-loading-spinner');
+                if (spinner) spinner.style.display = 'none';
             }
         }
 
@@ -541,8 +556,6 @@
 
                 // Actualizar tablas con efecto de fade
                 await Promise.all([
-                    populateTableWithAnimation(summaryTableBody, data.summary, createSummaryRow, 'No hay resumen disponible.'),
-                    populateTableWithAnimation(bankTableBody, data.bank_breakdown, createBankRow, 'Sin movimientos por banco en la semana.'),
                     populateTableWithAnimation(detailsTableBody, data.details, createDetailRow, 'No se han registrado fichas en la semana seleccionada.')
                 ]);
 
@@ -797,25 +810,7 @@
             tableBody.style.opacity = '1';
         }
 
-        function createSummaryRow(item) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${escapeHTML(item.gerente_nombre)}</td>
-                <td>${Number(item.total_fichas) || 0}</td>
-                <td>${formatCurrency(item.monto_total)}</td>
-            `;
-            return tr;
-        }
 
-        function createBankRow(item) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${escapeHTML(item.banco || 'Sin banco')}</td>
-                <td>${Number(item.total_fichas) || 0}</td>
-                <td>${formatCurrency(item.monto_total)}</td>
-            `;
-            return tr;
-        }
 
         function createDetailRow(item) {
             const tr = document.createElement('tr');
