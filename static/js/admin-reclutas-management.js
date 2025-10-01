@@ -644,13 +644,17 @@ window.AdminReclutasManagement = AdminReclutasManagement;
 // 🚀 AUTO-INICIALIZACIÓN ROBUSTA
 document.addEventListener('DOMContentLoaded', () => {
     const section = document.getElementById('admin-reclutas-management');
-    
-    // Si la sección de administración de reclutas existe en la carga inicial de la página, inicializarla.
-    // Esto soluciona el problema de carga inicial después del login.
+    const loginSection = document.getElementById('login-section');
+
+    // Solo inicializar si la sección existe Y el login NO está visible (usuario ya autenticado)
     if (section && !AdminReclutasManagement.isInitialized) {
-        console.log('🚀 Inicializando Panel Administrativo de Reclutas al cargar la página...');
-        AdminReclutasManagement.init();
-        AdminReclutasManagement.isInitialized = true;
+        const isLoginVisible = loginSection && loginSection.style.display !== 'none';
+
+        if (!isLoginVisible) {
+            console.log('🚀 Inicializando Panel Administrativo de Reclutas al cargar la página...');
+            AdminReclutasManagement.init();
+            AdminReclutasManagement.isInitialized = true;
+        }
     }
 
     // Adicionalmente, escuchar por cambios de sección si la app es una SPA (Single Page Application)

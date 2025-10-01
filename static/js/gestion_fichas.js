@@ -136,10 +136,21 @@
      * Inicializar modal
      */
     function initModal() {
-        if (!elements.modal || !elements.openModalBtn) return;
+        // Esperar a que el botón esté disponible en el DOM
+        const waitForButton = setInterval(() => {
+            const openBtn = document.getElementById('open-fichas-modal');
+            if (openBtn) {
+                clearInterval(waitForButton);
+                elements.openModalBtn = openBtn;
 
-        // Abrir modal
-        elements.openModalBtn.addEventListener('click', openModal);
+                // Abrir modal
+                elements.openModalBtn.addEventListener('click', openModal);
+                console.log('✅ Botón calculadora vinculado correctamente');
+            }
+        }, 100);
+
+        // Timeout de seguridad (10 segundos)
+        setTimeout(() => clearInterval(waitForButton), 10000);
 
         // Cerrar modal
         if (elements.closeModalBtn) {
@@ -159,6 +170,21 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && isModalOpen()) {
                 closeModal();
+            }
+        });
+
+        // Listener para cambio de sección (cuando se navega a gestión de gerentes)
+        document.addEventListener('sectionChanged', (event) => {
+            if (event.detail && event.detail.section === 'gestion-gerentes-section') {
+                // Re-cachear el botón cuando se muestra la sección
+                setTimeout(() => {
+                    const btn = document.getElementById('open-fichas-modal');
+                    if (btn && !elements.openModalBtn) {
+                        elements.openModalBtn = btn;
+                        btn.addEventListener('click', openModal);
+                        console.log('✅ Botón calculadora re-vinculado en cambio de sección');
+                    }
+                }, 200);
             }
         });
     }
