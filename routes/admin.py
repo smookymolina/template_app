@@ -25,7 +25,7 @@ from datetime import datetime, timedelta, timezone
 
 admin_bp = Blueprint('admin', __name__)
 
-def admin_required(f):  
+def admin_required(f):
     """
     Decorador que verifica si el usuario tiene permisos de administrador.
     También comprueba si la IP está en la lista de permitidas.
@@ -40,10 +40,18 @@ def admin_required(f):
         #         "success": False,
         #         "message": "Acceso no autorizado desde esta IP"
         #     }), 403
-        
-        if not current_user.is_authenticated or not current_user.is_admin():
-            return jsonify({"success": False, "message": "Acceso no autorizado"}), 403
-        
+
+        # Verificar autenticación
+        if not current_user.is_authenticated:
+            current_app.logger.warning(f"🔒 Intento de acceso sin autenticación a {request.endpoint}")
+            return jsonify({"success": False, "message": "No autenticado. Por favor, inicia sesión."}), 401
+
+        # Verificar permisos de admin
+        if not current_user.is_admin():
+            current_app.logger.warning(f"🔒 Usuario {current_user.email} (rol: {current_user.rol}) intentó acceder a {request.endpoint}")
+            return jsonify({"success": False, "message": "Acceso no autorizado. Requiere permisos de administrador."}), 403
+
+        current_app.logger.debug(f"✅ Acceso autorizado a {request.endpoint} para {current_user.email}")
         return f(*args, **kwargs)
     return login_required(decorated_function)
 
@@ -1869,45 +1877,84 @@ def get_fichas_gerente_details(gerente_id):
 def add_ficha():
     """Crea una ficha de deposito para un gerente activo."""
     try:
+        # Obtener datos del request
         data = request.get_json() or {}
+        current_app.logger.info(f"📥 Recibiendo solicitud para crear ficha: {data}")
+
         nombre_depositante = (data.get('nombre_depositante') or '').strip()
         banco = (data.get('banco') or '').strip()
         monto = data.get('monto')
         gerente_id = data.get('gerente_id')
         fecha_str = data.get('fecha')
 
+        # Validar campos requeridos
         if not nombre_depositante or not banco or monto is None or gerente_id is None:
-            return jsonify({"success": False, "message": "Todos los campos son requeridos"}), 400
+            missing_fields = []
+            if not nombre_depositante:
+                missing_fields.append('nombre_depositante')
+            if not banco:
+                missing_fields.append('banco')
+            if monto is None:
+                missing_fields.append('monto')
+            if gerente_id is None:
+                missing_fields.append('gerente_id')
 
+            current_app.logger.warning(f"⚠️ Campos faltantes: {missing_fields}")
+            return jsonify({"success": False, "message": f"Campos requeridos faltantes: {', '.join(missing_fields)}"}), 400
+
+        # Validar monto
         try:
             monto_decimal = Decimal(str(monto))
             if monto_decimal <= 0:
                 raise ValueError("Monto no positivo")
             monto_decimal = monto_decimal.quantize(Decimal('0.01'))
-        except (InvalidOperation, TypeError, ValueError):
+            current_app.logger.info(f"✅ Monto validado: {monto_decimal}")
+        except (InvalidOperation, TypeError, ValueError) as e:
+            current_app.logger.error(f"❌ Error validando monto: {str(e)}")
             return jsonify({"success": False, "message": "El monto debe ser un numero valido y mayor a cero"}), 400
 
+        # Validar gerente_id
         try:
             gerente_id_int = int(gerente_id)
-        except (TypeError, ValueError):
+            current_app.logger.info(f"✅ Gerente ID validado: {gerente_id_int}")
+        except (TypeError, ValueError) as e:
+            current_app.logger.error(f"❌ Error validando gerente_id: {str(e)}")
             return jsonify({"success": False, "message": "El identificador de gerente no es valido"}), 400
 
+        # Verificar que el gerente existe y está activo
         gerente = Usuario.query.get(gerente_id_int)
-        if not gerente or gerente.rol != 'gerente' or not getattr(gerente, 'is_active', True):
-            return jsonify({"success": False, "message": "El gerente seleccionado no es valido"}), 400
+        if not gerente:
+            current_app.logger.error(f"❌ Gerente no encontrado: {gerente_id_int}")
+            return jsonify({"success": False, "message": f"El gerente con ID {gerente_id_int} no existe"}), 400
 
+        if gerente.rol != 'gerente':
+            current_app.logger.error(f"❌ Usuario no es gerente: {gerente.nombre} (rol: {gerente.rol})")
+            return jsonify({"success": False, "message": f"El usuario seleccionado no tiene rol de gerente"}), 400
+
+        if not getattr(gerente, 'is_active', True):
+            current_app.logger.error(f"❌ Gerente inactivo: {gerente.nombre}")
+            return jsonify({"success": False, "message": f"El gerente seleccionado está inactivo"}), 400
+
+        current_app.logger.info(f"✅ Gerente validado: {gerente.nombre} (ID: {gerente_id_int})")
+
+        # Validar y procesar fecha
         fecha_deposito = None
         if fecha_str:
             try:
                 fecha_deposito = datetime.fromisoformat(fecha_str)
-            except ValueError:
+                current_app.logger.info(f"✅ Fecha proporcionada: {fecha_deposito}")
+            except ValueError as e:
+                current_app.logger.error(f"❌ Error en formato de fecha: {str(e)}")
                 return jsonify({"success": False, "message": "La fecha proporcionada no tiene el formato correcto (ISO 8601)"}), 400
 
         if fecha_deposito is None:
             fecha_deposito = datetime.utcnow()
+            current_app.logger.info(f"✅ Usando fecha actual: {fecha_deposito}")
         elif fecha_deposito.tzinfo is not None:
             fecha_deposito = fecha_deposito.astimezone(timezone.utc).replace(tzinfo=None)
+            current_app.logger.info(f"✅ Fecha convertida a UTC: {fecha_deposito}")
 
+        # Crear la ficha
         nueva_ficha = FichaDeposito(
             nombre_depositante=nombre_depositante,
             banco=banco,
@@ -1915,14 +1962,20 @@ def add_ficha():
             gerente_id=gerente_id_int,
             fecha=fecha_deposito
         )
-        db.session.add(nueva_ficha)
-        db.session.commit()
+
+        current_app.logger.info(f"💾 Intentando guardar ficha en base de datos...")
+
+        try:
+            db.session.add(nueva_ficha)
+            db.session.commit()
+            current_app.logger.info(f"✅ Ficha guardada exitosamente con ID: {nueva_ficha.id}")
+        except Exception as db_error:
+            db.session.rollback()
+            current_app.logger.error(f"❌ Error al guardar en base de datos: {str(db_error)}")
+            return jsonify({"success": False, "message": f"Error al guardar en base de datos: {str(db_error)}"}), 500
 
         current_app.logger.info(
-            "Ficha de deposito registrada por %s para gerente %s: %s",
-            current_user.email,
-            gerente.nombre,
-            monto_decimal
+            f"✅ Ficha de deposito registrada por {current_user.email} para gerente {gerente.nombre}: ${monto_decimal}"
         )
 
         return jsonify({
@@ -1933,7 +1986,7 @@ def add_ficha():
 
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error("Error al registrar ficha de deposito: %s", str(e))
+        current_app.logger.error(f"❌ Error inesperado al registrar ficha de deposito: {str(e)}")
         return jsonify({"success": False, "message": "Error interno al registrar la ficha"}), 500
 
 @admin_bp.route('/fichas/summary', methods=['GET'])

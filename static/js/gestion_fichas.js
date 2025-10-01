@@ -3,6 +3,30 @@
  * GESTIÓN DE FICHAS - JavaScript Completamente Actualizado para Modal
  * Compatible con el nuevo diseño HTML y CSS
  * ========================================================================
+ *
+ * FLUJO DEL WIZARD (5 pasos):
+ * 1. Paso 1: Información Básica (Monto, Depositante, Banco)
+ *    - Validaciones: monto > 0, depositante >= 2 chars, banco >= 2 chars
+ * 2. Paso 2: Gerente y Fecha
+ *    - Validaciones: gerente seleccionado (ID válido)
+ * 3. Paso 3: Verificación/Revisión
+ *    - Sin validaciones, solo muestra los datos ingresados
+ * 4. Paso 4: Confirmación Final
+ *    - Botón "Guardar Ficha" disponible
+ *    - Submit solo funciona en este paso
+ * 5. Paso 5: Éxito
+ *    - Mensaje de confirmación
+ *    - Botón "Nueva Ficha" disponible
+ *
+ * REQUISITOS:
+ * - Usuario debe estar autenticado
+ * - Usuario debe tener rol = 'admin'
+ * - Elemento con data-admin-only debe existir en el DOM
+ *
+ * DEBUG:
+ * - Abrir consola del navegador (F12) para ver logs detallados
+ * - Logs con emojis: 🔍 validación, ✅ éxito, ❌ error, 📤 envío, 📥 recepción
+ * ========================================================================
  */
 
 (function() {
@@ -858,24 +882,27 @@
         const depositante = elements.inputDepositante?.value?.trim();
         const banco = elements.inputBanco?.value?.trim();
 
-        if (!monto || parseFloat(monto) <= 0) {
-            showNotification('El monto debe ser mayor a 0', 'warning');
+        console.log('🔍 Validando paso 1:', { monto, depositante, banco });
+
+        if (!monto || isNaN(parseFloat(monto)) || parseFloat(monto) <= 0) {
+            showNotification('El monto debe ser un número válido mayor a 0', 'warning');
             elements.inputMonto?.focus();
             return false;
         }
 
-        if (!depositante) {
-            showNotification('El nombre del depositante es requerido', 'warning');
+        if (!depositante || depositante.length < 2) {
+            showNotification('El nombre del depositante debe tener al menos 2 caracteres', 'warning');
             elements.inputDepositante?.focus();
             return false;
         }
 
-        if (!banco) {
-            showNotification('El banco es requerido', 'warning');
+        if (!banco || banco.length < 2) {
+            showNotification('El banco debe tener al menos 2 caracteres', 'warning');
             elements.inputBanco?.focus();
             return false;
         }
 
+        console.log('✅ Paso 1 validado correctamente');
         return true;
     }
 
@@ -884,13 +911,24 @@
      */
     function validateStep2() {
         const gerente = elements.selectGerente?.value;
+        const fecha = elements.inputFecha?.value;
 
-        if (!gerente) {
+        console.log('🔍 Validando paso 2:', { gerente, fecha });
+
+        if (!gerente || gerente === '' || gerente === 'null' || gerente === 'undefined') {
             showNotification('Selecciona un gerente responsable', 'warning');
             elements.selectGerente?.focus();
             return false;
         }
 
+        // Validar que el gerente sea un número válido
+        const gerenteId = parseInt(gerente);
+        if (isNaN(gerenteId)) {
+            showNotification('El gerente seleccionado no es válido', 'error');
+            return false;
+        }
+
+        console.log('✅ Paso 2 validado correctamente', { gerenteId, fecha: fecha || 'fecha actual' });
         return true;
     }
 
@@ -1083,22 +1121,30 @@
 
         if (currentStep !== 4) {
             console.warn('⚠️ Submit cancelado: no estás en el paso 4');
+            showNotification('Debes completar todos los pasos antes de guardar', 'warning');
             return;
         }
 
         console.log('✅ Procesando guardado de ficha...');
+        console.log('📋 Datos del wizard:', wizardData);
+
         const btn = elements.btnSubmit;
         const originalText = btn.innerHTML;
 
         try {
+            // Validar que tengamos todos los datos necesarios
+            if (!wizardData.nombre_depositante || !wizardData.banco || !wizardData.monto || !wizardData.gerente_id) {
+                throw new Error('Faltan datos requeridos. Por favor, completa todos los pasos.');
+            }
+
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
 
             const payload = {
                 nombre_depositante: wizardData.nombre_depositante,
                 banco: wizardData.banco,
-                monto: wizardData.monto,
-                gerente_id: wizardData.gerente_id
+                monto: parseFloat(wizardData.monto),
+                gerente_id: parseInt(wizardData.gerente_id)
             };
 
             if (wizardData.fecha) {
@@ -1112,24 +1158,43 @@
 
             const response = await fetch('/admin/fichas', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload),
+                credentials: 'same-origin'
             });
 
             console.log('📥 Respuesta del servidor:', response.status, response.statusText);
-            const result = await response.json();
-            console.log('📊 Resultado:', result);
+
+            let result;
+            try {
+                result = await response.json();
+                console.log('📊 Resultado:', result);
+            } catch (jsonError) {
+                console.error('Error al parsear JSON:', jsonError);
+                throw new Error('Error en la respuesta del servidor');
+            }
 
             if (response.ok && result.success) {
                 showNotification('¡Ficha registrada exitosamente!', 'success');
                 goToStep(5);
                 await loadSummaryAndDetails();
             } else {
-                throw new Error(result.message || 'Error al registrar');
+                // Manejar errores específicos
+                if (response.status === 403) {
+                    throw new Error('No tienes permisos para realizar esta acción. Por favor, verifica tu sesión.');
+                } else if (response.status === 401) {
+                    throw new Error('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+                } else if (response.status === 400) {
+                    throw new Error(result.message || 'Datos inválidos. Verifica la información ingresada.');
+                } else {
+                    throw new Error(result.message || 'Error al registrar la ficha');
+                }
             }
         } catch (error) {
-            console.error('Error:', error);
-            showNotification('Error al guardar: ' + error.message, 'error');
+            console.error('❌ Error completo:', error);
+            showNotification('Error: ' + error.message, 'error');
         } finally {
             btn.disabled = false;
             btn.innerHTML = originalText;
@@ -1198,7 +1263,7 @@
     /**
      * Cargar resumen y detalles
      */
-    async function loadSummaryAndDetails() {
+    window.loadSummaryAndDetails = async function() {
         if (isLoading) return;
 
         isLoading = true;
@@ -1754,9 +1819,6 @@
                 // Recargar datos si hay una función disponible
                 if (typeof window.loadSummaryAndDetails === 'function') {
                     setTimeout(() => window.loadSummaryAndDetails(), 500);
-                } else {
-                    // Recargar la página después de 1.5 segundos
-                    setTimeout(() => location.reload(), 1500);
                 }
             } else {
                 throw new Error(result.message || 'Error al registrar la ficha');

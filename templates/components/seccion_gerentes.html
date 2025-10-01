@@ -44,9 +44,13 @@
                     <button id="fichas-week-prev" class="btn-week" title="Semana anterior">
                         <i class="fas fa-chevron-left"></i>
                     </button>
-                    <div class="week-display">
-                        <span class="week-label">Semana Actual</span>
-                        <strong id="fichas-week-range" class="week-range">Cargando...</strong>
+                    <div class="week-display" id="fichas-week-display" style="cursor: pointer;" title="Seleccionar fecha">
+                        <i class="fas fa-calendar-alt mr-2"></i>
+                        <div>
+                            <span class="week-label">Semana</span>
+                            <strong id="fichas-week-range" class="week-range">Cargando...</strong>
+                        </div>
+                        <input type="date" id="fichas-date-picker" style="display: none;">
                     </div>
                     <button id="fichas-week-next" class="btn-week" title="Semana siguiente" disabled>
                         <i class="fas fa-chevron-right"></i>
