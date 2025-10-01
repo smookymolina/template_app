@@ -696,6 +696,7 @@ const Reclutas = {
                 this.handleDistribucionExcelFile(e.target.files[0]);
             });
         }
+        this.applyThemeStyles();
         console.log("✅ Botón distribución Excel configurado");
     },
 
