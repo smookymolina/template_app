@@ -91,6 +91,7 @@
             setupFormValidation();
             initializeTooltips();
             initializeWizard();
+            initializeTabs(); // ✅ NUEVO: Inicializar sistema de pestañas
 
             console.log('✅ Inicialización completada');
         }
@@ -297,8 +298,17 @@
         }
 
         function bindEvents() {
+            // ✅ DETECTAR SI EXISTE WIZARD O USAR FORMULARIO SIMPLE
+            const hasWizard = wizardSteps && wizardSteps.length > 0;
+
             if (form) {
-                form.addEventListener('submit', handleSubmitFicha);
+                if (hasWizard) {
+                    console.log('📝 Modo wizard detectado');
+                    form.addEventListener('submit', handleSubmitFichaWizard);
+                } else {
+                    console.log('📝 Modo formulario simple detectado');
+                    form.addEventListener('submit', handleSubmitFichaSimple);
+                }
             }
 
             if (exportButton) {
@@ -326,28 +336,30 @@
                 });
             }
 
-            // Eventos del wizard
-            if (btnPrev) {
-                btnPrev.addEventListener('click', handlePrevStep);
-            }
+            // Eventos del wizard (solo si existe)
+            if (hasWizard) {
+                if (btnPrev) {
+                    btnPrev.addEventListener('click', handlePrevStep);
+                }
 
-            if (btnNext) {
-                btnNext.addEventListener('click', handleNextStep);
-            }
+                if (btnNext) {
+                    btnNext.addEventListener('click', handleNextStep);
+                }
 
-            if (btnNew) {
-                btnNew.addEventListener('click', resetWizard);
-            }
+                if (btnNew) {
+                    btnNew.addEventListener('click', resetWizard);
+                }
 
-            // Eventos para navegación directa en los pasos
-            stepNavigation.forEach(step => {
-                step.addEventListener('click', function() {
-                    const targetStep = parseInt(this.dataset.step);
-                    if (targetStep <= currentStep || step.classList.contains('completed')) {
-                        goToStep(targetStep);
-                    }
+                // Eventos para navegación directa en los pasos
+                stepNavigation.forEach(step => {
+                    step.addEventListener('click', function() {
+                        const targetStep = parseInt(this.dataset.step);
+                        if (targetStep <= currentStep || step.classList.contains('completed')) {
+                            goToStep(targetStep);
+                        }
+                    });
                 });
-            });
+            }
 
             // Botón para recargar gerentes
             if (reloadGerentesBtn) {
@@ -499,6 +511,7 @@
             showLoadingState();
 
             try {
+                console.log('🔄 Cargando resumen de fichas...');
                 const response = await fetch(getSummaryUrl());
 
                 // Verificar si la respuesta es HTML (página de login) en lugar de JSON
@@ -516,17 +529,24 @@
                     throw new Error(data.message || 'No fue posible obtener el resumen de fichas');
                 }
 
-                // Actualizar datos con animaciones
+                console.log('✅ Datos recibidos:', data);
+
+                // ✅ PASO 4: Actualizar datos con animaciones mejoradas
                 await updateWeekBanner(data.week_range);
                 await updateTotals(data.totals);
 
+                // ✅ Crear tarjetas visuales
+                createGerenteCards(data.summary);
+                createBancoCards(data.bank_breakdown);
+
+                // Actualizar tablas con efecto de fade
                 await Promise.all([
-                    populateTable(summaryTableBody, data.summary, createSummaryRow, 'No hay resumen disponible.'),
-                    populateTable(bankTableBody, data.bank_breakdown, createBankRow, 'Sin movimientos por banco en la semana.'),
-                    populateTable(detailsTableBody, data.details, createDetailRow, 'No se han registrado fichas en la semana seleccionada.')
+                    populateTableWithAnimation(summaryTableBody, data.summary, createSummaryRow, 'No hay resumen disponible.'),
+                    populateTableWithAnimation(bankTableBody, data.bank_breakdown, createBankRow, 'Sin movimientos por banco en la semana.'),
+                    populateTableWithAnimation(detailsTableBody, data.details, createDetailRow, 'No se han registrado fichas en la semana seleccionada.')
                 ]);
 
-                showSuccessNotification('Datos actualizados correctamente');
+                console.log('✅ Tablas y tarjetas actualizadas correctamente');
             } catch (error) {
                 console.error('Error en loadSummaryAndDetails:', error);
 
@@ -588,16 +608,23 @@
             }
         }
 
-        async function handleSubmitFicha(event) {
+        // ✅ FUNCIÓN PARA FORMULARIO SIMPLE (SIN WIZARD)
+        async function handleSubmitFichaSimple(event) {
             event.preventDefault();
+            console.log('📝 Guardando ficha en modo simple...');
 
             // Validar formulario antes de enviar
-            if (!validateForm()) {
+            if (!validateFormSimple()) {
                 showWarningNotification('Por favor, completa todos los campos requeridos correctamente.');
                 return;
             }
 
             const submitButton = form.querySelector('.btn-submit-ficha');
+            if (!submitButton) {
+                console.error('❌ Botón de submit no encontrado');
+                return;
+            }
+
             const originalText = submitButton.innerHTML;
 
             // Mostrar estado de carga
@@ -626,6 +653,8 @@
                 return;
             }
 
+            console.log('📤 Enviando payload:', payload);
+
             try {
                 const response = await fetch('/admin/fichas', {
                     method: 'POST',
@@ -636,25 +665,68 @@
                 });
 
                 const result = await response.json();
+                console.log('📥 Respuesta recibida:', result);
+
                 if (response.ok && result.success) {
-                    showSuccessNotification('¡Ficha registrada exitosamente!');
+                    // Notificación mejorada con detalles
+                    const fichaInfo = result.ficha;
+                    const montoFormateado = formatCurrency(fichaInfo?.monto || payload.monto);
+                    const mensaje = `¡Ficha registrada! ${montoFormateado} de ${payload.nombre_depositante}`;
+                    showSuccessNotification(mensaje);
+
+                    // Limpiar formulario con animación
                     clearFormWithAnimation();
 
-                    // Recargar datos después de un breve delay para que se vea la animación
-                    setTimeout(() => {
-                        loadSummaryAndDetails();
-                    }, 500);
+                    // Recargar datos inmediatamente
+                    console.log('🔄 Recargando datos...');
+                    await loadSummaryAndDetails();
                 } else {
                     throw new Error(result.message || 'Error al registrar la ficha');
                 }
             } catch (error) {
-                console.error('Error al enviar formulario de ficha:', error);
+                console.error('❌ Error al enviar formulario de ficha:', error);
                 showErrorNotification(`Error: ${error.message}`);
             } finally {
                 // Restaurar botón
                 submitButton.disabled = false;
                 submitButton.innerHTML = originalText;
             }
+        }
+
+        // Función auxiliar para validar formulario simple
+        function validateFormSimple() {
+            const nombre = document.getElementById('ficha-nombre-depositante')?.value?.trim();
+            const banco = document.getElementById('ficha-banco')?.value?.trim();
+            const monto = document.getElementById('ficha-monto')?.value;
+            const gerente = gerenteSelect?.value;
+
+            console.log('🔍 Validando formulario:', { nombre, banco, monto, gerente });
+
+            if (!nombre) {
+                showWarningNotification('El nombre del depositante es requerido');
+                document.getElementById('ficha-nombre-depositante')?.focus();
+                return false;
+            }
+
+            if (!banco) {
+                showWarningNotification('El banco es requerido');
+                document.getElementById('ficha-banco')?.focus();
+                return false;
+            }
+
+            if (!monto || parseFloat(monto) <= 0) {
+                showWarningNotification('El monto debe ser mayor a 0');
+                document.getElementById('ficha-monto')?.focus();
+                return false;
+            }
+
+            if (!gerente) {
+                showWarningNotification('Selecciona un gerente válido');
+                gerenteSelect?.focus();
+                return false;
+            }
+
+            return true;
         }
 
         function populateTable(tableBody, data, createRowFn, noDataMessage) {
@@ -678,6 +750,51 @@
             td.style.textAlign = 'center';
             tr.appendChild(td);
             tableBody.appendChild(tr);
+        }
+
+        // ✅ PASO 5: Función para poblar tabla con animación de entrada
+        async function populateTableWithAnimation(tableBody, data, createRowFn, noDataMessage) {
+            if (!tableBody) {
+                return;
+            }
+
+            // Aplicar efecto de fade out
+            tableBody.style.opacity = '0.3';
+            tableBody.style.transition = 'opacity 0.2s ease';
+
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            // Limpiar y poblar
+            tableBody.innerHTML = '';
+
+            if (Array.isArray(data) && data.length > 0) {
+                data.forEach(function(item, index) {
+                    const row = createRowFn(item);
+                    row.style.opacity = '0';
+                    row.style.transform = 'translateY(-10px)';
+                    row.style.transition = 'all 0.3s ease';
+                    tableBody.appendChild(row);
+
+                    // Animar entrada con delay escalonado
+                    setTimeout(() => {
+                        row.style.opacity = '1';
+                        row.style.transform = 'translateY(0)';
+                    }, index * 50);
+                });
+            } else {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                const columnCount = tableBody.closest('table')?.querySelectorAll('thead th').length || 1;
+                td.colSpan = columnCount;
+                td.textContent = noDataMessage;
+                td.style.textAlign = 'center';
+                td.className = 'text-muted';
+                tr.appendChild(td);
+                tableBody.appendChild(tr);
+            }
+
+            // Restaurar opacidad de la tabla
+            tableBody.style.opacity = '1';
         }
 
         function createSummaryRow(item) {
@@ -1137,12 +1254,13 @@
             }, 500);
         }
 
-        // Sobrescribir el handleSubmitFicha para trabajar con el wizard
-        async function handleSubmitFicha(event) {
+        // ✅ FUNCIÓN PARA WIZARD (MODO DE 3 PASOS)
+        async function handleSubmitFichaWizard(event) {
             event.preventDefault();
 
             // Si no estamos en el paso 2, no hacer nada
             if (currentStep !== 2) {
+                console.log('⚠️ No estamos en el paso 2, wizard requiere completar pasos previos');
                 return;
             }
 
@@ -1181,7 +1299,15 @@
 
                 const result = await response.json();
                 if (response.ok && result.success) {
-                    showSuccessNotification('¡Ficha registrada exitosamente!');
+                    // ✅ PASO 5: Notificación mejorada con detalles de la ficha guardada
+                    const fichaInfo = result.ficha;
+                    const montoFormateado = formatCurrency(fichaInfo?.monto || wizardData.monto);
+                    const mensaje = `¡Ficha registrada! ${montoFormateado} de ${wizardData.nombre_depositante}`;
+                    showSuccessNotification(mensaje);
+
+                    // ✅ PASO 3: Recargar datos inmediatamente después de guardar
+                    console.log('🔄 Recargando datos después de guardar ficha...');
+                    await loadSummaryAndDetails();
 
                     // Ir al paso 3 (resultado)
                     goToStep(3);
@@ -1304,9 +1430,205 @@
                 .fichas-wizard-step {
                     transition: all 0.3s ease;
                 }
+
+                /* ✅ Estilos para loading state */
+                .loading-state {
+                    position: relative;
+                    pointer-events: none;
+                }
+
+                .loading-state::after {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(255, 255, 255, 0.7);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10;
+                }
+
+                .loading-state::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 40px;
+                    height: 40px;
+                    border: 3px solid #f3f3f3;
+                    border-top: 3px solid #3498db;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                    z-index: 11;
+                }
+
+                @keyframes spin {
+                    0% { transform: translate(-50%, -50%) rotate(0deg); }
+                    100% { transform: translate(-50%, -50%) rotate(360deg); }
+                }
+
+                /* Animación de entrada para filas de tabla */
+                @keyframes fadeInUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                .success-pulse {
+                    animation: successPulse 0.6s ease;
+                }
+
+                @keyframes successPulse {
+                    0%, 100% {
+                        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+                    }
+                    50% {
+                        box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+                    }
+                }
             `;
             document.head.appendChild(style);
         }
+        // ✅ SISTEMA DE PESTAÑAS MODERNO
+        function initializeTabs() {
+            const tabs = document.querySelectorAll('.fichas-tab');
+            const tabPanes = document.querySelectorAll('.fichas-tab-pane');
+
+            if (tabs.length === 0) {
+                console.log('ℹ️ No se encontraron pestañas, omitiendo inicialización');
+                return;
+            }
+
+            console.log('📑 Inicializando sistema de pestañas...');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const targetTab = this.dataset.tab;
+
+                    // Remover active de todas las pestañas
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabPanes.forEach(pane => pane.classList.remove('active'));
+
+                    // Activar pestaña seleccionada
+                    this.classList.add('active');
+                    const targetPane = document.getElementById(`tab-${targetTab}`);
+                    if (targetPane) {
+                        targetPane.classList.add('active');
+                    }
+
+                    console.log(`📑 Cambio a pestaña: ${targetTab}`);
+                });
+            });
+        }
+
+        // ✅ CREAR TARJETAS VISUALES PARA RESUMEN POR GERENTE
+        function createGerenteCards(data) {
+            const container = document.getElementById('gerentes-cards-container');
+            if (!container || !Array.isArray(data)) return;
+
+            container.innerHTML = '';
+
+            if (data.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">No hay datos de gerentes para esta semana</p>';
+                return;
+            }
+
+            data.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'summary-card';
+                card.style.animationDelay = `${index * 0.1}s`;
+
+                card.innerHTML = `
+                    <div class="summary-card-header">
+                        <div class="summary-card-icon">
+                            <i class="fas fa-user-tie"></i>
+                        </div>
+                        <div class="summary-card-title">${escapeHTML(item.gerente_nombre)}</div>
+                    </div>
+                    <div class="summary-card-body">
+                        <div class="summary-card-stat">
+                            <span class="summary-card-stat-label">Fichas</span>
+                            <div class="summary-card-stat-value">${Number(item.total_fichas) || 0}</div>
+                        </div>
+                        <div class="summary-card-stat">
+                            <span class="summary-card-stat-label">Total</span>
+                            <div class="summary-card-stat-value">${formatCurrency(item.monto_total)}</div>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // ✅ CREAR TARJETAS VISUALES PARA RESUMEN POR BANCO
+        function createBancoCards(data) {
+            const container = document.getElementById('bancos-cards-container');
+            if (!container || !Array.isArray(data)) return;
+
+            container.innerHTML = '';
+
+            if (data.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">No hay datos de bancos para esta semana</p>';
+                return;
+            }
+
+            data.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'summary-card';
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.style.borderLeftColor = getRandomColor();
+
+                card.innerHTML = `
+                    <div class="summary-card-header">
+                        <div class="summary-card-icon" style="background: ${getRandomGradient()}">
+                            <i class="fas fa-university"></i>
+                        </div>
+                        <div class="summary-card-title">${escapeHTML(item.banco || 'Sin banco')}</div>
+                    </div>
+                    <div class="summary-card-body">
+                        <div class="summary-card-stat">
+                            <span class="summary-card-stat-label">Fichas</span>
+                            <div class="summary-card-stat-value">${Number(item.total_fichas) || 0}</div>
+                        </div>
+                        <div class="summary-card-stat">
+                            <span class="summary-card-stat-label">Total</span>
+                            <div class="summary-card-stat-value">${formatCurrency(item.monto_total)}</div>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // Función auxiliar para colores aleatorios
+        function getRandomColor() {
+            const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function getRandomGradient() {
+            const gradients = [
+                'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+                'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+                'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
+            ];
+            return gradients[Math.floor(Math.random() * gradients.length)];
+        }
+
         return true;
     }
 

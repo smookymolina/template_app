@@ -352,140 +352,187 @@
 
 {% block modals %}
 {% if current_user.is_authenticated and current_user.is_admin() %}
-<div id="fichas-calculator-modal" class="modal modal-lg" data-admin-only role="dialog" aria-modal="true" aria-hidden="true">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3><i class="fas fa-calculator"></i> Calculadora de Fichas Semanales</h3>
+<div id="fichas-calculator-modal" class="modal modal-lg fichas-modal-modern" data-admin-only role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-content fichas-modal-content">
+        <div class="modal-header fichas-modal-header">
+            <div>
+                <h3><i class="fas fa-calculator"></i> Control de Fichas de Depósito</h3>
+                <p class="fichas-modal-subtitle">Gestiona y visualiza las fichas semanales (Jueves a Miércoles)</p>
+            </div>
             <span class="close-modal" id="close-fichas-calculator" role="button" tabindex="0" aria-label="Cerrar calculadora" onclick="closeFichasCalculatorModal()">&times;</span>
         </div>
-        <div class="modal-body">
-            <div id="fichas-calculator-section" class="mt-2" data-admin-only>
-                <div class="section-header">
-                    <h3><i class="fas fa-calculator"></i> Calculadora de Fichas Semanales</h3>
-                    <p>Registra y controla las fichas de deposito de los gerentes para el ciclo semanal (Jueves a Miercoles).</p>
+        <div class="modal-body fichas-modal-body">
+            <div id="fichas-calculator-section" data-admin-only>
+
+                <!-- 📊 Dashboard de Métricas Principales -->
+                <div class="fichas-dashboard-header">
+                    <div class="fichas-week-selector">
+                        <button type="button" class="btn-week-nav" id="fichas-week-prev">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <div class="week-info">
+                            <span class="week-label">Semana</span>
+                            <strong id="fichas-week-range" class="week-range">Cargando...</strong>
+                        </div>
+                        <button type="button" class="btn-week-nav" id="fichas-week-next" disabled>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="fichas-stats-cards">
+                        <div class="stat-card stat-card-primary">
+                            <div class="stat-icon"><i class="fas fa-receipt"></i></div>
+                            <div class="stat-content">
+                                <span class="stat-label">Total Fichas</span>
+                                <h3 id="fichas-total-count" class="stat-value">0</h3>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-card-success">
+                            <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+                            <div class="stat-content">
+                                <span class="stat-label">Monto Total</span>
+                                <h3 id="fichas-total-amount" class="stat-value">$0.00</h3>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-lg-5">
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title"><i class="fas fa-plus-circle"></i> Registrar Nueva Ficha</h5>
-                                <form id="form-add-ficha">
-                                    <div class="form-group">
-                                        <label for="ficha-nombre-depositante">Nombre del Depositante</label>
-                                        <input type="text" class="form-control" id="ficha-nombre-depositante" maxlength="150" required>
+                <!-- 📑 Sistema de Pestañas -->
+                <div class="fichas-tabs-container">
+                    <div class="fichas-tabs-header">
+                        <button class="fichas-tab active" data-tab="nueva-ficha">
+                            <i class="fas fa-plus-circle"></i> Nueva Ficha
+                        </button>
+                        <button class="fichas-tab" data-tab="por-gerente">
+                            <i class="fas fa-users"></i> Por Gerente
+                        </button>
+                        <button class="fichas-tab" data-tab="por-banco">
+                            <i class="fas fa-university"></i> Por Banco
+                        </button>
+                        <button class="fichas-tab" data-tab="detalle">
+                            <i class="fas fa-list"></i> Detalle Completo
+                        </button>
+                        <button id="btn-export-fichas" class="btn-export">
+                            <i class="fas fa-file-excel"></i> Exportar
+                        </button>
+                    </div>
+
+                    <div class="fichas-tabs-content">
+                        <!-- Pestaña 1: Nueva Ficha -->
+                        <div class="fichas-tab-pane active" id="tab-nueva-ficha">
+                            <div class="ficha-form-container">
+                                <form id="form-add-ficha" class="ficha-form-modern">
+                                    <div class="form-row">
+                                        <div class="form-col">
+                                            <div class="form-group-modern">
+                                                <label for="ficha-nombre-depositante"><i class="fas fa-user"></i> Depositante</label>
+                                                <input type="text" class="form-control-modern" id="ficha-nombre-depositante" maxlength="150" placeholder="Nombre completo" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-col">
+                                            <div class="form-group-modern">
+                                                <label for="ficha-banco"><i class="fas fa-university"></i> Banco</label>
+                                                <input type="text" class="form-control-modern" id="ficha-banco" maxlength="100" placeholder="Ej: BBVA, Santander..." required>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label for="ficha-banco">Banco</label>
-                                        <input type="text" class="form-control" id="ficha-banco" maxlength="100" required>
+
+                                    <div class="form-row">
+                                        <div class="form-col">
+                                            <div class="form-group-modern">
+                                                <label for="ficha-monto"><i class="fas fa-dollar-sign"></i> Monto (MXN)</label>
+                                                <input type="number" class="form-control-modern" id="ficha-monto" step="0.01" min="0" placeholder="0.00" required>
+                                            </div>
+                                        </div>
+                                        <div class="form-col">
+                                            <div class="form-group-modern">
+                                                <label for="ficha-gerente-id"><i class="fas fa-user-tie"></i> Gerente</label>
+                                                <select class="form-control-modern" id="ficha-gerente-id" required>
+                                                    <option value="">Seleccionar gerente...</option>
+                                                    {% if current_user.is_authenticated and current_user.is_admin() %}
+                                                        {% if gerentes_list %}
+                                                            {% for gerente in gerentes_list %}
+                                                                <option value="{{ gerente.id }}">{{ gerente.nombre }}{% if gerente.email %} ({{ gerente.email }}){% endif %}</option>
+                                                            {% endfor %}
+                                                        {% else %}
+                                                            <option value="" disabled>No hay gerentes disponibles</option>
+                                                        {% endif %}
+                                                    {% endif %}
+                                                </select>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label for="ficha-monto">Monto (MXN)</label>
-                                        <input type="number" class="form-control" id="ficha-monto" step="0.01" min="0" required>
+
+                                    <div class="form-row">
+                                        <div class="form-col-full">
+                                            <div class="form-group-modern">
+                                                <label for="ficha-fecha"><i class="fas fa-calendar"></i> Fecha del Depósito (opcional)</label>
+                                                <input type="datetime-local" class="form-control-modern" id="ficha-fecha">
+                                                <small class="form-hint">Si se deja vacío, se usará la fecha actual</small>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label for="ficha-fecha">Fecha del Deposito (opcional)</label>
-                                        <input type="datetime-local" class="form-control" id="ficha-fecha">
-                                        <small class="form-text text-muted">Si lo dejas vacio se usara la fecha actual.</small>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="ficha-gerente-id">Gerente</label>
-                                        <select class="form-control" id="ficha-gerente-id" required>
-                                            <option value="">Selecciona un gerente</option>
-                                            {% if current_user.is_authenticated and current_user.is_admin() %}
-                                                {% if gerentes_list %}
-                                                    {% for gerente in gerentes_list %}
-                                                        <option value="{{ gerente.id }}">{{ gerente.nombre }}{% if gerente.email %} ({{ gerente.email }}){% endif %}</option>
-                                                    {% endfor %}
-                                                {% else %}
-                                                    <option value="" disabled>No hay gerentes disponibles</option>
-                                                {% endif %}
-                                            {% endif %}
-                                        </select>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary btn-block mt-3 btn-submit-ficha">
+
+                                    <button type="submit" class="btn-submit-modern btn-submit-ficha">
                                         <i class="fas fa-save"></i> Guardar Ficha
                                     </button>
                                 </form>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="col-lg-7">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="fichas-week-controls" style="display:flex; flex-direction:column; gap:0.75rem; align-items:flex-start;">
-                                    <div>
-                                        <h5 class="card-title" style="margin-bottom:0.25rem;"><i class="fas fa-list-alt"></i> Resumen Semanal</h5>
-                                        <p class="text-muted" style="margin:0;">Semana en curso: <strong id="fichas-week-range"></strong></p>
-                                    </div>
-                                    <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="fichas-week-prev">
-                                            <i class="fas fa-chevron-left"></i> Semana Anterior
-                                        </button>
-                                        <button type="button" class="btn btn-outline-secondary btn-sm" id="fichas-week-next" disabled>
-                                            Semana Siguiente <i class="fas fa-chevron-right"></i>
-                                        </button>
-                                        <button id="btn-export-fichas" class="btn btn-success btn-sm">
-                                            <i class="fas fa-file-excel"></i> Exportar
-                                        </button>
-                                    </div>
-                                </div>
+                        <!-- Pestaña 2: Resumen por Gerente -->
+                        <div class="fichas-tab-pane" id="tab-por-gerente">
+                            <div class="fichas-cards-grid" id="gerentes-cards-container">
+                                <!-- Se llenará dinámicamente -->
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table-modern" id="table-fichas-summary">
+                                    <thead>
+                                        <tr>
+                                            <th>Gerente</th>
+                                            <th class="text-center">Fichas</th>
+                                            <th class="text-right">Monto Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
 
-                                <div class="fichas-totals mb-3" style="display:flex; flex-wrap:wrap; gap:1.5rem; margin-top:1rem;">
-                                    <div>
-                                        <span class="text-muted">Total de Fichas</span>
-                                        <h4 id="fichas-total-count" style="margin:0;">0</h4>
-                                    </div>
-                                    <div>
-                                        <span class="text-muted">Monto Semanal</span>
-                                        <h4 id="fichas-total-amount" style="margin:0;">$0.00</h4>
-                                    </div>
-                                </div>
+                        <!-- Pestaña 3: Resumen por Banco -->
+                        <div class="fichas-tab-pane" id="tab-por-banco">
+                            <div class="fichas-cards-grid" id="bancos-cards-container">
+                                <!-- Se llenará dinámicamente -->
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table-modern" id="table-fichas-bank">
+                                    <thead>
+                                        <tr>
+                                            <th>Banco</th>
+                                            <th class="text-center">Fichas</th>
+                                            <th class="text-right">Monto Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
 
-                                <h6>Resumen por Gerente</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-hover" id="table-fichas-summary">
-                                        <thead>
-                                            <tr>
-                                                <th>Gerente</th>
-                                                <th># Fichas</th>
-                                                <th>Monto Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody></tbody>
-                                    </table>
-                                </div>
-
-                                <h6 class="mt-4">Resumen por Banco</h6>
-                                <div class="table-responsive">
-                                    <table class="table table-sm table-hover" id="table-fichas-bank">
-                                        <thead>
-                                            <tr>
-                                                <th>Banco</th>
-                                                <th># Fichas</th>
-                                                <th>Monto Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody></tbody>
-                                    </table>
-                                </div>
-
-                                <h6 class="mt-4">Detalle de Fichas</h6>
-                                <div class="table-responsive" style="max-height: 360px; overflow-y: auto;">
-                                    <table class="table table-sm table-striped" id="table-fichas-details">
-                                        <thead>
-                                            <tr>
-                                                <th>Fecha</th>
-                                                <th>Depositante</th>
-                                                <th>Banco</th>
-                                                <th>Monto</th>
-                                                <th>Gerente</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody></tbody>
-                                    </table>
-                                </div>
+                        <!-- Pestaña 4: Detalle Completo -->
+                        <div class="fichas-tab-pane" id="tab-detalle">
+                            <div class="table-responsive fichas-details-container">
+                                <table class="table-modern table-details" id="table-fichas-details">
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Depositante</th>
+                                            <th>Banco</th>
+                                            <th class="text-right">Monto</th>
+                                            <th>Gerente</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
                             </div>
                         </div>
                     </div>

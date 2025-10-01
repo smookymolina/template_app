@@ -64,7 +64,7 @@
                     </div>
 
                     {% if current_user.rol == 'admin' %}
-                    <div class="filter-group filter-group--button">
+                    <div class="filter-group filter-group--button admin-only" id="filter-gerente-control">
                         <label for="filter-by-gerente-btn">Gerentes:</label>
                         <button type="button" class="btn-secondary filter-button" id="filter-by-gerente-btn" aria-haspopup="listbox" aria-expanded="false">
                             <i class="fas fa-user-tie"></i> Filtrar por Gerente

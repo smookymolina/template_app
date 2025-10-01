@@ -166,6 +166,9 @@ const UI = {
         document.documentElement.style.setProperty('--primary-color', color);
         document.documentElement.style.setProperty('--primary-dark', this.darkenColor(color, 20));
         document.documentElement.style.setProperty('--primary-light', this.lightenColor(color, 80));
+
+    // Notificar a otros módulos sobre el cambio de color
+    document.dispatchEvent(new CustomEvent('primaryColorChanged', { detail: { color: color } }));
         
         // ✅ SOLUCIÓN: Verificar Auth de forma defensiva
         const isAuthAvailable = typeof Auth !== 'undefined' && Auth !== null;

@@ -382,13 +382,13 @@ const Reclutas = {
     configureUIForRole: function() {
         const role = this.userRole || Auth.getUserRole() || 'asesor';
         this.userRole = role;
-        
+
         console.log('Configurando UI de reclutas para rol:', role);
-        
-        // Actualizar clases CSS según jerarquía: Admin > Gerente > Asesor
+
+        // Actualizar clases CSS segun jerarquia: Admin > Gerente > Asesor
         document.body.classList.remove('admin-view', 'gerente-view', 'asesor-view');
         document.body.classList.add(`${role}-view`);
-        
+
         if (role === 'admin') {
             this.showAsesorColumn();
             this.showAdminWelcome();
@@ -403,7 +403,74 @@ const Reclutas = {
             this.showAsesorWelcome();
             this.setupAsesorFeatures();
         }
+
+        // Sincronizar controles visibles despues de aplicar configuraciones especificas
+        this.syncRoleBasedFilters();
     },
+
+    /**
+     * Garantiza que los controles de filtrado se respeten segun el rol activo
+     */
+    syncRoleBasedFilters: function() {
+        const filterGroup = document.getElementById('filter-gerente-control');
+        const button = document.getElementById('filter-by-gerente-btn');
+        const dropdown = document.getElementById('filter-gerente-dropdown');
+
+        if (!filterGroup) {
+            return;
+        }
+
+        if (!filterGroup.dataset.defaultDisplay) {
+            const computedDisplay = window.getComputedStyle(filterGroup).display;
+            filterGroup.dataset.defaultDisplay = computedDisplay && computedDisplay !== 'none'
+                ? computedDisplay
+                : 'flex';
+        }
+
+        if (this.userRole === 'admin') {
+            filterGroup.style.display = filterGroup.dataset.defaultDisplay;
+            filterGroup.classList.remove('hidden-by-role');
+            if (button) {
+                button.disabled = false;
+                button.removeAttribute('aria-disabled');
+            }
+        } else {
+            filterGroup.style.display = 'none';
+            filterGroup.classList.add('hidden-by-role');
+            if (button) {
+                button.disabled = true;
+                button.setAttribute('aria-disabled', 'true');
+                button.setAttribute('aria-expanded', 'false');
+            }
+            if (dropdown) {
+                dropdown.classList.remove('open');
+                dropdown.setAttribute('aria-hidden', 'true');
+            }
+
+            if (this.filters.gerente_id && this.filters.gerente_id !== 'todos') {
+                this.filters.gerente_id = 'todos';
+                this.updateGerenteFilterButtonLabel();
+                this.highlightActiveGerenteOption();
+            }
+        }
+    },
+
+
+    /**
+
+     * Asegura que filtros y botones mantengan el estado visual acorde al rol
+
+     */
+
+    ensureRoleVisualState: function() {
+
+        this.syncRoleBasedFilters();
+
+        this.applyThemeStyles();
+
+    },
+
+
 
     showAsesorColumn: function() {
         console.log('Mostrando columna de asesor');
@@ -564,8 +631,9 @@ const Reclutas = {
         
         // Mensaje de bienvenida
         this.showAdminWelcome();
-        
-        
+
+        this.ensureRoleVisualState();
+
     },
 
     /**
@@ -1532,8 +1600,9 @@ const Reclutas = {
 
         // Mensaje de bienvenida
         this.showGerenteWelcome();
-        
-        
+
+        this.ensureRoleVisualState();
+
     },
 
     /**
@@ -1620,6 +1689,11 @@ const Reclutas = {
                     }
                 }
             });
+
+            // Escuchar cambios de color
+            document.addEventListener('primaryColorChanged', (e) => {
+                this.applyThemeStyles(e.detail.color);
+            });
             
             console.log('Módulo de reclutas inicializado correctamente');
             
@@ -1634,6 +1708,7 @@ const Reclutas = {
      * Muestra el overlay de carga para la sección de reclutas.
      */
     showReclutasLoader: function() {
+        this.syncRoleBasedFilters();
         const loader = document.getElementById('reclutas-loader');
         if (loader) {
             loader.style.display = 'flex';
@@ -1647,12 +1722,14 @@ const Reclutas = {
                 }, 50);
             }
         }
+        this.applyThemeStyles();
     },
 
     /**
      * Oculta el overlay de carga de la sección de reclutas.
      */
     hideReclutasLoader: function() {
+        this.syncRoleBasedFilters();
         const loader = document.getElementById('reclutas-loader');
         if (loader) {
             const progressFill = document.getElementById('reclutas-progress-fill');
@@ -1667,6 +1744,29 @@ const Reclutas = {
                 }
             }, 400);
         }
+    },
+
+    /**
+     * Aplica los estilos del tema dinámicamente a los botones.
+     */
+    applyThemeStyles: function(color) {
+        const primaryColor = color || localStorage.getItem(CONFIG.STORAGE_KEYS.PRIMARY_COLOR) || CONFIG.DEFAULTS.PRIMARY_COLOR;
+        if (!primaryColor) {
+            return;
+        }
+
+        const borderColor = (window.UI && typeof window.UI.darkenColor === 'function')
+            ? window.UI.darkenColor(primaryColor, 10)
+            : primaryColor;
+
+        ['open-add-recluta-modal', 'distribuir-excel-btn'].forEach((buttonId) => {
+            const button = document.getElementById(buttonId);
+            if (!button) {
+                return;
+            }
+            button.style.backgroundColor = primaryColor;
+            button.style.borderColor = borderColor;
+        });
     },
 
     /**
@@ -1935,6 +2035,7 @@ const Reclutas = {
      * Carga y muestra la lista de reclutas
      */
     loadAndDisplayReclutas: async function() {
+        this.ensureRoleVisualState();
         this.showReclutasLoader();
         try {
             console.log('📊 Cargando y actualizando dashboard de reclutas...');
