@@ -6,7 +6,8 @@
       "Read(//c/Users/GIRTEC/Documents/**)",
       "Bash(pkill:*)",
       "Bash(dir:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

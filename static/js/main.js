@@ -1744,6 +1744,8 @@ function handleSpecialSections(sectionId) {
         handleConfiguracionSection();
     } else if (sectionId === 'gestion-gerentes-section') {
         handleGestionGerentesSection();
+    } else if (sectionId === 'admin-reclutas-management') {
+        handleAdminReclutasManagementSection();
     }
 }
 
@@ -1951,6 +1953,32 @@ function handleGestionGerentesSection() {
             console.error('Error al iniciar tutorial de gerentes:', error);
         }
     }, 500);
+}
+
+/**
+ * ✅ MANEJAR SECCIÓN DE PANEL ADMINISTRATIVO DE RECLUTAS
+ */
+function handleAdminReclutasManagementSection() {
+    const currentUser = getCurrentUser();
+    console.log('🔒 Accediendo a Panel Administrativo de Reclutas, usuario:', currentUser?.rol);
+
+    if (currentUser?.rol !== 'admin') {
+        showNotification('Acceso denegado. Solo los administradores pueden acceder al panel administrativo.', 'error');
+        showSection('reclutas-section');
+        return;
+    }
+
+    // Inicializar el módulo de gestión administrativa de reclutas
+    if (window.initializeAdminPanel && typeof window.initializeAdminPanel === 'function') {
+        console.log('🚀 Inicializando Panel Administrativo de Reclutas...');
+        window.initializeAdminPanel();
+    } else if (window.AdminReclutasManagement && typeof window.AdminReclutasManagement.init === 'function') {
+        console.log('🚀 Inicializando Panel Administrativo de Reclutas (fallback)...');
+        window.AdminReclutasManagement.init();
+    } else {
+        console.error('❌ No se pudo cargar el módulo de Panel Administrativo de Reclutas.');
+        showError('No se pudo cargar el módulo de gestión administrativa de reclutas.');
+    }
 }
 
 /**

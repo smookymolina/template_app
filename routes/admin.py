@@ -1,6 +1,7 @@
 from flask_cors import cross_origin
-from flask import Blueprint, jsonify, request, current_app, render_template, make_response, url_for
+from flask import Blueprint, jsonify, request, current_app, render_template, make_response, url_for, redirect
 from sqlalchemy import func, case, and_
+from sqlalchemy.orm import selectinload
 from flask_login import login_required, current_user
 import io
 import csv
@@ -373,10 +374,9 @@ def invalidate_session(id):
 @admin_bp.route('/dashboard', methods=['GET'])
 @admin_required
 def admin_dashboard():
-    """
-    Renderiza el panel de administración.
-    """
-    return render_template('admin/dashboard.html')
+    """Renderiza el panel administrativo redirigiendo a la vista principal."""
+    current_app.logger.debug('Admin dashboard solicitado; redirigiendo a la vista principal con ancla admin.')
+    return redirect(url_for('main.index', _anchor='admin-reclutas-management'))
 
 @admin_bp.route('/metricas/tendencias', methods=['GET'])
 @admin_required
@@ -1503,23 +1503,41 @@ def _get_top_asesor_del_equipo(asesores):
 # GESTIÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“N AVANZADA DE RECLUTAS - SOLO ADMIN
 # =========================
 
+
+
+def _get_admin_reclutas_catalogos():
+    """Obtiene catálogos de asesores y gerentes activos para el panel administrativo."""
+    asesores = Usuario.query.filter_by(rol='asesor', is_active=True).order_by(Usuario.nombre.asc()).all()
+    gerentes = Usuario.query.filter_by(rol='gerente', is_active=True).order_by(Usuario.nombre.asc()).all()
+    return {
+        "asesores": [{
+            "id": asesor.id,
+            "nombre": asesor.nombre or asesor.email,
+            "email": asesor.email
+        } for asesor in asesores],
+        "gerentes": [{
+            "id": gerente.id,
+            "nombre": gerente.nombre or gerente.email,
+            "email": gerente.email
+        } for gerente in gerentes]
+    }
+
 @admin_bp.route('/reclutas/management', methods=['GET'])
 @admin_required
 def get_reclutas_management():
-    """
-    ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ ADMIN ONLY: Obtiene todos los reclutas para gestiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n administrativa
-    """
+    """ADMIN ONLY: Obtiene reclutas con filtros, paginación y catálogos auxiliares."""
     try:
         page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 50, type=int)
-        search = request.args.get('search', '')
-        estado = request.args.get('estado', '')
-        asesor_id = request.args.get('asesor_id', '', type=str)
+        per_page = min(request.args.get('per_page', 50, type=int), 200)
+        search = request.args.get('search', '', type=str)
+        estado = request.args.get('estado', '', type=str)
+        asesor_id_raw = request.args.get('asesor_id', '', type=str)
 
-        # Base query - ADMIN puede ver TODOS los reclutas
-        query = Recluta.query
+        query = (
+            Recluta.query
+            .options(selectinload(Recluta.asesor))
+        )
 
-        # Filtros
         if search:
             search_term = f"%{search}%"
             query = query.filter(
@@ -1534,40 +1552,44 @@ def get_reclutas_management():
         if estado:
             query = query.filter(Recluta.estado == estado)
 
-        if asesor_id:
-            if asesor_id == 'sin_asignar':
+        if asesor_id_raw:
+            if asesor_id_raw in {'sin_asignar', 'null'}:
                 query = query.filter(Recluta.asesor_id.is_(None))
             else:
-                query = query.filter(Recluta.asesor_id == int(asesor_id))
+                try:
+                    query = query.filter(Recluta.asesor_id == int(asesor_id_raw))
+                except ValueError:
+                    return jsonify({
+                        "success": False,
+                        "message": "Filtro de asesor inválido"
+                    }), 400
 
-        # Ordenar por fecha de registro (mÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡s recientes primero)
         query = query.order_by(Recluta.fecha_registro.desc())
+        reclutas_paginados = query.paginate(page=page, per_page=per_page, error_out=False)
 
-        # PaginaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n
-        reclutas_paginados = query.paginate(
-            page=page,
-            per_page=per_page,
-            error_out=False
-        )
+        recluta_ids = [recluta.id for recluta in reclutas_paginados.items]
+        eventos_por_recluta = defaultdict(list)
+        if recluta_ids:
+            eventos = (
+                EventoRecluta.query
+                .filter(EventoRecluta.recluta_id.in_(recluta_ids))
+                .order_by(EventoRecluta.recluta_id.asc(), EventoRecluta.fecha.asc(), EventoRecluta.id.asc())
+                .all()
+            )
+            for evento in eventos:
+                eventos_por_recluta[evento.recluta_id].append(evento.serialize())
 
-        # Obtener lista de asesores para el dropdown
-        asesores = Usuario.query.filter_by(rol='asesor').all()
-        gerentes = Usuario.query.filter_by(rol='gerente').all()
-
-        # Serializar reclutas con informaciÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n del asesor
         reclutas_data = []
         for recluta in reclutas_paginados.items:
-            recluta_info = recluta.serialize()
-            recluta_info['asesor_nombre'] = recluta.asesor.nombre if recluta.asesor else "Sin asignar"
-            recluta_info['asesor_email'] = recluta.asesor.email if recluta.asesor else ""
-            
-            # Obtener y serializar eventos personalizados para el recluta
-            eventos = EventoRecluta.get_for_recluta(recluta.id)
-            recluta_info['eventos'] = [evento.serialize() for evento in eventos]
-            
-            reclutas_data.append(recluta_info)
+            info = recluta.serialize()
+            info['asesor_nombre'] = recluta.asesor.nombre if recluta.asesor else "Sin asignar"
+            info['asesor_email'] = recluta.asesor.email if recluta.asesor else ""
+            info['eventos'] = eventos_por_recluta.get(recluta.id, [])
+            reclutas_data.append(info)
 
-        current_app.logger.info(f"ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ Admin consultÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³ {len(reclutas_data)} reclutas para gestiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n")
+        catalogos = _get_admin_reclutas_catalogos()
+
+        current_app.logger.info('Admin consultó %s reclutas para gestión administrativa', len(reclutas_data))
 
         return jsonify({
             "success": True,
@@ -1580,15 +1602,34 @@ def get_reclutas_management():
                 "has_next": reclutas_paginados.has_next,
                 "has_prev": reclutas_paginados.has_prev
             },
-            "asesores": [{"id": a.id, "nombre": a.nombre, "email": a.email} for a in asesores],
-            "gerentes": [{"id": g.id, "nombre": g.nombre, "email": g.email} for g in gerentes]
+            "asesores": catalogos["asesores"],
+            "gerentes": catalogos["gerentes"]
         })
 
     except Exception as e:
-        current_app.logger.error(f"ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ Error en gestiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³n de reclutas admin: {str(e)}")
+        current_app.logger.error('Error en gestión de reclutas admin: %s', str(e), exc_info=True)
         return jsonify({
             "success": False,
             "message": f"Error al obtener reclutas: {str(e)}"
+        }), 500
+
+
+
+@admin_bp.route('/reclutas/support-data', methods=['GET'])
+@admin_required
+def get_admin_reclutas_support_data():
+    """ADMIN ONLY: Devuelve catálogos auxiliares (asesores y gerentes)."""
+    try:
+        catalogos = _get_admin_reclutas_catalogos()
+        return jsonify({
+            "success": True,
+            **catalogos
+        })
+    except Exception as e:
+        current_app.logger.error('Error al obtener catálogos admin de reclutas: %s', str(e), exc_info=True)
+        return jsonify({
+            "success": False,
+            "message": f"Error al obtener catálogos: {str(e)}"
         }), 500
 
 @admin_bp.route('/reclutas/bulk-delete', methods=['POST'])

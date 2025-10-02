@@ -6,6 +6,19 @@
 import CONFIG from './config.js';
 import { showNotification, showError, showSuccess } from './notifications.js';
 
+
+const escapeHtml = (value) => {
+    if (value === undefined || value === null) {
+        return '';
+    }
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+};
+
 const AdminReclutasManagement = {
     // Estado
     currentPage: 1,
@@ -13,6 +26,7 @@ const AdminReclutasManagement = {
     itemsPerPage: 50,
     reclutas: [],
     asesores: [],
+    gerentes: [],
     selectedReclutas: new Set(),
     isLoading: false,
     isInitialized: false,
@@ -65,78 +79,94 @@ const AdminReclutasManagement = {
     /**
      * 📊 CARGAR DATOS INICIALES
      */
-    async loadData() {
-        try {
-            this.showLoading();
-            await Promise.all([
-                this.loadReclutas(),
-                this.loadAsesores()
-            ]);
-            this.hideLoading();
-        } catch (error) {
-            console.error('❌ Error cargando datos:', error);
-            showError('Error al cargar datos del panel administrativo');
-            this.hideLoading();
-        }
-    },
+    
+async loadData() {
+    try {
+        this.showLoading();
+        await this.loadSupportData();
+        await this.loadReclutas();
+    } catch (error) {
+        console.error('? Error cargando datos:', error);
+        showError('Error al cargar datos del panel administrativo');
+    } finally {
+        this.hideLoading();
+    }
+},
+
 
     /**
      * 👥 CARGAR LISTA DE RECLUTAS
      */
-    async loadReclutas() {
-        try {
-            const params = new URLSearchParams({
-                page: this.currentPage,
-                per_page: this.itemsPerPage,
-                search: this.filters.search,
-                estado: this.filters.estado,
-                asesor_id: this.filters.asesor_id
-            });
+async loadReclutas() {
+    try {
+        const params = new URLSearchParams({
+            page: this.currentPage,
+            per_page: this.itemsPerPage,
+            search: this.filters.search,
+            estado: this.filters.estado,
+            asesor_id: this.filters.asesor_id
+        });
 
-            const response = await fetch(`/admin/reclutas/management?${params}`, {
-                headers: { 'Content-Type': 'application/json' }
-            });
+        const response = await fetch(`/admin/reclutas/management?${params}`, {
+            headers: { 'Content-Type': 'application/json' }
+        });
 
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-            const data = await response.json();
-            if (!data.success) throw new Error(data.message);
+        const data = await response.json();
+        if (!data?.success) throw new Error(data?.message || 'Respuesta inválida del servidor');
 
-            this.reclutas = data.reclutas;
-            this.updatePagination(data.pagination);
-            this.renderReclutas();
+        this.reclutas = Array.isArray(data.reclutas) ? data.reclutas : [];
+        const pagination = data.pagination || {
+            page: 1,
+            pages: 1,
+            per_page: this.reclutas.length || this.itemsPerPage,
+            total: this.reclutas.length,
+            has_next: false,
+            has_prev: false
+        };
 
-            console.log(`✅ Cargados ${this.reclutas.length} reclutas para página ${this.currentPage}`);
-            console.log('🔍 Filtros aplicados:', this.filters);
-        } catch (error) {
-            console.error('❌ Error cargando reclutas:', error);
-            showError('Error al cargar lista de reclutas');
-        }
-    },
+        this.updatePagination(pagination);
+        this.renderReclutas();
+
+        console.log(`? Cargados ${this.reclutas.length} reclutas para página ${this.currentPage}`);
+        console.log('?? Filtros aplicados:', this.filters);
+    } catch (error) {
+        console.error('? Error cargando reclutas:', error);
+        showError('Error al cargar lista de reclutas');
+    }
+},
+
 
     /**
      * 👤 CARGAR LISTA DE ASESORES
      */
-    async loadAsesores() {
+    async loadSupportData() {
         try {
-            const response = await fetch('/admin/reclutas/management', {
+            const response = await fetch('/admin/reclutas/support-data', {
                 headers: { 'Content-Type': 'application/json' }
             });
 
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             const data = await response.json();
-            if (!data.success) throw new Error(data.message);
+            if (!data?.success) throw new Error(data?.message || 'Respuesta inválida del servidor');
 
-            this.asesores = data.asesores || [];
+            this.asesores = Array.isArray(data.asesores) ? data.asesores : [];
+            this.gerentes = Array.isArray(data.gerentes) ? data.gerentes : [];
             this.populateAsesorFilters();
 
-            console.log(`✅ Cargados ${this.asesores.length} asesores:`, this.asesores.map(a => a.nombre));
+            if (this.reclutas.length) {
+                this.renderReclutas();
+            }
+
+            console.log(`? Cargados ${this.asesores.length} asesores y ${this.gerentes.length} gerentes`);
         } catch (error) {
-            console.error('❌ Error cargando asesores:', error);
-            showError('Error al cargar lista de asesores');
+            console.error('? Error cargando datos auxiliares:', error);
+            showError('Error al cargar catálogos del panel administrativo');
         }
     },
+
 
     /**
      * 🎨 RENDERIZAR TABLA DE RECLUTAS
@@ -160,6 +190,26 @@ const AdminReclutasManagement = {
         }
 
         this.reclutas.forEach(recluta => {
+            const estadoEtiqueta = (recluta.estado || 'Sin estado').toString();
+            const estadoSlug = estadoEtiqueta
+                .normalize('NFD')
+                .replace(/[̀-ͯ]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '') || 'sin-estado';
+
+            let fechaRegistro = 'Sin fecha';
+            if (recluta.fecha_registro) {
+                const fecha = new Date(recluta.fecha_registro);
+                if (!Number.isNaN(fecha.valueOf())) {
+                    fechaRegistro = fecha.toLocaleDateString();
+                }
+            }
+
+            const asesorOptions = this.asesores.map(a =>
+                `<option value="${a.id}" ${a.id == recluta.asesor_id ? 'selected' : ''}>${escapeHtml(a.nombre || a.email)}</option>`
+            ).join('');
+
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>
@@ -167,37 +217,35 @@ const AdminReclutasManagement = {
                            data-id="${recluta.id}"
                            ${this.selectedReclutas.has(recluta.id) ? 'checked' : ''}>
                 </td>
-                <td><code>${recluta.folio}</code></td>
-                <td>${recluta.nombre}</td>
-                <td>${recluta.email}</td>
-                <td>${recluta.telefono}</td>
+                <td><code>${escapeHtml(recluta.folio || 'S/F')}</code></td>
+                <td>${escapeHtml(recluta.nombre || 'Nombre no disponible')}</td>
+                <td>${escapeHtml(recluta.email || 'Sin email')}</td>
+                <td>${escapeHtml(recluta.telefono || 'Sin teléfono')}</td>
                 <td>
-                    <span class="status-badge status-${recluta.estado.toLowerCase().replace(' ', '-')}">
-                        ${recluta.estado}
+                    <span class="status-badge status-${estadoSlug}">
+                        ${escapeHtml(estadoEtiqueta)}
                     </span>
                 </td>
-                <td>${recluta.asesor_nombre || 'Sin asignar'}</td>
-                <td>${new Date(recluta.fecha_registro).toLocaleDateString()}</td>
+                <td>${escapeHtml(recluta.asesor_nombre || 'Sin asignar')}</td>
+                <td>${escapeHtml(fechaRegistro)}</td>
                 <td>
                     <div class="action-buttons">
                         <select class="single-asesor-select" data-id="${recluta.id}"
-                                title="Selecciona un nuevo asesor para ${recluta.nombre}">
+                                title="Selecciona un nuevo asesor para ${escapeHtml(recluta.nombre || 'este recluta')}">
                             <option value="">Cambiar asesor...</option>
                             <option value="null" ${!recluta.asesor_id ? 'selected' : ''}>Sin asesor</option>
-                            ${this.asesores.map(a =>
-                                `<option value="${a.id}" ${a.id == recluta.asesor_id ? 'selected' : ''}>${a.nombre}</option>`
-                            ).join('')}
+                            ${asesorOptions}
                         </select>
                         <button class="btn-sm btn-warning single-assign"
                                 data-id="${recluta.id}"
-                                title="Asignar asesor seleccionado a ${recluta.nombre}"
-                                aria-label="Asignar asesor a ${recluta.nombre}">
+                                title="Asignar asesor seleccionado a ${escapeHtml(recluta.nombre || 'este recluta')}"
+                                aria-label="Asignar asesor a ${escapeHtml(recluta.nombre || 'este recluta')}">
                             <i class="fas fa-user-edit" aria-hidden="true"></i>
                         </button>
                         <button class="btn-sm btn-danger single-delete"
                                 data-id="${recluta.id}"
-                                title="Eliminar a ${recluta.nombre} permanentemente"
-                                aria-label="Eliminar a ${recluta.nombre}">
+                                title="Eliminar a ${escapeHtml(recluta.nombre || 'este recluta')} permanentemente"
+                                aria-label="Eliminar a ${escapeHtml(recluta.nombre || 'este recluta')}">
                             <i class="fas fa-trash" aria-hidden="true"></i>
                         </button>
                     </div>
@@ -207,10 +255,10 @@ const AdminReclutasManagement = {
             tbody.appendChild(row);
         });
 
-        // Event listeners para acciones individuales
         this.setupRowEventListeners();
         this.updateSelectionUI();
     },
+
 
     /**
      * 🎯 CONFIGURAR EVENTOS DE FILAS
@@ -562,7 +610,10 @@ const AdminReclutasManagement = {
      * 🎨 ACTUALIZAR INFORMACIÓN DE PAGINACIÓN
      */
     updatePagination(pagination) {
-        this.totalPages = pagination.pages;
+        if (!pagination) {
+            return;
+        }
+        this.totalPages = pagination.pages || 1;
 
         const prevBtn = document.getElementById('admin-prev-page');
         const nextBtn = document.getElementById('admin-next-page');
@@ -641,31 +692,53 @@ const AdminReclutasManagement = {
 // 🚀 INICIALIZACIÓN GLOBAL PARA INTEGRACIÓN CON NAVEGACIÓN
 window.AdminReclutasManagement = AdminReclutasManagement;
 
+// 🚀 FUNCIÓN DE INICIALIZACIÓN CONTROLADA
+function initializeAdminPanel() {
+    const section = document.getElementById('admin-reclutas-management');
+
+    if (!section) {
+        console.warn('⚠️ Sección admin-reclutas-management no encontrada en el DOM');
+        return;
+    }
+
+    if (AdminReclutasManagement.isInitialized) {
+        console.log('✅ Panel Administrativo ya está inicializado, recargando datos...');
+        AdminReclutasManagement.loadData();
+        return;
+    }
+
+    console.log('🚀 Inicializando Panel Administrativo de Reclutas...');
+    AdminReclutasManagement.init();
+    AdminReclutasManagement.isInitialized = true;
+}
+
 // 🚀 AUTO-INICIALIZACIÓN ROBUSTA
 document.addEventListener('DOMContentLoaded', () => {
     const section = document.getElementById('admin-reclutas-management');
     const loginSection = document.getElementById('login-section');
 
     // Solo inicializar si la sección existe Y el login NO está visible (usuario ya autenticado)
-    if (section && !AdminReclutasManagement.isInitialized) {
-        const isLoginVisible = loginSection && loginSection.style.display !== 'none';
+    if (section && loginSection) {
+        const isLoginVisible = loginSection.style.display !== 'none';
 
         if (!isLoginVisible) {
-            console.log('🚀 Inicializando Panel Administrativo de Reclutas al cargar la página...');
-            AdminReclutasManagement.init();
-            AdminReclutasManagement.isInitialized = true;
+            initializeAdminPanel();
         }
     }
 
-    // Adicionalmente, escuchar por cambios de sección si la app es una SPA (Single Page Application)
-    // para inicializar el panel si se navega a él dinámicamente.
+    // Escuchar por cambios de sección para inicializar cuando se navega al panel
     document.addEventListener('sectionChanged', (event) => {
-        if (event.detail && event.detail.section === 'admin-reclutas-management' && !AdminReclutasManagement.isInitialized) {
-            console.log('🚀 Inicializando Panel Administrativo de Reclutas por evento sectionChanged...');
-            AdminReclutasManagement.init();
-            AdminReclutasManagement.isInitialized = true;
+        if (event.detail && event.detail.section === 'admin-reclutas-management') {
+            console.log('📍 Navegando a Panel Administrativo de Reclutas...');
+            // Dar tiempo para que la sección sea visible antes de inicializar
+            setTimeout(() => {
+                initializeAdminPanel();
+            }, 100);
         }
     });
 });
+
+// Exponer función de inicialización globalmente para uso manual
+window.initializeAdminPanel = initializeAdminPanel;
 
 export default AdminReclutasManagement;

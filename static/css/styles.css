@@ -3,6 +3,7 @@
     --primary-color: #007bff;
     --primary-dark: #0056b3;
     --primary-light: #e9f2f9;
+    --primary-hover: #0056b3;
     /* Colores adicionales para la paleta */
     --color-option-blue: #007bff;
     --color-option-green: #28a745;
@@ -11,20 +12,40 @@
     --color-option-orange: #fd7e14;
     --secondary-color: #6c757d;
     --secondary-dark: #5a6268;
+    --secondary-hover: #545b62;
     --success-color: #28a745;
+    --success-background: #d4edda;
     --warning-color: #ffc107;
+    --warning-background: #fff3cd;
+    --warning-border: #ffeaa7;
+    --warning-text: #856404;
+    --warning-hover: #e0a800;
     --danger-color: #dc3545;
+    --danger-background: #f8d7da;
+    --danger-hover: #c82333;
     --light-color: #f8f9fa;
     --dark-color: #343a40;
     --text-color: #333;
+    --text-primary: #333;
+    --text-secondary: #666;
     --text-light: #6c757d;
     --border-color: #dee2e6;
+    --border-light: #eee;
     --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
     --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
     --border-radius: 8px;
     --transition: all 0.3s ease;
     --font-family: 'Poppins', sans-serif;
+    /* Variables de cards y fondos */
+    --card-background: #fff;
+    --input-background: #fff;
+    --input-hover-background: #f8f9fa;
+    --table-header-bg: #f8f9fa;
+    --table-hover: #f5f5f5;
+    --table-stripe: #fafafa;
+    --code-background: #e9ecef;
+    --code-color: #495057;
 }
 
 /* ===== MODO OSCURO ===== */
