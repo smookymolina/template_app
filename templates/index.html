@@ -232,7 +232,7 @@
             </div>
             {% if current_user.is_authenticated and current_user.is_admin() %}
             <div class="gerentes-actions gerentes-calculator-launch" data-admin-only>
-                <button class="btn-secondary" type="button" id="open-fichas-calculator" aria-haspopup="dialog" aria-controls="fichas-calculator-modal" onclick="openFichasCalculatorModal()">
+                <button class="btn-secondary" type="button" id="open-fichas-modal" aria-haspopup="dialog" aria-controls="fichas-calculator-modal" onclick="openFichasCalculatorModal()">
                     <i class="fas fa-calculator"></i> Calculadora
                 </button>
             </div>
@@ -372,9 +372,46 @@
                         <button type="button" class="btn-week-nav" id="fichas-week-prev">
                             <i class="fas fa-chevron-left"></i>
                         </button>
-                        <div class="week-info">
-                            <span class="week-label">Semana</span>
-                            <strong id="fichas-week-range" class="week-range">Cargando...</strong>
+                        <div class="week-info-wrapper">
+                            <div class="week-info" id="fichas-week-display" role="button" tabindex="0" style="cursor: pointer;" title="📅 Clic para seleccionar rango de fechas personalizado">
+                                <span class="week-label">
+                                    <i class="fas fa-calendar-alt"></i> SEMANA
+                                </span>
+                                <strong id="fichas-week-range" class="week-range">Cargando...</strong>
+                                <small style="display: block; font-size: 0.7rem; color: #667eea; margin-top: 0.25rem; font-weight: 500;">
+                                    <i class="fas fa-info-circle"></i> Clic para cambiar
+                                </small>
+                            </div>
+
+                            <!-- Popover de selecci贸n de rango -->
+                            <div id="date-range-popover" class="date-range-popover" style="display: none;">
+                                <div class="popover-header">
+                                    <h4><i class="fas fa-calendar-week"></i> Seleccionar Rango Semanal</h4>
+                                    <button type="button" class="popover-close" id="close-date-popover">×</button>
+                                </div>
+                                <div class="popover-body">
+                                    <div class="date-input-group">
+                                        <label for="fecha-inicio">
+                                            <i class="fas fa-calendar-day"></i> Fecha Inicio
+                                        </label>
+                                        <input type="date" id="fecha-inicio" class="date-input">
+                                    </div>
+                                    <div class="date-input-group">
+                                        <label for="fecha-fin">
+                                            <i class="fas fa-calendar-check"></i> Fecha Fin
+                                        </label>
+                                        <input type="date" id="fecha-fin" class="date-input">
+                                    </div>
+                                    <div class="popover-actions">
+                                        <button type="button" class="btn-popover-cancel" id="cancel-date-range">
+                                            <i class="fas fa-times"></i> Cancelar
+                                        </button>
+                                        <button type="button" class="btn-popover-apply" id="apply-date-range">
+                                            <i class="fas fa-check"></i> Aplicar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <button type="button" class="btn-week-nav" id="fichas-week-next" disabled>
                             <i class="fas fa-chevron-right"></i>

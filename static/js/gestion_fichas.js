@@ -35,6 +35,7 @@
     // Variables globales
     let currentStep = 1;
     let currentReferenceDate = new Date();
+    let currentWeekOffset = 0;
     let isLoading = false;
     let wizardData = {};
     const TOTAL_STEPS = 5;
@@ -201,24 +202,40 @@
     }
 
     /**
+     * Vincular botón calculadora
+     */
+    function bindCalculatorButton() {
+        const openBtn = document.getElementById('open-fichas-modal');
+        if (openBtn && openBtn !== elements.openModalBtn) {
+            // Remover listener anterior si existe
+            if (elements.openModalBtn) {
+                elements.openModalBtn.removeEventListener('click', openModal);
+            }
+
+            elements.openModalBtn = openBtn;
+            elements.openModalBtn.addEventListener('click', openModal);
+            console.log('✅ Botón calculadora vinculado correctamente');
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Inicializar modal
      */
     function initModal() {
-        // Esperar a que el botón esté disponible en el DOM
-        const waitForButton = setInterval(() => {
-            const openBtn = document.getElementById('open-fichas-modal');
-            if (openBtn) {
-                clearInterval(waitForButton);
-                elements.openModalBtn = openBtn;
+        // Intentar vincular el botón inmediatamente
+        if (!bindCalculatorButton()) {
+            // Si no está disponible, esperar con un intervalo
+            const waitForButton = setInterval(() => {
+                if (bindCalculatorButton()) {
+                    clearInterval(waitForButton);
+                }
+            }, 100);
 
-                // Abrir modal
-                elements.openModalBtn.addEventListener('click', openModal);
-                console.log('✅ Botón calculadora vinculado correctamente');
-            }
-        }, 100);
-
-        // Timeout de seguridad (10 segundos)
-        setTimeout(() => clearInterval(waitForButton), 10000);
+            // Timeout de seguridad (10 segundos)
+            setTimeout(() => clearInterval(waitForButton), 10000);
+        }
 
         // Cerrar modal
         if (elements.closeModalBtn) {
@@ -244,17 +261,30 @@
         // Listener para cambio de sección (cuando se navega a gestión de gerentes)
         document.addEventListener('sectionChanged', (event) => {
             if (event.detail && event.detail.section === 'gestion-gerentes-section') {
-                // Re-cachear el botón cuando se muestra la sección
+                // Re-vincular el botón cuando se muestra la sección
                 setTimeout(() => {
-                    const btn = document.getElementById('open-fichas-modal');
-                    if (btn && !elements.openModalBtn) {
-                        elements.openModalBtn = btn;
-                        btn.addEventListener('click', openModal);
-                        console.log('✅ Botón calculadora re-vinculado en cambio de sección');
-                    }
+                    bindCalculatorButton();
                 }, 200);
             }
         });
+
+        // Observer para detectar cuando el botón se agrega al DOM
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.addedNodes.length) {
+                    bindCalculatorButton();
+                }
+            });
+        });
+
+        // Observar cambios en el contenedor de gestión de gerentes
+        const gerentesSection = document.getElementById('gestion-gerentes-section');
+        if (gerentesSection) {
+            observer.observe(gerentesSection, {
+                childList: true,
+                subtree: true
+            });
+        }
     }
 
     /**
@@ -395,30 +425,94 @@
             });
         }
 
-        // Selector de fecha por calendario
+        // Selector de rango de fechas con popover
         if (elements.weekDisplay) {
             elements.weekDisplay.addEventListener('click', () => {
-                if (elements.datePicker) {
-                    try {
-                        elements.datePicker.showPicker();
-                    } catch (error) {
-                        // Fallback para navegadores más antiguos
-                        elements.datePicker.click();
-                    }
+                const popover = document.getElementById('date-range-popover');
+                if (popover) {
+                    popover.style.display = popover.style.display === 'none' ? 'block' : 'none';
                 }
             });
         }
 
-        if (elements.datePicker) {
-            elements.datePicker.addEventListener('change', () => {
-                const selectedDate = elements.datePicker.value;
-                if (selectedDate) {
-                    // Usar T00:00:00 para evitar problemas de zona horaria
-                    currentReferenceDate = new Date(selectedDate + 'T00:00:00');
-                    loadSummaryAndDetails();
-                }
+        // Cerrar popover
+        const closePopover = document.getElementById('close-date-popover');
+        const cancelPopover = document.getElementById('cancel-date-range');
+
+        if (closePopover) {
+            closePopover.addEventListener('click', () => {
+                const popover = document.getElementById('date-range-popover');
+                if (popover) popover.style.display = 'none';
             });
         }
+
+        if (cancelPopover) {
+            cancelPopover.addEventListener('click', () => {
+                const popover = document.getElementById('date-range-popover');
+                if (popover) popover.style.display = 'none';
+            });
+        }
+
+        // Aplicar rango de fechas
+        const applyDateRange = document.getElementById('apply-date-range');
+        if (applyDateRange) {
+            applyDateRange.addEventListener('click', () => {
+                const fechaInicio = document.getElementById('fecha-inicio').value;
+                const fechaFin = document.getElementById('fecha-fin').value;
+
+                if (!fechaInicio || !fechaFin) {
+                    showNotification('Por favor selecciona ambas fechas (inicio y fin)', 'warning');
+                    return;
+                }
+
+                const inicio = new Date(fechaInicio + 'T00:00:00');
+                const fin = new Date(fechaFin + 'T00:00:00');
+
+                if (inicio > fin) {
+                    showNotification('La fecha de inicio no puede ser mayor que la fecha de fin', 'error');
+                    return;
+                }
+
+                // Actualizar fecha de referencia con el inicio del rango
+                currentReferenceDate = inicio;
+
+                // Actualizar visualización
+                if (elements.weekRange) {
+                    elements.weekRange.textContent = `${formatDateShort(inicio)} - ${formatDateShort(fin)}`;
+
+                    // Feedback visual
+                    elements.weekRange.style.transition = 'all 0.3s ease';
+                    elements.weekRange.style.transform = 'scale(1.1)';
+                    elements.weekRange.style.color = '#667eea';
+
+                    setTimeout(() => {
+                        elements.weekRange.style.transform = 'scale(1)';
+                        elements.weekRange.style.color = '';
+                    }, 300);
+                }
+
+                // Cerrar popover
+                const popover = document.getElementById('date-range-popover');
+                if (popover) popover.style.display = 'none';
+
+                // Recargar datos
+                loadSummaryAndDetails();
+
+                console.log('📅 Rango seleccionado:', formatDateShort(inicio), '-', formatDateShort(fin));
+            });
+        }
+
+        // Cerrar popover al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            const popover = document.getElementById('date-range-popover');
+            const weekDisplay = elements.weekDisplay;
+
+            if (popover && weekDisplay && popover.style.display !== 'none') {
+                if (!popover.contains(e.target) && !weekDisplay.contains(e.target)) {
+                    popover.style.display = 'none';
+                }
+            }
+        });
 
         // Exportar
         if (elements.exportBtn) {
@@ -1313,6 +1407,54 @@
             isLoading = false;
             updateWeekNavigation();
         }
+    }
+
+    /**
+     * Calcular semana (Jueves a Miércoles) que contiene una fecha dada
+     */
+    function getWeekRange(date) {
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0);
+
+        // Obtener día de la semana (0 = Domingo, 4 = Jueves)
+        const dayOfWeek = d.getDay();
+
+        // Calcular días desde el jueves anterior
+        // Si es Jueves (4), Viernes (5), Sábado (6) o Domingo (0) -> pertenece a la semana que empezó ese jueves
+        // Si es Lunes (1), Martes (2) o Miércoles (3) -> pertenece a la semana que empezó el jueves anterior
+        let daysFromThursday;
+        if (dayOfWeek === 0) { // Domingo
+            daysFromThursday = 3; // 3 días atrás para llegar al jueves
+        } else if (dayOfWeek < 4) { // Lunes, Martes, Miércoles
+            daysFromThursday = dayOfWeek + 3; // días hasta el jueves anterior
+        } else { // Jueves, Viernes, Sábado
+            daysFromThursday = dayOfWeek - 4; // días desde el jueves de esta semana
+        }
+
+        // Calcular fecha de inicio (Jueves)
+        const startDate = new Date(d);
+        startDate.setDate(d.getDate() - daysFromThursday);
+
+        // Calcular fecha de fin (Miércoles siguiente)
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+
+        return {
+            start: startDate,
+            end: endDate,
+            label: `${formatDateShort(startDate)} - ${formatDateShort(endDate)}`
+        };
+    }
+
+    /**
+     * Formatear fecha corta (dd/mm/yyyy)
+     */
+    function formatDateShort(date) {
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
     }
 
     /**
