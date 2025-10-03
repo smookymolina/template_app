@@ -39,6 +39,7 @@
     let isLoading = false;
     let wizardData = {};
     const TOTAL_STEPS = 5;
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
     // Referencias a elementos DOM
     const elements = {};
@@ -75,6 +76,7 @@
         initModal();
         initTabs();
         initWizard();
+        setWeekByDate(new Date());
         bindEvents();
         loadInitialData();
 
@@ -413,14 +415,17 @@
         // Navegación semanal
         if (elements.weekPrevBtn) {
             elements.weekPrevBtn.addEventListener('click', () => {
-                currentReferenceDate.setDate(currentReferenceDate.getDate() - 7);
+                setWeekOffset(currentWeekOffset + 1);
                 loadSummaryAndDetails();
             });
         }
 
         if (elements.weekNextBtn) {
             elements.weekNextBtn.addEventListener('click', () => {
-                currentReferenceDate.setDate(currentReferenceDate.getDate() + 7);
+                if (currentWeekOffset === 0) {
+                    return;
+                }
+                setWeekOffset(currentWeekOffset - 1);
                 loadSummaryAndDetails();
             });
         }
@@ -430,7 +435,11 @@
             elements.weekDisplay.addEventListener('click', () => {
                 const popover = document.getElementById('date-range-popover');
                 if (popover) {
-                    popover.style.display = popover.style.display === 'none' ? 'block' : 'none';
+                    const isVisible = popover.style.display === 'block';
+                    if (!isVisible) {
+                        syncWeekInputs();
+                    }
+                    popover.style.display = isVisible ? 'none' : 'block';
                 }
             });
         }
@@ -457,30 +466,36 @@
         const applyDateRange = document.getElementById('apply-date-range');
         if (applyDateRange) {
             applyDateRange.addEventListener('click', () => {
-                const fechaInicio = document.getElementById('fecha-inicio').value;
-                const fechaFin = document.getElementById('fecha-fin').value;
+                const inicioInput = document.getElementById('fecha-inicio');
+                const finInput = document.getElementById('fecha-fin');
+                const fechaInicio = inicioInput?.value;
+                const fechaFin = finInput?.value;
 
                 if (!fechaInicio || !fechaFin) {
                     showNotification('Por favor selecciona ambas fechas (inicio y fin)', 'warning');
                     return;
                 }
 
-                const inicio = new Date(fechaInicio + 'T00:00:00');
-                const fin = new Date(fechaFin + 'T00:00:00');
+                const inicio = new Date(`${fechaInicio}T00:00:00`);
+                const fin = new Date(`${fechaFin}T00:00:00`);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
 
                 if (inicio > fin) {
                     showNotification('La fecha de inicio no puede ser mayor que la fecha de fin', 'error');
                     return;
                 }
 
-                // Actualizar fecha de referencia con el inicio del rango
-                currentReferenceDate = inicio;
+                if (inicio > today) {
+                    showNotification('No es posible seleccionar semanas futuras', 'warning');
+                    return;
+                }
 
-                // Actualizar visualización
+                const weekRange = getWeekRange(inicio);
+                setWeekByDate(weekRange.start);
+
                 if (elements.weekRange) {
-                    elements.weekRange.textContent = `${formatDateShort(inicio)} - ${formatDateShort(fin)}`;
-
-                    // Feedback visual
+                    elements.weekRange.textContent = weekRange.label;
                     elements.weekRange.style.transition = 'all 0.3s ease';
                     elements.weekRange.style.transform = 'scale(1.1)';
                     elements.weekRange.style.color = '#667eea';
@@ -491,14 +506,17 @@
                     }, 300);
                 }
 
-                // Cerrar popover
+                syncWeekInputs();
+
                 const popover = document.getElementById('date-range-popover');
-                if (popover) popover.style.display = 'none';
+                if (popover) {
+                    popover.style.display = 'none';
+                }
 
-                // Recargar datos
                 loadSummaryAndDetails();
+                updateWeekNavigation();
 
-                console.log('📅 Rango seleccionado:', formatDateShort(inicio), '-', formatDateShort(fin));
+                console.log('Semana seleccionada manualmente:', weekRange.label);
             });
         }
 
@@ -1389,12 +1407,34 @@
 
         try {
             const dateString = currentReferenceDate.toISOString().split('T')[0];
-            const url = `/admin/fichas/summary?reference_date_param=${dateString}`;
+            const params = new URLSearchParams({ reference_date: dateString });
+            if (currentWeekOffset > 0) {
+                params.set('week_offset', currentWeekOffset);
+            }
 
-            const response = await fetch(url);
+            const response = await fetch(`/admin/fichas/summary?${params.toString()}`);
             const data = await response.json();
 
             if (data.success) {
+                let matchedReference = false;
+
+                if (data.week_range?.start) {
+                    setWeekByDate(new Date(`${data.week_range.start}T00:00:00`));
+                    matchedReference = true;
+                } else if (data.filters?.reference_date) {
+                    setWeekByDate(new Date(`${data.filters.reference_date}T00:00:00`));
+                    matchedReference = true;
+                }
+
+                if (typeof data.filters?.week_offset === 'number') {
+                    const normalizedOffset = Math.max(0, data.filters.week_offset);
+                    if (!matchedReference) {
+                        setWeekOffset(normalizedOffset);
+                    } else {
+                        currentWeekOffset = normalizedOffset;
+                    }
+                }
+
                 updateWeekBanner(data.week_range);
                 updateTotals(data.totals);
                 renderGerenteCards(data.summary);
@@ -1444,6 +1484,58 @@
             end: endDate,
             label: `${formatDateShort(startDate)} - ${formatDateShort(endDate)}`
         };
+    }
+
+    function normalizeToWeekStart(date) {
+        const week = getWeekRange(date);
+        const start = new Date(week.start);
+        start.setHours(0, 0, 0, 0);
+        return start;
+    }
+
+    function calculateWeekOffsetFrom(date) {
+        const currentWeek = getWeekRange(new Date());
+        const targetWeek = getWeekRange(date);
+        const diffMs = currentWeek.start.getTime() - targetWeek.start.getTime();
+        if (diffMs <= 0) {
+            return 0;
+        }
+        const diffDays = Math.round(diffMs / MS_PER_DAY);
+        return Math.max(0, Math.round(diffDays / 7));
+    }
+
+    function setWeekByDate(date) {
+        currentReferenceDate = normalizeToWeekStart(date);
+        currentWeekOffset = calculateWeekOffsetFrom(currentReferenceDate);
+        syncWeekInputs();
+    }
+
+    function setWeekOffset(offset) {
+        currentWeekOffset = Math.max(0, offset);
+        const reference = new Date();
+        reference.setDate(reference.getDate() - currentWeekOffset * 7);
+        currentReferenceDate = normalizeToWeekStart(reference);
+        syncWeekInputs();
+    }
+
+    function syncWeekInputs() {
+        const inicioInput = document.getElementById('fecha-inicio');
+        const finInput = document.getElementById('fecha-fin');
+        if (!inicioInput || !finInput) {
+            return;
+        }
+
+        const range = getWeekRange(currentReferenceDate);
+        inicioInput.value = formatDateForInput(range.start);
+        finInput.value = formatDateForInput(range.end);
+    }
+
+    function formatDateForInput(date) {
+        const d = new Date(date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${year}-${month}-${day}`;
     }
 
     /**
@@ -1599,8 +1691,13 @@
                 const loader = detailsContainer.querySelector('.details-loader');
                 
                 try {
-                    const url = `/admin/fichas/gerente/${gerenteId}/details?week_offset=${currentWeekOffset}`;
-                    const response = await fetch(url);
+                    const params = new URLSearchParams({
+                        reference_date: currentReferenceDate.toISOString().split('T')[0]
+                    });
+                    if (currentWeekOffset > 0) {
+                        params.set('week_offset', currentWeekOffset);
+                    }
+                    const response = await fetch(`/admin/fichas/gerente/${gerenteId}/details?${params.toString()}`);
                     const data = await response.json();
 
                     loader.style.display = 'none';
@@ -1747,16 +1844,11 @@
      */
     function updateWeekNavigation() {
         if (elements.weekNextBtn) {
-            const today = new Date();
-            // Poner a cero la hora para comparar solo fechas
-            today.setHours(0, 0, 0, 0);
-            
-            // Clonar para no modificar la original
-            const refDate = new Date(currentReferenceDate);
-            refDate.setHours(0, 0, 0, 0);
+            elements.weekNextBtn.disabled = currentWeekOffset === 0;
+        }
 
-            // Deshabilitar si la fecha de referencia es mayor o igual a hoy
-            elements.weekNextBtn.disabled = refDate >= today;
+        if (elements.weekPrevBtn) {
+            elements.weekPrevBtn.disabled = false;
         }
     }
 
@@ -1807,12 +1899,15 @@
             document.body.appendChild(iframe);
 
             // Construir URL con parámetros
-            const url = currentWeekOffset > 0 ?
-                `/admin/fichas/export?week_offset=${currentWeekOffset}` :
-                '/admin/fichas/export';
+            const params = new URLSearchParams({
+                reference_date: currentReferenceDate.toISOString().split('T')[0]
+            });
+            if (currentWeekOffset > 0) {
+                params.set('week_offset', currentWeekOffset);
+            }
 
             // Iniciar descarga
-            iframe.src = url;
+            iframe.src = `/admin/fichas/export?${params.toString()}`;
 
             // Esperar un tiempo razonable para la descarga
             await new Promise(resolve => setTimeout(resolve, 2000));
