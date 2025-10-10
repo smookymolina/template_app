@@ -1896,36 +1896,50 @@ def get_fichas_gerente_details(gerente_id):
     try:
         reference_date_param = request.args.get('reference_date')
         week_offset = request.args.get('week_offset', default=0, type=int)
+        start_date_param = request.args.get('start_date')
+        end_date_param = request.args.get('end_date')
 
-        if reference_date_param:
+        use_custom_range = bool(start_date_param and end_date_param)
+
+        if use_custom_range:
             try:
-                base_date = datetime.strptime(reference_date_param, '%Y-%m-%d').date()
+                range_start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
+                range_end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
             except ValueError:
-                return jsonify({"success": False, "message": 'El parametro reference_date debe tener formato YYYY-MM-DD'}), 400
+                return jsonify({"success": False, "message": 'Los parámetros start_date y end_date deben tener formato YYYY-MM-DD'}), 400
+
+            if range_start_date > range_end_date:
+                return jsonify({"success": False, "message": 'El rango de fechas personalizado es inválido (start_date > end_date)'}), 400
         else:
-            base_date = datetime.utcnow().date()
+            if reference_date_param:
+                try:
+                    base_date = datetime.strptime(reference_date_param, '%Y-%m-%d').date()
+                except ValueError:
+                    return jsonify({"success": False, "message": 'El parametro reference_date debe tener formato YYYY-MM-DD'}), 400
+            else:
+                base_date = datetime.utcnow().date()
 
-        if week_offset:
-            base_date = base_date - timedelta(weeks=week_offset)
+            if week_offset:
+                base_date = base_date - timedelta(weeks=week_offset)
 
-        start_of_week, end_of_week = _calculate_week_bounds(base_date)
+            range_start_date, range_end_date = _calculate_week_bounds(base_date)
 
-        start_of_week_dt = datetime.combine(start_of_week, datetime.min.time())
-        end_of_week_dt = datetime.combine(end_of_week, datetime.max.time())
+        start_dt = datetime.combine(range_start_date, datetime.min.time())
+        end_dt = datetime.combine(range_end_date, datetime.max.time())
 
         fichas = FichaDeposito.query.filter(
             FichaDeposito.gerente_id == gerente_id,
-            FichaDeposito.fecha >= start_of_week_dt,
-            FichaDeposito.fecha <= end_of_week_dt
+            FichaDeposito.fecha >= start_dt,
+            FichaDeposito.fecha <= end_dt
         ).order_by(FichaDeposito.fecha.desc()).all()
 
         return jsonify({
             "success": True,
             "details": [f.serialize() for f in fichas],
             "week_range": {
-                "start": start_of_week.isoformat(),
-                "end": end_of_week.isoformat(),
-                "label": f"{start_of_week.strftime('%d/%m/%Y')} - {end_of_week.strftime('%d/%m/%Y')}"
+                "start": range_start_date.isoformat(),
+                "end": range_end_date.isoformat(),
+                "label": f"{range_start_date.strftime('%d/%m/%Y')} - {range_end_date.strftime('%d/%m/%Y')}"
             }
         })
 
@@ -2057,24 +2071,44 @@ def get_fichas_summary():
     try:
         reference_date_param = request.args.get('reference_date')
         week_offset = request.args.get('week_offset', default=0, type=int)
+        start_date_param = request.args.get('start_date')
+        end_date_param = request.args.get('end_date')
+
         if week_offset is None:
             week_offset = 0
 
-        if reference_date_param:
+        use_custom_range = bool(start_date_param and end_date_param)
+
+        if use_custom_range:
             try:
-                base_date = datetime.strptime(reference_date_param, '%Y-%m-%d').date()
+                range_start_date = datetime.strptime(start_date_param, '%Y-%m-%d').date()
+                range_end_date = datetime.strptime(end_date_param, '%Y-%m-%d').date()
             except ValueError:
-                return jsonify({"success": False, "message": "El parametro reference_date debe tener formato YYYY-MM-DD"}), 400
+                return jsonify({"success": False, "message": "Los parámetros start_date y end_date deben tener formato YYYY-MM-DD"}), 400
+
+            if range_start_date > range_end_date:
+                return jsonify({"success": False, "message": "El rango de fechas personalizado es inválido (start_date > end_date)"}), 400
+
+            normalized_week_offset = 0
+            reference_date = range_start_date
         else:
-            base_date = datetime.utcnow().date()
+            if reference_date_param:
+                try:
+                    base_date = datetime.strptime(reference_date_param, '%Y-%m-%d').date()
+                except ValueError:
+                    return jsonify({"success": False, "message": "El parametro reference_date debe tener formato YYYY-MM-DD"}), 400
+            else:
+                base_date = datetime.utcnow().date()
 
-        if week_offset:
-            base_date = base_date - timedelta(weeks=week_offset)
+            if week_offset:
+                base_date = base_date - timedelta(weeks=week_offset)
 
-        start_of_week, end_of_week = _calculate_week_bounds(base_date)
+            range_start_date, range_end_date = _calculate_week_bounds(base_date)
+            reference_date = range_start_date
+            normalized_week_offset = week_offset
 
-        start_of_week_dt = datetime.combine(start_of_week, datetime.min.time())
-        end_of_week_dt = datetime.combine(end_of_week, datetime.max.time())
+        start_dt = datetime.combine(range_start_date, datetime.min.time())
+        end_dt = datetime.combine(range_end_date, datetime.max.time())
 
         summary_query = (
             db.session.query(
@@ -2085,8 +2119,8 @@ def get_fichas_summary():
             )
             .join(FichaDeposito, Usuario.id == FichaDeposito.gerente_id)
             .filter(
-                FichaDeposito.fecha >= start_of_week_dt,
-                FichaDeposito.fecha <= end_of_week_dt
+                FichaDeposito.fecha >= start_dt,
+                FichaDeposito.fecha <= end_dt
             )
             .group_by(Usuario.id, Usuario.nombre)
             .order_by(Usuario.nombre)
@@ -2118,8 +2152,8 @@ def get_fichas_summary():
                 func.sum(FichaDeposito.monto).label('monto_total')
             )
             .filter(
-                FichaDeposito.fecha >= start_of_week_dt,
-                FichaDeposito.fecha <= end_of_week_dt
+                FichaDeposito.fecha >= start_dt,
+                FichaDeposito.fecha <= end_dt
             )
             .group_by(FichaDeposito.banco)
             .order_by(FichaDeposito.banco)
@@ -2140,7 +2174,7 @@ def get_fichas_summary():
 
         fichas_detalle = (
             FichaDeposito.query
-            .filter(FichaDeposito.fecha >= start_of_week_dt, FichaDeposito.fecha <= end_of_week_dt)
+            .filter(FichaDeposito.fecha >= start_dt, FichaDeposito.fecha <= end_dt)
             .order_by(FichaDeposito.fecha.desc())
             .all()
         )
@@ -2155,13 +2189,16 @@ def get_fichas_summary():
             'details': [ficha.serialize() for ficha in fichas_detalle],
             'bank_breakdown': bank_breakdown,
             'week_range': {
-                'start': start_of_week.strftime('%Y-%m-%d'),
-                'end': end_of_week.strftime('%Y-%m-%d'),
-                'label': f"{start_of_week.strftime('%d/%m/%Y')} - {end_of_week.strftime('%d/%m/%Y')}"
+                'start': range_start_date.strftime('%Y-%m-%d'),
+                'end': range_end_date.strftime('%Y-%m-%d'),
+                'label': f"{range_start_date.strftime('%d/%m/%Y')} - {range_end_date.strftime('%d/%m/%Y')}"
             },
             'filters': {
-                'reference_date': start_of_week.isoformat(),
-                'week_offset': week_offset
+                'reference_date': reference_date.isoformat(),
+                'start_date': range_start_date.isoformat(),
+                'end_date': range_end_date.isoformat(),
+                'week_offset': normalized_week_offset,
+                'custom_range': use_custom_range
             }
         }
 

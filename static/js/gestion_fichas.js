@@ -38,6 +38,7 @@
     let currentWeekOffset = 0;
     let isLoading = false;
     let wizardData = {};
+    let customRange = null;
     const TOTAL_STEPS = 5;
     const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -491,11 +492,18 @@
                     return;
                 }
 
-                const weekRange = getWeekRange(inicio);
-                setWeekByDate(weekRange.start);
+                setCustomRange(inicio, fin);
 
-                if (elements.weekRange) {
-                    elements.weekRange.textContent = weekRange.label;
+                const customLabel = getCustomRangeLabel();
+                if (customLabel && customRange?.start && customRange?.end) {
+                    updateWeekBanner({
+                        start: formatDateForInput(customRange.start),
+                        end: formatDateForInput(customRange.end),
+                        label: customLabel
+                    });
+                }
+
+                if (elements.weekRange && customLabel) {
                     elements.weekRange.style.transition = 'all 0.3s ease';
                     elements.weekRange.style.transform = 'scale(1.1)';
                     elements.weekRange.style.color = '#667eea';
@@ -506,8 +514,6 @@
                     }, 300);
                 }
 
-                syncWeekInputs();
-
                 const popover = document.getElementById('date-range-popover');
                 if (popover) {
                     popover.style.display = 'none';
@@ -516,7 +522,7 @@
                 loadSummaryAndDetails();
                 updateWeekNavigation();
 
-                console.log('Semana seleccionada manualmente:', weekRange.label);
+                console.log('Rango personalizado aplicado:', customLabel);
             });
         }
 
@@ -1405,37 +1411,46 @@
 
         isLoading = true;
 
+        const isCustom = !!(customRange && customRange.start && customRange.end);
+
         try {
-            const dateString = currentReferenceDate.toISOString().split('T')[0];
-            const params = new URLSearchParams({ reference_date: dateString });
-            if (currentWeekOffset > 0) {
-                params.set('week_offset', currentWeekOffset);
+            const params = new URLSearchParams();
+
+            if (isCustom) {
+                params.set('start_date', formatDateForInput(customRange.start));
+                params.set('end_date', formatDateForInput(customRange.end));
+            } else {
+                const dateString = formatDateForInput(currentReferenceDate);
+                params.set('reference_date', dateString);
             }
 
             const response = await fetch(`/admin/fichas/summary?${params.toString()}`);
             const data = await response.json();
 
             if (data.success) {
-                let matchedReference = false;
-
-                if (data.week_range?.start) {
-                    setWeekByDate(new Date(`${data.week_range.start}T00:00:00`));
-                    matchedReference = true;
-                } else if (data.filters?.reference_date) {
-                    setWeekByDate(new Date(`${data.filters.reference_date}T00:00:00`));
-                    matchedReference = true;
-                }
-
-                if (typeof data.filters?.week_offset === 'number') {
-                    const normalizedOffset = Math.max(0, data.filters.week_offset);
-                    if (!matchedReference) {
-                        setWeekOffset(normalizedOffset);
-                    } else {
-                        currentWeekOffset = normalizedOffset;
+                if (isCustom) {
+                    if (data.filters?.start_date && data.filters?.end_date) {
+                        const start = new Date(`${data.filters.start_date}T00:00:00`);
+                        const end = new Date(`${data.filters.end_date}T00:00:00`);
+                        setCustomRange(start, end);
+                    }
+                } else {
+                    if (data.week_range?.start) {
+                        setWeekByDate(new Date(`${data.week_range.start}T00:00:00`));
+                    } else if (data.filters?.reference_date) {
+                        setWeekByDate(new Date(`${data.filters.reference_date}T00:00:00`));
                     }
                 }
 
-                updateWeekBanner(data.week_range);
+                const bannerRange = isCustom && customRange
+                    ? {
+                        start: formatDateForInput(customRange.start),
+                        end: formatDateForInput(customRange.end),
+                        label: getCustomRangeLabel()
+                    }
+                    : data.week_range;
+
+                updateWeekBanner(bannerRange);
                 updateTotals(data.totals);
                 renderGerenteCards(data.summary);
                 renderBancoCards(data.bank_breakdown);
@@ -1505,12 +1520,14 @@
     }
 
     function setWeekByDate(date) {
+        customRange = null;
         currentReferenceDate = normalizeToWeekStart(date);
         currentWeekOffset = calculateWeekOffsetFrom(currentReferenceDate);
         syncWeekInputs();
     }
 
     function setWeekOffset(offset) {
+        customRange = null;
         currentWeekOffset = Math.max(0, offset);
         const reference = new Date();
         reference.setDate(reference.getDate() - currentWeekOffset * 7);
@@ -1518,10 +1535,49 @@
         syncWeekInputs();
     }
 
+    function setCustomRange(startDate, endDate) {
+        customRange = {
+            start: new Date(startDate),
+            end: new Date(endDate)
+        };
+
+        const startTime = customRange.start.getTime();
+        const endTime = customRange.end.getTime();
+
+        if (Number.isNaN(startTime) || Number.isNaN(endTime)) {
+            customRange = null;
+            return;
+        }
+
+        customRange.start.setHours(0, 0, 0, 0);
+        customRange.end.setHours(0, 0, 0, 0);
+
+        currentReferenceDate = new Date(customRange.start);
+        currentWeekOffset = 0;
+        syncWeekInputs();
+    }
+
+    function getCustomRangeLabel() {
+        if (
+            !customRange ||
+            Number.isNaN(customRange.start?.getTime?.()) ||
+            Number.isNaN(customRange.end?.getTime?.())
+        ) {
+            return null;
+        }
+        return `${formatDateShort(customRange.start)} - ${formatDateShort(customRange.end)}`;
+    }
+
     function syncWeekInputs() {
         const inicioInput = document.getElementById('fecha-inicio');
         const finInput = document.getElementById('fecha-fin');
         if (!inicioInput || !finInput) {
+            return;
+        }
+
+        if (customRange && customRange.start && customRange.end) {
+            inicioInput.value = formatDateForInput(customRange.start);
+            finInput.value = formatDateForInput(customRange.end);
             return;
         }
 
@@ -1691,11 +1747,12 @@
                 const loader = detailsContainer.querySelector('.details-loader');
                 
                 try {
-                    const params = new URLSearchParams({
-                        reference_date: currentReferenceDate.toISOString().split('T')[0]
-                    });
-                    if (currentWeekOffset > 0) {
-                        params.set('week_offset', currentWeekOffset);
+                    const params = new URLSearchParams();
+                    if (customRange && customRange.start && customRange.end) {
+                        params.set('start_date', formatDateForInput(customRange.start));
+                        params.set('end_date', formatDateForInput(customRange.end));
+                    } else {
+                        params.set('reference_date', formatDateForInput(currentReferenceDate));
                     }
                     const response = await fetch(`/admin/fichas/gerente/${gerenteId}/details?${params.toString()}`);
                     const data = await response.json();
@@ -1843,12 +1900,14 @@
      * Actualizar navegación semanal
      */
     function updateWeekNavigation() {
+        const isCustom = !!(customRange && customRange.start && customRange.end);
+
         if (elements.weekNextBtn) {
-            elements.weekNextBtn.disabled = currentWeekOffset === 0;
+            elements.weekNextBtn.disabled = isCustom || currentWeekOffset === 0;
         }
 
         if (elements.weekPrevBtn) {
-            elements.weekPrevBtn.disabled = false;
+            elements.weekPrevBtn.disabled = isCustom ? true : false;
         }
     }
 
@@ -1899,11 +1958,12 @@
             document.body.appendChild(iframe);
 
             // Construir URL con parámetros
-            const params = new URLSearchParams({
-                reference_date: currentReferenceDate.toISOString().split('T')[0]
-            });
-            if (currentWeekOffset > 0) {
-                params.set('week_offset', currentWeekOffset);
+            const params = new URLSearchParams();
+            if (customRange && customRange.start && customRange.end) {
+                params.set('start_date', formatDateForInput(customRange.start));
+                params.set('end_date', formatDateForInput(customRange.end));
+            } else {
+                params.set('reference_date', formatDateForInput(currentReferenceDate));
             }
 
             // Iniciar descarga
