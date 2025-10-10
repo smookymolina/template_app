@@ -41,6 +41,9 @@
     let customRange = null;
     const TOTAL_STEPS = 5;
     const MS_PER_DAY = 24 * 60 * 60 * 1000;
+    const STORAGE_KEYS = {
+        selection: 'fichas-week-selection'
+    };
 
     // Referencias a elementos DOM
     const elements = {};
@@ -77,7 +80,13 @@
         initModal();
         initTabs();
         initWizard();
-        setWeekByDate(new Date());
+
+        const restoredSelection = restoreSelection();
+        if (!restoredSelection) {
+            setWeekByDate(new Date());
+            updateWeekBanner(getWeekRange(currentReferenceDate));
+        }
+
         bindEvents();
         loadInitialData();
 
@@ -417,6 +426,7 @@
         if (elements.weekPrevBtn) {
             elements.weekPrevBtn.addEventListener('click', () => {
                 setWeekOffset(currentWeekOffset + 1);
+                persistSelection();
                 loadSummaryAndDetails();
             });
         }
@@ -427,6 +437,7 @@
                     return;
                 }
                 setWeekOffset(currentWeekOffset - 1);
+                persistSelection();
                 loadSummaryAndDetails();
             });
         }
@@ -513,6 +524,8 @@
                         elements.weekRange.style.color = '';
                     }, 300);
                 }
+
+                persistSelection();
 
                 const popover = document.getElementById('date-range-popover');
                 if (popover) {
@@ -1455,6 +1468,7 @@
                 renderGerenteCards(data.summary);
                 renderBancoCards(data.bank_breakdown);
                 renderDetailsTable(data.details);
+                persistSelection();
             }
         } catch (error) {
             console.error('Error cargando datos:', error);
@@ -1524,6 +1538,7 @@
         currentReferenceDate = normalizeToWeekStart(date);
         currentWeekOffset = calculateWeekOffsetFrom(currentReferenceDate);
         syncWeekInputs();
+        updateWeekNavigation();
     }
 
     function setWeekOffset(offset) {
@@ -1533,28 +1548,27 @@
         reference.setDate(reference.getDate() - currentWeekOffset * 7);
         currentReferenceDate = normalizeToWeekStart(reference);
         syncWeekInputs();
+        updateWeekNavigation();
     }
 
     function setCustomRange(startDate, endDate) {
-        customRange = {
-            start: new Date(startDate),
-            end: new Date(endDate)
-        };
+        const normalizedStart = normalizeInputDate(startDate);
+        const normalizedEnd = normalizeInputDate(endDate);
 
-        const startTime = customRange.start.getTime();
-        const endTime = customRange.end.getTime();
-
-        if (Number.isNaN(startTime) || Number.isNaN(endTime)) {
+        if (!normalizedStart || !normalizedEnd || normalizedStart > normalizedEnd) {
             customRange = null;
             return;
         }
 
-        customRange.start.setHours(0, 0, 0, 0);
-        customRange.end.setHours(0, 0, 0, 0);
+        customRange = {
+            start: normalizedStart,
+            end: normalizedEnd
+        };
 
         currentReferenceDate = new Date(customRange.start);
         currentWeekOffset = 0;
         syncWeekInputs();
+        updateWeekNavigation();
     }
 
     function getCustomRangeLabel() {
@@ -1592,6 +1606,128 @@
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const year = d.getFullYear();
         return `${year}-${month}-${day}`;
+    }
+
+    function normalizeInputDate(value) {
+        if (!value) return null;
+
+        if (value instanceof Date) {
+            if (Number.isNaN(value.getTime())) {
+                return null;
+            }
+            return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+        }
+
+        if (typeof value === 'string') {
+            const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (dateOnlyMatch) {
+                const [, year, month, day] = dateOnlyMatch.map(Number);
+                return new Date(year, month - 1, day);
+            }
+        }
+
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) {
+            return null;
+        }
+        return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+    }
+
+    function persistSelection() {
+        try {
+            if (typeof localStorage === 'undefined') return;
+
+            let payload = null;
+
+            if (customRange && customRange.start && customRange.end) {
+                payload = {
+                    mode: 'custom',
+                    start: formatDateForInput(customRange.start),
+                    end: formatDateForInput(customRange.end)
+                };
+            } else if (currentReferenceDate instanceof Date && !Number.isNaN(currentReferenceDate.getTime())) {
+                const range = getWeekRange(currentReferenceDate);
+                payload = {
+                    mode: 'week',
+                    start: formatDateForInput(range.start),
+                    end: formatDateForInput(range.end)
+                };
+            }
+
+            if (!payload) return;
+
+            localStorage.setItem(STORAGE_KEYS.selection, JSON.stringify(payload));
+        } catch (error) {
+            console.warn('No se pudo guardar la selección de fichas', error);
+        }
+    }
+
+    function clearStoredSelection() {
+        try {
+            if (typeof localStorage === 'undefined') return;
+            localStorage.removeItem(STORAGE_KEYS.selection);
+        } catch (error) {
+            console.warn('No se pudo limpiar la selección de fichas', error);
+        }
+    }
+
+    function restoreSelection() {
+        try {
+            if (typeof localStorage === 'undefined') return false;
+
+            const stored = localStorage.getItem(STORAGE_KEYS.selection);
+            if (!stored) return false;
+
+            const data = JSON.parse(stored);
+
+            if (data.mode === 'custom' && data.start && data.end) {
+                const start = normalizeInputDate(data.start);
+                const end = normalizeInputDate(data.end);
+
+                if (!start || !end) {
+                    clearStoredSelection();
+                    return false;
+                }
+
+                setCustomRange(start, end);
+                if (!customRange) {
+                    clearStoredSelection();
+                    return false;
+                }
+
+                const customLabel = getCustomRangeLabel();
+                if (customLabel && customRange?.start && customRange?.end) {
+                    updateWeekBanner({
+                        start: formatDateForInput(customRange.start),
+                        end: formatDateForInput(customRange.end),
+                        label: customLabel
+                    });
+                }
+
+                updateWeekNavigation();
+                return true;
+            }
+
+            if (data.mode === 'week' && data.start) {
+                const start = normalizeInputDate(data.start);
+                if (!start) {
+                    clearStoredSelection();
+                    return false;
+                }
+
+                setWeekByDate(start);
+                const range = getWeekRange(currentReferenceDate);
+                updateWeekBanner(range);
+                updateWeekNavigation();
+                return true;
+            }
+
+            clearStoredSelection();
+            return false;
+        } catch (error) {
+            console.warn('No se pudo restaurar la selección de fichas', error);
+            return false;
+        }
     }
 
     /**
