@@ -496,11 +496,19 @@
     background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%);
     background-size: 200% 200%;
     animation: shimmer 3s ease-in-out infinite;
+    pointer-events: none; /* CORRECCIÓN: Permite que los clics pasen al botón de cerrar */
 }
 
 @keyframes shimmer {
     0%, 100% { background-position: -200% 0; }
     50% { background-position: 200% 0; }
+}
+
+/* CORRECCIÓN: Asegurar que el botón de cierre y el título estén por encima del pseudo-elemento */
+.modal-header .close-modal,
+.modal-header h3 {
+    position: relative;
+    z-index: 2;
 }
 
 .modal-header-content {
@@ -575,6 +583,7 @@
     background: rgba(255, 255, 255, 0.2);
     opacity: 0;
     transition: opacity 0.3s ease;
+    pointer-events: none; /* Asegura que los clics pasen al botón */
 }
 
 .modal-close:hover::before {
@@ -2276,6 +2285,7 @@ button.loading.btn-success::after {
     background-size: 200% 200%;
     animation: shimmer 3s ease-in-out infinite;
     z-index: 0;
+    pointer-events: none; /* CORRECCIÓN: Permite que los clics pasen al botón de cerrar */
 }
 
 .fichas-modal-header > div,
@@ -2335,6 +2345,7 @@ button.loading.btn-success::after {
     background: rgba(255, 255, 255, 0.2);
     opacity: 0;
     transition: opacity 0.3s ease;
+    pointer-events: none; /* Asegura que los clics pasen al botón */
 }
 
 .fichas-modal-header .close-modal:hover::before {

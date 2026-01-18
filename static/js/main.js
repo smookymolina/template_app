@@ -460,11 +460,20 @@ function setupModalEvents() {
 }
 
 /**
- * ✅ CONFIGURAR EVENTOS DE CIERRE DEL MODAL
+ * ✅ CONFIGURAR EVENTOS DE CIERRE DEL MODAL DE CLIENTE
+ * CORREGIDO: Solo selecciona botones dentro del modal de cliente, no de toda la página
  */
 function setupModalCloseEvents() {
     const modal = document.getElementById('cliente-modal');
-    const closeButtons = document.querySelectorAll('.close-modal, .close-modal-btn');
+
+    // Verificar que el modal existe antes de configurar eventos
+    if (!modal) {
+        console.warn('⚠️ Modal cliente-modal no encontrado');
+        return;
+    }
+
+    // CORRECCIÓN: Solo seleccionar botones DENTRO del modal de cliente
+    const closeButtons = modal.querySelectorAll('.close-modal, .close-modal-btn');
 
     for (const button of closeButtons) {
         button.addEventListener('click', closeClientModal);
