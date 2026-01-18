@@ -1225,12 +1225,12 @@ select.input-field.is-invalid {
 /* Footer del modal */
 .modal-footer {
     padding: 1.5rem 2rem;
-    background: var(--gray-50);
-    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50, #f8f9fa);
+    border-top: 1px solid var(--gray-200, var(--border-color, #dee2e6));
     display: flex;
     gap: 1rem;
     align-items: center;
-    border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    border-radius: 0 0 var(--radius-xl, var(--border-radius, 8px)) var(--radius-xl, var(--border-radius, 8px));
 }
 
 .footer-spacer {
@@ -1240,11 +1240,11 @@ select.input-field.is-invalid {
 /* ========== BOTONES DEL MODAL - CONSISTENTES CON LA APP ========== */
 .modal-footer button {
     padding: 12px 24px;
-    border-radius: var(--radius);
+    border-radius: var(--radius, var(--border-radius, 8px));
     font-weight: 500;
     font-size: 15px;
     cursor: pointer;
-    transition: var(--transition);
+    transition: var(--transition, all 0.3s ease);
     border: none;
     display: inline-flex;
     align-items: center;
@@ -1263,23 +1263,23 @@ select.input-field.is-invalid {
 .modal-footer .btn-primary,
 #btn-modal-next,
 #btn-modal-new {
-    background-color: var(--primary);
+    background-color: var(--primary-color, #007bff);
     color: white;
 }
 
 .modal-footer .btn-primary:hover:not(:disabled),
 #btn-modal-next:hover:not(:disabled),
 #btn-modal-new:hover:not(:disabled) {
-    background-color: var(--primary-dark);
+    background-color: var(--primary-dark, #0056b3);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 /* Botón Secundario */
 .modal-footer .btn-secondary,
 #btn-modal-prev,
 #btn-modal-cancel {
-    background-color: var(--secondary);
+    background-color: var(--secondary-color, #6c757d);
     color: white;
 }
 
