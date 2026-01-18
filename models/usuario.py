@@ -81,6 +81,14 @@ class Usuario(db.Model, UserMixin):
             "gerente_nombre": self.gerente.nombre if self.gerente else None,
             "total_asesores": self.asesores.count() if self.rol == 'gerente' else 0
         }
+
+    def serialize_with_details(self):
+        """Serializa el usuario e incluye detalles adicionales sobre su equipo si es gerente."""
+        data = self.serialize()
+        if self.rol == 'gerente':
+            data['total_reclutas_directos'] = self._count_reclutas_gerente(self.id)
+            data['total_reclutas_equipo'] = self._count_reclutas_equipo(self.id)
+        return data
     
     def get_display_role(self):
         """Retorna el nombre descriptivo del rol"""

@@ -42,7 +42,7 @@ const Jerarquia = {
             
             const [gerentesResponse, asesoresResponse] = await Promise.all([
                 fetch('/api/asesores?rol=gerente'),
-                fetch('/api/asesores?sin_gerente=true')
+                fetch('/api/asesores?rol=asesor&sin_gerente=true')
             ]);
 
             const gerentesData = await gerentesResponse.json();
@@ -599,13 +599,76 @@ const Jerarquia = {
             if (data.success) {
                 showSuccess(data.message || 'Asesor reasignado con éxito.');
                 document.getElementById('modalReasignarAsesor').remove();
-                this.mostrarJerarquiaCompleta(); // Recargar la vista
+                // Actualización dinámica en lugar de recarga completa
+                this.actualizarVistaReasignacion(data.asesor, data.antiguo_gerente, data.nuevo_gerente);
             } else {
                 showError(data.message || 'Ocurrió un error durante la reasignación.');
             }
         } catch (error) {
             console.error('Error en ejecutarReasignacion:', error);
             showError('Error de conexión al ejecutar la reasignación.');
+        }
+    },
+
+    actualizarVistaReasignacion: function(asesor, antiguoGerente, nuevoGerente) {
+        console.log(`Reasignando dinámicamente: ${asesor.nombre} de ${antiguoGerente.nombre} a ${nuevoGerente.nombre}`);
+
+        // 1. Eliminar el item del asesor de la lista del antiguo gerente
+        const asesorItem = document.querySelector(`.asesor-item[data-asesor-id="${asesor.id}"]`);
+        if (asesorItem) {
+            asesorItem.remove();
+        }
+
+        // 2. Actualizar contadores del antiguo gerente
+        const antiguoGerenteCard = document.querySelector(`.gerente-card[data-gerente-id="${antiguoGerente.id}"]`);
+        if (antiguoGerenteCard) {
+            // Contador en el header
+            const statBadge = antiguoGerenteCard.querySelector('.gerente-stats .stat-badge[title="Asesores"]');
+            if (statBadge) {
+                const currentCount = Math.max(0, (parseInt(statBadge.innerText.trim(), 10) || 0) - 1);
+                statBadge.innerHTML = `<i class="fas fa-users"></i> ${currentCount}`;
+            }
+            // Contador en el subtítulo
+            const sectionCount = antiguoGerenteCard.querySelector('.asesores-list .section-subtitle .section-count');
+            if (sectionCount) {
+                const currentCount = Math.max(0, (parseInt(sectionCount.innerText.trim(), 10) || 0) - 1);
+                sectionCount.innerText = currentCount;
+
+                // Si se queda sin asesores, añadir el placeholder
+                if (currentCount === 0) {
+                     const asesoresListContainer = antiguoGerenteCard.querySelector('.asesores-list');
+                     if(asesoresListContainer){
+                        asesoresListContainer.insertAdjacentHTML('beforeend', this.renderEmptyAsesores(antiguoGerente.id));
+                     }
+                }
+            }
+        }
+
+        // 3. Añadir el item del asesor a la lista del nuevo gerente
+        const nuevoGerenteCard = document.querySelector(`.gerente-card[data-gerente-id="${nuevoGerente.id}"]`);
+        if (nuevoGerenteCard) {
+            const asesoresListContainer = nuevoGerenteCard.querySelector('.asesores-list');
+            if (asesoresListContainer) {
+                // Eliminar placeholder si existe
+                const emptyPlaceholder = asesoresListContainer.querySelector('.empty-asesores');
+                if (emptyPlaceholder) {
+                    emptyPlaceholder.remove();
+                }
+                // Añadir asesor
+                asesoresListContainer.insertAdjacentHTML('beforeend', this.renderAsesorItem(asesor, nuevoGerente.id));
+
+                // Actualizar contadores
+                const statBadge = nuevoGerenteCard.querySelector('.gerente-stats .stat-badge[title="Asesores"]');
+                 if (statBadge) {
+                    const currentCount = (parseInt(statBadge.innerText.trim(), 10) || 0) + 1;
+                    statBadge.innerHTML = `<i class="fas fa-users"></i> ${currentCount}`;
+                }
+                const sectionCount = asesoresListContainer.querySelector('.section-subtitle .section-count');
+                 if (sectionCount) {
+                    const currentCount = (parseInt(sectionCount.innerText.trim(), 10) || 0) + 1;
+                    sectionCount.innerText = currentCount;
+                }
+            }
         }
     },
 
@@ -616,15 +679,15 @@ const Jerarquia = {
             // Obtener gerentes y asesores sin asignar
             const [gerentesResponse, asesoresResponse] = await Promise.all([
                 fetch('/api/asesores?rol=gerente'),
-                fetch('/api/asesores?rol=asesor')
+                fetch('/api/asesores?rol=asesor&sin_gerente=true')
             ]);
 
             const gerentesData = await gerentesResponse.json();
             const asesoresData = await asesoresResponse.json();
 
             if (gerentesData.success && asesoresData.success) {
-                // Filtrar asesores sin gerente
-                const asesoresSinGerente = asesoresData.asesores.filter(asesor => !asesor.gerente_id);
+                // El backend ya ha filtrado, no es necesario filtrar en el cliente
+                const asesoresSinGerente = asesoresData.asesores;
 
                 this.mostrarModalAsignacionAsesores(gerentesData.asesores, asesoresSinGerente, gerenteId);
             } else {
@@ -727,13 +790,11 @@ const Jerarquia = {
             const data = await response.json();
 
             if (data.success) {
-                showNotification(data.message, 'success');
+                showSuccess(data.message || 'Asesor asignado correctamente.');
                 document.getElementById('modalAsignacionAsesores')?.remove();
 
-                // Recargar jerarquía si está visible
-                if (document.getElementById('jerarquia-container')?.innerHTML.includes('jerarquia-tree')) {
-                    this.mostrarJerarquiaCompleta();
-                }
+                // Actualización dinámica del DOM en lugar de recarga completa
+                this.actualizarVistaAsignacion(data.gerente, data.asesor);
             } else {
                 showError(data.message || 'Error en la asignación');
             }
@@ -742,6 +803,57 @@ const Jerarquia = {
             console.error('Error ejecutando asignación:', error);
             showError('Error de conexión en la asignación');
         }
+    },
+
+    actualizarVistaAsignacion: function(gerente, asesor) {
+        console.log('Actualizando vista dinámicamente para:', gerente, asesor);
+
+        const gerenteCard = document.querySelector(`.gerente-card[data-gerente-id="${gerente.id}"]`);
+        if (!gerenteCard) {
+            console.warn('No se encontró la tarjeta del gerente para actualizar.');
+            // Si la tarjeta no está, una recarga puede ser un fallback válido
+            this.mostrarJerarquiaCompleta();
+            return;
+        }
+
+        // 1. Eliminar al asesor del modal si aún estuviera visible
+        const asesorOption = document.querySelector(`#selectAsesor option[value="${asesor.id}"]`);
+        if (asesorOption) {
+            asesorOption.remove();
+        }
+
+        // 2. Renderizar el item del nuevo asesor
+        const asesorHtml = this.renderAsesorItem(asesor, gerente.id);
+        
+        // 3. Encontrar la lista de asesores del gerente
+        const asesoresListContainer = gerenteCard.querySelector('.asesores-list');
+        if (asesoresListContainer) {
+            // Eliminar el placeholder si existe
+            const emptyPlaceholder = asesoresListContainer.querySelector('.empty-asesores');
+            if (emptyPlaceholder) {
+                emptyPlaceholder.remove();
+            }
+            
+            // Añadir el nuevo asesor
+            asesoresListContainer.insertAdjacentHTML('beforeend', asesorHtml);
+        }
+
+        // 4. Actualizar el contador de asesores del gerente
+        const statBadge = gerenteCard.querySelector('.gerente-stats .stat-badge');
+        if (statBadge && statBadge.title.toLowerCase() === 'asesores') {
+            const currentCount = parseInt(statBadge.innerText.trim(), 10) || 0;
+            statBadge.innerHTML = `<i class="fas fa-users"></i> ${currentCount + 1}`;
+        }
+
+        // 5. Actualizar el contador en el subtítulo de la sección de asesores
+        const sectionCount = asesoresListContainer.querySelector('.section-subtitle .section-count');
+        if (sectionCount) {
+            const currentCount = parseInt(sectionCount.innerText.trim(), 10) || 0;
+            sectionCount.innerText = currentCount + 1;
+        }
+
+        // 6. Actualizar métricas globales
+        this.setupAdminHierarchicalMetrics();
     },
 
     redistribuirReclutasGerente: async function() {
