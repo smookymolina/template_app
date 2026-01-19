@@ -3942,60 +3942,117 @@ const Reclutas = {
     },
 
     /**
-     * Renderiza la lista de eventos de timeline
+     * Renderiza la línea de seguimiento completa
      */
-    renderTimelineList: function() {
-        const container = document.getElementById('timeline-list');
-        const emptyState = document.getElementById('empty-timeline');
-        
-        if (!container) return;
-        
-        if (!this.currentTimelineData || this.currentTimelineData.length === 0) {
-            if (emptyState) emptyState.style.display = 'block';
+    renderTimeline: function(filterStatus = 'all') {
+        const timelineList = document.getElementById('timeline-list');
+        const emptyTimeline = document.getElementById('empty-timeline');
+
+        if (!timelineList || !emptyTimeline) return;
+
+        // Filtrar eventos según el estado seleccionado
+        const filteredEvents = this.currentTimelineData.filter(item => {
+            if (filterStatus === 'all') return true;
+            return item.status === filterStatus;
+        });
+
+        if (filteredEvents.length === 0) {
+            timelineList.innerHTML = ''; // Limpiar lista
+            emptyTimeline.style.display = 'block';
+            timelineList.appendChild(emptyTimeline);
             return;
         }
-        
-        if (emptyState) emptyState.style.display = 'none';
-        
-        // Ordenar por fecha
-        const sortedData = [...this.currentTimelineData].sort((a, b) => new Date(a.date) - new Date(b.date));
-        
-        const html = sortedData.map(item => {
-            const formattedDate = new Date(item.date).toLocaleDateString('es-ES', { timeZone: 'UTC' });
-            const statusIcons = {
-                completed: 'fas fa-check-circle',
-                pending: 'fas fa-clock',
-                cancelled: 'fas fa-times-circle'
-            };
-            const statusTexts = {
-                completed: 'Completado',
-                pending: 'Pendiente',
-                cancelled: 'Cancelado'
-            };
 
-            return `
-                <div class="timeline-item" data-id="${item.id}">
-                    <div class="timeline-item-header">
-                        <div class="timeline-item-date">${formattedDate}</div>
-                        <div class="timeline-item-status ${item.status}">
-                            <i class="${statusIcons[item.status]}"></i> ${statusTexts[item.status]}
-                        </div>
-                    </div>
-                    <div class="timeline-item-title">${item.title}</div>
-                    <div class="timeline-item-description">${item.description || 'Sin descripción'}</div>
-                    <div class="timeline-item-actions">
-                        <button class="btn btn-outline" onclick="(window.reclutaManager || window.Reclutas).editTimelineItem(${item.id})">
-                            <i class="fas fa-edit"></i> Editar
-                        </button>
-                        <button class="btn btn-danger" onclick="(window.reclutaManager || window.Reclutas).deleteTimelineItemApi(${item.id})">
-                            <i class="fas fa-trash"></i> Eliminar
-                        </button>
-                    </div>
-                </div>
-            `;
-        }).join('');
+        emptyTimeline.style.display = 'none';
         
-        container.innerHTML = html;
+        // Ordenar: más recientes primero
+        const sortedEvents = filteredEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        timelineList.innerHTML = sortedEvents.map(item => this.renderTimelineItem(item)).join('');
+    },
+
+    /**
+     * Calcula los días transcurridos desde una fecha y devuelve un objeto
+     */
+    calculateDaysAgo: function(dateString) {
+        const eventDate = new Date(dateString);
+        eventDate.setUTCHours(0, 0, 0, 0);
+
+        const now = new Date();
+        now.setUTCHours(0, 0, 0, 0);
+        
+        const diffTime = now - eventDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+        if (diffDays < -1) return { prefix: 'En', number: -diffDays, text: 'días' };
+        if (diffDays === -1) return { number: 'Mañana', text: '' };
+        if (diffDays === 0) return { number: 'Hoy', text: '' };
+        if (diffDays === 1) return { number: 'Ayer', text: '' };
+        return { prefix: 'Hace', number: diffDays, text: 'días' };
+    },
+
+    /**
+     * Renderiza un único item de la línea de seguimiento con el nuevo diseño
+     */
+    renderTimelineItem: function(item) {
+        const daysAgo = this.calculateDaysAgo(item.date);
+        let iconClass = 'fa-calendar-day';
+        let statusColor = 'var(--secondary-color)';
+
+        switch(item.status) {
+            case 'completed':
+                iconClass = 'fa-check-circle';
+                statusColor = 'var(--timeline-success)';
+                break;
+            case 'pending':
+                iconClass = 'fa-hourglass-half';
+                statusColor = 'var(--timeline-warning)';
+                break;
+            case 'cancelled':
+                iconClass = 'fa-times-circle';
+                statusColor = 'var(--timeline-danger)';
+                break;
+        }
+        
+        return `
+            <div class="timeline-card" data-event-id="${item.id}" onclick="Reclutas.editTimelineItem(${item.id})">
+                <div class="timeline-card-icon" style="background-color: ${statusColor};">
+                    <i class="fas ${iconClass}"></i>
+                </div>
+                <div class="timeline-card-content">
+                    <div class="timeline-card-title">${item.title}</div>
+                    <div class="timeline-card-date">${new Date(item.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                </div>
+                <div class="timeline-card-days">
+                    <div class="days-ago-number">
+                        ${daysAgo.prefix ? `<span class="days-ago-prefix">${daysAgo.prefix}</span>` : ''}
+                        <span class="days-ago-value">${daysAgo.number}</span>
+                    </div>
+                    <div class="days-ago-text">${daysAgo.text}</div>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * Configura los eventos para los botones de filtro del timeline
+     */
+    setupTimelineFilters: function() {
+        const filterControls = document.querySelector('.timeline-filter-controls');
+        if (!filterControls) return;
+
+        filterControls.addEventListener('click', (e) => {
+            if (e.target.matches('.filter-btn')) {
+                // Quitar clase activa de todos los botones
+                filterControls.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                
+                // Añadir clase activa al botón presionado
+                e.target.classList.add('active');
+
+                const status = e.target.dataset.status;
+                this.renderTimeline(status);
+            }
+        });
     },
 
     /**

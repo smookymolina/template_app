@@ -112,9 +112,34 @@ Diseño Mejorado de Timeline
 
 /* Estado cancelado */
 .timeline-item.cancelled .timeline-marker {
+    background-color: var(--danger-color);
     border-color: var(--danger-color);
-    background-color: #fdf0f1;
 }
+
+/* ===========================================
+   🎯 ANULACIÓN PARA NUEVO DISEÑO DE TARJETAS
+=========================================== */
+
+/* 
+ * Anula la línea vertical del timeline antiguo cuando se usa 
+ * el nuevo sistema de tarjetas para evitar conflictos visuales.
+ */
+#client-timeline.timeline,
+#timeline-list .timeline {
+    border-left: none !important;
+}
+
+#client-timeline .timeline-item::before,
+#timeline-list .timeline-item::before {
+    display: none !important;
+}
+
+#client-timeline > .timeline-card + .timeline-card,
+#timeline-list > .timeline-card + .timeline-card {
+    margin-top: 15px; /* Asegura espacio entre tarjetas */
+}
+
+
 
 .timeline-item.cancelled::after {
     content: '\f05e'; /* Ban */

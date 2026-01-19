@@ -444,13 +444,11 @@ const Client = {
      * @param {string} folio - Folio del recluta
      */
     displayTrackingResults: function(info, isInModal = true, folio = null) {
-        // Verificar que la información existe y es válida
         if (!info) {
             this.setFormState('error', 'No se encontró información para este folio');
             return;
         }
         
-        // Obtener los contenedores
         const formId = isInModal ? 'modal-tracking-form' : 'tracking-form';
         const resultsId = isInModal ? 'modal-results' : 'tracking-results';
         
@@ -463,20 +461,15 @@ const Client = {
             return;
         }
         
-        // Ocultar formulario
-        if (trackingForm) {
-            trackingForm.style.display = 'none';
-        }
+        if (trackingForm) trackingForm.style.display = 'none';
         
-        // Determinar estado para badge
         const estadoBadge = info.estado ? this.getBadgeClass(info.estado) : 'badge-secondary';
         
-        // Crear contenido de resultados con validación de datos
         resultsContainer.innerHTML = `
             <div class="tracking-result-card">
                 <h3>Información de Proceso</h3>
                 <div class="tracking-info">
-                    <div class="tracking-row">
+                     <div class="tracking-row">
                         <div class="tracking-label">Candidato:</div>
                         <div class="tracking-value">${info.nombre || 'No disponible'}</div>
                     </div>
@@ -486,19 +479,16 @@ const Client = {
                             <span class="badge ${estadoBadge}">${info.estado || 'Desconocido'}</span>
                         </div>
                     </div>
-                    <div class="tracking-row">
-                        <div class="tracking-label">Fecha de registro:</div>
-                        <div class="tracking-value">${info.fecha_registro || 'No disponible'}</div>
-                    </div>
-                    <div class="tracking-row">
-                        <div class="tracking-label">Última actualización:</div>
-                        <div class="tracking-value">${info.ultima_actualizacion || 'No disponible'}</div>
-                    </div>
-                    ${this.renderEntrevistaSection(info.proxima_entrevista)}
                 </div>
             </div>
             
             <div class="timeline-container" id="client-timeline-container">
+                <h3>Línea de Tiempo del Proceso</h3>
+                <div class="timeline-filter-controls">
+                    <button class="filter-btn active" data-status="all">Todos</button>
+                    <button class="filter-btn" data-status="completed">Completados</button>
+                    <button class="filter-btn" data-status="pending">Pendientes</button>
+                </div>
                 <div class="timeline" id="client-timeline">
                     <div class="loading-timeline">
                         <i class="fas fa-spinner fa-spin"></i>
@@ -510,163 +500,119 @@ const Client = {
             <button class="btn-secondary new-query-btn">
                 <i class="fas fa-arrow-left"></i> Realizar otra consulta
             </button>
-
-            <button class="btn-primary download-docs-btn" data-folio="${folio}">
-                <i class="fas fa-download"></i> Descargar documentos
-            </button>
         `;
         
-        // Mostrar el contenedor de resultados
         resultsContainer.style.display = 'block';
         
-        // Configurar evento del botón de descarga
-        this.setupDownloadButton(folio);
-        
-        // Cargar eventos personalizados de forma asíncrona
-        this.loadCustomTimelineForTracking(folio, info.estado);
+        this.fetchAndRenderClientTimeline(folio);
+        this.setupClientTimelineFilters();
     },
 
-    /**
-     * Carga y renderiza la timeline personalizada con eventos del asesor
-     * @param {string} folio - Folio del recluta
-     * @param {string} estadoRecluta - Estado actual del recluta para fallback
-     */
-    loadCustomTimelineForTracking: async function(folio, estadoRecluta) {
+    fetchAndRenderClientTimeline: async function(folio) {
         const timelineContainer = document.getElementById('client-timeline');
-        if (!timelineContainer) {
-            console.error('[CLIENT] Timeline container no encontrado');
-            return;
-        }
+        if (!timelineContainer) return;
 
         try {
-            console.log(`[CLIENT] Cargando eventos personalizados para folio: ${folio}`);
-            
-            // Llamar a la API de timeline
             const response = await fetch(`/api/tracking/${folio}/timeline`);
             const data = await response.json();
             
-            console.log('[CLIENT] Respuesta de API timeline:', data);
-            
-            if (response.ok && data.success) {
-                const customEvents = data.custom_events || [];
-                
-                if (customEvents.length > 0) {
-                    console.log(`[CLIENT] ${customEvents.length} eventos personalizados encontrados`);
-                    this.renderCustomTimelineEvents(customEvents);
-                } else {
-                    console.log('[CLIENT] No hay eventos personalizados, usando timeline genérica');
-                    this.renderGenericTimeline(estadoRecluta);
-                }
+            if (response.ok && data.success && data.custom_events) {
+                this.clientTimelineData = data.custom_events;
+                this.renderClientTimeline('all');
             } else {
-                console.warn('[CLIENT] API timeline falló, usando timeline genérica');
-                this.renderGenericTimeline(estadoRecluta);
+                timelineContainer.innerHTML = '<div class="empty-timeline"><i class="fas fa-exclamation-circle"></i><p>No se pudo cargar la línea de tiempo.</p></div>';
             }
-            
         } catch (error) {
-            console.error('[CLIENT] Error cargando timeline personalizada:', error);
-            this.renderGenericTimeline(estadoRecluta);
+            console.error('Error fetching client timeline:', error);
+            timelineContainer.innerHTML = '<div class="empty-timeline"><i class="fas fa-exclamation-circle"></i><p>Error de conexión al cargar la línea de tiempo.</p></div>';
         }
     },
 
-    /**
-     * Renderiza eventos personalizados en la timeline
-     * @param {Array} events - Array de eventos personalizados
-     */
-    renderCustomTimelineEvents: function(events) {
+    renderClientTimeline: function(filterStatus = 'all') {
         const timelineContainer = document.getElementById('client-timeline');
-        if (!timelineContainer) return;
+        if (!timelineContainer || !this.clientTimelineData) return;
 
-        console.log('[CLIENT] Renderizando eventos personalizados:', events);
+        const filteredEvents = this.clientTimelineData.filter(item => {
+            if (filterStatus === 'all') return true;
+            return item.status === filterStatus;
+        });
 
-        // Ordenar eventos por fecha
-        const sortedEvents = events.sort((a, b) => new Date(a.date) - new Date(b.date));
+        if (filteredEvents.length === 0) {
+            timelineContainer.innerHTML = '<div class="empty-timeline"><i class="fas fa-info-circle"></i><p>No hay eventos para el filtro seleccionado.</p></div>';
+            return;
+        }
 
-        // Función para obtener clase CSS según estado
-        const getStatusClass = (status) => {
-            switch(status) {
-                case 'completed': return 'completed';
-                case 'pending': return 'active';  
-                case 'cancelled': return 'cancelled';
-                default: return '';
-            }
-        };
+        const sortedEvents = filteredEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+        timelineContainer.innerHTML = sortedEvents.map(item => this.renderTimelineCard(item)).join('');
+    },
+    
+    calculateDaysAgo: function(dateString) {
+        const eventDate = new Date(dateString);
+        eventDate.setUTCHours(0, 0, 0, 0);
+        const now = new Date();
+        now.setUTCHours(0, 0, 0, 0);
+        const diffTime = now - eventDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-        // Normaliza fechas ISO (YYYY-MM-DD) para evitar desfases por zona horaria
-        const parseDate = (dateStr) => {
-            if (!dateStr) return null;
-            if (dateStr instanceof Date) return dateStr;
-            if (typeof dateStr === 'string') {
-                const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-                if (match) {
-                    const year = Number(match[1]);
-                    const month = Number(match[2]);
-                    const day = Number(match[3]);
-                    return new Date(year, month - 1, day);
-                }
-            }
-            const parsed = new Date(dateStr);
-            return Number.isNaN(parsed.getTime()) ? null : parsed;
-        };
-
-        // Función para formatear fecha
-        const formatDate = (dateStr) => {
-            try {
-                const parsedDate = parseDate(dateStr);
-                return parsedDate
-                    ? parsedDate.toLocaleDateString('es-ES', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    })
-                    : dateStr;
-            } catch (e) {
-                return dateStr;
-            }
-        };
-
-        // Función para obtener texto de estado
-        const getStatusText = (status) => {
-            switch(status) {
-                case 'completed': return 'Completado';
-                case 'pending': return 'Pendiente';
-                case 'cancelled': return 'Cancelado';
-                default: return status;
-            }
-        };
-
-        // Generar HTML
-        const timelineHTML = sortedEvents.map((event, index) => `
-            <div class="timeline-item ${getStatusClass(event.status)}" data-event-id="${event.id}">
-                <div class="timeline-marker"></div>
-                <div class="timeline-content">
-                    <h4>${event.title}</h4>
-                    <p><strong>${formatDate(event.date)}</strong></p>
-                    ${event.description ? `<p>${event.description}</p>` : ''}
-                    <div class="timeline-meta">
-                        <span class="status-badge status-${event.status}">
-                            ${getStatusText(event.status)}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-
-        timelineContainer.innerHTML = timelineHTML;
-        console.log('[CLIENT] Timeline personalizada renderizada exitosamente');
+        if (diffDays < -1) return { prefix: 'En', number: -diffDays, text: 'días' };
+        if (diffDays === -1) return { number: 'Mañana', text: '' };
+        if (diffDays === 0) return { number: 'Hoy', text: '' };
+        if (diffDays === 1) return { number: 'Ayer', text: '' };
+        return { prefix: 'Hace', number: diffDays, text: 'días' };
     },
 
-    /**
-     * Renderiza la timeline genérica cuando no hay eventos personalizados
-     * @param {string} estadoRecluta - Estado actual del recluta
-     */
-    renderGenericTimeline: function(estadoRecluta) {
-        const timelineContainer = document.getElementById('client-timeline');
-        if (!timelineContainer) return;
+    renderTimelineCard: function(item) {
+        const daysAgo = this.calculateDaysAgo(item.date);
+        let iconClass = 'fa-calendar-day';
+        let statusColor = 'var(--secondary-color)';
 
-        console.log(`[CLIENT] Renderizando timeline genérica para estado: ${estadoRecluta}`);
+        switch(item.status) {
+            case 'completed':
+                iconClass = 'fa-check-circle';
+                statusColor = 'var(--timeline-success, #10b981)';
+                break;
+            case 'pending':
+                iconClass = 'fa-hourglass-half';
+                statusColor = 'var(--timeline-warning, #f59e0b)';
+                break;
+            case 'cancelled':
+                iconClass = 'fa-times-circle';
+                statusColor = 'var(--timeline-danger, #ef4444)';
+                break;
+        }
         
-        // Usar la función existente
-        timelineContainer.innerHTML = this.renderTimelineItems(estadoRecluta || 'Desconocido');
+        return `
+            <div class="timeline-card" data-event-id="${item.id}">
+                <div class="timeline-card-icon" style="background-color: ${statusColor};">
+                    <i class="fas ${iconClass}"></i>
+                </div>
+                <div class="timeline-card-content">
+                    <div class="timeline-card-title">${item.title}</div>
+                    <div class="timeline-card-date">${new Date(item.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                </div>
+                <div class="timeline-card-days">
+                    <div class="days-ago-number">
+                        ${daysAgo.prefix ? `<span class="days-ago-prefix">${daysAgo.prefix}</span>` : ''}
+                        <span class="days-ago-value">${daysAgo.number}</span>
+                    </div>
+                    <div class="days-ago-text">${daysAgo.text}</div>
+                </div>
+            </div>
+        `;
+    },
+
+    setupClientTimelineFilters: function() {
+        const filterControls = document.querySelector('#client-timeline-container .timeline-filter-controls');
+        if (!filterControls) return;
+
+        filterControls.addEventListener('click', (e) => {
+            if (e.target.matches('.filter-btn')) {
+                filterControls.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                const status = e.target.dataset.status;
+                this.renderClientTimeline(status);
+            }
+        });
     },
     
     /**
