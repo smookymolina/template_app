@@ -30,3 +30,4 @@ from models.documento import Documento
 from models.user_settings import UserSettings
 from models.notification import Notification
 from models.ficha_deposito import FichaDeposito
+from models.tutorial_analytics import TutorialAnalytics

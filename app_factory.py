@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_login import LoginManager
+from flask_migrate import Migrate
 import logging
 import os
 from config import config
@@ -7,6 +8,9 @@ from models import db
 from sqlalchemy.exc import OperationalError
 from models.usuario import Usuario
 from flask_cors import CORS
+
+# Instancia global de Migrate
+migrate = Migrate()
 
 def create_app(config_name='default'):
     """
@@ -98,7 +102,10 @@ def initialize_extensions(app):
     """Inicializa las extensiones de Flask"""
     # Inicializar SQLAlchemy
     db.init_app(app)
-    
+
+    # Inicializar Flask-Migrate
+    migrate.init_app(app, db)
+
     # Inicializar Flask-Login
     login_manager = LoginManager()
     login_manager.init_app(app)
