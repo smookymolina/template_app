@@ -3889,7 +3889,7 @@ const Reclutas = {
             console.error('Error cargando timeline:', e);
             this.currentTimelineData = [];
         }
-        this.renderTimelineList();
+        this.renderTimeline();
         this.updateTimelineStats();
     },
 
@@ -3937,7 +3937,7 @@ const Reclutas = {
             }
         ];
         
-        this.renderTimelineList();
+        this.renderTimeline();
         this.updateTimelineStats();
     },
 
@@ -3946,29 +3946,38 @@ const Reclutas = {
      */
     renderTimeline: function(filterStatus = 'all') {
         const timelineList = document.getElementById('timeline-list');
-        const emptyTimeline = document.getElementById('empty-timeline');
-
-        if (!timelineList || !emptyTimeline) return;
+        if (!timelineList) {
+            console.error('No se encontró el elemento timeline-list');
+            return;
+        }
 
         // Filtrar eventos según el estado seleccionado
-        const filteredEvents = this.currentTimelineData.filter(item => {
+        const filteredEvents = (this.currentTimelineData || []).filter(item => {
             if (filterStatus === 'all') return true;
             return item.status === filterStatus;
         });
 
+        // HTML para estado vacío
+        const emptyHTML = `
+            <div class="empty-timeline" id="empty-timeline">
+                <i class="fas fa-route"></i>
+                <h5>No hay eventos en la línea de tiempo</h5>
+                <p>Agrega el primer evento para comenzar el seguimiento del candidato</p>
+            </div>
+        `;
+
         if (filteredEvents.length === 0) {
-            timelineList.innerHTML = ''; // Limpiar lista
-            emptyTimeline.style.display = 'block';
-            timelineList.appendChild(emptyTimeline);
+            timelineList.innerHTML = emptyHTML;
             return;
         }
 
-        emptyTimeline.style.display = 'none';
-        
         // Ordenar: más recientes primero
-        const sortedEvents = filteredEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+        const sortedEvents = [...filteredEvents].sort((a, b) => new Date(b.date) - new Date(a.date));
 
+        // Renderizar eventos
         timelineList.innerHTML = sortedEvents.map(item => this.renderTimelineItem(item)).join('');
+
+        console.log(`Timeline renderizado: ${sortedEvents.length} eventos mostrados`);
     },
 
     /**
@@ -4187,7 +4196,7 @@ const Reclutas = {
         }
         
         // Actualizar vista
-        this.renderTimelineList();
+        this.renderTimeline();
         this.updateTimelineStats();
         this.cancelTimelineForm();
         
@@ -4205,7 +4214,7 @@ const Reclutas = {
         
         this.currentTimelineData = this.currentTimelineData.filter(item => item.id !== id);
         
-        this.renderTimelineList();
+        this.renderTimeline();
         this.updateTimelineStats();
         
         showSuccess('Evento eliminado correctamente');
@@ -4245,20 +4254,45 @@ window.addRecluta = function() {
 
 // Exponer reclutaManager para uso en onclick del HTML
 // Métodos API para persistir eventos (nuevos, no invasivos)
+Reclutas.isSavingTimeline = false; // Flag para evitar duplicados
+
 Reclutas.saveTimelineItemApi = async function() {
-    // Obtener fecha y asegurar formato correcto (evitar que la zona horaria cambie el dia elegido)
+    // Evitar múltiples clics
+    if (Reclutas.isSavingTimeline) {
+        console.log('Ya se está guardando un evento, ignorando clic duplicado');
+        return;
+    }
+
+    // Obtener botón y deshabilitarlo
+    const saveBtn = document.querySelector('#timeline-form .btn-success');
+    const originalBtnText = saveBtn ? saveBtn.innerHTML : '';
+
+    // Obtener fecha y asegurar formato correcto
     const dateInput = document.getElementById('event-date').value;
     const dateObj = dateInput ? new Date(dateInput + 'T12:00:00') : new Date();
     if (Number.isNaN(dateObj.getTime())) {
-        showError('La fecha seleccionada no es valida');
+        if (window.showError) showError('La fecha seleccionada no es válida');
         return;
     }
     const date = dateObj.toISOString().split('T')[0];
     const status = document.getElementById('event-status').value;
-    const title = document.getElementById('event-title').value;
-    const description = document.getElementById('event-description').value;
-    if (!date || !status || !title) { showError('Por favor completa todos los campos obligatorios'); return; }
+    const title = document.getElementById('event-title').value.trim();
+    const description = document.getElementById('event-description').value.trim();
+
+    if (!date || !status || !title) {
+        if (window.showError) showError('Por favor completa todos los campos obligatorios');
+        return;
+    }
+
+    // Marcar como guardando y deshabilitar botón
+    Reclutas.isSavingTimeline = true;
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+    }
+
     const payload = { date, status, title, description: description || '' };
+
     try {
         let url = `${CONFIG.API_URL}/reclutas/${Reclutas.currentReclutaId}/timeline`;
         let method = 'POST';
@@ -4266,15 +4300,40 @@ Reclutas.saveTimelineItemApi = async function() {
             url = `${url}/${Reclutas.currentEditingTimelineId}`;
             method = 'PUT';
         }
-        const resp = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+
+        const resp = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
         const data = await resp.json();
-        if (!resp.ok || !data.success) throw new Error(data.message || 'No se pudo guardar el evento');
-        showSuccess(Reclutas.currentEditingTimelineId ? 'Evento actualizado correctamente' : 'Evento creado correctamente');
+
+        if (!resp.ok || !data.success) {
+            throw new Error(data.message || 'No se pudo guardar el evento');
+        }
+
+        // Mostrar mensaje de éxito
+        const successMsg = Reclutas.currentEditingTimelineId
+            ? 'Evento actualizado correctamente'
+            : 'Evento creado correctamente';
+        if (window.showSuccess) showSuccess(successMsg);
+
+        // Actualizar la lista de eventos
         await Reclutas.fetchAndRenderTimeline();
+
+        // Cerrar formulario
         Reclutas.cancelTimelineForm();
+
     } catch (e) {
         console.error('Error guardando evento:', e);
-        showError(e.message || 'Error al guardar el evento');
+        if (window.showError) showError(e.message || 'Error al guardar el evento');
+    } finally {
+        // Restaurar botón y flag
+        Reclutas.isSavingTimeline = false;
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalBtnText;
+        }
     }
 };
 
