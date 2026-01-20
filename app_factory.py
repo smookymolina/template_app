@@ -3,6 +3,7 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 import logging
 import os
+import time
 from config import config
 from models import db
 from sqlalchemy.exc import OperationalError
@@ -217,15 +218,13 @@ def register_error_handlers(app):
 
 def register_context_processors(app):
     """Registra context processors para variables globales en templates"""
-    # Versión para cache busting de archivos estáticos
-    # Cambiar este valor cada vez que se actualicen archivos JS/CSS
-    STATIC_VERSION = '1.5.6.2'
-
     @app.context_processor
     def inject_static_version():
+        # Generar un timestamp para cache busting
+        timestamp = int(time.time())
         return {
-            'static_version': STATIC_VERSION,
-            'v': STATIC_VERSION  # Alias corto para usar en templates
+            'static_version': timestamp,
+            'v': timestamp  # Alias corto para usar en templates
         }
 
 def register_request_hooks(app):

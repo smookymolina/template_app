@@ -1782,14 +1782,26 @@ const Reclutas = {
             }
             
             const modal = document.getElementById('view-recluta-modal');
+            const timelineButton = document.getElementById('btn-gestionar-timeline');
+
             if (!modal) {
                 showError('No se puede mostrar los detalles del recluta');
                 return;
+            }
+
+            // Deshabilitar botón de timeline mientras se carga
+            if (timelineButton) {
+                timelineButton.disabled = true;
+                timelineButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
             }
             
             // Obtener datos del recluta
             const recluta = await this.getRecluta(id);
             this.currentReclutaId = id;
+            
+            // 🎯 AÑADIR ID AL MODAL
+            modal.dataset.reclutaId = id;
+
             console.log('🎯 [viewRecluta] currentReclutaId establecido:', this.currentReclutaId);
             console.log('🎯 [viewRecluta] window.Reclutas.currentReclutaId:', window.Reclutas?.currentReclutaId);
             console.log('🎯 [viewRecluta] this === window.Reclutas:', this === window.Reclutas);
@@ -1855,12 +1867,25 @@ const Reclutas = {
             
             // Mostrar modal
             UI.showModal('view-recluta-modal');
+
+            // Habilitar botón de timeline
+            if (timelineButton) {
+                timelineButton.disabled = false;
+                timelineButton.innerHTML = '<i class="fas fa-route"></i> Gestionar Línea de Seguimiento';
+            }
             
             console.log('✅ Modal de detalles mostrado correctamente');
             
         } catch (error) {
             console.error('❌ Error al ver recluta:', error);
             showError('Error al cargar los detalles: ' + error.message);
+
+            // Asegurarse de re-habilitar el botón en caso de error
+            const timelineButton = document.getElementById('btn-gestionar-timeline');
+            if (timelineButton) {
+                timelineButton.disabled = false;
+                timelineButton.innerHTML = '<i class="fas fa-route"></i> Gestionar Línea de Seguimiento';
+            }
         }
     },
 

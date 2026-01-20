@@ -785,49 +785,35 @@
 function openTimelineModalSafely() {
     try {
         console.log('🎯 [TIMELINE] Intentando abrir modal de timeline...');
-        console.log('🎯 [TIMELINE] window.Reclutas existe:', !!window.Reclutas);
-        console.log('🎯 [TIMELINE] window.reclutaManager existe:', !!window.reclutaManager);
-
-        // Definir reclutaManager global si no existe (compatibilidad)
-        if (!window.reclutaManager && window.Reclutas) {
-            window.reclutaManager = window.Reclutas;
-            console.log('🎯 [COMPAT] Creando referencia reclutaManager -> Reclutas');
-        }
-
-        // Verificar referencias unificadas
+        
         const manager = window.reclutaManager || window.Reclutas;
 
-        console.log('🎯 [TIMELINE] Manager seleccionado:', manager ? 'OK' : 'NULL');
-        if (manager) {
-            console.log('🎯 [TIMELINE] currentReclutaId:', manager.currentReclutaId);
-            console.log('🎯 [TIMELINE] openTimelineModal existe:', typeof manager.openTimelineModal);
-        }
-
         if (manager && typeof manager.openTimelineModal === 'function') {
-            // Verificar que hay un recluta seleccionado
+            // 🎯 LÓGICA MEJORADA: Fallback para obtener el ID
             if (!manager.currentReclutaId) {
-                console.error('🎯 [TIMELINE] ERROR: currentReclutaId es null o undefined');
-                // Intentar obtener el ID desde el modal visible
-                const folioElement = document.getElementById('detail-recluta-folio');
-                const nombreElement = document.getElementById('detail-recluta-nombre');
-                console.log('🎯 [TIMELINE] Folio en modal:', folioElement?.textContent);
-                console.log('🎯 [TIMELINE] Nombre en modal:', nombreElement?.textContent);
+                console.warn('🎯 [TIMELINE] currentReclutaId es null, intentando fallback desde el DOM...');
+                const viewModal = document.getElementById('view-recluta-modal');
+                const reclutaIdFromDOM = viewModal ? viewModal.dataset.reclutaId : null;
 
-                alert('Por favor, selecciona un recluta antes de gestionar su línea de seguimiento.');
-                return;
+                if (reclutaIdFromDOM) {
+                    console.log('🎯 [TIMELINE] Éxito en fallback. ID del DOM:', reclutaIdFromDOM);
+                    manager.currentReclutaId = parseInt(reclutaIdFromDOM, 10);
+                } else {
+                    console.error('🎯 [TIMELINE] ERROR FATAL: No se pudo obtener el ID del recluta ni del manager ni del DOM.');
+                    alert('Por favor, cierra y vuelve a abrir los detalles del recluta antes de gestionar su línea de seguimiento.');
+                    return;
+                }
             }
 
             console.log('🎯 [SUCCESS] Abriendo timeline modal para recluta:', manager.currentReclutaId);
             manager.openTimelineModal();
         } else {
-            console.error('🎯 [ERROR] No se encontró el gestor de reclutas');
-            console.log('🎯 [DEBUG] window.reclutaManager:', window.reclutaManager);
-            console.log('🎯 [DEBUG] window.Reclutas:', window.Reclutas);
+            console.error('🎯 [ERROR] No se encontró el gestor de reclutas (reclutaManager).');
             alert('Error: No se pudo cargar la funcionalidad de gestión de timeline. Por favor, recarga la página.');
         }
     } catch (error) {
-        console.error('🎯 [ERROR] Al abrir modal de timeline:', error);
-        alert('Ocurrió un error al intentar abrir la gestión de timeline. Por favor, intenta de nuevo.');
+        console.error('🎯 [ERROR] Excepción al abrir modal de timeline:', error);
+        alert('Ocurrió un error inesperado al intentar abrir la gestión de timeline.');
     }
 }
 
