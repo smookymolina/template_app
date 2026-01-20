@@ -72,11 +72,14 @@ def create_app(config_name='default'):
     
     # Configurar ganchos antes/después de petición
     register_request_hooks(app)
-    
+
+    # Registrar context processor para cache busting de archivos estáticos
+    register_context_processors(app)
+
     # Inicializar la base de datos y crear usuarios por defecto
     with app.app_context():
         initialize_database(app)
-    
+
     return app
 
 def configure_logging(app):
@@ -211,6 +214,19 @@ def register_error_handlers(app):
     @app.errorhandler(401)
     def unauthorized(e):
         return {'error': 'No autorizado'}, 401
+
+def register_context_processors(app):
+    """Registra context processors para variables globales en templates"""
+    # Versión para cache busting de archivos estáticos
+    # Cambiar este valor cada vez que se actualicen archivos JS/CSS
+    STATIC_VERSION = '1.5.6.2'
+
+    @app.context_processor
+    def inject_static_version():
+        return {
+            'static_version': STATIC_VERSION,
+            'v': STATIC_VERSION  # Alias corto para usar en templates
+        }
 
 def register_request_hooks(app):
     """Registra ganchos de petición (before/after request)"""
