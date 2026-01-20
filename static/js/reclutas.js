@@ -1790,6 +1790,9 @@ const Reclutas = {
             // Obtener datos del recluta
             const recluta = await this.getRecluta(id);
             this.currentReclutaId = id;
+            console.log('🎯 [viewRecluta] currentReclutaId establecido:', this.currentReclutaId);
+            console.log('🎯 [viewRecluta] window.Reclutas.currentReclutaId:', window.Reclutas?.currentReclutaId);
+            console.log('🎯 [viewRecluta] this === window.Reclutas:', this === window.Reclutas);
             
             // Rellenar elementos del modal
             const elements = {
