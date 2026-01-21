@@ -1,0 +1,207 @@
+Goal: Safely update production from the correct git remote/branch with a fast-forward pull, handle local changes, run required post-deploy steps, START ALL REQUIRED SERVICES (Redis, MySQL), and verify the application is healthy.
+
+Context to ask for first:
+- Repo path and current branch name used in production.
+- Service manager in use (systemd, pm2, docker-compose, etc.).
+- Whether local changes are allowed, and how to handle them (stash vs abort).
+- Required post-pull steps (migrations, build, dependency install, cache clear).
+- Health check endpoint or validation command (if none, say "no endpoint").
+
+Commands and checks to request in order (PowerShell-friendly):
+
+1) Confirm location, repo, and branch:
+   - pwd
+   - git rev-parse --show-toplevel
+   - git status -sb
+   - git branch --show-current
+   - git remote -v
+
+2) Safety checks:
+   - If there are uncommitted changes, decide: stash or abort.
+   - If stash allowed: git stash push -u -m "prod-pull-<timestamp>"
+   - If not allowed: abort and report.
+
+3) Fetch and update:
+   - git fetch --all --prune
+   - git log --oneline --decorate -n 5
+   - git pull --ff-only origin <branch>
+   - If ff-only fails, stop and report (do not rebase/merge on prod unless explicitly approved).
+
+4) ===== CRITICAL: INSTALL AND VERIFY DEPENDENCIES =====
+
+   A) ACTIVATE VIRTUAL ENVIRONMENT FIRST:
+      - source venv/bin/activate (Linux/Mac)
+      - OR: source .venv/bin/activate
+      - OR: .\venv\Scripts\activate (Windows)
+      - Verify activation: which python (should point to venv)
+
+   B) INSTALL PYTHON DEPENDENCIES:
+      - Upgrade pip first (prevents many issues):
+        - python -m pip install --upgrade pip
+      - Install requirements with verbose output:
+        - python -m pip install -r requirements.txt --no-cache-dir 2>&1 | tee pip_install.log
+      - Check exit code: echo $? (must be 0)
+      - If install fails, check common issues:
+        - Missing system packages: sudo apt install python3-dev libmysqlclient-dev build-essential
+        - Permission issues: use --user flag or fix venv ownership
+        - Compilation errors: install gcc, make, and development headers
+
+   C) VERIFY CRITICAL PACKAGES ARE INSTALLED:
+      - Check Flask and extensions:
+        - python -c "import flask; print(f'Flask {flask.__version__}')"
+        - python -c "import flask_login; print('flask_login OK')"
+        - python -c "import flask_migrate; print('flask_migrate OK')"
+      - Check Redis client:
+        - python -c "import redis; print(f'redis-py {redis.__version__}')"
+      - Check Database drivers:
+        - python -c "import pymysql; print(f'PyMySQL {pymysql.__version__}')"
+        - python -c "import sqlalchemy; print(f'SQLAlchemy {sqlalchemy.__version__}')"
+      - Check other critical imports:
+        - python -c "from app_factory import create_app; print('app_factory OK')"
+      - If ANY import fails, DO NOT PROCEED - fix the dependency first!
+
+   D) QUICK DEPENDENCY HEALTH CHECK (run this single command):
+      - python -c "
+import sys
+failed = []
+for mod in ['flask', 'flask_login', 'flask_migrate', 'redis', 'pymysql', 'sqlalchemy', 'gunicorn']:
+    try:
+        __import__(mod)
+        print(f'✓ {mod}')
+    except ImportError as e:
+        print(f'✗ {mod}: {e}')
+        failed.append(mod)
+if failed:
+    print(f'\n❌ FAILED: {failed}')
+    sys.exit(1)
+print('\n✅ All critical dependencies OK')
+"
+
+   E) RUN DATABASE MIGRATIONS:
+      - flask db upgrade 2>&1 | tee migration.log
+      - Check exit code: echo $? (must be 0)
+      - If migration fails:
+        - Check database connection: flask db current
+        - Check for pending migrations: flask db history
+        - Common fix: flask db stamp head (use with caution)
+
+   F) VERIFY APPLICATION CAN START (dry run):
+      - python -c "from app_factory import create_app; app = create_app('production'); print('✅ App created successfully')"
+      - If this fails, check the error and fix before proceeding!
+
+5) ===== CRITICAL: VERIFY AND START REQUIRED SERVICES =====
+
+   A) CHECK AND START REDIS:
+      - Check Redis status:
+        - systemctl status redis (or redis-server)
+        - OR: docker ps | grep redis
+      - If Redis is NOT running, START IT:
+        - sudo systemctl start redis
+        - OR: sudo systemctl start redis-server
+        - OR: docker start redis
+        - OR: redis-server --daemonize yes
+      - Verify Redis is responding:
+        - redis-cli ping
+        - Expected response: PONG
+      - If Redis fails to start, check logs:
+        - sudo journalctl -u redis -n 50
+        - OR: cat /var/log/redis/redis-server.log
+
+   B) CHECK AND START MYSQL/MARIADB:
+      - Check MySQL status:
+        - systemctl status mysql (or mariadb or mysqld)
+        - OR: docker ps | grep mysql
+      - If MySQL is NOT running, START IT:
+        - sudo systemctl start mysql
+        - OR: sudo systemctl start mariadb
+        - OR: docker start mysql
+      - Verify MySQL is responding:
+        - mysqladmin ping -u root -p
+        - OR: mysql -u root -p -e "SELECT 1"
+      - If MySQL fails, check logs:
+        - sudo journalctl -u mysql -n 50
+
+   C) CLEAR APPLICATION CACHES (important after deployment):
+      - Clear Redis metrics cache:
+        - redis-cli KEYS "metrics_cache_*" | xargs redis-cli DEL
+        - OR from Python: flask shell -> from utils.metrics_cache import clear_all_metrics_cache; clear_all_metrics_cache()
+      - Clear any session caches if needed.
+
+6) Restart application and verify:
+   - Restart service using the correct manager:
+     - sudo systemctl restart gunicorn
+     - OR: sudo systemctl restart <your-app-service>
+     - OR: pm2 restart all
+     - OR: docker-compose restart app
+   - Wait a few seconds for service to initialize.
+   - Tail logs for errors:
+     - sudo journalctl -u gunicorn -f
+     - OR: tail -f /var/log/gunicorn/error.log
+   - Check for startup errors, especially:
+     - Redis connection errors
+     - MySQL/Database connection errors
+     - Import errors
+
+7) Health check and validation:
+   - Run health check (HTTP or CLI), or if none:
+     - curl -I https://freted.info (check for HTTP 200)
+     - curl -s https://freted.info/api/health (if health endpoint exists)
+     - Check service status: systemctl status <service>
+     - Confirm port is listening: ss -tlnp | grep 5000 (or your port)
+   - Test critical endpoints:
+     - Login page loads
+     - API responds (try a simple GET endpoint)
+     - Metrics page loads without 502 error
+
+8) If stash was used:
+   - Decide whether to re-apply (git stash pop) or keep it for later review.
+
+9) TROUBLESHOOTING 502 ERRORS:
+   If you see 502 Bad Gateway after deployment:
+
+   A) Check if the application is running:
+      - systemctl status gunicorn (or your app service)
+      - ps aux | grep gunicorn
+      - ps aux | grep python
+
+   B) Check if Redis is running (REQUIRED for metrics):
+      - redis-cli ping
+      - If no response: sudo systemctl start redis
+
+   C) Check if MySQL is running:
+      - mysqladmin ping
+      - If no response: sudo systemctl start mysql
+
+   D) Check application logs for errors:
+      - sudo journalctl -u gunicorn -n 100
+      - Look for: ConnectionRefusedError, redis.exceptions.ConnectionError, OperationalError
+
+   E) CHECK FOR MISSING DEPENDENCIES (common cause of 502):
+      - Activate venv: source venv/bin/activate
+      - Test imports:
+        - python -c "from app_factory import create_app; print('OK')"
+      - If ImportError appears:
+        - Reinstall: pip install -r requirements.txt --no-cache-dir
+        - Check specific package: pip show <package-name>
+      - Common missing packages that cause 502:
+        - redis, pymysql, gunicorn, flask-login, flask-migrate
+
+   F) Restart in correct order:
+      1. sudo systemctl start redis
+      2. sudo systemctl start mysql
+      3. source venv/bin/activate && pip install -r requirements.txt
+      4. sudo systemctl restart gunicorn
+      5. Wait 10 seconds
+      6. Test: curl -I https://freted.info
+
+Expected output to report:
+- Current commit before and after.
+- Any local changes handled.
+- pip install result: success/failed (include error if failed).
+- Critical dependencies check: all OK / which ones failed.
+- Database migration result: success/failed.
+- Redis status: running/not running.
+- MySQL status: running/not running.
+- Application dry-run: can create app / failed with error.
+- Service status and health check result.
+- Any errors found in logs.

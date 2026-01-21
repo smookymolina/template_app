@@ -10,7 +10,8 @@
       "mcp__ide__getDiagnostics",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "WebFetch(domain:freted.info)"
     ],
     "deny": [],
     "ask": []
