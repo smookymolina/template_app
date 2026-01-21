@@ -1,5 +1,26 @@
 Goal: Safely update production from the correct git remote/branch with a fast-forward pull, handle local changes, run required post-deploy steps, START ALL REQUIRED SERVICES (Redis, MySQL), and verify the application is healthy.
 
+=============================================================================
+CAMBIOS EN ESTA VERSION (2026-01-21):
+=============================================================================
+
+1) GESTION DE GERENTES - Asignacion/Reasignacion de Asesores:
+   - CORREGIDO: El modal de asignacion ahora muestra TODOS los asesores (con y sin gerente)
+   - NUEVO: Se puede reasignar un asesor de un gerente a otro directamente
+   - NUEVO: El select muestra el gerente actual de cada asesor
+   - Archivos modificados:
+     * static/js/jerarquia.js (lineas 675-770 aprox)
+
+2) LINEA DE SEGUIMIENTO (Timeline) - Eventos:
+   - CORREGIDO: La fecha ya NO se guarda un dia antes (problema de zona horaria)
+   - NUEVO: Boton de eliminar visible en cada tarjeta de evento
+   - CORREGIDO: Visualizacion correcta de fechas sin desfase
+   - Archivos modificados:
+     * static/js/reclutas.js (funciones saveTimelineItemApi, editTimelineItem, calculateDaysAgo, renderTimelineItem)
+     * static/css/new-timeline.css (estilos para boton eliminar)
+
+=============================================================================
+
 Context to ask for first:
 - Repo path and current branch name used in production.
 - Service manager in use (systemd, pm2, docker-compose, etc.).
@@ -153,10 +174,27 @@ print('\n✅ All critical dependencies OK')
      - API responds (try a simple GET endpoint)
      - Metrics page loads without 502 error
 
-8) If stash was used:
+8) ===== VERIFICAR CAMBIOS DE ESTA VERSION =====
+
+   A) GESTION DE GERENTES - Probar asignacion/reasignacion:
+      - Ir a Gestion de Gerentes > Asignar Asesores
+      - Verificar que aparecen TODOS los asesores (con y sin gerente)
+      - Verificar que cada asesor muestra su gerente actual
+      - Probar reasignar un asesor a otro gerente
+      - Verificar que los contadores se actualizan correctamente
+
+   B) LINEA DE SEGUIMIENTO - Probar eventos:
+      - Abrir un recluta > Linea de Seguimiento
+      - Agregar un evento con fecha de hoy
+      - Verificar que la fecha se guarda CORRECTAMENTE (sin desfase de un dia)
+      - Verificar que aparece el boton de eliminar (icono papelera) en cada tarjeta
+      - Probar eliminar un evento
+      - Editar un evento y verificar que la fecha se muestra correctamente
+
+9) If stash was used:
    - Decide whether to re-apply (git stash pop) or keep it for later review.
 
-9) TROUBLESHOOTING 502 ERRORS:
+10) TROUBLESHOOTING 502 ERRORS:
    If you see 502 Bad Gateway after deployment:
 
    A) Check if the application is running:
@@ -205,3 +243,5 @@ Expected output to report:
 - Application dry-run: can create app / failed with error.
 - Service status and health check result.
 - Any errors found in logs.
+- Resultado de pruebas de Gestion de Gerentes (asignacion/reasignacion funciona).
+- Resultado de pruebas de Timeline (fecha correcta, boton eliminar funciona).
