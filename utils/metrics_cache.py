@@ -20,7 +20,7 @@ class MetricsCacheManager:
     - ✅ Caché estratificado por roles (admin, gerente, asesor)
     - ✅ Invalidación automática basada en cambios de datos
     - ✅ Gestión de TTL (Time To Live) por tipo de usuario
-    - ✅ Compresión de datos para optimizar memoria
+    - ✅ Backend de Redis para escalabilidad en producción
     - ✅ Logging detallado para auditoría
     """
 
@@ -31,6 +31,8 @@ class MetricsCacheManager:
             'asesor': 120      # 2 minutos para asesores
         }
         self.cache_prefix = 'metrics_cache_'
+        # El cliente de Redis se obtiene del contexto de la aplicación
+        self.redis_client = current_app.redis_client
 
     def generate_cache_key(self, user_id: int, user_role: str,
                           endpoint: str, filters: Dict = None) -> str:
@@ -52,15 +54,14 @@ class MetricsCacheManager:
             filters_json = json.dumps(filters, sort_keys=True)
             filters_hash = hashlib.md5(filters_json.encode()).hexdigest()[:8]
 
-        # Formato: metrics_cache_{role}_{user_id}_{endpoint}_{filters_hash}_{timestamp}
-        timestamp = int(time.time() / 60)  # Bucket por minuto
-
-        return f"{self.cache_prefix}{user_role}_{user_id}_{endpoint}_{filters_hash}_{timestamp}"
+        # Formato: metrics_cache_{role}_{user_id}_{endpoint}_{filters_hash}
+        # Se elimina el timestamp por minuto para un caché más consistente
+        return f"{self.cache_prefix}{user_role}_{user_id}_{endpoint}_{filters_hash}"
 
     def set_cache(self, cache_key: str, data: Dict[str, Any],
                   user_role: str) -> bool:
         """
-        💾 ESTABLECER datos en caché
+        💾 ESTABLECER datos en caché de Redis
 
         Args:
             cache_key: Clave de caché
@@ -70,34 +71,30 @@ class MetricsCacheManager:
         Returns:
             bool: True si se guardó exitosamente
         """
+        if not self.redis_client:
+            return False
+
         try:
             ttl = self.cache_ttl.get(user_role, 120)
+            
+            # Serializar el objeto de datos a una cadena JSON
+            serialized_data = json.dumps(data)
 
-            cache_entry = {
-                'data': data,
-                'timestamp': datetime.utcnow().isoformat(),
-                'expires_at': (datetime.utcnow() + timedelta(seconds=ttl)).isoformat(),
-                'user_role': user_role,
-                'version': '2.0'
-            }
-
-            # Usar session como almacén temporal
-            # En producción, usar Redis o Memcached
-            session[cache_key] = cache_entry
+            # Usar setex para establecer la clave con expiración atómica
+            self.redis_client.setex(cache_key, ttl, serialized_data)
 
             current_app.logger.info(
-                f"💾 Cache SET: {cache_key} | TTL: {ttl}s | Rol: {user_role}"
+                f"💾 Cache SET [Redis]: {cache_key} | TTL: {ttl}s | Rol: {user_role}"
             )
-
             return True
 
         except Exception as e:
-            current_app.logger.error(f"❌ Error setting cache: {str(e)}")
+            current_app.logger.error(f"❌ Error setting Redis cache: {str(e)}")
             return False
 
     def get_cache(self, cache_key: str) -> Optional[Dict[str, Any]]:
         """
-        📖 OBTENER datos del caché
+        📖 OBTENER datos del caché de Redis
 
         Args:
             cache_key: Clave de caché
@@ -105,109 +102,80 @@ class MetricsCacheManager:
         Returns:
             Dict o None: Datos del caché si existen y son válidos
         """
+        if not self.redis_client:
+            return None
+
         try:
-            cache_entry = session.get(cache_key)
-            if not cache_entry:
-                current_app.logger.debug(f"💾 Cache MISS: {cache_key}")
+            cached_data = self.redis_client.get(cache_key)
+            
+            if not cached_data:
+                current_app.logger.debug(f"💾 Cache MISS [Redis]: {cache_key}")
                 return None
 
-            # Verificar expiración
-            expires_at = datetime.fromisoformat(cache_entry['expires_at'])
-            if datetime.utcnow() > expires_at:
-                current_app.logger.debug(f"💾 Cache EXPIRED: {cache_key}")
-                session.pop(cache_key, None)
-                return None
-
-            current_app.logger.info(f"💾 Cache HIT: {cache_key}")
-            return cache_entry['data']
+            current_app.logger.info(f"💾 Cache HIT [Redis]: {cache_key}")
+            
+            # Deserializar la cadena JSON a un objeto Python
+            return json.loads(cached_data)
 
         except Exception as e:
-            current_app.logger.error(f"❌ Error getting cache: {str(e)}")
+            current_app.logger.error(f"❌ Error getting Redis cache: {str(e)}")
             return None
 
     def invalidate_user_cache(self, user_id: int, user_role: str = None):
         """
-        🗑️ INVALIDAR caché de un usuario específico
+        🗑️ INVALIDAR caché de un usuario específico en Redis
 
         Args:
             user_id: ID del usuario
             user_role: Rol específico a invalidar (opcional)
         """
+        if not self.redis_client:
+            return
+
         try:
-            keys_to_remove = []
+            # Construir patrón de búsqueda
+            if user_role:
+                pattern = f"{self.cache_prefix}{user_role}_{user_id}_*"
+            else:
+                pattern = f"{self.cache_prefix}*_{user_id}_*"
 
-            for key in list(session.keys()):
-                if key.startswith(self.cache_prefix):
-                    # Parsear la key para extraer información
-                    parts = key.split('_')
-                    if len(parts) >= 4:
-                        cached_role = parts[2]
-                        cached_user_id = parts[3]
+            # Usar scan_iter para buscar claves sin bloquear el servidor
+            keys_to_remove = [key for key in self.redis_client.scan_iter(match=pattern)]
 
-                        if str(cached_user_id) == str(user_id):
-                            if user_role is None or cached_role == user_role:
-                                keys_to_remove.append(key)
-
-            # Remover keys identificadas
-            for key in keys_to_remove:
-                session.pop(key, None)
+            if keys_to_remove:
+                self.redis_client.delete(*keys_to_remove)
 
             current_app.logger.info(
-                f"🗑️ Cache invalidated for user {user_id} ({user_role}): {len(keys_to_remove)} entries"
+                f"🗑️ Cache invalidated [Redis] for user {user_id} ({user_role or 'all roles'}): "
+                f"{len(keys_to_remove)} entries"
             )
 
         except Exception as e:
-            current_app.logger.error(f"❌ Error invalidating cache: {str(e)}")
+            current_app.logger.error(f"❌ Error invalidating Redis cache: {str(e)}")
 
     def invalidate_role_cache(self, user_role: str):
         """
-        🗑️ INVALIDAR caché de todos los usuarios de un rol
+        🗑️ INVALIDAR caché de todos los usuarios de un rol en Redis
 
         Args:
             user_role: Rol a invalidar
         """
+        if not self.redis_client:
+            return
+
         try:
-            keys_to_remove = []
+            pattern = f"{self.cache_prefix}{user_role}_*"
+            keys_to_remove = [key for key in self.redis_client.scan_iter(match=pattern)]
 
-            for key in list(session.keys()):
-                if key.startswith(f"{self.cache_prefix}{user_role}_"):
-                    keys_to_remove.append(key)
-
-            # Remover keys identificadas
-            for key in keys_to_remove:
-                session.pop(key, None)
+            if keys_to_remove:
+                self.redis_client.delete(*keys_to_remove)
 
             current_app.logger.info(
-                f"🗑️ Cache invalidated for role {user_role}: {len(keys_to_remove)} entries"
+                f"🗑️ Cache invalidated [Redis] for role {user_role}: {len(keys_to_remove)} entries"
             )
 
         except Exception as e:
-            current_app.logger.error(f"❌ Error invalidating role cache: {str(e)}")
-
-    def cleanup_expired_cache(self):
-        """
-        🧹 LIMPIAR caché expirado
-        """
-        try:
-            keys_to_remove = []
-            now = datetime.utcnow()
-
-            for key in list(session.keys()):
-                if key.startswith(self.cache_prefix):
-                    cache_entry = session.get(key)
-                    if cache_entry and 'expires_at' in cache_entry:
-                        expires_at = datetime.fromisoformat(cache_entry['expires_at'])
-                        if now > expires_at:
-                            keys_to_remove.append(key)
-
-            # Remover keys expiradas
-            for key in keys_to_remove:
-                session.pop(key, None)
-
-            current_app.logger.info(f"🧹 Expired cache cleaned: {len(keys_to_remove)} entries")
-
-        except Exception as e:
-            current_app.logger.error(f"❌ Error cleaning cache: {str(e)}")
+            current_app.logger.error(f"❌ Error invalidating role cache [Redis]: {str(e)}")
 
 
 # Instancia global del gestor de caché
@@ -234,6 +202,13 @@ def metrics_cache_decorator(endpoint_name: str, cache_filters: List[str] = None)
             from flask_login import current_user
 
             try:
+                # Obtener el cliente Redis del contexto de la app
+                redis_client = current_app.redis_client
+                if not redis_client:
+                    # Si Redis no está disponible, ejecutar la función sin caché
+                    current_app.logger.warning(f"Cache bypass for {endpoint_name} (Redis unavailable).")
+                    return f(*args, **kwargs)
+
                 # 🔐 VERIFICAR USUARIO AUTENTICADO
                 if not current_user.is_authenticated:
                     return f(*args, **kwargs)
@@ -249,37 +224,45 @@ def metrics_cache_decorator(endpoint_name: str, cache_filters: List[str] = None)
                         if value:
                             filters[filter_param] = value
 
+                # Crear instancia del manager DENTRO del contexto de la app
+                with current_app.app_context():
+                    local_cache_manager = MetricsCacheManager()
+
                 # 🔑 GENERAR CLAVE DE CACHÉ
-                cache_key = cache_manager.generate_cache_key(
+                cache_key = local_cache_manager.generate_cache_key(
                     user_id, user_role, endpoint_name, filters
                 )
 
                 # 📖 INTENTAR OBTENER DEL CACHÉ
-                cached_data = cache_manager.get_cache(cache_key)
+                cached_data = local_cache_manager.get_cache(cache_key)
                 if cached_data:
-                    current_app.logger.info(f"💾 Serving from cache: {endpoint_name} for {user_role}")
                     return cached_data
 
                 # 🔄 CACHE MISS - EJECUTAR FUNCIÓN ORIGINAL
                 result = f(*args, **kwargs)
 
                 # 💾 GUARDAR EN CACHÉ SI ES RESPUESTA EXITOSA
-                if (hasattr(result, 'status_code') and result.status_code == 200) or \
-                   (isinstance(result, dict) and result.get('success', True)):
+                is_successful = False
+                response_data = None
 
-                    # Extraer datos para cachear
+                if hasattr(result, 'status_code') and 200 <= result.status_code < 300:
+                    is_successful = True
                     if hasattr(result, 'get_json'):
-                        cache_data = result.get_json()
+                        response_data = result.get_json()
                     else:
-                        cache_data = result
-
-                    cache_manager.set_cache(cache_key, cache_data, user_role)
+                        response_data = result # No es un objeto de respuesta de Flask
+                elif isinstance(result, dict) and result.get('success', True):
+                    is_successful = True
+                    response_data = result
+                
+                if is_successful and response_data:
+                    local_cache_manager.set_cache(cache_key, response_data, user_role)
 
                 return result
 
             except Exception as e:
-                current_app.logger.error(f"❌ Error in cache decorator: {str(e)}")
-                # En caso de error, ejecutar función sin caché
+                current_app.logger.error(f"❌ Error in Redis cache decorator: {str(e)}")
+                # En caso de error, ejecutar función sin caché para mantener la app funcionando
                 return f(*args, **kwargs)
 
         return decorated_function
@@ -303,25 +286,45 @@ def invalidate_metrics_cache_on_change(affected_roles: List[str] = None,
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
+            # Primero ejecutar la función para asegurar que el cambio se aplique
             result = f(*args, **kwargs)
 
+            # Invalidar caché solo si la operación fue exitosa
             try:
-                # Invalidar caché después de operación exitosa
-                if (hasattr(result, 'status_code') and result.status_code in [200, 201]) or \
-                   (isinstance(result, dict) and result.get('success', True)):
+                is_successful = False
+                if hasattr(result, 'status_code'):
+                    if 200 <= result.status_code < 300:
+                        is_successful = True
+                elif isinstance(result, dict):
+                    if result.get('success', False):
+                        is_successful = True
 
+                if is_successful:
+                    # Crear una instancia del manager dentro del contexto de la app
+                    with current_app.app_context():
+                        local_cache_manager = MetricsCacheManager()
+                    
                     if affected_roles:
                         for role in affected_roles:
-                            cache_manager.invalidate_role_cache(role)
+                            local_cache_manager.invalidate_role_cache(role)
 
                     if affected_users:
-                        for user_id in affected_users:
-                            cache_manager.invalidate_user_cache(user_id)
+                        # Extraer IDs de los argumentos de la función decorada si es necesario
+                        # Esta es una implementación simple, puede requerir más lógica
+                        user_ids = []
+                        for user_id_arg in affected_users:
+                            if isinstance(user_id_arg, int):
+                                user_ids.append(user_id_arg)
+                            elif isinstance(user_id_arg, str) and user_id_arg in kwargs:
+                                user_ids.append(kwargs[user_id_arg])
+                        
+                        for user_id in user_ids:
+                            local_cache_manager.invalidate_user_cache(user_id)
 
                     current_app.logger.info(f"🗑️ Cache invalidated after {f.__name__}")
 
             except Exception as e:
-                current_app.logger.error(f"❌ Error invalidating cache: {str(e)}")
+                current_app.logger.error(f"❌ Error invalidating cache after change: {str(e)}")
 
             return result
         return decorated_function
@@ -334,68 +337,62 @@ def invalidate_metrics_cache_on_change(affected_roles: List[str] = None,
 
 def get_cache_stats() -> Dict[str, Any]:
     """
-    📊 OBTENER estadísticas del caché
+    📊 OBTENER estadísticas del caché de Redis
 
     Returns:
         Dict con estadísticas detalladas
     """
+    redis_client = current_app.redis_client
+    if not redis_client:
+        return {'error': 'Redis no está conectado'}
+
     try:
-        cache_keys = [key for key in session.keys() if key.startswith(cache_manager.cache_prefix)]
-
+        redis_info = redis_client.info()
+        
+        # Contar llaves de métricas
+        metric_keys = [key for key in redis_client.scan_iter(match=f"{cache_manager.cache_prefix}*")]
+        
         stats_by_role = {}
-        total_size = 0
-        expired_count = 0
-        now = datetime.utcnow()
-
-        for key in cache_keys:
-            cache_entry = session.get(key)
-            if cache_entry:
-                # Analizar por rol
-                parts = key.split('_')
-                if len(parts) >= 3:
-                    role = parts[2]
-                    if role not in stats_by_role:
-                        stats_by_role[role] = {'count': 0, 'size': 0}
-
-                    stats_by_role[role]['count'] += 1
-
-                    # Calcular tamaño aproximado
-                    size = len(json.dumps(cache_entry))
-                    stats_by_role[role]['size'] += size
-                    total_size += size
-
-                # Verificar expiración
-                if 'expires_at' in cache_entry:
-                    expires_at = datetime.fromisoformat(cache_entry['expires_at'])
-                    if now > expires_at:
-                        expired_count += 1
+        for key in metric_keys:
+            parts = key.split('_')
+            if len(parts) >= 3:
+                role = parts[2]
+                if role not in stats_by_role:
+                    stats_by_role[role] = {'count': 0}
+                stats_by_role[role]['count'] += 1
 
         return {
-            'total_entries': len(cache_keys),
-            'expired_entries': expired_count,
-            'total_size_bytes': total_size,
+            'redis_version': redis_info.get('redis_version'),
+            'total_keys_in_db': redis_info.get('db0', {}).get('keys', 'N/A'),
+            'metric_cache_entries': len(metric_keys),
+            'used_memory': redis_info.get('used_memory_human'),
+            'uptime_in_days': redis_info.get('uptime_in_days'),
             'stats_by_role': stats_by_role,
-            'timestamp': now.isoformat()
+            'timestamp': datetime.utcnow().isoformat()
         }
 
     except Exception as e:
-        current_app.logger.error(f"❌ Error getting cache stats: {str(e)}")
+        current_app.logger.error(f"❌ Error getting Redis cache stats: {str(e)}")
         return {'error': str(e)}
 
 
 def clear_all_metrics_cache():
     """
-    🗑️ LIMPIAR todo el caché de métricas
+    🗑️ LIMPIAR todo el caché de métricas de Redis
     """
+    redis_client = current_app.redis_client
+    if not redis_client:
+        return 0
+        
     try:
-        keys_to_remove = [key for key in session.keys() if key.startswith(cache_manager.cache_prefix)]
+        keys_to_remove = [key for key in redis_client.scan_iter(match=f"{cache_manager.cache_prefix}*")]
+        
+        if keys_to_remove:
+            redis_client.delete(*keys_to_remove)
 
-        for key in keys_to_remove:
-            session.pop(key, None)
-
-        current_app.logger.info(f"🗑️ All metrics cache cleared: {len(keys_to_remove)} entries")
+        current_app.logger.info(f"🗑️ All metrics cache cleared from Redis: {len(keys_to_remove)} entries")
         return len(keys_to_remove)
 
     except Exception as e:
-        current_app.logger.error(f"❌ Error clearing cache: {str(e)}")
+        current_app.logger.error(f"❌ Error clearing Redis cache: {str(e)}")
         return 0

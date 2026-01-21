@@ -4,6 +4,7 @@ from flask_migrate import Migrate
 import logging
 import os
 import time
+import redis
 from config import config
 from models import db
 from sqlalchemy.exc import OperationalError
@@ -104,6 +105,19 @@ def configure_logging(app):
 
 def initialize_extensions(app):
     """Inicializa las extensiones de Flask"""
+    # Inicializar Cliente Redis
+    try:
+        # Usamos decode_responses=True para que las keys/values se devuelvan como strings
+        app.redis_client = redis.from_url(app.config['REDIS_URL'], decode_responses=True)
+        # Verificar la conexión
+        app.redis_client.ping()
+        app.logger.info("🚀 Conexión con Redis establecida exitosamente.")
+    except redis.exceptions.ConnectionError as e:
+        app.logger.error(f"⚠️ No se pudo conectar a Redis: {e}")
+        app.logger.warning("La aplicación se ejecutará sin caché. "
+                           "Para habilitar el caché, configure REDIS_URL y asegúrese de que el servidor Redis esté en ejecución.")
+        app.redis_client = None  # Deshabilitar caché si no hay conexión
+
     # Inicializar SQLAlchemy
     db.init_app(app)
 

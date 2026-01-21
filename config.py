@@ -68,6 +68,8 @@ class Config:
         'pool_pre_ping': True,
         'pool_recycle': get_pool_recycle()
     }
+    # ⚙️ Redis Configuration
+    REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
     UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'uploads')
     PROFILE_IMG_FOLDER = os.path.join(UPLOAD_FOLDER, 'profile_images')
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
