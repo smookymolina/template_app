@@ -7,7 +7,7 @@ import hashlib
 import json
 import time
 from datetime import datetime, timedelta
-from flask import session, current_app
+from flask import session, current_app, has_app_context
 from functools import wraps
 from typing import Dict, Any, Optional, List
 
@@ -24,15 +24,22 @@ class MetricsCacheManager:
     - ✅ Logging detallado para auditoría
     """
 
-    def __init__(self):
+    def __init__(self, redis_client=None):
         self.cache_ttl = {
             'admin': 300,      # 5 minutos para admins
             'gerente': 180,    # 3 minutos para gerentes
             'asesor': 120      # 2 minutos para asesores
         }
         self.cache_prefix = 'metrics_cache_'
-        # El cliente de Redis se obtiene del contexto de la aplicación
-        self.redis_client = current_app.redis_client
+        # El cliente de Redis se obtiene de forma diferida para evitar errores sin contexto
+        self._redis_client = redis_client
+
+    def _get_redis_client(self):
+        if self._redis_client is not None:
+            return self._redis_client
+        if has_app_context():
+            return getattr(current_app, 'redis_client', None)
+        return None
 
     def generate_cache_key(self, user_id: int, user_role: str,
                           endpoint: str, filters: Dict = None) -> str:
@@ -71,7 +78,8 @@ class MetricsCacheManager:
         Returns:
             bool: True si se guardó exitosamente
         """
-        if not self.redis_client:
+        redis_client = self._get_redis_client()
+        if not redis_client:
             return False
 
         try:
@@ -81,7 +89,7 @@ class MetricsCacheManager:
             serialized_data = json.dumps(data)
 
             # Usar setex para establecer la clave con expiración atómica
-            self.redis_client.setex(cache_key, ttl, serialized_data)
+            redis_client.setex(cache_key, ttl, serialized_data)
 
             current_app.logger.info(
                 f"💾 Cache SET [Redis]: {cache_key} | TTL: {ttl}s | Rol: {user_role}"
@@ -102,11 +110,12 @@ class MetricsCacheManager:
         Returns:
             Dict o None: Datos del caché si existen y son válidos
         """
-        if not self.redis_client:
+        redis_client = self._get_redis_client()
+        if not redis_client:
             return None
 
         try:
-            cached_data = self.redis_client.get(cache_key)
+            cached_data = redis_client.get(cache_key)
             
             if not cached_data:
                 current_app.logger.debug(f"💾 Cache MISS [Redis]: {cache_key}")
@@ -129,7 +138,8 @@ class MetricsCacheManager:
             user_id: ID del usuario
             user_role: Rol específico a invalidar (opcional)
         """
-        if not self.redis_client:
+        redis_client = self._get_redis_client()
+        if not redis_client:
             return
 
         try:
@@ -140,10 +150,10 @@ class MetricsCacheManager:
                 pattern = f"{self.cache_prefix}*_{user_id}_*"
 
             # Usar scan_iter para buscar claves sin bloquear el servidor
-            keys_to_remove = [key for key in self.redis_client.scan_iter(match=pattern)]
+            keys_to_remove = [key for key in redis_client.scan_iter(match=pattern)]
 
             if keys_to_remove:
-                self.redis_client.delete(*keys_to_remove)
+                redis_client.delete(*keys_to_remove)
 
             current_app.logger.info(
                 f"🗑️ Cache invalidated [Redis] for user {user_id} ({user_role or 'all roles'}): "
@@ -160,15 +170,16 @@ class MetricsCacheManager:
         Args:
             user_role: Rol a invalidar
         """
-        if not self.redis_client:
+        redis_client = self._get_redis_client()
+        if not redis_client:
             return
 
         try:
             pattern = f"{self.cache_prefix}{user_role}_*"
-            keys_to_remove = [key for key in self.redis_client.scan_iter(match=pattern)]
+            keys_to_remove = [key for key in redis_client.scan_iter(match=pattern)]
 
             if keys_to_remove:
-                self.redis_client.delete(*keys_to_remove)
+                redis_client.delete(*keys_to_remove)
 
             current_app.logger.info(
                 f"🗑️ Cache invalidated [Redis] for role {user_role}: {len(keys_to_remove)} entries"
@@ -202,8 +213,11 @@ def metrics_cache_decorator(endpoint_name: str, cache_filters: List[str] = None)
             from flask_login import current_user
 
             try:
+                if not has_app_context():
+                    return f(*args, **kwargs)
+
                 # Obtener el cliente Redis del contexto de la app
-                redis_client = current_app.redis_client
+                redis_client = getattr(current_app, 'redis_client', None)
                 if not redis_client:
                     # Si Redis no está disponible, ejecutar la función sin caché
                     current_app.logger.warning(f"Cache bypass for {endpoint_name} (Redis unavailable).")
@@ -224,9 +238,8 @@ def metrics_cache_decorator(endpoint_name: str, cache_filters: List[str] = None)
                         if value:
                             filters[filter_param] = value
 
-                # Crear instancia del manager DENTRO del contexto de la app
-                with current_app.app_context():
-                    local_cache_manager = MetricsCacheManager()
+                # Crear instancia del manager usando el cliente Redis activo
+                local_cache_manager = MetricsCacheManager(redis_client=redis_client)
 
                 # 🔑 GENERAR CLAVE DE CACHÉ
                 cache_key = local_cache_manager.generate_cache_key(
@@ -300,9 +313,11 @@ def invalidate_metrics_cache_on_change(affected_roles: List[str] = None,
                         is_successful = True
 
                 if is_successful:
-                    # Crear una instancia del manager dentro del contexto de la app
-                    with current_app.app_context():
-                        local_cache_manager = MetricsCacheManager()
+                    if not has_app_context():
+                        return result
+
+                    # Crear una instancia del manager dentro del contexto actual
+                    local_cache_manager = MetricsCacheManager()
                     
                     if affected_roles:
                         for role in affected_roles:
@@ -342,7 +357,10 @@ def get_cache_stats() -> Dict[str, Any]:
     Returns:
         Dict con estadísticas detalladas
     """
-    redis_client = current_app.redis_client
+    if not has_app_context():
+        return {'error': 'No app context'}
+
+    redis_client = getattr(current_app, 'redis_client', None)
     if not redis_client:
         return {'error': 'Redis no está conectado'}
 
@@ -380,7 +398,10 @@ def clear_all_metrics_cache():
     """
     🗑️ LIMPIAR todo el caché de métricas de Redis
     """
-    redis_client = current_app.redis_client
+    if not has_app_context():
+        return 0
+
+    redis_client = getattr(current_app, 'redis_client', None)
     if not redis_client:
         return 0
         
