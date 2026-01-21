@@ -4027,12 +4027,14 @@ const Reclutas = {
      * Calcula los días transcurridos desde una fecha y devuelve un objeto
      */
     calculateDaysAgo: function(dateString) {
-        const eventDate = new Date(dateString);
-        eventDate.setUTCHours(0, 0, 0, 0);
+        // Parsear la fecha evitando problemas de zona horaria
+        const [year, month, day] = dateString.split('-').map(Number);
+        const eventDate = new Date(year, month - 1, day);
+        eventDate.setHours(0, 0, 0, 0);
 
         const now = new Date();
-        now.setUTCHours(0, 0, 0, 0);
-        
+        now.setHours(0, 0, 0, 0);
+
         const diffTime = now - eventDate;
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
@@ -4066,14 +4068,19 @@ const Reclutas = {
                 break;
         }
         
+        // Formatear fecha evitando problemas de zona horaria
+        const [year, month, day] = item.date.split('-').map(Number);
+        const dateForDisplay = new Date(year, month - 1, day);
+        const formattedDate = dateForDisplay.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+
         return `
-            <div class="timeline-card" data-event-id="${item.id}" onclick="Reclutas.editTimelineItem(${item.id})">
+            <div class="timeline-card" data-event-id="${item.id}">
                 <div class="timeline-card-icon" style="background-color: ${statusColor};">
                     <i class="fas ${iconClass}"></i>
                 </div>
-                <div class="timeline-card-content">
+                <div class="timeline-card-content" onclick="Reclutas.editTimelineItem(${item.id})" style="cursor: pointer; flex: 1;">
                     <div class="timeline-card-title">${item.title}</div>
-                    <div class="timeline-card-date">${new Date(item.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
+                    <div class="timeline-card-date">${formattedDate}</div>
                 </div>
                 <div class="timeline-card-days">
                     <div class="days-ago-number">
@@ -4082,6 +4089,9 @@ const Reclutas = {
                     </div>
                     <div class="days-ago-text">${daysAgo.text}</div>
                 </div>
+                <button class="timeline-delete-btn" onclick="event.stopPropagation(); Reclutas.deleteTimelineItemApi(${item.id});" title="Eliminar evento">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
             </div>
         `;
     },
@@ -4174,9 +4184,8 @@ const Reclutas = {
         const formTitle = document.getElementById('form-title');
         if (formTitle) formTitle.textContent = 'Editar Evento de Timeline';
         
-        // Asegurar que la fecha se muestre correctamente (formato local)
-        const eventDate = new Date(item.date + 'T12:00:00');
-        document.getElementById('event-date').value = eventDate.toISOString().split('T')[0];
+        // Usar la fecha directamente (ya viene en formato YYYY-MM-DD del backend)
+        document.getElementById('event-date').value = item.date;
         document.getElementById('event-status').value = item.status;
         document.getElementById('event-title').value = item.title;
         document.getElementById('event-description').value = item.description || '';
@@ -4324,14 +4333,14 @@ Reclutas.saveTimelineItemApi = async function() {
     const saveBtn = document.querySelector('#timeline-form .btn-success');
     const originalBtnText = saveBtn ? saveBtn.innerHTML : '';
 
-    // Obtener fecha y asegurar formato correcto
+    // Obtener fecha directamente del input (ya viene en formato YYYY-MM-DD)
     const dateInput = document.getElementById('event-date').value;
-    const dateObj = dateInput ? new Date(dateInput + 'T12:00:00') : new Date();
-    if (Number.isNaN(dateObj.getTime())) {
+    if (!dateInput || !/^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
         if (window.showError) showError('La fecha seleccionada no es válida');
         return;
     }
-    const date = dateObj.toISOString().split('T')[0];
+    // Usar directamente el valor del input para evitar problemas de zona horaria
+    const date = dateInput;
     const status = document.getElementById('event-status').value;
     const title = document.getElementById('event-title').value.trim();
     const description = document.getElementById('event-description').value.trim();

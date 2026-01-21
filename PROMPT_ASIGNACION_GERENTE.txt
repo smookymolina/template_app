@@ -1,0 +1,38 @@
+Objetivo
+Corrige la seccion "Gestion de Gerentes" para que el modal de asignacion permita:
+1) asignar un gerente a un asesor sin gerente, y
+2) cambiar/reasignar un asesor a otro gerente desde el mismo flujo.
+
+Contexto tecnico
+- Frontend actual: static/js/jerarquia.js (funcion mostrarAsignacionAsesores).
+- API actual: /api/asesores (routes/api.py) filtra por rol, is_active y sin_gerente.
+- Modal actual solo trae asesores sin gerente usando:
+  /api/asesores?rol=asesor&sin_gerente=true
+
+Problema
+Solo aparecen asesores sin gerente. Si un asesor ya esta asignado, no aparece en el modal, por lo que no se puede reasignar desde este flujo.
+
+Requisitos de correccion
+1) La lista de asesores en el modal debe incluir TODOS los asesores activos, asignados y no asignados.
+2) Debe mostrar el gerente actual de cada asesor (si existe) para evitar errores.
+3) El boton "Asignar" debe:
+   - Si el asesor no tiene gerente, asignarlo al gerente seleccionado.
+   - Si ya tiene gerente, reasignarlo al nuevo gerente (y mostrar mensaje de reasignacion).
+4) Mantener seguridad: solo admin puede hacer la asignacion/reasignacion.
+5) Actualizar la vista en el frontend para reflejar el cambio (contadores y tarjetas).
+
+Sugerencia de cambios minimos
+- Frontend: en static/js/jerarquia.js, cambiar la llamada a
+  /api/asesores?rol=asesor&sin_gerente=true
+  por
+  /api/asesores?rol=asesor
+  y renderizar nombre + gerente actual en el option.
+- Backend: si se mantiene el endpoint /gerentes/asignar-asesor, permitir reasignacion con el mismo endpoint y retornar data del gerente anterior (ya existe).
+- UI: en el select de asesores, mostrar algo como:
+  "Nombre (email) - Gerente actual: X" o "Sin gerente".
+
+Validacion
+- Abrir modal Asignar Asesores a Gerentes.
+- Ver todos los asesores activos.
+- Seleccionar asesor con gerente y reasignarlo a otro gerente.
+- Confirmar que el contador de asesores del gerente anterior disminuye y el del nuevo aumenta.

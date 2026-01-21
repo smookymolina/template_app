@@ -133,6 +133,36 @@
     line-height: 1;
 }
 
+/* Botón de eliminar en la tarjeta */
+.timeline-delete-btn {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background-color: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    margin-left: 8px;
+}
+
+.timeline-delete-btn:hover {
+    background-color: #fee2e2;
+    color: #ef4444;
+}
+
+.timeline-delete-btn:active {
+    transform: scale(0.95);
+}
+
+.timeline-delete-btn i {
+    font-size: 14px;
+}
+
 /* Estilos para el estado vacío, por si se muestra */
 .empty-timeline {
     text-align: center;

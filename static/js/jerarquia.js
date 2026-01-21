@@ -676,20 +676,20 @@ const Jerarquia = {
         try {
             console.log('Cargando modal de asignación de asesores...');
 
-            // Obtener gerentes y asesores sin asignar
+            // Obtener gerentes y TODOS los asesores activos (para permitir reasignación)
             const [gerentesResponse, asesoresResponse] = await Promise.all([
                 fetch('/api/asesores?rol=gerente'),
-                fetch('/api/asesores?rol=asesor&sin_gerente=true')
+                fetch('/api/asesores?rol=asesor')
             ]);
 
             const gerentesData = await gerentesResponse.json();
             const asesoresData = await asesoresResponse.json();
 
             if (gerentesData.success && asesoresData.success) {
-                // El backend ya ha filtrado, no es necesario filtrar en el cliente
-                const asesoresSinGerente = asesoresData.asesores;
+                // Pasar todos los asesores (con o sin gerente) para permitir reasignación
+                const todosLosAsesores = asesoresData.asesores;
 
-                this.mostrarModalAsignacionAsesores(gerentesData.asesores, asesoresSinGerente, gerenteId);
+                this.mostrarModalAsignacionAsesores(gerentesData.asesores, todosLosAsesores, gerenteId);
             } else {
                 showError('Error al cargar datos para asignación');
             }
@@ -700,12 +700,15 @@ const Jerarquia = {
         }
     },
 
-    mostrarModalAsignacionAsesores: function(gerentes, asesoresSinGerente, gerenteId = null) {
+    mostrarModalAsignacionAsesores: function(gerentes, todosLosAsesores, gerenteId = null) {
+        // Separar asesores sin gerente para el mensaje informativo
+        const asesoresSinGerente = todosLosAsesores.filter(a => !a.gerente_id);
+
         const modalHtml = `
             <div id="modalAsignacionAsesores" class="modal">
                 <div class="modal-content modal-lg">
                     <div class="modal-header">
-                        <h3><i class="fas fa-user-plus"></i> Asignar Asesores a Gerentes</h3>
+                        <h3><i class="fas fa-user-plus"></i> Asignar/Reasignar Asesores a Gerentes</h3>
                         <span class="close-modal" onclick="this.closest('.modal').remove()">&times;</span>
                     </div>
                     <div class="modal-body">
@@ -724,14 +727,17 @@ const Jerarquia = {
                                     <label for="selectAsesor">Seleccionar Asesor:</label>
                                     <select id="selectAsesor" class="form-control">
                                         <option value="">-- Selecciona un asesor --</option>
-                                        ${asesoresSinGerente.map(asesor =>
-                                            `<option value="${asesor.id}">${asesor.nombre || asesor.email}</option>`
-                                        ).join('')}
+                                        ${todosLosAsesores.map(asesor => {
+                                            const gerenteInfo = asesor.gerente_nombre
+                                                ? ` - Gerente actual: ${asesor.gerente_nombre}`
+                                                : ' - Sin gerente';
+                                            return `<option value="${asesor.id}" data-gerente-id="${asesor.gerente_id || ''}">${asesor.nombre || asesor.email}${gerenteInfo}</option>`;
+                                        }).join('')}
                                     </select>
                                 </div>
                                 <div class="form-actions">
                                     <button class="btn-primary" onclick="Jerarquia.ejecutarAsignacionAsesor()">
-                                        <i class="fas fa-check"></i> Asignar Asesor
+                                        <i class="fas fa-check"></i> Asignar/Reasignar Asesor
                                     </button>
                                 </div>
                             </div>
@@ -749,8 +755,12 @@ const Jerarquia = {
                             </div>
                         </div>
 
-                        ${asesoresSinGerente.length === 0 ?
-                            '<div class="info-message"><i class="fas fa-info-circle"></i> Todos los asesores ya están asignados</div>'
+                        ${asesoresSinGerente.length === 0 && todosLosAsesores.length > 0 ?
+                            '<div class="info-message"><i class="fas fa-info-circle"></i> Todos los asesores ya tienen gerente asignado. Puede reasignarlos seleccionando uno de la lista.</div>'
+                            : ''
+                        }
+                        ${todosLosAsesores.length === 0 ?
+                            '<div class="info-message"><i class="fas fa-info-circle"></i> No hay asesores registrados en el sistema.</div>'
                             : ''
                         }
                     </div>
@@ -769,9 +779,18 @@ const Jerarquia = {
     ejecutarAsignacionAsesor: async function() {
         const gerenteId = document.getElementById('selectGerente')?.value;
         const asesorId = document.getElementById('selectAsesor')?.value;
+        const selectAsesor = document.getElementById('selectAsesor');
+        const selectedOption = selectAsesor?.selectedOptions[0];
+        const asesorGerenteActualId = selectedOption?.dataset?.gerenteId;
 
         if (!gerenteId || !asesorId) {
             showNotification('Selecciona ambos: gerente y asesor', 'warning');
+            return;
+        }
+
+        // Validar que no se esté asignando al mismo gerente que ya tiene
+        if (asesorGerenteActualId && parseInt(asesorGerenteActualId) === parseInt(gerenteId)) {
+            showNotification('El asesor ya está asignado a este gerente', 'warning');
             return;
         }
 
@@ -793,8 +812,13 @@ const Jerarquia = {
                 showSuccess(data.message || 'Asesor asignado correctamente.');
                 document.getElementById('modalAsignacionAsesores')?.remove();
 
-                // Actualización dinámica del DOM en lugar de recarga completa
-                this.actualizarVistaAsignacion(data.gerente, data.asesor);
+                // Si fue reasignación, actualizar también la vista del gerente anterior
+                if (data.antiguo_gerente) {
+                    this.actualizarVistaReasignacion(data.asesor, data.antiguo_gerente, data.gerente);
+                } else {
+                    // Asignación nueva (asesor sin gerente previo)
+                    this.actualizarVistaAsignacion(data.gerente, data.asesor);
+                }
             } else {
                 showError(data.message || 'Error en la asignación');
             }
