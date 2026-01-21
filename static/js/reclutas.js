@@ -3875,6 +3875,15 @@ const Reclutas = {
      * Abre el submodal de gestión de timeline
      */
     openTimelineModal: function() {
+        const viewModal = document.getElementById('view-recluta-modal');
+        const modalReclutaId = viewModal ? viewModal.dataset.reclutaId : null;
+        if (modalReclutaId) {
+            const parsedId = parseInt(modalReclutaId, 10);
+            if (!Number.isNaN(parsedId) && parsedId !== this.currentReclutaId) {
+                this.currentReclutaId = parsedId;
+            }
+        }
+
         if (!this.currentReclutaId) {
             showError('No hay un recluta seleccionado');
             return;
@@ -3900,10 +3909,16 @@ const Reclutas = {
      */
     fetchAndRenderTimeline: async function() {
         try {
+            this.currentTimelineData = [];
             const resp = await fetch(`${CONFIG.API_URL}/reclutas/${this.currentReclutaId}/timeline`);
             const data = await resp.json();
             if (resp.ok && data.success) {
-                this.currentTimelineData = (data.items || []).map(e => ({
+                const items = Array.isArray(data.items) ? data.items : [];
+                const reclutaId = this.currentReclutaId;
+                const scopedItems = reclutaId
+                    ? items.filter(item => Number(item.recluta_id) === Number(reclutaId))
+                    : items;
+                this.currentTimelineData = scopedItems.map(e => ({
                     id: e.id,
                     date: e.date,
                     status: e.status,
@@ -4288,6 +4303,20 @@ Reclutas.saveTimelineItemApi = async function() {
     // Evitar múltiples clics
     if (Reclutas.isSavingTimeline) {
         console.log('Ya se está guardando un evento, ignorando clic duplicado');
+        return;
+    }
+
+    const viewModal = document.getElementById('view-recluta-modal');
+    const modalReclutaId = viewModal ? viewModal.dataset.reclutaId : null;
+    if (modalReclutaId) {
+        const parsedId = parseInt(modalReclutaId, 10);
+        if (!Number.isNaN(parsedId)) {
+            Reclutas.currentReclutaId = parsedId;
+        }
+    }
+
+    if (!Reclutas.currentReclutaId) {
+        if (window.showError) showError('No hay un recluta seleccionado');
         return;
     }
 

@@ -11,8 +11,8 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Directorio del proyecto (ajustar según instalación)
-PROJECT_DIR="/ruta/a/template_app"
+# Directorio del proyecto (auto-detectado)
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 echo -e "${BLUE}============================================${NC}"
 echo -e "${BLUE} Sistema de Gestión de Reclutas - Comandos${NC}"
@@ -31,6 +31,7 @@ show_menu() {
     echo "  7) Ver logs de Gunicorn"
     echo "  8) Actualizar desde Git"
     echo "  9) Crear usuario admin"
+    echo " 10) Actualizar y migrar (seguro)"
     echo "  0) Salir"
     echo ""
     read -p "Opción: " option
@@ -61,6 +62,8 @@ run_migrations() {
     echo -e "${YELLOW}Aplicando migraciones...${NC}"
     cd $PROJECT_DIR
     source .venv/bin/activate
+    export FLASK_APP=${FLASK_APP:-app.py}
+    export FLASK_ENV=${FLASK_ENV:-production}
     flask db upgrade
 }
 
@@ -88,8 +91,10 @@ update_from_git() {
     echo -e "${YELLOW}Actualizando desde Git...${NC}"
     cd $PROJECT_DIR
     git fetch origin
-    git pull origin $(git branch --show-current)
+    git pull --ff-only origin $(git branch --show-current)
     source .venv/bin/activate
+    export FLASK_APP=${FLASK_APP:-app.py}
+    export FLASK_ENV=${FLASK_ENV:-production}
     pip install -r requirements.txt
     flask db upgrade
     echo -e "${GREEN}Actualización completada. Reinicia el servidor manualmente.${NC}"
@@ -100,6 +105,12 @@ create_admin() {
     cd $PROJECT_DIR
     source .venv/bin/activate
     flask crear-admin
+}
+
+safe_update() {
+    echo -e "${YELLOW}Actualización segura con migraciones...${NC}"
+    cd $PROJECT_DIR
+    bash scripts/produccion_migracion.sh
 }
 
 # Loop principal
@@ -115,6 +126,7 @@ while true; do
         7) view_logs ;;
         8) update_from_git ;;
         9) create_admin ;;
+        10) safe_update ;;
         0) echo -e "${GREEN}¡Hasta luego!${NC}"; exit 0 ;;
         *) echo -e "${RED}Opción no válida${NC}" ;;
     esac

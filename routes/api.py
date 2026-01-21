@@ -1731,27 +1731,36 @@ def track_by_folio(folio):
 @api_bp.route('/tracking/<folio>/timeline', methods=['GET'])
 def get_timeline_folio(folio):
     """
-    Obtiene la información completa de la timeline para un recluta.
-    Incluye todos los estados y fechas de cambio de estado.
+    Obtiene la informacion completa de la timeline para un recluta.
+    Incluye solo los eventos asociados al folio consultado.
     """
     try:
-        recluta = Recluta.query.filter_by(folio=folio).first()
-        
+        recluta = Recluta.get_by_folio(folio)
         if not recluta:
             return jsonify({"success": False, "message": "Folio no encontrado"}), 404
-        
-        # Obtener solo eventos personalizados creados por el asesor
+
         try:
-            personalizados = EventoRecluta.get_for_recluta(recluta.id)
+            personalizados = (
+                EventoRecluta.query
+                .join(Recluta, EventoRecluta.recluta_id == Recluta.id)
+                .filter(Recluta.id == recluta.id)
+                .order_by(EventoRecluta.fecha.asc(), EventoRecluta.id.asc())
+                .all()
+            )
             custom_events = [e.serialize() for e in personalizados]
-            current_app.logger.info(f"Timeline folio {folio}: {len(custom_events)} eventos encontrados")
+            current_app.logger.info(
+                f"Timeline folio {recluta.folio}: {len(custom_events)} eventos encontrados"
+            )
         except Exception as db_error:
-            current_app.logger.error(f"Error de BD obteniendo eventos para folio {folio}: {str(db_error)}")
+            current_app.logger.error(
+                f"Error de BD obteniendo eventos para folio {recluta.folio}: {str(db_error)}"
+            )
             custom_events = []
-        
+
         return jsonify({
             "success": True,
-            "folio": folio,
+            "folio": recluta.folio,
+            "recluta_id": recluta.id,
             "nombre_candidato": recluta.nombre,
             "estado_actual": recluta.estado,
             "custom_events": custom_events,
@@ -1759,9 +1768,11 @@ def get_timeline_folio(folio):
             "custom_events_count": len(custom_events)
         })
     except Exception as e:
-        current_app.logger.error(f"Error general al obtener timeline del folio {folio}: {str(e)}")
+        current_app.logger.error(
+            f"Error general al obtener timeline del folio {folio}: {str(e)}"
+        )
         return jsonify({
-            "success": False, 
+            "success": False,
             "message": "Error al procesar la solicitud",
             "custom_events": [],
             "has_custom_events": False,

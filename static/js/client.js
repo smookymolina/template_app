@@ -496,6 +496,10 @@ const Client = {
                     </div>
                 </div>
             </div>
+
+            <button class="download-docs-btn" type="button">
+                <i class="fas fa-file-archive"></i> Descargar documentos
+            </button>
             
             <button class="btn-secondary new-query-btn">
                 <i class="fas fa-arrow-left"></i> Realizar otra consulta
@@ -506,6 +510,9 @@ const Client = {
         
         this.fetchAndRenderClientTimeline(folio);
         this.setupClientTimelineFilters();
+        if (folio) {
+            this.setupDownloadButton(folio);
+        }
     },
 
     fetchAndRenderClientTimeline: async function(folio) {
@@ -513,17 +520,23 @@ const Client = {
         if (!timelineContainer) return;
 
         try {
+            this.clientTimelineData = [];
             const response = await fetch(`/api/tracking/${folio}/timeline`);
             const data = await response.json();
             
-            if (response.ok && data.success && data.custom_events) {
-                this.clientTimelineData = data.custom_events;
+            if (response.ok && data.success && Array.isArray(data.custom_events)) {
+                const reclutaId = data.recluta_id || null;
+                this.clientTimelineData = reclutaId
+                    ? data.custom_events.filter(item => item.recluta_id === reclutaId)
+                    : data.custom_events;
                 this.renderClientTimeline('all');
             } else {
+                this.clientTimelineData = [];
                 timelineContainer.innerHTML = '<div class="empty-timeline"><i class="fas fa-exclamation-circle"></i><p>No se pudo cargar la línea de tiempo.</p></div>';
             }
         } catch (error) {
             console.error('Error fetching client timeline:', error);
+            this.clientTimelineData = [];
             timelineContainer.innerHTML = '<div class="empty-timeline"><i class="fas fa-exclamation-circle"></i><p>Error de conexión al cargar la línea de tiempo.</p></div>';
         }
     },
