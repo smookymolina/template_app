@@ -4019,6 +4019,7 @@ const Reclutas = {
 
         // Renderizar eventos
         timelineList.innerHTML = sortedEvents.map(item => this.renderTimelineItem(item)).join('');
+        this.setupTimelineCommentToggles();
 
         console.log(`Timeline renderizado: ${sortedEvents.length} eventos mostrados`);
     },
@@ -4048,6 +4049,13 @@ const Reclutas = {
     /**
      * Renderiza un único item de la línea de seguimiento con el nuevo diseño
      */
+    escapeHtml: function(text) {
+        if (text === null || text === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    },
+
     renderTimelineItem: function(item) {
         const daysAgo = this.calculateDaysAgo(item.date);
         let iconClass = 'fa-calendar-day';
@@ -4073,25 +4081,46 @@ const Reclutas = {
         const dateForDisplay = new Date(year, month - 1, day);
         const formattedDate = dateForDisplay.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
 
-        return `
-            <div class="timeline-card" data-event-id="${item.id}">
-                <div class="timeline-card-icon" style="background-color: ${statusColor};">
-                    <i class="fas ${iconClass}"></i>
-                </div>
-                <div class="timeline-card-content" onclick="Reclutas.editTimelineItem(${item.id})" style="cursor: pointer; flex: 1;">
-                    <div class="timeline-card-title">${item.title}</div>
-                    <div class="timeline-card-date">${formattedDate}</div>
-                </div>
-                <div class="timeline-card-days">
-                    <div class="days-ago-number">
-                        ${daysAgo.prefix ? `<span class="days-ago-prefix">${daysAgo.prefix}</span>` : ''}
-                        <span class="days-ago-value">${daysAgo.number}</span>
+        const commentText = item.description ? item.description.trim() : '';
+        const hasComment = commentText.length > 0;
+        const isLongComment = commentText.length > 180;
+        const commentHTML = hasComment
+            ? `
+                <div class="timeline-card-comment ${isLongComment ? 'is-collapsed' : ''}">
+                    <div class="comment-header">
+                        <div class="comment-title">
+                            <i class="fas fa-comment-dots"></i>
+                            <span>Comentario del asesor:</span>
+                        </div>
+                        ${isLongComment ? '<button class="comment-toggle" type="button" aria-expanded="false">Ver mas</button>' : ''}
                     </div>
-                    <div class="days-ago-text">${daysAgo.text}</div>
+                    <div class="comment-text">${this.escapeHtml(commentText)}</div>
                 </div>
-                <button class="timeline-delete-btn" onclick="event.stopPropagation(); Reclutas.deleteTimelineItemApi(${item.id});" title="Eliminar evento">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
+            `
+            : '';
+
+        return `
+            <div class="timeline-card ${hasComment ? 'has-comment' : ''}" data-event-id="${item.id}">
+                <div class="timeline-card-header">
+                    <div class="timeline-card-icon" style="background-color: ${statusColor};">
+                        <i class="fas ${iconClass}"></i>
+                    </div>
+                    <div class="timeline-card-content" onclick="Reclutas.editTimelineItem(${item.id})" style="cursor: pointer; flex: 1;">
+                        <div class="timeline-card-title">${item.title}</div>
+                        <div class="timeline-card-date">${formattedDate}</div>
+                    </div>
+                    <div class="timeline-card-days">
+                        <div class="days-ago-number">
+                            ${daysAgo.prefix ? `<span class="days-ago-prefix">${daysAgo.prefix}</span>` : ''}
+                            <span class="days-ago-value">${daysAgo.number}</span>
+                        </div>
+                        <div class="days-ago-text">${daysAgo.text}</div>
+                    </div>
+                    <button class="timeline-delete-btn" onclick="event.stopPropagation(); Reclutas.deleteTimelineItemApi(${item.id});" title="Eliminar evento">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+                ${commentHTML}
             </div>
         `;
     },
@@ -4113,6 +4142,32 @@ const Reclutas = {
 
                 const status = e.target.dataset.status;
                 this.renderTimeline(status);
+            }
+        });
+    },
+
+    setupTimelineCommentToggles: function() {
+        const timelineList = document.getElementById('timeline-list');
+        if (!timelineList || timelineList.dataset.commentToggleBound === 'true') return;
+
+        timelineList.dataset.commentToggleBound = 'true';
+
+        timelineList.addEventListener('click', (e) => {
+            const toggleBtn = e.target.closest('.comment-toggle');
+            if (!toggleBtn) return;
+
+            const commentBlock = toggleBtn.closest('.timeline-card-comment');
+            if (!commentBlock) return;
+
+            const isCollapsed = commentBlock.classList.contains('is-collapsed');
+            if (isCollapsed) {
+                commentBlock.classList.remove('is-collapsed');
+                toggleBtn.textContent = 'Ver menos';
+                toggleBtn.setAttribute('aria-expanded', 'true');
+            } else {
+                commentBlock.classList.add('is-collapsed');
+                toggleBtn.textContent = 'Ver mas';
+                toggleBtn.setAttribute('aria-expanded', 'false');
             }
         });
     },

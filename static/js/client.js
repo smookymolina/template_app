@@ -510,6 +510,7 @@ const Client = {
         
         this.fetchAndRenderClientTimeline(folio);
         this.setupClientTimelineFilters();
+        this.setupClientTimelineCommentToggles();
         if (folio) {
             this.setupDownloadButton(folio);
         }
@@ -578,40 +579,83 @@ const Client = {
         const daysAgo = this.calculateDaysAgo(item.date);
         let iconClass = 'fa-calendar-day';
         let statusColor = 'var(--secondary-color)';
+        let statusLabel = 'Programado';
 
         switch(item.status) {
             case 'completed':
                 iconClass = 'fa-check-circle';
                 statusColor = 'var(--timeline-success, #10b981)';
+                statusLabel = 'Completado';
                 break;
             case 'pending':
                 iconClass = 'fa-hourglass-half';
                 statusColor = 'var(--timeline-warning, #f59e0b)';
+                statusLabel = 'Pendiente';
                 break;
             case 'cancelled':
                 iconClass = 'fa-times-circle';
                 statusColor = 'var(--timeline-danger, #ef4444)';
+                statusLabel = 'Cancelado';
                 break;
         }
-        
+
+        // Renderizar comentario si existe
+        const commentText = item.description ? item.description.trim() : '';
+        const hasComment = commentText.length > 0;
+        const isLongComment = commentText.length > 180;
+        const commentHTML = hasComment
+            ? `<div class="timeline-card-comment ${isLongComment ? 'is-collapsed' : ''}">
+                   <div class="comment-header">
+                       <div class="comment-title">
+                           <i class="fas fa-comment-dots"></i>
+                           <span>Comentario del asesor:</span>
+                       </div>
+                       ${isLongComment ? '<button class="comment-toggle" type="button" aria-expanded="false">Ver mas</button>' : ''}
+                   </div>
+                   <div class="comment-text">${this.escapeHtml(commentText)}</div>
+               </div>`
+            : '';
+
         return `
-            <div class="timeline-card" data-event-id="${item.id}">
-                <div class="timeline-card-icon" style="background-color: ${statusColor};">
-                    <i class="fas ${iconClass}"></i>
-                </div>
-                <div class="timeline-card-content">
-                    <div class="timeline-card-title">${item.title}</div>
-                    <div class="timeline-card-date">${new Date(item.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                </div>
-                <div class="timeline-card-days">
-                    <div class="days-ago-number">
-                        ${daysAgo.prefix ? `<span class="days-ago-prefix">${daysAgo.prefix}</span>` : ''}
-                        <span class="days-ago-value">${daysAgo.number}</span>
+            <div class="timeline-card ${hasComment ? 'has-comment' : ''}" data-event-id="${item.id}">
+                <div class="timeline-card-header">
+                    <div class="timeline-card-icon" style="background-color: ${statusColor};">
+                        <i class="fas ${iconClass}"></i>
                     </div>
-                    <div class="days-ago-text">${daysAgo.text}</div>
+                    <div class="timeline-card-content">
+                        <div class="timeline-card-title">${item.title}</div>
+                        <div class="timeline-card-meta">
+                            <span class="timeline-card-date">
+                                <i class="fas fa-calendar-alt"></i>
+                                ${new Date(item.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
+                            </span>
+                            <span class="timeline-card-status" style="background-color: ${statusColor}20; color: ${statusColor};">
+                                ${statusLabel}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="timeline-card-days">
+                        <div class="days-ago-number">
+                            ${daysAgo.prefix ? `<span class="days-ago-prefix">${daysAgo.prefix}</span>` : ''}
+                            <span class="days-ago-value">${daysAgo.number}</span>
+                        </div>
+                        <div class="days-ago-text">${daysAgo.text}</div>
+                    </div>
                 </div>
+                ${commentHTML}
             </div>
         `;
+    },
+
+    /**
+     * Escapa caracteres HTML para prevenir XSS
+     * @param {string} text - Texto a escapar
+     * @returns {string} - Texto escapado
+     */
+    escapeHtml: function(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     },
 
     setupClientTimelineFilters: function() {
@@ -624,6 +668,32 @@ const Client = {
                 e.target.classList.add('active');
                 const status = e.target.dataset.status;
                 this.renderClientTimeline(status);
+            }
+        });
+    },
+
+    setupClientTimelineCommentToggles: function() {
+        const timelineContainer = document.getElementById('client-timeline');
+        if (!timelineContainer || timelineContainer.dataset.commentToggleBound === 'true') return;
+
+        timelineContainer.dataset.commentToggleBound = 'true';
+
+        timelineContainer.addEventListener('click', (e) => {
+            const toggleBtn = e.target.closest('.comment-toggle');
+            if (!toggleBtn) return;
+
+            const commentBlock = toggleBtn.closest('.timeline-card-comment');
+            if (!commentBlock) return;
+
+            const isCollapsed = commentBlock.classList.contains('is-collapsed');
+            if (isCollapsed) {
+                commentBlock.classList.remove('is-collapsed');
+                toggleBtn.textContent = 'Ver menos';
+                toggleBtn.setAttribute('aria-expanded', 'true');
+            } else {
+                commentBlock.classList.add('is-collapsed');
+                toggleBtn.textContent = 'Ver mas';
+                toggleBtn.setAttribute('aria-expanded', 'false');
             }
         });
     },

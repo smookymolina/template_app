@@ -59,6 +59,11 @@
                 <span>Tendencias & Reportes</span>
                 <div class="tab-indicator"></div>
             </button>
+            <button class="tab-button-v2" data-tab="actividad" id="tab-actividad">
+                <i class="fas fa-user-clock"></i>
+                <span>Actividad de Usuarios</span>
+                <div class="tab-indicator"></div>
+            </button>
         </div>
     </div>
 
@@ -470,6 +475,176 @@
                             </tr>
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 👁️ TAB 5: ACTIVIDAD DE USUARIOS -->
+        <div id="tab-content-actividad" class="tab-content-v2" data-tab="actividad" style="display: none;">
+            <!-- KPIs de Actividad -->
+            <div class="actividad-kpis-section">
+                <div class="kpis-grid-v2">
+                    <div class="kpi-card-v2 usuarios-activos-hoy">
+                        <div class="kpi-icon-v2">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div class="kpi-content-v2">
+                            <div class="kpi-number" id="kpi-usuarios-activos-hoy">--</div>
+                            <div class="kpi-label">Usuarios Activos Hoy</div>
+                            <div class="kpi-trend" id="kpi-activos-trend">
+                                <i class="fas fa-circle" style="color: #10B981;"></i> En línea ahora
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card-v2 tiempo-promedio">
+                        <div class="kpi-icon-v2">
+                            <i class="fas fa-hourglass-half"></i>
+                        </div>
+                        <div class="kpi-content-v2">
+                            <div class="kpi-number" id="kpi-tiempo-promedio">--</div>
+                            <div class="kpi-label">Tiempo Promedio/Sesión</div>
+                            <div class="kpi-trend" id="kpi-tiempo-trend">
+                                <i class="fas fa-arrow-up"></i> +12 min vs ayer
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card-v2 sesiones-semana">
+                        <div class="kpi-icon-v2">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="kpi-content-v2">
+                            <div class="kpi-number" id="kpi-sesiones-semana">--</div>
+                            <div class="kpi-label">Sesiones Esta Semana</div>
+                            <div class="kpi-trend" id="kpi-sesiones-trend">
+                                <i class="fas fa-arrow-up"></i> +8% vs semana anterior
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card-v2 acciones-totales">
+                        <div class="kpi-icon-v2">
+                            <i class="fas fa-mouse-pointer"></i>
+                        </div>
+                        <div class="kpi-content-v2">
+                            <div class="kpi-number" id="kpi-acciones-totales">--</div>
+                            <div class="kpi-label">Acciones Totales Hoy</div>
+                            <div class="kpi-trend" id="kpi-acciones-trend">
+                                <i class="fas fa-arrow-right"></i> Normal
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usuarios En Línea Ahora -->
+            <div class="usuarios-online-section">
+                <h4 class="section-title-v2">
+                    <i class="fas fa-circle" style="color: #10B981; animation: pulse 2s infinite;"></i> Usuarios En Línea Ahora
+                </h4>
+                <div id="usuarios-online-container" class="usuarios-online-grid">
+                    <div class="loading-placeholder">
+                        <i class="fas fa-wifi fa-spin"></i>
+                        <p>Detectando usuarios en línea...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Actividad por Usuario -->
+            <div class="actividad-usuarios-section">
+                <div class="section-header-inline">
+                    <h4 class="section-title-v2">
+                        <i class="fas fa-history"></i> Actividad por Usuario
+                    </h4>
+                    <div class="actividad-filters">
+                        <select id="filtro-periodo-actividad" class="form-select-v2">
+                            <option value="hoy">Hoy</option>
+                            <option value="7dias" selected>Últimos 7 días</option>
+                            <option value="30dias">Últimos 30 días</option>
+                            <option value="todo">Todo el tiempo</option>
+                        </select>
+                        <select id="filtro-rol-actividad" class="form-select-v2">
+                            <option value="todos">Todos los roles</option>
+                            <option value="admin">Administradores</option>
+                            <option value="gerente">Gerentes</option>
+                            <option value="asesor">Asesores</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-responsive-v2">
+                    <table id="actividad-usuarios-table" class="data-table-v2 actividad-table">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Rol</th>
+                                <th>Última Conexión</th>
+                                <th>Sesiones</th>
+                                <th>Tiempo Total</th>
+                                <th>Acciones</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="actividad-usuarios-tbody">
+                            <tr>
+                                <td colspan="7" class="loading-cell">
+                                    <div class="loading-placeholder">
+                                        <i class="fas fa-user-clock fa-spin"></i>
+                                        <p>Cargando actividad de usuarios...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Gráficos de Actividad -->
+            <div class="actividad-charts-section">
+                <div class="chart-row">
+                    <div class="chart-card half">
+                        <div class="chart-header">
+                            <h4><i class="fas fa-clock"></i> Actividad por Hora del Día</h4>
+                        </div>
+                        <div id="chart-actividad-horas" class="chart-container-medium">
+                            <canvas id="actividadHorasChartCanvas"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card half">
+                        <div class="chart-header">
+                            <h4><i class="fas fa-calendar-week"></i> Actividad por Día de la Semana</h4>
+                        </div>
+                        <div id="chart-actividad-dias" class="chart-container-medium">
+                            <canvas id="actividadDiasChartCanvas"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Acciones Más Frecuentes -->
+            <div class="acciones-frecuentes-section">
+                <h4 class="section-title-v2">
+                    <i class="fas fa-fire"></i> Acciones Más Frecuentes
+                </h4>
+                <div class="acciones-grid" id="acciones-frecuentes-container">
+                    <div class="loading-placeholder">
+                        <i class="fas fa-chart-bar fa-spin"></i>
+                        <p>Analizando acciones frecuentes...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Usuarios Inactivos -->
+            <div class="usuarios-inactivos-section">
+                <h4 class="section-title-v2">
+                    <i class="fas fa-user-slash"></i> Usuarios Sin Actividad Reciente
+                    <span class="badge-warning" id="count-inactivos">--</span>
+                </h4>
+                <div id="usuarios-inactivos-container" class="usuarios-inactivos-grid">
+                    <div class="loading-placeholder">
+                        <i class="fas fa-search fa-spin"></i>
+                        <p>Identificando usuarios inactivos...</p>
+                    </div>
                 </div>
             </div>
         </div>

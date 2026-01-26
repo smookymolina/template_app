@@ -45,20 +45,6 @@
         </div>
 
         {% block content %}
-        <div id="metricas-admin-container" class="admin-only" style="display: none;">
-            <h2>📊 Métricas Avanzadas por Asesor</h2>
-            <button id="refresh-metricas-btn" class="btn btn-primary mb-3">
-                <i class="fas fa-sync-alt"></i> Actualizar Métricas
-            </button>
-            <div id="resumen-global">
-                <!-- Resumen global de métricas se renderizará aquí -->
-            </div>
-            <h3>Desempeño Individual de Asesores</h3>
-            <div id="asesores-metricas" class="asesores-grid">
-                <!-- Tarjetas de asesores se renderizarán aquí -->
-            </div>
-            <div id="metricas-loader" class="loader">Cargando métricas...</div>
-        </div>
         {% endblock %}
     </div>
 
@@ -74,11 +60,10 @@
     <script type="module" src="{{ url_for('static', filename='js/configuracion.js') }}?v={{ v }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/reclutas.js') }}?v={{ v }}"></script>
 
-    <!-- 📊 MÉTRICAS ADMIN - LEGACY -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/metricas-admin.css') }}?v={{ v }}">
+    <!-- 👤 GESTIÓN DE USUARIOS (admin.js) -->
     <script type="module" src="{{ url_for('static', filename='js/admin.js') }}?v={{ v }}"></script>
 
-    <!-- 🎯 MÉTRICAS ADMIN V2.0 - NUEVO SISTEMA -->
+    <!-- 🎯 MÉTRICAS ADMIN V2.0 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/metricas-admin-v2.css') }}?v={{ v }}">
     <script src="{{ url_for('static', filename='js/metricas-admin-v2.js') }}?v={{ v }}"></script>
 

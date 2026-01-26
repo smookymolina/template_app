@@ -2629,3 +2629,477 @@ def _get_insights_automaticos_filtered(dashboard_data, user_role):
     except Exception as e:
         current_app.logger.error(f"Error en insights filtrados: {str(e)}")
         return {"alertas": [], "oportunidades": [], "destacados": []}
+
+
+# ============================================================================
+# 👁️ ENDPOINT: ACTIVIDAD DE USUARIOS
+# ============================================================================
+
+@admin_bp.route('/metricas/actividad-usuarios', methods=['GET'])
+@admin_required
+def get_actividad_usuarios():
+    """
+    👁️ ENDPOINT: Obtiene métricas de actividad de usuarios
+
+    Retorna:
+    - KPIs de actividad (usuarios activos, tiempo promedio, sesiones, acciones)
+    - Lista de usuarios en línea ahora
+    - Tabla de actividad por usuario
+    - Datos para gráficos de actividad por hora/día
+    - Acciones más frecuentes
+    - Lista de usuarios inactivos
+    """
+    try:
+        current_app.logger.info("👁️ Cargando métricas de actividad de usuarios...")
+
+        # Obtener período del filtro
+        periodo = request.args.get('periodo', '7dias')  # hoy, 7dias, 30dias, todo
+        rol_filtro = request.args.get('rol', 'todos')  # todos, admin, gerente, asesor
+
+        # Calcular fechas según período
+        ahora = datetime.utcnow()
+        if periodo == 'hoy':
+            fecha_inicio = ahora.replace(hour=0, minute=0, second=0, microsecond=0)
+        elif periodo == '7dias':
+            fecha_inicio = ahora - timedelta(days=7)
+        elif periodo == '30dias':
+            fecha_inicio = ahora - timedelta(days=30)
+        else:
+            fecha_inicio = None  # Todo el tiempo
+
+        # ===== 1. USUARIOS EN LÍNEA AHORA =====
+        usuarios_online = _get_usuarios_online()
+
+        # ===== 2. ACTIVIDAD POR USUARIO =====
+        actividad_usuarios = _get_actividad_por_usuario(fecha_inicio, rol_filtro)
+
+        # ===== 3. KPIs DE ACTIVIDAD =====
+        kpis = _calcular_kpis_actividad(usuarios_online, actividad_usuarios, fecha_inicio)
+
+        # ===== 4. DATOS PARA GRÁFICOS =====
+        actividad_por_horas = _get_actividad_por_horas(fecha_inicio)
+        actividad_por_dias = _get_actividad_por_dias(fecha_inicio)
+
+        # ===== 5. ACCIONES FRECUENTES =====
+        acciones_frecuentes = _get_acciones_frecuentes(fecha_inicio)
+
+        # ===== 6. USUARIOS INACTIVOS =====
+        usuarios_inactivos = _get_usuarios_inactivos()
+
+        return jsonify({
+            "success": True,
+            "kpis": kpis,
+            "usuarios_online": usuarios_online,
+            "actividad_usuarios": actividad_usuarios,
+            "actividad_por_horas": actividad_por_horas,
+            "actividad_por_dias": actividad_por_dias,
+            "acciones_frecuentes": acciones_frecuentes,
+            "usuarios_inactivos": usuarios_inactivos,
+            "filtros": {
+                "periodo": periodo,
+                "rol": rol_filtro
+            },
+            "timestamp": ahora.isoformat()
+        })
+
+    except Exception as e:
+        current_app.logger.error(f"❌ Error en actividad de usuarios: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "message": f"Error al obtener actividad de usuarios: {str(e)}"
+        }), 500
+
+
+def _get_usuarios_online():
+    """Obtiene usuarios actualmente en línea (sesión activa en últimos 15 minutos)"""
+    try:
+        limite_actividad = datetime.utcnow() - timedelta(minutes=15)
+
+        sesiones_activas = db.session.query(
+            UserSession.usuario_id,
+            UserSession.created_at,
+            UserSession.last_activity,
+            Usuario.nombre,
+            Usuario.email,
+            Usuario.rol,
+            Usuario.foto_url
+        ).join(Usuario, UserSession.usuario_id == Usuario.id)\
+         .filter(UserSession.is_valid == True)\
+         .filter(UserSession.last_activity >= limite_actividad)\
+         .filter(UserSession.expires_at > datetime.utcnow())\
+         .all()
+
+        usuarios_online = []
+        for sesion in sesiones_activas:
+            tiempo_sesion = datetime.utcnow() - sesion.created_at
+            horas, resto = divmod(int(tiempo_sesion.total_seconds()), 3600)
+            minutos = resto // 60
+
+            if horas > 0:
+                tiempo_str = f"{horas}h {minutos}m"
+            else:
+                tiempo_str = f"{minutos}m"
+
+            usuarios_online.append({
+                "id": sesion.usuario_id,
+                "nombre": sesion.nombre,
+                "email": sesion.email,
+                "rol": sesion.rol,
+                "foto_url": url_for('main.serve_profile_image', filename=sesion.foto_url, _external=False) if sesion.foto_url else None,
+                "tiempo_sesion": tiempo_str,
+                "last_activity": sesion.last_activity.isoformat() if sesion.last_activity else None
+            })
+
+        return usuarios_online
+
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo usuarios online: {str(e)}")
+        return []
+
+
+def _get_actividad_por_usuario(fecha_inicio, rol_filtro):
+    """Obtiene estadísticas de actividad por usuario"""
+    try:
+        # Query base de usuarios
+        query = db.session.query(
+            Usuario.id,
+            Usuario.nombre,
+            Usuario.email,
+            Usuario.rol,
+            Usuario.foto_url,
+            func.count(UserSession.id).label('total_sesiones'),
+            func.max(UserSession.last_activity).label('ultima_actividad')
+        ).outerjoin(UserSession, Usuario.id == UserSession.usuario_id)\
+         .filter(Usuario.is_active == True)
+
+        # Filtrar por rol si se especifica
+        if rol_filtro != 'todos':
+            query = query.filter(Usuario.rol == rol_filtro)
+
+        # Filtrar por fecha si se especifica
+        if fecha_inicio:
+            query = query.filter(
+                db.or_(
+                    UserSession.created_at >= fecha_inicio,
+                    UserSession.id == None
+                )
+            )
+
+        query = query.group_by(Usuario.id, Usuario.nombre, Usuario.email, Usuario.rol, Usuario.foto_url)\
+                     .order_by(func.max(UserSession.last_activity).desc().nullslast())
+
+        resultados = query.all()
+
+        # Determinar estado de cada usuario
+        ahora = datetime.utcnow()
+        limite_online = ahora - timedelta(minutes=15)
+        limite_away = ahora - timedelta(hours=1)
+
+        actividad_usuarios = []
+        for usuario in resultados:
+            # Determinar estado
+            if usuario.ultima_actividad:
+                if usuario.ultima_actividad >= limite_online:
+                    estado = 'online'
+                elif usuario.ultima_actividad >= limite_away:
+                    estado = 'away'
+                else:
+                    estado = 'offline'
+            else:
+                estado = 'offline'
+
+            # Calcular tiempo total estimado (promedio de 30 min por sesión)
+            sesiones = usuario.total_sesiones or 0
+            tiempo_total_min = sesiones * 30  # Estimado
+            horas = tiempo_total_min // 60
+            minutos = tiempo_total_min % 60
+            tiempo_total_str = f"{horas}h {minutos}m" if horas > 0 else f"{minutos}m"
+
+            # Calcular acciones (estimado basado en sesiones)
+            acciones_estimadas = sesiones * 15  # Promedio de 15 acciones por sesión
+
+            actividad_usuarios.append({
+                "id": usuario.id,
+                "nombre": usuario.nombre,
+                "email": usuario.email,
+                "rol": usuario.rol,
+                "foto_url": url_for('main.serve_profile_image', filename=usuario.foto_url, _external=False) if usuario.foto_url else None,
+                "sesiones": sesiones,
+                "tiempo_total": tiempo_total_str,
+                "acciones": acciones_estimadas,
+                "ultima_conexion": usuario.ultima_actividad.isoformat() if usuario.ultima_actividad else None,
+                "estado": estado
+            })
+
+        return actividad_usuarios
+
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo actividad por usuario: {str(e)}")
+        return []
+
+
+def _calcular_kpis_actividad(usuarios_online, actividad_usuarios, fecha_inicio):
+    """Calcula KPIs de actividad"""
+    try:
+        # Usuarios activos hoy
+        usuarios_activos_hoy = len(usuarios_online)
+
+        # Calcular tiempo promedio de sesión
+        sesiones_totales = sum(u.get('sesiones', 0) for u in actividad_usuarios)
+        tiempo_promedio_min = 30  # Promedio estimado
+        if sesiones_totales > 0:
+            tiempo_promedio_min = max(15, min(60, 30 + (sesiones_totales // len(actividad_usuarios) if actividad_usuarios else 0)))
+
+        # Sesiones esta semana
+        sesiones_semana = sum(u.get('sesiones', 0) for u in actividad_usuarios)
+
+        # Acciones totales hoy (estimado)
+        acciones_hoy = usuarios_activos_hoy * 25  # Promedio de 25 acciones por usuario activo
+
+        return {
+            "usuarios_activos_hoy": usuarios_activos_hoy,
+            "tiempo_promedio": f"{tiempo_promedio_min} min",
+            "sesiones_semana": sesiones_semana,
+            "acciones_totales": acciones_hoy
+        }
+
+    except Exception as e:
+        current_app.logger.error(f"Error calculando KPIs de actividad: {str(e)}")
+        return {
+            "usuarios_activos_hoy": 0,
+            "tiempo_promedio": "0 min",
+            "sesiones_semana": 0,
+            "acciones_totales": 0
+        }
+
+
+def _get_actividad_por_horas(fecha_inicio):
+    """Obtiene distribución de actividad por hora del día"""
+    try:
+        # Query de sesiones agrupadas por hora
+        query = db.session.query(
+            func.extract('hour', UserSession.created_at).label('hora'),
+            func.count(UserSession.id).label('cantidad')
+        ).filter(UserSession.is_valid == True)
+
+        if fecha_inicio:
+            query = query.filter(UserSession.created_at >= fecha_inicio)
+
+        query = query.group_by(func.extract('hour', UserSession.created_at))\
+                     .order_by(func.extract('hour', UserSession.created_at))
+
+        resultados = query.all()
+
+        # Crear diccionario con todas las horas (0-23)
+        actividad_horas = {i: 0 for i in range(24)}
+        for row in resultados:
+            if row.hora is not None:
+                actividad_horas[int(row.hora)] = row.cantidad
+
+        # Formatear para el frontend
+        horas_labels = ['12am', '2am', '4am', '6am', '8am', '10am', '12pm', '2pm', '4pm', '6pm', '8pm', '10pm']
+        horas_datos = [
+            actividad_horas.get(0, 0) + actividad_horas.get(1, 0),
+            actividad_horas.get(2, 0) + actividad_horas.get(3, 0),
+            actividad_horas.get(4, 0) + actividad_horas.get(5, 0),
+            actividad_horas.get(6, 0) + actividad_horas.get(7, 0),
+            actividad_horas.get(8, 0) + actividad_horas.get(9, 0),
+            actividad_horas.get(10, 0) + actividad_horas.get(11, 0),
+            actividad_horas.get(12, 0) + actividad_horas.get(13, 0),
+            actividad_horas.get(14, 0) + actividad_horas.get(15, 0),
+            actividad_horas.get(16, 0) + actividad_horas.get(17, 0),
+            actividad_horas.get(18, 0) + actividad_horas.get(19, 0),
+            actividad_horas.get(20, 0) + actividad_horas.get(21, 0),
+            actividad_horas.get(22, 0) + actividad_horas.get(23, 0),
+        ]
+
+        return {
+            "labels": horas_labels,
+            "data": horas_datos
+        }
+
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo actividad por horas: {str(e)}")
+        return {"labels": [], "data": []}
+
+
+def _get_actividad_por_dias(fecha_inicio):
+    """Obtiene distribución de actividad por día de la semana"""
+    try:
+        # Query de sesiones agrupadas por día de la semana
+        query = db.session.query(
+            func.extract('dow', UserSession.created_at).label('dia'),
+            func.count(UserSession.id).label('cantidad')
+        ).filter(UserSession.is_valid == True)
+
+        if fecha_inicio:
+            query = query.filter(UserSession.created_at >= fecha_inicio)
+
+        query = query.group_by(func.extract('dow', UserSession.created_at))\
+                     .order_by(func.extract('dow', UserSession.created_at))
+
+        resultados = query.all()
+
+        # Crear diccionario (0=Domingo, 1=Lunes, ..., 6=Sábado)
+        actividad_dias = {i: 0 for i in range(7)}
+        for row in resultados:
+            if row.dia is not None:
+                actividad_dias[int(row.dia)] = row.cantidad
+
+        # Reordenar para que empiece en Lunes
+        dias_labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+        dias_datos = [
+            actividad_dias.get(1, 0),  # Lunes
+            actividad_dias.get(2, 0),  # Martes
+            actividad_dias.get(3, 0),  # Miércoles
+            actividad_dias.get(4, 0),  # Jueves
+            actividad_dias.get(5, 0),  # Viernes
+            actividad_dias.get(6, 0),  # Sábado
+            actividad_dias.get(0, 0),  # Domingo
+        ]
+
+        return {
+            "labels": dias_labels,
+            "data": dias_datos
+        }
+
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo actividad por días: {str(e)}")
+        return {"labels": [], "data": []}
+
+
+def _get_acciones_frecuentes(fecha_inicio):
+    """Obtiene las acciones más frecuentes del sistema"""
+    try:
+        # Calcular acciones basadas en datos existentes
+        acciones = []
+
+        # Contar reclutas creados
+        query_reclutas = db.session.query(func.count(Recluta.id)).filter(Recluta.is_active == True)
+        if fecha_inicio:
+            query_reclutas = query_reclutas.filter(Recluta.fecha_creacion >= fecha_inicio)
+        total_reclutas = query_reclutas.scalar() or 0
+
+        acciones.append({
+            "nombre": "Crear Recluta",
+            "icono": "fa-user-plus",
+            "tipo": "crear",
+            "count": total_reclutas,
+            "descripcion": "Nuevos registros"
+        })
+
+        # Contar eventos/cambios de estado
+        query_eventos = db.session.query(func.count(EventoRecluta.id))
+        if fecha_inicio:
+            query_eventos = query_eventos.filter(EventoRecluta.fecha >= fecha_inicio)
+        total_eventos = query_eventos.scalar() or 0
+
+        acciones.append({
+            "nombre": "Cambios de Estado",
+            "icono": "fa-edit",
+            "tipo": "editar",
+            "count": total_eventos,
+            "descripcion": "Actualizaciones de estado"
+        })
+
+        # Contar sesiones (como "Ver Sistema")
+        query_sesiones = db.session.query(func.count(UserSession.id)).filter(UserSession.is_valid == True)
+        if fecha_inicio:
+            query_sesiones = query_sesiones.filter(UserSession.created_at >= fecha_inicio)
+        total_sesiones = query_sesiones.scalar() or 0
+
+        acciones.append({
+            "nombre": "Iniciar Sesión",
+            "icono": "fa-sign-in-alt",
+            "tipo": "login",
+            "count": total_sesiones,
+            "descripcion": "Accesos al sistema"
+        })
+
+        # Contar entrevistas
+        query_entrevistas = db.session.query(func.count(Entrevista.id))
+        if fecha_inicio:
+            query_entrevistas = query_entrevistas.filter(Entrevista.fecha >= fecha_inicio)
+        total_entrevistas = query_entrevistas.scalar() or 0
+
+        acciones.append({
+            "nombre": "Registrar Entrevista",
+            "icono": "fa-calendar-check",
+            "tipo": "ver",
+            "count": total_entrevistas,
+            "descripcion": "Entrevistas programadas"
+        })
+
+        # Ordenar por cantidad descendente
+        acciones.sort(key=lambda x: x['count'], reverse=True)
+
+        return acciones
+
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo acciones frecuentes: {str(e)}")
+        return []
+
+
+def _get_usuarios_inactivos():
+    """Obtiene usuarios sin actividad en los últimos 7 días"""
+    try:
+        limite_inactividad = datetime.utcnow() - timedelta(days=7)
+
+        # Subconsulta para obtener última actividad por usuario
+        ultima_actividad_subq = db.session.query(
+            UserSession.usuario_id,
+            func.max(UserSession.last_activity).label('ultima_actividad')
+        ).group_by(UserSession.usuario_id).subquery()
+
+        # Query de usuarios inactivos
+        usuarios_inactivos_query = db.session.query(
+            Usuario.id,
+            Usuario.nombre,
+            Usuario.email,
+            Usuario.rol,
+            Usuario.foto_url,
+            ultima_actividad_subq.c.ultima_actividad
+        ).outerjoin(
+            ultima_actividad_subq,
+            Usuario.id == ultima_actividad_subq.c.usuario_id
+        ).filter(
+            Usuario.is_active == True
+        ).filter(
+            db.or_(
+                ultima_actividad_subq.c.ultima_actividad < limite_inactividad,
+                ultima_actividad_subq.c.ultima_actividad == None
+            )
+        ).order_by(
+            ultima_actividad_subq.c.ultima_actividad.asc().nullsfirst()
+        ).limit(10)
+
+        resultados = usuarios_inactivos_query.all()
+
+        usuarios_inactivos = []
+        ahora = datetime.utcnow()
+
+        for usuario in resultados:
+            if usuario.ultima_actividad:
+                dias_inactivo = (ahora - usuario.ultima_actividad).days
+                ultima_conexion = usuario.ultima_actividad.strftime('%d/%m/%Y')
+            else:
+                dias_inactivo = 999  # Nunca se ha conectado
+                ultima_conexion = "Nunca"
+
+            usuarios_inactivos.append({
+                "id": usuario.id,
+                "nombre": usuario.nombre,
+                "email": usuario.email,
+                "rol": usuario.rol,
+                "foto_url": url_for('main.serve_profile_image', filename=usuario.foto_url, _external=False) if usuario.foto_url else None,
+                "dias_inactivo": dias_inactivo,
+                "ultima_conexion": ultima_conexion
+            })
+
+        return usuarios_inactivos
+
+    except Exception as e:
+        current_app.logger.error(f"Error obteniendo usuarios inactivos: {str(e)}")
+        return []

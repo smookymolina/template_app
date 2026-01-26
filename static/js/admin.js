@@ -495,15 +495,21 @@ class UserAccountManager {
 
     generateUserRowHTML(user) {
         const roleBadgeClass = this.getRoleBadgeClass(user.rol);
-        const createdDate = user.created_at ? 
-            new Date(user.created_at).toLocaleDateString('es-ES') : 
+        const createdDate = user.created_at ?
+            new Date(user.created_at).toLocaleDateString('es-ES') :
             'N/A';
+
+        // Generar avatar con imagen o icono según disponibilidad
+        const avatarContent = user.foto_url
+            ? `<img src="${user.foto_url}" alt="${user.nombre || 'Usuario'}" class="user-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+               <i class="fas fa-user-circle user-avatar-fallback" style="display: none;"></i>`
+            : `<i class="fas fa-user-circle"></i>`;
 
         return `
             <div class="users-table-row" data-user-id="${user.id}">
                 <div class="user-info-col">
                     <div class="user-avatar">
-                        <i class="fas fa-user-circle"></i>
+                        ${avatarContent}
                     </div>
                     <div class="user-details">
                         <div class="user-name">${user.nombre || 'Sin nombre'}</div>

@@ -1639,3 +1639,424 @@
 .team-table .btn-manage i {
     margin: 0;
 }
+
+/* ============================================================================ */
+/* 👁️ TAB ACTIVIDAD DE USUARIOS - ESTILOS */
+/* ============================================================================ */
+
+/* KPIs de Actividad */
+.actividad-kpis-section {
+    margin-bottom: 2rem;
+}
+
+.kpi-card-v2.usuarios-activos-hoy .kpi-icon-v2 {
+    background: linear-gradient(135deg, #10B981, #059669);
+}
+
+.kpi-card-v2.tiempo-promedio .kpi-icon-v2 {
+    background: linear-gradient(135deg, #8B5CF6, #6D28D9);
+}
+
+.kpi-card-v2.sesiones-semana .kpi-icon-v2 {
+    background: linear-gradient(135deg, #F59E0B, #D97706);
+}
+
+.kpi-card-v2.acciones-totales .kpi-icon-v2 {
+    background: linear-gradient(135deg, #EC4899, #DB2777);
+}
+
+/* Sección Usuarios En Línea */
+.usuarios-online-section {
+    margin-bottom: 2rem;
+}
+
+.usuarios-online-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.usuario-online-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    border: 2px solid #10B981;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.usuario-online-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.usuario-online-card::before {
+    content: '';
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 10px;
+    height: 10px;
+    background: #10B981;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+}
+
+.usuario-online-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.usuario-online-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.usuario-online-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.usuario-online-info h6 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.usuario-online-info small {
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+.usuario-online-tiempo {
+    font-size: 0.75rem;
+    color: #10B981;
+    font-weight: 600;
+}
+
+/* Sección Actividad por Usuario */
+.actividad-usuarios-section {
+    margin-bottom: 2rem;
+}
+
+.section-header-inline {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.actividad-filters {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.actividad-table .usuario-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.actividad-table .usuario-avatar-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+    color: white;
+    font-weight: 600;
+}
+
+.actividad-table .usuario-avatar-small img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-badge.online {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+.status-badge.offline {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6b7280;
+}
+
+.status-badge.away {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+}
+
+.rol-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.rol-badge.admin {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+}
+
+.rol-badge.gerente {
+    background: rgba(253, 126, 20, 0.1);
+    color: #fd7e14;
+}
+
+.rol-badge.asesor {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+/* Sección Gráficos de Actividad */
+.actividad-charts-section {
+    margin-bottom: 2rem;
+}
+
+/* Sección Acciones Frecuentes */
+.acciones-frecuentes-section {
+    margin-bottom: 2rem;
+}
+
+.acciones-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.accion-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.2s ease;
+}
+
+.accion-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.accion-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.accion-icon.crear { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+.accion-icon.editar { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.accion-icon.ver { background: rgba(139, 92, 246, 0.1); color: #8B5CF6; }
+.accion-icon.eliminar { background: rgba(239, 68, 68, 0.1); color: #EF4444; }
+.accion-icon.login { background: rgba(245, 158, 11, 0.1); color: #F59E0B; }
+
+.accion-info {
+    flex: 1;
+}
+
+.accion-info h6 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.accion-info p {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.accion-count {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+/* Sección Usuarios Inactivos */
+.usuarios-inactivos-section {
+    margin-bottom: 2rem;
+}
+
+.usuarios-inactivos-section .section-title-v2 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.badge-warning {
+    background: #FEF3C7;
+    color: #D97706;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.usuarios-inactivos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.usuario-inactivo-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    border: 1px solid #f1f5f9;
+    border-left: 4px solid #EF4444;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.usuario-inactivo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.usuario-inactivo-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #9ca3af;
+    font-size: 1.25rem;
+}
+
+.usuario-inactivo-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(100%);
+    opacity: 0.7;
+}
+
+.usuario-inactivo-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.usuario-inactivo-info h6 {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #6b7280;
+}
+
+.usuario-inactivo-info small {
+    color: #9ca3af;
+    font-size: 0.75rem;
+}
+
+.dias-inactivo {
+    background: rgba(239, 68, 68, 0.1);
+    color: #DC2626;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Trend Indicator mejorado */
+.trend-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.trend-indicator.positive {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+.trend-indicator.negative {
+    background: rgba(239, 68, 68, 0.1);
+    color: #DC2626;
+}
+
+.trend-indicator.neutral {
+    background: rgba(107, 114, 128, 0.1);
+    color: #6B7280;
+}
+
+/* Responsive para Actividad */
+@media (max-width: 768px) {
+    .section-header-inline {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .actividad-filters {
+        flex-direction: column;
+    }
+
+    .usuarios-online-grid,
+    .acciones-grid,
+    .usuarios-inactivos-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .accion-card {
+        flex-direction: column;
+        text-align: center;
+    }
+}

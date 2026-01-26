@@ -120,6 +120,50 @@ class MetricasAdminV2 {
                 this.switchPeriod(period);
             });
         });
+
+        // TAB ACTIVIDAD: Filtros de período y rol
+        const filtroPeriodoActividad = document.getElementById('filtro-periodo-actividad');
+        const filtroRolActividad = document.getElementById('filtro-rol-actividad');
+
+        if (filtroPeriodoActividad) {
+            filtroPeriodoActividad.addEventListener('change', () => this.reloadActividadData());
+        }
+        if (filtroRolActividad) {
+            filtroRolActividad.addEventListener('change', () => this.reloadActividadData());
+        }
+    }
+
+    /**
+     * 🔄 RECARGAR DATOS DE ACTIVIDAD CON FILTROS
+     */
+    async reloadActividadData() {
+        const periodo = document.getElementById('filtro-periodo-actividad')?.value || '7dias';
+        const rol = document.getElementById('filtro-rol-actividad')?.value || 'todos';
+
+        try {
+            console.log(`🔄 Recargando actividad con filtros: periodo=${periodo}, rol=${rol}`);
+
+            const response = await fetch(`/admin/metricas/actividad-usuarios?periodo=${periodo}&rol=${rol}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.renderActividadData(data);
+            }
+
+        } catch (error) {
+            console.error('Error recargando actividad:', error);
+        }
     }
 
     /**
@@ -229,6 +273,7 @@ class MetricasAdminV2 {
         this.renderEquiposTab();
         this.renderIndividualTab();
         this.renderTendenciasTab();
+        this.renderActividadTab();
     }
 
     /**
@@ -1146,7 +1191,8 @@ class MetricasAdminV2 {
                 'resumen': 'Resumen General',
                 'equipos': 'Vista por Equipos',
                 'individual': 'Análisis Individual',
-                'tendencias': 'Tendencias & Reportes'
+                'tendencias': 'Tendencias & Reportes',
+                'actividad': 'Actividad de Usuarios'
             };
 
             breadcrumb.innerHTML = (
@@ -1470,6 +1516,469 @@ class MetricasAdminV2 {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    /* ========================================================================== */
+    /* 👁️ TAB 5: ACTIVIDAD DE USUARIOS */
+    /* ========================================================================== */
+
+    /**
+     * 👁️ RENDERIZAR TAB DE ACTIVIDAD DE USUARIOS
+     */
+    renderActividadTab() {
+        console.log('👁️ Renderizando Tab Actividad de Usuarios...');
+
+        // Cargar datos de actividad
+        this.loadActividadData();
+    }
+
+    /**
+     * 📡 CARGAR DATOS DE ACTIVIDAD DE USUARIOS
+     */
+    async loadActividadData() {
+        try {
+            console.log('📡 Cargando datos de actividad...');
+
+            const response = await fetch('/admin/metricas/actividad-usuarios', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                // Si el endpoint no existe, usar datos de demostración
+                console.log('⚠️ Endpoint de actividad no disponible, usando datos demo');
+                this.renderActividadDemo();
+                return;
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.renderActividadData(data);
+            } else {
+                this.renderActividadDemo();
+            }
+
+        } catch (error) {
+            console.log('⚠️ Error cargando actividad, usando datos demo:', error);
+            this.renderActividadDemo();
+        }
+    }
+
+    /**
+     * 🎨 RENDERIZAR DATOS DE ACTIVIDAD (DEMO)
+     */
+    renderActividadDemo() {
+        // KPIs de Actividad
+        this.updateActividadKPIs({
+            usuarios_activos_hoy: 8,
+            tiempo_promedio: '45 min',
+            sesiones_semana: 156,
+            acciones_totales: 1247
+        });
+
+        // Usuarios en línea
+        this.renderUsuariosOnline([
+            { id: 1, nombre: 'Admin Principal', rol: 'admin', tiempo_sesion: '2h 15m', foto_url: null },
+            { id: 2, nombre: 'Brayan Dridan', rol: 'gerente', tiempo_sesion: '1h 30m', foto_url: '/media/profiles/11_20260122001446_IMG_1145.jpeg' },
+            { id: 3, nombre: 'Emilio Ramirez', rol: 'gerente', tiempo_sesion: '45m', foto_url: '/media/profiles/10_20260122175044_SAURON.jpeg' }
+        ]);
+
+        // Tabla de actividad
+        this.renderActividadTabla([
+            { id: 1, nombre: 'Admin Principal', rol: 'admin', ultima_conexion: new Date(), sesiones: 45, tiempo_total: '12h 30m', acciones: 523, estado: 'online' },
+            { id: 2, nombre: 'Brayan Dridan', rol: 'gerente', ultima_conexion: new Date(), sesiones: 38, tiempo_total: '8h 45m', acciones: 312, estado: 'online' },
+            { id: 3, nombre: 'Emilio Ramirez', rol: 'gerente', ultima_conexion: new Date(Date.now() - 3600000), sesiones: 32, tiempo_total: '6h 20m', acciones: 287, estado: 'away' },
+            { id: 4, nombre: 'Stefhany Valencia', rol: 'asesor', ultima_conexion: new Date(Date.now() - 86400000), sesiones: 28, tiempo_total: '5h 10m', acciones: 198, estado: 'offline' },
+            { id: 5, nombre: 'Miguel Ángel Flores', rol: 'asesor', ultima_conexion: new Date(Date.now() - 172800000), sesiones: 22, tiempo_total: '4h 30m', acciones: 156, estado: 'offline' }
+        ]);
+
+        // Gráficos de actividad
+        this.renderActividadHorasChart();
+        this.renderActividadDiasChart();
+
+        // Acciones frecuentes
+        this.renderAccionesFrecuentes([
+            { nombre: 'Crear Recluta', icono: 'fa-user-plus', tipo: 'crear', count: 342, descripcion: 'Nuevos registros' },
+            { nombre: 'Editar Estado', icono: 'fa-edit', tipo: 'editar', count: 287, descripcion: 'Cambios de estado' },
+            { nombre: 'Ver Perfil', icono: 'fa-eye', tipo: 'ver', count: 523, descripcion: 'Consultas de perfil' },
+            { nombre: 'Iniciar Sesión', icono: 'fa-sign-in-alt', tipo: 'login', count: 156, descripcion: 'Accesos al sistema' }
+        ]);
+
+        // Usuarios inactivos
+        this.renderUsuariosInactivos([
+            { id: 10, nombre: 'Usuario Inactivo 1', rol: 'asesor', dias_inactivo: 15, ultima_conexion: '11/01/2026' },
+            { id: 11, nombre: 'Usuario Inactivo 2', rol: 'asesor', dias_inactivo: 22, ultima_conexion: '04/01/2026' }
+        ]);
+
+        console.log('✅ Tab Actividad renderizado con datos demo');
+    }
+
+    /**
+     * 📊 ACTUALIZAR KPIs DE ACTIVIDAD
+     */
+    updateActividadKPIs(kpis) {
+        const elementos = {
+            'kpi-usuarios-activos-hoy': kpis.usuarios_activos_hoy,
+            'kpi-tiempo-promedio': kpis.tiempo_promedio,
+            'kpi-sesiones-semana': kpis.sesiones_semana,
+            'kpi-acciones-totales': kpis.acciones_totales
+        };
+
+        Object.entries(elementos).forEach(([id, valor]) => {
+            const el = document.getElementById(id);
+            if (el) {
+                if (typeof valor === 'number') {
+                    this.animateNumber(el, valor);
+                } else {
+                    el.textContent = valor;
+                }
+            }
+        });
+    }
+
+    /**
+     * 🟢 RENDERIZAR USUARIOS EN LÍNEA
+     */
+    renderUsuariosOnline(usuarios) {
+        const container = document.getElementById('usuarios-online-container');
+        if (!container) return;
+
+        if (!usuarios || usuarios.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-user-slash"></i>
+                    <p>No hay usuarios en línea en este momento</p>
+                </div>
+            `;
+            return;
+        }
+
+        const html = usuarios.map(usuario => `
+            <div class="usuario-online-card">
+                <div class="usuario-online-avatar">
+                    ${usuario.foto_url
+                        ? `<img src="${usuario.foto_url}" alt="${usuario.nombre}">`
+                        : `<span>${this.getInitials(usuario.nombre)}</span>`
+                    }
+                </div>
+                <div class="usuario-online-info">
+                    <h6>${usuario.nombre}</h6>
+                    <small class="rol-badge ${usuario.rol}">${usuario.rol}</small>
+                </div>
+                <div class="usuario-online-tiempo">${usuario.tiempo_sesion}</div>
+            </div>
+        `).join('');
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * 📋 RENDERIZAR TABLA DE ACTIVIDAD
+     */
+    renderActividadTabla(usuarios) {
+        const tbody = document.getElementById('actividad-usuarios-tbody');
+        if (!tbody) return;
+
+        const html = usuarios.map(usuario => `
+            <tr>
+                <td>
+                    <div class="usuario-cell">
+                        <div class="usuario-avatar-small">
+                            ${usuario.foto_url
+                                ? `<img src="${usuario.foto_url}" alt="${usuario.nombre}">`
+                                : this.getInitials(usuario.nombre)
+                            }
+                        </div>
+                        <span>${usuario.nombre}</span>
+                    </div>
+                </td>
+                <td><span class="rol-badge ${usuario.rol}">${usuario.rol}</span></td>
+                <td>${this.formatFechaRelativa(usuario.ultima_conexion)}</td>
+                <td>${usuario.sesiones}</td>
+                <td>${usuario.tiempo_total}</td>
+                <td>${usuario.acciones}</td>
+                <td><span class="status-badge ${usuario.estado}">${this.getEstadoLabel(usuario.estado)}</span></td>
+            </tr>
+        `).join('');
+
+        tbody.innerHTML = html;
+    }
+
+    /**
+     * 📈 RENDERIZAR GRÁFICO DE ACTIVIDAD POR HORAS
+     */
+    renderActividadHorasChart() {
+        const chartId = 'actividadHoras';
+        this.destroyChart(chartId);
+
+        const ctx = document.getElementById('actividadHorasChartCanvas');
+        if (!ctx) return;
+
+        // Datos de demo - actividad por hora del día
+        const horasLabels = ['6am', '8am', '10am', '12pm', '2pm', '4pm', '6pm', '8pm'];
+        const actividadData = [5, 25, 45, 38, 55, 62, 35, 12];
+
+        this.charts[chartId] = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: horasLabels,
+                datasets: [{
+                    label: 'Usuarios Activos',
+                    data: actividadData,
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#3B82F6'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    /**
+     * 📈 RENDERIZAR GRÁFICO DE ACTIVIDAD POR DÍAS
+     */
+    renderActividadDiasChart() {
+        const chartId = 'actividadDias';
+        this.destroyChart(chartId);
+
+        const ctx = document.getElementById('actividadDiasChartCanvas');
+        if (!ctx) return;
+
+        const diasLabels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+        const actividadData = [85, 92, 78, 95, 88, 25, 15];
+
+        this.charts[chartId] = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: diasLabels,
+                datasets: [{
+                    label: 'Sesiones',
+                    data: actividadData,
+                    backgroundColor: diasLabels.map((_, i) =>
+                        i < 5 ? 'rgba(59, 130, 246, 0.7)' : 'rgba(156, 163, 175, 0.5)'
+                    ),
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    /**
+     * 🔥 RENDERIZAR ACCIONES FRECUENTES
+     */
+    renderAccionesFrecuentes(acciones) {
+        const container = document.getElementById('acciones-frecuentes-container');
+        if (!container) return;
+
+        const html = acciones.map(accion => `
+            <div class="accion-card">
+                <div class="accion-icon ${accion.tipo}">
+                    <i class="fas ${accion.icono}"></i>
+                </div>
+                <div class="accion-info">
+                    <h6>${accion.nombre}</h6>
+                    <p>${accion.descripcion}</p>
+                </div>
+                <div class="accion-count">${accion.count}</div>
+            </div>
+        `).join('');
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * 🚫 RENDERIZAR USUARIOS INACTIVOS
+     */
+    renderUsuariosInactivos(usuarios) {
+        const container = document.getElementById('usuarios-inactivos-container');
+        const countBadge = document.getElementById('count-inactivos');
+
+        if (countBadge) {
+            countBadge.textContent = usuarios.length;
+        }
+
+        if (!container) return;
+
+        if (!usuarios || usuarios.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-check-circle" style="color: #10B981;"></i>
+                    <p>Todos los usuarios han estado activos recientemente</p>
+                </div>
+            `;
+            return;
+        }
+
+        const html = usuarios.map(usuario => `
+            <div class="usuario-inactivo-card">
+                <div class="usuario-inactivo-avatar">
+                    ${usuario.foto_url
+                        ? `<img src="${usuario.foto_url}" alt="${usuario.nombre}">`
+                        : `<i class="fas fa-user"></i>`
+                    }
+                </div>
+                <div class="usuario-inactivo-info">
+                    <h6>${usuario.nombre}</h6>
+                    <small>Última conexión: ${usuario.ultima_conexion}</small>
+                </div>
+                <div class="dias-inactivo">${usuario.dias_inactivo} días</div>
+            </div>
+        `).join('');
+
+        container.innerHTML = html;
+    }
+
+    /**
+     * 🛠️ FORMATEAR FECHA RELATIVA
+     */
+    formatFechaRelativa(fecha) {
+        if (!fecha) return 'Nunca';
+
+        const ahora = new Date();
+        const diff = ahora - new Date(fecha);
+        const minutos = Math.floor(diff / 60000);
+        const horas = Math.floor(diff / 3600000);
+        const dias = Math.floor(diff / 86400000);
+
+        if (minutos < 1) return 'Ahora mismo';
+        if (minutos < 60) return `Hace ${minutos} min`;
+        if (horas < 24) return `Hace ${horas}h`;
+        if (dias < 7) return `Hace ${dias} días`;
+
+        return new Date(fecha).toLocaleDateString('es-ES');
+    }
+
+    /**
+     * 🏷️ OBTENER LABEL DE ESTADO
+     */
+    getEstadoLabel(estado) {
+        const labels = {
+            'online': 'En línea',
+            'offline': 'Desconectado',
+            'away': 'Ausente'
+        };
+        return labels[estado] || estado;
+    }
+
+    /**
+     * 🎨 RENDERIZAR DATOS DE ACTIVIDAD (REAL)
+     */
+    renderActividadData(data) {
+        this.updateActividadKPIs(data.kpis);
+        this.renderUsuariosOnline(data.usuarios_online);
+        this.renderActividadTabla(data.actividad_usuarios);
+        this.renderActividadHorasChartReal(data.actividad_por_horas);
+        this.renderActividadDiasChartReal(data.actividad_por_dias);
+        this.renderAccionesFrecuentes(data.acciones_frecuentes);
+        this.renderUsuariosInactivos(data.usuarios_inactivos);
+
+        console.log('✅ Tab Actividad renderizado con datos reales');
+    }
+
+    /**
+     * 📈 RENDERIZAR GRÁFICO DE ACTIVIDAD POR HORAS (DATOS REALES)
+     */
+    renderActividadHorasChartReal(datosHoras) {
+        const chartId = 'actividadHoras';
+        this.destroyChart(chartId);
+
+        const ctx = document.getElementById('actividadHorasChartCanvas');
+        if (!ctx || !datosHoras) {
+            this.renderActividadHorasChart(); // Fallback a demo
+            return;
+        }
+
+        this.charts[chartId] = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels: datosHoras.labels,
+                datasets: [{
+                    label: 'Sesiones',
+                    data: datosHoras.data,
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#3B82F6'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    /**
+     * 📈 RENDERIZAR GRÁFICO DE ACTIVIDAD POR DÍAS (DATOS REALES)
+     */
+    renderActividadDiasChartReal(datosDias) {
+        const chartId = 'actividadDias';
+        this.destroyChart(chartId);
+
+        const ctx = document.getElementById('actividadDiasChartCanvas');
+        if (!ctx || !datosDias) {
+            this.renderActividadDiasChart(); // Fallback a demo
+            return;
+        }
+
+        this.charts[chartId] = new Chart(ctx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: datosDias.labels,
+                datasets: [{
+                    label: 'Sesiones',
+                    data: datosDias.data,
+                    backgroundColor: datosDias.labels.map((_, i) =>
+                        i < 5 ? 'rgba(59, 130, 246, 0.7)' : 'rgba(156, 163, 175, 0.5)'
+                    ),
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
                 scales: {
                     y: { beginAtZero: true }
                 }

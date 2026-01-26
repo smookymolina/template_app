@@ -1,0 +1,34 @@
+Redis setup (Windows)
+
+What Redis is used for
+- The app uses Redis as a cache for metrics and other computed data to speed up the admin dashboards.
+- The Redis client is initialized in app startup and attached to the Flask app as app.redis_client.
+- Cache helpers read/write through this client (see utils/metrics_cache.py).
+
+Where Redis is implemented in this project
+- app_factory.py -> initialize_extensions(): creates the Redis client and pings Redis on startup.
+- config.py -> REDIS_URL: defines the Redis connection string (can be overridden by env var).
+- utils/metrics_cache.py -> uses current_app.redis_client to set/get cached metrics.
+
+What REDIS_URL is for
+- REDIS_URL is the full connection string to your Redis server.
+- Example local: redis://localhost:6379/0
+- Example remote: redis://:password@host:port/0
+- In production you should set REDIS_URL to a managed Redis instance or your own server.
+
+Status
+- Redis server should be running on 127.0.0.1:6379
+- Test: redis-cli ping -> PONG
+
+Start Redis (manual)
+- "C:\Program Files\Redis\redis-server.exe" --port 6379
+
+Install Redis as a service (auto-start)
+- "C:\Program Files\Redis\redis-server.exe" --service-install "C:\Program Files\Redis\redis.windows.conf"
+- "C:\Program Files\Redis\redis-server.exe" --service-start
+
+Environment
+- REDIS_URL=redis://localhost:6379/0
+
+Flask
+- .venv\Scripts\flask.exe run

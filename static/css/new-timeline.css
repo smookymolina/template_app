@@ -175,3 +175,155 @@
     margin-bottom: 1rem;
     opacity: 0.5;
 }
+
+/* ============================================
+   ESTILOS PARA COMENTARIOS EN TIMELINE
+   ============================================ */
+
+/* Tarjeta con comentario - estructura de dos filas */
+.timeline-card.has-comment {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+}
+
+.timeline-card-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+}
+
+/* Meta info (fecha y estado) */
+.timeline-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.timeline-card-meta .timeline-card-date {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.timeline-card-meta .timeline-card-date i {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.timeline-card-status {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Sección de comentarios */
+.timeline-card-comment {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #e2e8f0;
+    width: 100%;
+}
+
+.timeline-card-comment .comment-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+    color: #667eea;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.timeline-card-comment .comment-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.timeline-card-comment .comment-header i {
+    font-size: 14px;
+}
+
+.timeline-card-comment .comment-text {
+    background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.6;
+    border-left: 3px solid #667eea;
+    position: relative;
+}
+
+.timeline-card-comment .comment-toggle {
+    background: transparent;
+    border: none;
+    color: #4f46e5;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.timeline-card-comment .comment-toggle:hover {
+    text-decoration: underline;
+}
+
+.timeline-card-comment.is-collapsed .comment-text {
+    max-height: 88px;
+    overflow: hidden;
+}
+
+.timeline-card-comment.is-collapsed .comment-text::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 24px;
+    background: linear-gradient(180deg, rgba(248, 249, 255, 0) 0%, rgba(248, 249, 255, 1) 100%);
+}
+
+.timeline-card-comment .comment-text::before {
+    content: '\201C';
+    position: absolute;
+    top: -5px;
+    left: 8px;
+    font-size: 28px;
+    color: #667eea;
+    opacity: 0.3;
+    font-family: Georgia, serif;
+}
+
+/* Responsive para comentarios */
+@media (max-width: 480px) {
+    .timeline-card-header {
+        flex-wrap: wrap;
+    }
+
+    .timeline-card-days {
+        width: 100%;
+        flex: none;
+        margin-top: 10px;
+        text-align: left;
+        align-items: flex-start;
+        flex-direction: row;
+        gap: 8px;
+    }
+
+    .days-ago-value {
+        font-size: 18px;
+    }
+
+    .timeline-card-comment .comment-text {
+        font-size: 13px;
+        padding: 10px 12px;
+    }
+}
