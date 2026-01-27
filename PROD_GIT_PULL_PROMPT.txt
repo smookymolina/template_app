@@ -1,247 +1,121 @@
-Goal: Safely update production from the correct git remote/branch with a fast-forward pull, handle local changes, run required post-deploy steps, START ALL REQUIRED SERVICES (Redis, MySQL), and verify the application is healthy.
+GOAL: Update production with a safe git pull, full backup (events, profiles, docs), save migration state, and restart Nginx + Gunicorn with Redis/MySQL running.
 
 =============================================================================
-CAMBIOS EN ESTA VERSION (2026-01-21):
+CHANGES IN THIS VERSION (2026-01-26):
 =============================================================================
+1) Timeline public + internal management:
+   - Comments visible, long comments are collapsible.
+   - Comment toggle styles in timeline.
+   - Files: static/js/client.js, static/js/reclutas.js, static/css/new-timeline.css
 
-1) GESTION DE GERENTES - Asignacion/Reasignacion de Asesores:
-   - CORREGIDO: El modal de asignacion ahora muestra TODOS los asesores (con y sin gerente)
-   - NUEVO: Se puede reasignar un asesor de un gerente a otro directamente
-   - NUEVO: El select muestra el gerente actual de cada asesor
-   - Archivos modificados:
-     * static/js/jerarquia.js (lineas 675-770 aprox)
+2) Advanced metrics:
+   - New subsection "Actividad" (user activity monitoring).
+   - Uses UserSession data for activity metrics.
 
-2) LINEA DE SEGUIMIENTO (Timeline) - Eventos:
-   - CORREGIDO: La fecha ya NO se guarda un dia antes (problema de zona horaria)
-   - NUEVO: Boton de eliminar visible en cada tarjeta de evento
-   - CORREGIDO: Visualizacion correcta de fechas sin desfase
-   - Archivos modificados:
-     * static/js/reclutas.js (funciones saveTimelineItemApi, editTimelineItem, calculateDaysAgo, renderTimelineItem)
-     * static/css/new-timeline.css (estilos para boton eliminar)
+3) Redis in app:
+   - Redis client initialized in app_factory.py and used for cache.
+   - REDIS_URL defines Redis connection (config.py).
+   - Guide: REDIS_SETUP.txt
 
 =============================================================================
 
-Context to ask for first:
-- Repo path and current branch name used in production.
-- Service manager in use (systemd, pm2, docker-compose, etc.).
-- Whether local changes are allowed, and how to handle them (stash vs abort).
-- Required post-pull steps (migrations, build, dependency install, cache clear).
-- Health check endpoint or validation command (if none, say "no endpoint").
+INSTRUCTIONS (Linux / Nginx + Gunicorn):
 
-Commands and checks to request in order (PowerShell-friendly):
+0) Confirm before starting:
+   - Repo path: /var/www/template_app (or actual)
+   - Target branch (ex: 1.5.6.6)
+   - Gunicorn service name (ex: gunicorn, template_app)
+   - Nginx service name (nginx)
 
-1) Confirm location, repo, and branch:
-   - pwd
+1) Go to repo and check status:
+   - cd /var/www/template_app
    - git rev-parse --show-toplevel
    - git status -sb
    - git branch --show-current
    - git remote -v
 
-2) Safety checks:
-   - If there are uncommitted changes, decide: stash or abort.
-   - If stash allowed: git stash push -u -m "prod-pull-<timestamp>"
-   - If not allowed: abort and report.
+2) MANDATORY BACKUP (events, profiles, docs, DB):
+   - mkdir -p /var/backups/template_app
+   - TS=$(date +%Y%m%d_%H%M%S)
+   - BACKUP_DIR=/var/backups/template_app/$TS
+   - mkdir -p "$BACKUP_DIR"
 
-3) Fetch and update:
+   A) Full DB backup:
+      - /scripts/backup_db.sh "$BACKUP_DIR"
+      - (If script does not exist)
+        set -a
+        [ -f .env ] && . ./.env
+        set +a
+        mysqldump -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h "${MYSQL_HOST}" -P "${MYSQL_PORT:-3306}" "${MYSQL_DB}" > "$BACKUP_DIR/db.sql"
+
+   B) Full CSV backup (events, reclutas, users, etc):
+      - python scripts/export_data.py
+      - LATEST=$(ls -dt backup_* | head -1)
+      - mv "$LATEST" "$BACKUP_DIR/"
+
+   C) Backup uploaded files (profiles + docs):
+      - tar -czf "$BACKUP_DIR/uploads.tar.gz" uploads/
+
+   D) Save migration state:
+      - flask db current > "$BACKUP_DIR/db_current.txt"
+      - flask db history > "$BACKUP_DIR/db_history.txt"
+
+3) Local changes:
+   - If there are local changes: choose STASH or ABORT
+   - Recommended stash:
+     git stash push -u -m "prod-pull-$TS"
+
+4) Update code:
    - git fetch --all --prune
-   - git log --oneline --decorate -n 5
    - git pull --ff-only origin <branch>
-   - If ff-only fails, stop and report (do not rebase/merge on prod unless explicitly approved).
+   - If ff-only fails: stop and review (no merge in prod)
 
-4) ===== CRITICAL: INSTALL AND VERIFY DEPENDENCIES =====
+5) Dependencies and migrations:
+   - source .venv/bin/activate  (or venv/bin/activate)
+   - python -m pip install --upgrade pip
+   - python -m pip install -r requirements.txt --no-cache-dir
+   - flask db upgrade 2>&1 | tee "$BACKUP_DIR/migration.log"
 
-   A) ACTIVATE VIRTUAL ENVIRONMENT FIRST:
-      - source venv/bin/activate (Linux/Mac)
-      - OR: source .venv/bin/activate
-      - OR: .\venv\Scripts\activate (Windows)
-      - Verify activation: which python (should point to venv)
+6) Verify DB schema (avoid 502 errors):
+   - python scripts/diagnostico_db.py | tee "$BACKUP_DIR/db_diagnostico.log"
+   - If any required table is missing (ex: user_session), fix before restart:
+     - Run migrations again: flask db upgrade
+     - If no migrations exist for new tables, last resort:
+       python -c "from app_factory import create_app; from models import db; app=create_app('production'); app.app_context().push(); db.create_all()"
 
-   B) INSTALL PYTHON DEPENDENCIES:
-      - Upgrade pip first (prevents many issues):
-        - python -m pip install --upgrade pip
-      - Install requirements with verbose output:
-        - python -m pip install -r requirements.txt --no-cache-dir 2>&1 | tee pip_install.log
-      - Check exit code: echo $? (must be 0)
-      - If install fails, check common issues:
-        - Missing system packages: sudo apt install python3-dev libmysqlclient-dev build-essential
-        - Permission issues: use --user flag or fix venv ownership
-        - Compilation errors: install gcc, make, and development headers
+7) Critical services (before app restart):
+   A) Redis
+      - systemctl status redis (or redis-server)
+      - systemctl start redis (if down)
+      - redis-cli ping -> PONG
 
-   C) VERIFY CRITICAL PACKAGES ARE INSTALLED:
-      - Check Flask and extensions:
-        - python -c "import flask; print(f'Flask {flask.__version__}')"
-        - python -c "import flask_login; print('flask_login OK')"
-        - python -c "import flask_migrate; print('flask_migrate OK')"
-      - Check Redis client:
-        - python -c "import redis; print(f'redis-py {redis.__version__}')"
-      - Check Database drivers:
-        - python -c "import pymysql; print(f'PyMySQL {pymysql.__version__}')"
-        - python -c "import sqlalchemy; print(f'SQLAlchemy {sqlalchemy.__version__}')"
-      - Check other critical imports:
-        - python -c "from app_factory import create_app; print('app_factory OK')"
-      - If ANY import fails, DO NOT PROCEED - fix the dependency first!
+   B) MySQL/MariaDB
+      - systemctl status mysql (or mariadb)
+      - systemctl start mysql (if down)
+      - mysqladmin ping -u root -p
 
-   D) QUICK DEPENDENCY HEALTH CHECK (run this single command):
-      - python -c "
-import sys
-failed = []
-for mod in ['flask', 'flask_login', 'flask_migrate', 'redis', 'pymysql', 'sqlalchemy', 'gunicorn']:
-    try:
-        __import__(mod)
-        print(f'✓ {mod}')
-    except ImportError as e:
-        print(f'✗ {mod}: {e}')
-        failed.append(mod)
-if failed:
-    print(f'\n❌ FAILED: {failed}')
-    sys.exit(1)
-print('\n✅ All critical dependencies OK')
-"
+8) Clear Redis cache (optional but recommended):
+   - redis-cli KEYS "metrics_cache_*" | xargs redis-cli DEL
 
-   E) RUN DATABASE MIGRATIONS:
-      - flask db upgrade 2>&1 | tee migration.log
-      - Check exit code: echo $? (must be 0)
-      - If migration fails:
-        - Check database connection: flask db current
-        - Check for pending migrations: flask db history
-        - Common fix: flask db stamp head (use with caution)
+9) Restart services in order:
+   - sudo systemctl restart gunicorn
+   - sudo systemctl restart nginx
+   - sudo systemctl status gunicorn --no-pager
+   - sudo systemctl status nginx --no-pager
 
-   F) VERIFY APPLICATION CAN START (dry run):
-      - python -c "from app_factory import create_app; app = create_app('production'); print('✅ App created successfully')"
-      - If this fails, check the error and fix before proceeding!
+10) Quick validation:
+   - curl -I https://tu-dominio
+   - Login works
+   - Timeline shows collapsible comments
+   - Advanced metrics -> Actividad loads (no 502)
 
-5) ===== CRITICAL: VERIFY AND START REQUIRED SERVICES =====
+11) If stash was used:
+   - git stash list
+   - decide apply or keep
 
-   A) CHECK AND START REDIS:
-      - Check Redis status:
-        - systemctl status redis (or redis-server)
-        - OR: docker ps | grep redis
-      - If Redis is NOT running, START IT:
-        - sudo systemctl start redis
-        - OR: sudo systemctl start redis-server
-        - OR: docker start redis
-        - OR: redis-server --daemonize yes
-      - Verify Redis is responding:
-        - redis-cli ping
-        - Expected response: PONG
-      - If Redis fails to start, check logs:
-        - sudo journalctl -u redis -n 50
-        - OR: cat /var/log/redis/redis-server.log
+=============================================================================
 
-   B) CHECK AND START MYSQL/MARIADB:
-      - Check MySQL status:
-        - systemctl status mysql (or mariadb or mysqld)
-        - OR: docker ps | grep mysql
-      - If MySQL is NOT running, START IT:
-        - sudo systemctl start mysql
-        - OR: sudo systemctl start mariadb
-        - OR: docker start mysql
-      - Verify MySQL is responding:
-        - mysqladmin ping -u root -p
-        - OR: mysql -u root -p -e "SELECT 1"
-      - If MySQL fails, check logs:
-        - sudo journalctl -u mysql -n 50
-
-   C) CLEAR APPLICATION CACHES (important after deployment):
-      - Clear Redis metrics cache:
-        - redis-cli KEYS "metrics_cache_*" | xargs redis-cli DEL
-        - OR from Python: flask shell -> from utils.metrics_cache import clear_all_metrics_cache; clear_all_metrics_cache()
-      - Clear any session caches if needed.
-
-6) Restart application and verify:
-   - Restart service using the correct manager:
-     - sudo systemctl restart gunicorn
-     - OR: sudo systemctl restart <your-app-service>
-     - OR: pm2 restart all
-     - OR: docker-compose restart app
-   - Wait a few seconds for service to initialize.
-   - Tail logs for errors:
-     - sudo journalctl -u gunicorn -f
-     - OR: tail -f /var/log/gunicorn/error.log
-   - Check for startup errors, especially:
-     - Redis connection errors
-     - MySQL/Database connection errors
-     - Import errors
-
-7) Health check and validation:
-   - Run health check (HTTP or CLI), or if none:
-     - curl -I https://freted.info (check for HTTP 200)
-     - curl -s https://freted.info/api/health (if health endpoint exists)
-     - Check service status: systemctl status <service>
-     - Confirm port is listening: ss -tlnp | grep 5000 (or your port)
-   - Test critical endpoints:
-     - Login page loads
-     - API responds (try a simple GET endpoint)
-     - Metrics page loads without 502 error
-
-8) ===== VERIFICAR CAMBIOS DE ESTA VERSION =====
-
-   A) GESTION DE GERENTES - Probar asignacion/reasignacion:
-      - Ir a Gestion de Gerentes > Asignar Asesores
-      - Verificar que aparecen TODOS los asesores (con y sin gerente)
-      - Verificar que cada asesor muestra su gerente actual
-      - Probar reasignar un asesor a otro gerente
-      - Verificar que los contadores se actualizan correctamente
-
-   B) LINEA DE SEGUIMIENTO - Probar eventos:
-      - Abrir un recluta > Linea de Seguimiento
-      - Agregar un evento con fecha de hoy
-      - Verificar que la fecha se guarda CORRECTAMENTE (sin desfase de un dia)
-      - Verificar que aparece el boton de eliminar (icono papelera) en cada tarjeta
-      - Probar eliminar un evento
-      - Editar un evento y verificar que la fecha se muestra correctamente
-
-9) If stash was used:
-   - Decide whether to re-apply (git stash pop) or keep it for later review.
-
-10) TROUBLESHOOTING 502 ERRORS:
-   If you see 502 Bad Gateway after deployment:
-
-   A) Check if the application is running:
-      - systemctl status gunicorn (or your app service)
-      - ps aux | grep gunicorn
-      - ps aux | grep python
-
-   B) Check if Redis is running (REQUIRED for metrics):
-      - redis-cli ping
-      - If no response: sudo systemctl start redis
-
-   C) Check if MySQL is running:
-      - mysqladmin ping
-      - If no response: sudo systemctl start mysql
-
-   D) Check application logs for errors:
-      - sudo journalctl -u gunicorn -n 100
-      - Look for: ConnectionRefusedError, redis.exceptions.ConnectionError, OperationalError
-
-   E) CHECK FOR MISSING DEPENDENCIES (common cause of 502):
-      - Activate venv: source venv/bin/activate
-      - Test imports:
-        - python -c "from app_factory import create_app; print('OK')"
-      - If ImportError appears:
-        - Reinstall: pip install -r requirements.txt --no-cache-dir
-        - Check specific package: pip show <package-name>
-      - Common missing packages that cause 502:
-        - redis, pymysql, gunicorn, flask-login, flask-migrate
-
-   F) Restart in correct order:
-      1. sudo systemctl start redis
-      2. sudo systemctl start mysql
-      3. source venv/bin/activate && pip install -r requirements.txt
-      4. sudo systemctl restart gunicorn
-      5. Wait 10 seconds
-      6. Test: curl -I https://freted.info
-
-Expected output to report:
-- Current commit before and after.
-- Any local changes handled.
-- pip install result: success/failed (include error if failed).
-- Critical dependencies check: all OK / which ones failed.
-- Database migration result: success/failed.
-- Redis status: running/not running.
-- MySQL status: running/not running.
-- Application dry-run: can create app / failed with error.
-- Service status and health check result.
-- Any errors found in logs.
-- Resultado de pruebas de Gestion de Gerentes (asignacion/reasignacion funciona).
-- Resultado de pruebas de Timeline (fecha correcta, boton eliminar funciona).
+NOTES:
+- REDIS_URL must point to your Redis instance (local or cloud).
+- In production, Redis must always be running.
+- If anything fails, use backups in /var/backups/template_app/$TS.
