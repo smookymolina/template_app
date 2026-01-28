@@ -791,6 +791,7 @@ async function setupUserInterface(usuario) {
     const loginSection = document.getElementById('login-section');
     const dashboardSection = document.getElementById('dashboard-section');
 
+    document.body.classList.remove('login-page');
     if (loginSection) loginSection.style.display = 'none';
     if (dashboardSection) {
         dashboardSection.classList.add('show-dashboard');
@@ -1611,7 +1612,8 @@ function showLoginScreen(forceClean = false) {
     // Asegurar que el dashboard esté completamente oculto
     ensureDashboardHidden();
     toggleLoginScreens();
-    switchToAdminTab();
+    document.body.classList.add('login-page');
+    switchToTrackingTab();
 
     console.log('✅ Pantalla de login mostrada');
 }

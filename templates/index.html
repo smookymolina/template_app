@@ -1,85 +1,147 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 
-{% block title %}Sistema de Gestión de Reclutas{% endblock %}
+{% block title %}Consulta de seguimiento{% endblock %}
+{% block body_class %}login-page{% endblock %}
 
 {% block content %}
-<div id="login-section">
-    <div class="login-card">
-        <div class="card-header">
-            <i class="fas fa-users-cog"></i>
-            <h2>Sistema de Gestión de Reclutas</h2>
-        </div>
-        
-        <div class="login-tabs">
-            <button type="button" id="admin-login-tab" class="login-tab active">Administrador</button>
-            <button type="button" id="tracking-tab" class="login-tab">Seguimiento</button>
-        </div>
-        
-        <!-- ✨ PESTAÑA ADMINISTRADOR -->
-        <form id="login-form" class="tab-content active">
-            <div class="form-group">
-                <label for="email">Correo Electrónico</label>
-                <div class="input-icon-wrapper">
-                    <i class="fas fa-envelope"></i>
-                    <input type="email" id="email" placeholder="Tu correo electrónico" required>
+<div id="login-section" class="landing">
+    <div class="landing-grid">
+        <section class="tracking-card login-card">
+            <div class="tracking-card-header">
+                <div class="tracking-title">
+                    <span class="tracking-pill">Consulta tu seguimiento</span>
+                    <h2>Consulta tu seguimiento</h2>
+                    <p>Ingresa tu número de folio para conocer el estado de tu proceso.</p>
                 </div>
-            </div>
-            
-            <div class="form-group">
-                <label for="password">Contraseña</label>
-                <div class="input-icon-wrapper">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="password" placeholder="Tu contraseña" required>
-                    <button type="button" id="toggle-password" class="toggle-password"><i class="fas fa-eye"></i></button>
-                </div>
-            </div>
-            
-            <div class="remember-forgot">
-                <label class="checkbox-container">
-                    <input type="checkbox" id="remember-me">
-                    <span class="checkbox-label">Recordarme</span>
-                </label>
-                <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
-            </div>
-            
-            <button type="button" id="login-button" class="btn-primary">
-                <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-            </button>
-        </form>
-        
-        <!-- ✨ PESTAÑA SEGUIMIENTO PÚBLICO -->
-        <div id="tracking-wrapper" class="tab-content">
-            <!-- Formulario de consulta de folio -->
-            <form id="tracking-form">
-                <div class="form-group">
-                    <label for="folio-input">Folio de Seguimiento</label>
-                    <div class="input-icon-wrapper">
-                        <i class="fas fa-file-alt"></i>
-                        <input type="text" id="folio-input" placeholder="Ingresa tu folio (Ej: REC-1A2B3C4D)" required>
+                <div class="tracking-illustration">
+                    <div class="floating-plane">
+                        <i class="fas fa-paper-plane"></i>
                     </div>
                 </div>
-                
-                <p class="form-info">
-                    <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para consultar el estado de tu proceso.
-                </p>
-                
-                <div class="recovery-link-container">
-                    <a href="#" id="tab-recuperar-folio-link">¿Olvidaste tu folio? Recupéralo aquí</a>
+            </div>
+
+            <div class="login-tabs landing-tabs">
+                <button type="button" id="tracking-tab" class="login-tab active">Seguimiento</button>
+                <button type="button" id="admin-login-tab" class="login-tab">Acceso interno</button>
+            </div>
+
+            <!-- PESTAÑA SEGUIMIENTO PÚBLICO -->
+            <div id="tracking-wrapper" class="tab-content active">
+                <form id="tracking-form" class="landing-form">
+                    <div class="form-group">
+                        <label for="folio-input">Número de folio</label>
+                        <div class="search-row">
+                            <div class="input-icon-wrapper">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="folio-input" placeholder="REC-1A2B3C4D" required>
+                            </div>
+                            <button type="button" id="tracking-button" class="btn-primary">
+                                Consultar
+                            </button>
+                        </div>
+                    </div>
+
+                    <p class="form-info">
+                        <i class="fas fa-info-circle"></i> Ingresa el folio proporcionado para consultar tu proceso.
+                    </p>
+
+                    <div class="recovery-link-container">
+                        <a href="#" id="tab-recuperar-folio-link">¿Olvidaste tu folio? Recupéralo aquí</a>
+                    </div>
+                </form>
+
+                <div id="tracking-results" style="display: none;">
+                    <!-- Los resultados se cargarán dinámicamente aquí -->
                 </div>
-                
-                <button type="button" id="tracking-button" class="btn-primary">
-                    <i class="fas fa-search"></i> Consultar Estado
+
+                <div class="tracking-icons">
+                    <span class="icon-bubble"><i class="fas fa-envelope-open-text"></i></span>
+                    <span class="icon-bubble"><i class="fas fa-comments"></i></span>
+                    <span class="icon-bubble"><i class="fas fa-bullseye"></i></span>
+                </div>
+            </div>
+
+            <!-- PESTAÑA ADMINISTRADOR -->
+            <form id="login-form" class="tab-content">
+                <div class="admin-login-header">
+                    <h3>Acceso de usuarios internos</h3>
+                    <p>Ingresa tus credenciales para continuar al panel.</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Correo electrónico</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-envelope"></i>
+                        <input type="email" id="email" placeholder="Tu correo electrónico" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <div class="input-icon-wrapper">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="password" placeholder="Tu contraseña" required>
+                        <button type="button" id="toggle-password" class="toggle-password"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+
+                <div class="remember-forgot">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="remember-me">
+                        <span class="checkbox-label">Recordarme</span>
+                    </label>
+                    <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
+                </div>
+
+                <button type="button" id="login-button" class="btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Iniciar sesión
+                </button>
+
+                <button type="button" class="btn-link back-to-tracking" onclick="document.getElementById('tracking-tab').click()">
+                    Volver a seguimiento
                 </button>
             </form>
-            
-            <!-- Contenedor para resultados del tracking -->
-            <div id="tracking-results" style="display: none;">
-                <!-- Los resultados se cargarán dinámicamente aquí -->
+        </section>
+
+        <aside class="tracking-side">
+            <div class="steps-card">
+                <ol class="steps-list steps-list-compact">
+                    <li class="step-item">
+                        <div class="step-icon step-icon-circle">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="step-body">
+                            <h4><span class="step-number-inline">1.</span> En revisión</h4>
+                            <p>Estamos evaluando tu perfil.</p>
+                        </div>
+                    </li>
+                    <li class="step-item">
+                        <div class="step-icon step-icon-circle">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="step-body">
+                            <h4><span class="step-number-inline">2.</span> Entrevista</h4>
+                            <p>Agenda y realiza tu entrevista.</p>
+                        </div>
+                    </li>
+                    <li class="step-item">
+                        <div class="step-icon step-icon-circle">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <div class="step-body">
+                            <h4><span class="step-number-inline">3.</span> Resultado</h4>
+                            <p>Recibe tu respuesta final.</p>
+                        </div>
+                    </li>
+                </ol>
             </div>
-        </div>
+
+            <button type="button" class="internal-access-cta" onclick="document.getElementById('admin-login-tab').click()">
+                Acceso de Usuarios Internos
+            </button>
+        </aside>
     </div>
-    
-    <!-- Versión en esquina inferior derecha -->
+
     <div class="version-badge">v1.5.6.6</div>
 </div>
 
@@ -154,9 +216,9 @@
                 <li class="active"><a href="#" data-section="reclutas-section"><i class="fas fa-users"></i> Reclutas</a></li>
                 <li><a href="#" data-section="calendario-section"><i class="fas fa-calendar-alt"></i> Calendario</a></li>
                 <li><a href="#" data-section="estadisticas-section"><i class="fas fa-chart-bar"></i> Estadísticas</a></li>
-                <!-- ✨ NUEVA: Gestión de Gerentes (Solo Admin) -->
+                <!-- âœ¨ NUEVA: Gestión de Gerentes (Solo Admin) -->
                 <li id="nav-gestion-gerentes" class="nav-admin-only"><a href="#" data-section="gestion-gerentes-section"><i class="fas fa-users-cog"></i> Gestión de Gerentes</a></li>
-                <!-- ✨ NUEVA: Panel Administrativo de Reclutas (Solo Admin) -->
+                <!-- âœ¨ NUEVA: Panel Administrativo de Reclutas (Solo Admin) -->
                 <li id="nav-admin-reclutas" class="nav-admin-only"><a href="#" data-section="admin-reclutas-management"><i class="fas fa-tools"></i> Panel Administrativo</a></li>
                 <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Configuración</a></li>
             </ul>
@@ -188,7 +250,7 @@
         <!-- Sección de estadísticas -->
         {% include 'components/seccion_estadisticas.html' %}
         
-        <!-- Ã¢Å“â€¦ SECCIÓN UNIFICADA: Gestión de Gerentes y Jerarquía -->
+        <!-- ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ SECCIÃ“N UNIFICADA: Gestión de Gerentes y Jerarquía -->
         <div id="gestion-gerentes-section" class="dashboard-content-section" style="display: none;">
             <div class="section-header">
                 <h2><i class="fas fa-users-cog"></i> Gestión de Gerentes</h2>
@@ -239,7 +301,7 @@
             {% endif %}
         </div>
 
-        <!-- Ã¢Å“â€¦ NUEVA SECCIÓN: Panel Administrativo de Reclutas (SOLO ADMIN) -->
+        <!-- ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ NUEVA SECCIÃ“N: Panel Administrativo de Reclutas (SOLO ADMIN) -->
         <div id="admin-reclutas-management" class="dashboard-content-section" style="display: none;">
             <div class="section-header">
                 <h2><i class="fas fa-tools"></i> Panel Administrativo de Reclutas</h2>
@@ -366,14 +428,14 @@
         <div class="modal-body fichas-modal-body">
             <div id="fichas-calculator-section" data-admin-only>
 
-                <!-- 📊 Dashboard de Métricas Principales -->
+                <!-- ðŸ“Š Dashboard de Métricas Principales -->
                 <div class="fichas-dashboard-header">
                     <div class="fichas-week-selector">
                         <button type="button" class="btn-week-nav" id="fichas-week-prev">
                             <i class="fas fa-chevron-left"></i>
                         </button>
                         <div class="week-info-wrapper">
-                            <div class="week-info" id="fichas-week-display" role="button" tabindex="0" style="cursor: pointer;" title="📅 Clic para seleccionar rango de fechas personalizado">
+                            <div class="week-info" id="fichas-week-display" role="button" tabindex="0" style="cursor: pointer;" title="ðŸ“… Clic para seleccionar rango de fechas personalizado">
                                 <span class="week-label">
                                     <i class="fas fa-calendar-alt"></i> SEMANA
                                 </span>
@@ -383,11 +445,11 @@
                                 </small>
                             </div>
 
-                            <!-- Popover de selecci贸n de rango -->
+                            <!-- Popover de selecciè´¸n de rango -->
                             <div id="date-range-popover" class="date-range-popover" style="display: none;">
                                 <div class="popover-header">
                                     <h4><i class="fas fa-calendar-week"></i> Seleccionar Rango Semanal</h4>
-                                    <button type="button" class="popover-close" id="close-date-popover">×</button>
+                                    <button type="button" class="popover-close" id="close-date-popover">Ã—</button>
                                 </div>
                                 <div class="popover-body">
                                     <div class="date-input-group">
@@ -436,7 +498,7 @@
                     </div>
                 </div>
 
-                <!-- 📑 Sistema de Pestañas -->
+                <!-- ðŸ“‘ Sistema de Pestañas -->
                 <div class="fichas-tabs-container">
                     <div class="fichas-tabs-header">
                         <button class="fichas-tab active" data-tab="nueva-ficha">
@@ -649,13 +711,13 @@
 {% block scripts %}
 {{ super() }}
 <script type="module">
-    // Ã¢Å“â€¦ IMPORTS CORRECTOS DE MÓDULOS
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ IMPORTS CORRECTOS DE MÃ“DULOS
     import { showNotification, showError, showSuccess } from '/static/js/notifications.js';
     import Client from '/static/js/client.js';
     import Timeline from '/static/js/timeline.js';
     import '/static/js/jerarquia.js';
 
-    // Ã¢Å“â€¦ INICIALIZACIÓN PRINCIPAL
+    // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ INICIALIZACIÃ“N PRINCIPAL
     document.addEventListener('DOMContentLoaded', function() {
         // Inicializar módulo de cliente (tracking público)
         Client.init();
@@ -663,7 +725,7 @@
         // Inicializar timeline
         Timeline.init();
         
-        // Ã¢Å“â€¦ MANEJO DE PESTAÑAS CORREGIDO
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ MANEJO DE PESTAÃ‘AS CORREGIDO
         const adminLoginTab = document.getElementById('admin-login-tab');
         const trackingTab = document.getElementById('tracking-tab');
         const loginForm = document.getElementById('login-form');
@@ -692,11 +754,11 @@
                         Tutorial.init();
                     }
                 }).catch(err => {
-                    console.warn('Ã¢Å¡Â Ã¯Â¸Â Error cargando tutorial:', err);
+                    console.warn('ÃƒÂ¢Ã…?Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Error cargando tutorial:', err);
                 });
             });
 
-            // Ã¢Å“â€¦ VERIFICAR PARÃƒÂMETROS URL PARA ACTIVAR PESTAÑA AUTOMÃƒÂTICAMENTE
+            // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ VERIFICAR PARÃƒÆ’Ã‚ÂMETROS URL PARA ACTIVAR PESTAÃ‘A AUTOMÃƒÆ’Ã‚ÂTICAMENTE
             const urlParams = new URLSearchParams(window.location.search);
             const tabParam = urlParams.get('tab');
             const folioParam = urlParams.get('folio');
@@ -713,7 +775,7 @@
                         if (folioInput) {
                             folioInput.value = folioParam;
                             
-                            // Si auto_consulta estÃƒ¡ activado, hacer la consulta automÃƒ¡ticamente
+                            // Si auto_consulta estÃƒÆ’? activado, hacer la consulta automÃƒÆ’áticamente
                             if (autoConsulta === 'true') {
                                 setTimeout(() => {
                                     if (Client && typeof Client.processFolioValue === 'function') {
@@ -727,7 +789,7 @@
             }
         }
 
-        // Ã¢Å“â€¦ EVENTOS DE TRACKING EN LA PESTAÑA
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ EVENTOS DE TRACKING EN LA PESTAÃ‘A
         const trackingButton = document.getElementById('tracking-button');
         const folioInput = document.getElementById('folio-input');
         
@@ -750,7 +812,7 @@
             });
         }
 
-        // Ã¢Å“â€¦ LINK DE RECUPERAR FOLIO EN LA PESTAÑA
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ LINK DE RECUPERAR FOLIO EN LA PESTAÃ‘A
         const tabRecuperarFolioLink = document.getElementById('tab-recuperar-folio-link');
         if (tabRecuperarFolioLink) {
             tabRecuperarFolioLink.addEventListener('click', function(e) {
@@ -767,7 +829,7 @@
             });
         }
 
-        // Ã¢Å“â€¦ MODAL DE CLIENTE - EVENTOS
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ MODAL DE CLIENTE - EVENTOS
         const clienteModal = document.getElementById('cliente-modal');
         const consultarFolioBtn = document.getElementById('consultar-folio-btn');
         const folioModalInput = document.getElementById('folio');
@@ -804,7 +866,7 @@
             });
         }
 
-        // Ã¢Å“â€¦ CERRAR MODAL
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ CERRAR MODAL
         const closeButtons = document.querySelectorAll('.close-modal, .close-modal-btn');
         closeButtons.forEach(button => {
             button.addEventListener('click', function() {
@@ -828,14 +890,14 @@
             }
         });
 
-        // Ã¢Å“â€¦ EXPONER FUNCIONES GLOBALMENTE PARA COMPATIBILIDAD
+        // ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ EXPONER FUNCIONES GLOBALMENTE PARA COMPATIBILIDAD
         window.showNotification = showNotification;
         window.showError = showError;
         window.showSuccess = showSuccess;
         window.Client = Client;
         window.Timeline = Timeline;
         
-        console.log('Ã¢Å“â€¦ Sistema de tracking por folio inicializado correctamente');
+        console.log('ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Sistema de tracking por folio inicializado correctamente');
     });
 </script>
 
@@ -849,3 +911,4 @@
 <!-- Input para Excel (si es necesario) -->
 <input type="file" id="excel-file-input" accept=".xlsx,.xls" style="display: none;">
 {% endblock %}
+
