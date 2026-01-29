@@ -20,6 +20,38 @@ let appState = {
     currentSection: 'reclutas-section'
 };
 
+// Heartbeat de actividad de usuario
+let activityHeartbeatId = null;
+const ACTIVITY_HEARTBEAT_MS = 60000;
+
+async function sendActivityPing() {
+    try {
+        await fetch("/auth/activity-ping", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" }
+        });
+    } catch (error) {
+        console.debug("[activity] Ping fallido:", error);
+    }
+}
+
+function startActivityHeartbeat() {
+    if (activityHeartbeatId) return;
+    sendActivityPing();
+    activityHeartbeatId = setInterval(sendActivityPing, ACTIVITY_HEARTBEAT_MS);
+}
+
+function stopActivityHeartbeat() {
+    if (!activityHeartbeatId) return;
+    clearInterval(activityHeartbeatId);
+    activityHeartbeatId = null;
+}
+
+document.addEventListener("userStateCleared", () => {
+    stopActivityHeartbeat();
+});
+
+
 /**
  * ✅ INICIALIZACIÓN PRINCIPAL DE LA APLICACIÓN
  */
@@ -639,6 +671,7 @@ async function loginSuccess(usuario) {
         await processLogin(usuario);
         startTutorial(usuario);
         showWelcomeMessage(usuario);
+        startActivityHeartbeat();
         
         console.log('✅ Login completado exitosamente para:', usuario.rol);
         

@@ -74,6 +74,8 @@ class Config:
     PROFILE_IMG_FOLDER = os.path.join(UPLOAD_FOLDER, 'profile_images')
     LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO').upper()
     SEED_DEV_USERS = os.environ.get('SEED_DEV_USERS', 'false').lower() == 'true'
+    USER_SESSION_COOKIE_NAME = os.environ.get('USER_SESSION_COOKIE_NAME', 'user_session')
+    USER_ACTIVITY_UPDATE_SECONDS = int(os.environ.get('USER_ACTIVITY_UPDATE_SECONDS', '60'))
 
     @staticmethod
     def init_app(app):

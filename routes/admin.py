@@ -2759,104 +2759,137 @@ def _get_usuarios_online():
         return []
 
 
+
+def _session_duration_minutes(session, now):
+    """Calcula la duracion de una sesion en minutos."""
+    start = session.created_at or session.last_activity or now
+    end = session.last_activity or session.created_at or now
+    if session.expires_at and end > session.expires_at:
+        end = session.expires_at
+    if end < start:
+        return 0
+    return int((end - start).total_seconds() // 60)
+
+def _format_duration(total_minutes):
+    """Formatea minutos totales a string legible."""
+    if not total_minutes or total_minutes <= 0:
+        return "0m"
+    horas = total_minutes // 60
+    minutos = total_minutes % 60
+    if horas > 0:
+        return f"{horas}h {minutos}m"
+    return f"{minutos}m"
+
 def _get_actividad_por_usuario(fecha_inicio, rol_filtro):
-    """Obtiene estadísticas de actividad por usuario"""
+    """Obtiene estadisticas de actividad por usuario"""
     try:
-        # Query base de usuarios
-        query = db.session.query(
-            Usuario.id,
-            Usuario.nombre,
-            Usuario.email,
-            Usuario.rol,
-            Usuario.foto_url,
-            func.count(UserSession.id).label('total_sesiones'),
-            func.max(UserSession.last_activity).label('ultima_actividad')
-        ).outerjoin(UserSession, Usuario.id == UserSession.usuario_id)\
-         .filter(Usuario.is_active == True)
+        users_query = Usuario.query.filter(Usuario.is_active == True)
+        if rol_filtro != "todos":
+            users_query = users_query.filter(Usuario.rol == rol_filtro)
 
-        # Filtrar por rol si se especifica
-        if rol_filtro != 'todos':
-            query = query.filter(Usuario.rol == rol_filtro)
+        usuarios = users_query.all()
+        if not usuarios:
+            return []
 
-        # Filtrar por fecha si se especifica
+        user_ids = [u.id for u in usuarios]
+
+        sesiones_query = UserSession.query.filter(UserSession.usuario_id.in_(user_ids))
         if fecha_inicio:
-            query = query.filter(
-                db.or_(
-                    UserSession.created_at >= fecha_inicio,
-                    UserSession.id == None
-                )
-            )
+            sesiones_query = sesiones_query.filter(UserSession.created_at >= fecha_inicio)
+        sesiones = sesiones_query.all()
 
-        query = query.group_by(Usuario.id, Usuario.nombre, Usuario.email, Usuario.rol, Usuario.foto_url)\
-                     .order_by(func.max(UserSession.last_activity).desc().nullslast())
+        sesiones_por_usuario = defaultdict(list)
+        for sesion in sesiones:
+            sesiones_por_usuario[sesion.usuario_id].append(sesion)
 
-        resultados = query.all()
+        reclutas_query = db.session.query(Recluta.asesor_id, func.count(Recluta.id))
+        reclutas_query = reclutas_query.filter(Recluta.asesor_id.in_(user_ids))
+        if fecha_inicio:
+            reclutas_query = reclutas_query.filter(Recluta.fecha_registro >= fecha_inicio)
+        reclutas_counts = {row[0]: row[1] for row in reclutas_query.group_by(Recluta.asesor_id).all() if row[0]}
 
-        # Determinar estado de cada usuario
+        entrevistas_query = db.session.query(Recluta.asesor_id, func.count(Entrevista.id))
+        entrevistas_query = entrevistas_query.join(Recluta, Entrevista.recluta_id == Recluta.id)
+        entrevistas_query = entrevistas_query.filter(Recluta.asesor_id.in_(user_ids))
+        if fecha_inicio:
+            entrevistas_query = entrevistas_query.filter(Entrevista.fecha_creacion >= fecha_inicio)
+        entrevistas_counts = {row[0]: row[1] for row in entrevistas_query.group_by(Recluta.asesor_id).all() if row[0]}
+
         ahora = datetime.utcnow()
         limite_online = ahora - timedelta(minutes=15)
         limite_away = ahora - timedelta(hours=1)
 
         actividad_usuarios = []
-        for usuario in resultados:
-            # Determinar estado
-            if usuario.ultima_actividad:
-                if usuario.ultima_actividad >= limite_online:
-                    estado = 'online'
-                elif usuario.ultima_actividad >= limite_away:
-                    estado = 'away'
+        for usuario in usuarios:
+            sesiones_user = sesiones_por_usuario.get(usuario.id, [])
+            total_sesiones = len(sesiones_user)
+            ultima_actividad = max((s.last_activity for s in sesiones_user if s.last_activity), default=None)
+            total_minutos = sum(_session_duration_minutes(s, ahora) for s in sesiones_user)
+
+            if ultima_actividad:
+                if ultima_actividad >= limite_online:
+                    estado = "online"
+                elif ultima_actividad >= limite_away:
+                    estado = "away"
                 else:
-                    estado = 'offline'
+                    estado = "offline"
             else:
-                estado = 'offline'
+                estado = "offline"
 
-            # Calcular tiempo total estimado (promedio de 30 min por sesión)
-            sesiones = usuario.total_sesiones or 0
-            tiempo_total_min = sesiones * 30  # Estimado
-            horas = tiempo_total_min // 60
-            minutos = tiempo_total_min % 60
-            tiempo_total_str = f"{horas}h {minutos}m" if horas > 0 else f"{minutos}m"
-
-            # Calcular acciones (estimado basado en sesiones)
-            acciones_estimadas = sesiones * 15  # Promedio de 15 acciones por sesión
+            acciones = total_sesiones + reclutas_counts.get(usuario.id, 0) + entrevistas_counts.get(usuario.id, 0)
 
             actividad_usuarios.append({
                 "id": usuario.id,
                 "nombre": usuario.nombre,
                 "email": usuario.email,
                 "rol": usuario.rol,
-                "foto_url": url_for('main.serve_profile_image', filename=usuario.foto_url, _external=False) if usuario.foto_url else None,
-                "sesiones": sesiones,
-                "tiempo_total": tiempo_total_str,
-                "acciones": acciones_estimadas,
-                "ultima_conexion": usuario.ultima_actividad.isoformat() if usuario.ultima_actividad else None,
-                "estado": estado
+                "foto_url": url_for("main.serve_profile_image", filename=usuario.foto_url, _external=False) if usuario.foto_url else None,
+                "sesiones": total_sesiones,
+                "tiempo_total": _format_duration(total_minutos),
+                "acciones": acciones,
+                "ultima_conexion": ultima_actividad.isoformat() if ultima_actividad else None,
+                "estado": estado,
+                "_ultima_dt": ultima_actividad or datetime.min
             })
+
+        actividad_usuarios.sort(key=lambda u: u.get("_ultima_dt"), reverse=True)
+        for usuario in actividad_usuarios:
+            usuario.pop("_ultima_dt", None)
 
         return actividad_usuarios
 
     except Exception as e:
         current_app.logger.error(f"Error obteniendo actividad por usuario: {str(e)}")
         return []
-
-
 def _calcular_kpis_actividad(usuarios_online, actividad_usuarios, fecha_inicio):
     """Calcula KPIs de actividad"""
     try:
-        # Usuarios activos hoy
-        usuarios_activos_hoy = len(usuarios_online)
+        ahora = datetime.utcnow()
+        inicio_hoy = ahora.replace(hour=0, minute=0, second=0, microsecond=0)
+        inicio_semana = ahora - timedelta(days=7)
 
-        # Calcular tiempo promedio de sesión
-        sesiones_totales = sum(u.get('sesiones', 0) for u in actividad_usuarios)
-        tiempo_promedio_min = 30  # Promedio estimado
-        if sesiones_totales > 0:
-            tiempo_promedio_min = max(15, min(60, 30 + (sesiones_totales // len(actividad_usuarios) if actividad_usuarios else 0)))
+        usuarios_activos_hoy = db.session.query(func.count(func.distinct(UserSession.usuario_id)))
+        usuarios_activos_hoy = usuarios_activos_hoy.filter(UserSession.last_activity >= inicio_hoy).scalar() or 0
 
-        # Sesiones esta semana
-        sesiones_semana = sum(u.get('sesiones', 0) for u in actividad_usuarios)
+        sesiones_semana = db.session.query(func.count(UserSession.id))
+        sesiones_semana = sesiones_semana.filter(UserSession.created_at >= inicio_semana).scalar() or 0
 
-        # Acciones totales hoy (estimado)
-        acciones_hoy = usuarios_activos_hoy * 25  # Promedio de 25 acciones por usuario activo
+        sesiones_query = UserSession.query
+        if fecha_inicio:
+            sesiones_query = sesiones_query.filter(UserSession.created_at >= fecha_inicio)
+        sesiones = sesiones_query.all()
+        total_minutos = sum(_session_duration_minutes(s, ahora) for s in sesiones)
+        tiempo_promedio_min = int(total_minutos / len(sesiones)) if sesiones else 0
+
+        sesiones_hoy = db.session.query(func.count(UserSession.id))
+        sesiones_hoy = sesiones_hoy.filter(UserSession.created_at >= inicio_hoy).scalar() or 0
+        reclutas_hoy = db.session.query(func.count(Recluta.id))
+        reclutas_hoy = reclutas_hoy.filter(Recluta.fecha_registro >= inicio_hoy).scalar() or 0
+        entrevistas_hoy = db.session.query(func.count(Entrevista.id))
+        entrevistas_hoy = entrevistas_hoy.filter(Entrevista.fecha_creacion >= inicio_hoy).scalar() or 0
+        eventos_hoy = db.session.query(func.count(EventoRecluta.id))
+        eventos_hoy = eventos_hoy.filter(EventoRecluta.fecha_creacion >= inicio_hoy).scalar() or 0
+        acciones_hoy = sesiones_hoy + reclutas_hoy + entrevistas_hoy + eventos_hoy
 
         return {
             "usuarios_activos_hoy": usuarios_activos_hoy,
@@ -2874,7 +2907,6 @@ def _calcular_kpis_actividad(usuarios_online, actividad_usuarios, fecha_inicio):
             "acciones_totales": 0
         }
 
-
 def _get_actividad_por_horas(fecha_inicio):
     """Obtiene distribución de actividad por hora del día"""
     try:
@@ -2882,7 +2914,7 @@ def _get_actividad_por_horas(fecha_inicio):
         query = db.session.query(
             func.extract('hour', UserSession.created_at).label('hora'),
             func.count(UserSession.id).label('cantidad')
-        ).filter(UserSession.is_valid == True)
+        )
 
         if fecha_inicio:
             query = query.filter(UserSession.created_at >= fecha_inicio)
@@ -2932,7 +2964,7 @@ def _get_actividad_por_dias(fecha_inicio):
         query = db.session.query(
             func.extract('dow', UserSession.created_at).label('dia'),
             func.count(UserSession.id).label('cantidad')
-        ).filter(UserSession.is_valid == True)
+        )
 
         if fecha_inicio:
             query = query.filter(UserSession.created_at >= fecha_inicio)
@@ -2977,9 +3009,9 @@ def _get_acciones_frecuentes(fecha_inicio):
         acciones = []
 
         # Contar reclutas creados
-        query_reclutas = db.session.query(func.count(Recluta.id)).filter(Recluta.is_active == True)
+        query_reclutas = db.session.query(func.count(Recluta.id))
         if fecha_inicio:
-            query_reclutas = query_reclutas.filter(Recluta.fecha_creacion >= fecha_inicio)
+            query_reclutas = query_reclutas.filter(Recluta.fecha_registro >= fecha_inicio)
         total_reclutas = query_reclutas.scalar() or 0
 
         acciones.append({
@@ -2993,7 +3025,7 @@ def _get_acciones_frecuentes(fecha_inicio):
         # Contar eventos/cambios de estado
         query_eventos = db.session.query(func.count(EventoRecluta.id))
         if fecha_inicio:
-            query_eventos = query_eventos.filter(EventoRecluta.fecha >= fecha_inicio)
+            query_eventos = query_eventos.filter(EventoRecluta.fecha_creacion >= fecha_inicio)
         total_eventos = query_eventos.scalar() or 0
 
         acciones.append({
@@ -3005,7 +3037,7 @@ def _get_acciones_frecuentes(fecha_inicio):
         })
 
         # Contar sesiones (como "Ver Sistema")
-        query_sesiones = db.session.query(func.count(UserSession.id)).filter(UserSession.is_valid == True)
+        query_sesiones = db.session.query(func.count(UserSession.id))
         if fecha_inicio:
             query_sesiones = query_sesiones.filter(UserSession.created_at >= fecha_inicio)
         total_sesiones = query_sesiones.scalar() or 0
@@ -3021,7 +3053,7 @@ def _get_acciones_frecuentes(fecha_inicio):
         # Contar entrevistas
         query_entrevistas = db.session.query(func.count(Entrevista.id))
         if fecha_inicio:
-            query_entrevistas = query_entrevistas.filter(Entrevista.fecha >= fecha_inicio)
+            query_entrevistas = query_entrevistas.filter(Entrevista.fecha_creacion >= fecha_inicio)
         total_entrevistas = query_entrevistas.scalar() or 0
 
         acciones.append({

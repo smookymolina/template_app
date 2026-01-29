@@ -251,26 +251,98 @@ def register_context_processors(app):
         }
 
 def register_request_hooks(app):
-    """Registra ganchos de petición (before/after request)"""
+    """Registra ganchos de petici?n (before/after request)"""
     @app.before_request
     def log_request_info():
-        """Log de información básica de la petición"""
+        """Log de informaci?n b?sica de la petici?n"""
         if app.debug:
             from flask import request
-            app.logger.debug(f'Petición: {request.method} {request.path}')
-    
+            app.logger.debug(f'Petici?n: {request.method} {request.path}')
+
+    @app.before_request
+    def track_user_activity():
+        """Actualiza la actividad de la sesi?n del usuario autenticado."""
+        from flask import request, g
+        from flask_login import current_user
+        from datetime import datetime
+        from models.user_session import UserSession
+
+        if not current_user.is_authenticated:
+            return
+
+        if request.endpoint == 'static' or request.path.startswith('/static'):
+            return
+
+        cookie_name = app.config.get('USER_SESSION_COOKIE_NAME', 'user_session')
+        session_token = request.cookies.get(cookie_name)
+        if not session_token:
+            g._create_user_session = True
+            return
+
+        g._create_user_session = False
+
+        try:
+            user_session = UserSession.query.filter_by(
+                session_token=session_token,
+                usuario_id=current_user.id,
+                is_valid=True
+            ).first()
+
+            if not user_session:
+                g._create_user_session = True
+                return
+
+            now = datetime.utcnow()
+            threshold = app.config.get('USER_ACTIVITY_UPDATE_SECONDS', 60)
+            if not user_session.last_activity or (now - user_session.last_activity).total_seconds() >= threshold:
+                user_session.last_activity = now
+                db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            app.logger.warning(f"Error actualizando actividad de sesion: {str(e)}")
+
     @app.after_request
     def add_security_headers(response):
-        """Añade cabeceras de seguridad a las respuestas"""
+        """A?ade cabeceras de seguridad a las respuestas"""
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'SAMEORIGIN'
         response.headers['X-XSS-Protection'] = '1; mode=block'
 
-        # Asegurar que el encoding UTF-8 esté correctamente configurado
+        # Asegurar que el encoding UTF-8 est? correctamente configurado
         if response.mimetype == 'text/html':
             response.headers['Content-Type'] = 'text/html; charset=utf-8'
         elif response.mimetype == 'application/json':
             response.headers['Content-Type'] = 'application/json; charset=utf-8'
+
+        # Emitir cookie de sesi?n propia si falta
+        try:
+            from flask import request, g
+            from flask_login import current_user
+            from utils.security import create_user_session, get_client_ip
+
+            if current_user.is_authenticated:
+                cookie_name = app.config.get('USER_SESSION_COOKIE_NAME', 'user_session')
+                if not request.cookies.get(cookie_name) and getattr(g, "_create_user_session", False):
+                    set_cookie_header = response.headers.get("Set-Cookie", "")
+                    if cookie_name not in set_cookie_header:
+                        max_age = int(app.permanent_session_lifetime.total_seconds())
+                        days_valid = max(1, int(max_age / 86400)) if max_age else 7
+                        session_obj = create_user_session(
+                            usuario_id=current_user.id,
+                            ip_address=get_client_ip(),
+                            user_agent=request.user_agent.string if request.user_agent else None,
+                            days_valid=days_valid
+                        )
+                        response.set_cookie(
+                            cookie_name,
+                            session_obj.session_token,
+                            max_age=max_age,
+                            httponly=True,
+                            samesite='Lax',
+                            secure=not app.debug
+                        )
+        except Exception as e:
+            app.logger.warning(f"No se pudo emitir cookie de sesion: {str(e)}")
 
         return response
 

@@ -4,6 +4,7 @@ from models.usuario import Usuario
 from models.user_session import UserSession
 from models.user_settings import UserSettings
 from utils.validators import validate_login_data, ValidationError
+from utils.security import create_user_session, get_client_ip
 from utils.helpers import guardar_archivo, eliminar_archivo
 from datetime import datetime
 
@@ -43,22 +44,23 @@ def login_usuario():
             usuario.last_login = datetime.utcnow()
             usuario.save()
             
-            # Crear sesión de usuario para rastreo
+            # Crear sesión de usuario para rastreo y emitir cookie propia
+            session_obj = None
             try:
-                ip_address = request.remote_addr
+                ip_address = get_client_ip()
                 user_agent = request.user_agent.string if request.user_agent else None
-                
-                session = UserSession(
+                max_age = int(current_app.permanent_session_lifetime.total_seconds())
+                days_valid = max(1, int(max_age / 86400)) if max_age else 7
+
+                session_obj = create_user_session(
                     usuario_id=usuario.id,
                     ip_address=ip_address,
                     user_agent=user_agent,
-                    session_token=request.cookies.get('session', ''),
-                    expires_at=datetime.utcnow() + current_app.permanent_session_lifetime
+                    days_valid=days_valid
                 )
-                session.save()
             except Exception as e:
                 current_app.logger.warning(f"No se pudo registrar la sesión: {str(e)}")
-            
+
             # Preparar datos del usuario
             user_data = usuario.serialize()
             
@@ -67,11 +69,22 @@ def login_usuario():
                 user_data['rol'] = 'admin'  # Default seguro
             
             current_app.logger.info(f"Login exitoso - Usuario: {usuario.email}, Rol: {user_data['rol']}")
-            return jsonify({
+            response = jsonify({
                 "success": True, 
-                "message": "Inicio de sesión exitoso", 
+                "message": "Inicio de sesion exitoso", 
                 "usuario": user_data
-            }), 200
+            })
+            if session_obj:
+                cookie_name = current_app.config.get('USER_SESSION_COOKIE_NAME', 'user_session')
+                response.set_cookie(
+                    cookie_name,
+                    session_obj.session_token,
+                    max_age=int(current_app.permanent_session_lifetime.total_seconds()),
+                    httponly=True,
+                    samesite='Lax',
+                    secure=not current_app.debug
+                )
+            return response, 200
         else:
             current_app.logger.warning(f"Intento fallido de inicio de sesión: {validated_data['email']}")
             return jsonify({
@@ -94,8 +107,9 @@ def logout_usuario():
     """
     try:
         # Registrar sesión como inválida
+        cookie_name = current_app.config.get('USER_SESSION_COOKIE_NAME', 'user_session')
         try:
-            session_token = request.cookies.get('session', '')
+            session_token = request.cookies.get(cookie_name, '')
             if session_token:
                 user_session = UserSession.query.filter_by(
                     session_token=session_token,
@@ -104,24 +118,50 @@ def logout_usuario():
                 ).first()
                 
                 if user_session:
+                    user_session.last_activity = datetime.utcnow()
                     user_session.is_valid = False
                     user_session.save()
         except Exception as e:
-            current_app.logger.warning(f"No se pudo invalidar la sesión: {str(e)}")
+            current_app.logger.warning(f"No se pudo invalidar la sesion: {str(e)}")
         
-        # Cerrar sesión de Flask-Login
+        # Cerrar sesion de Flask-Login
         logout_user()
         
-        return jsonify({
+        response = jsonify({
             "success": True, 
-            "message": "Sesión cerrada correctamente"
-        }), 200
+            "message": "Sesion cerrada correctamente"
+        })
+        response.delete_cookie(cookie_name)
+        return response, 200
     except Exception as e:
         current_app.logger.error(f"Error en logout: {str(e)}")
         return jsonify({
             "success": False, 
             "message": f"Error al cerrar sesión: {str(e)}"
         }), 500
+
+@auth_bp.route('/activity-ping', methods=['POST'])
+@login_required
+def activity_ping():
+    """Actualiza la actividad de la sesion actual."""
+    try:
+        cookie_name = current_app.config.get('USER_SESSION_COOKIE_NAME', 'user_session')
+        session_token = request.cookies.get(cookie_name, '')
+        if not session_token:
+            return jsonify({"success": False, "message": "Sesion no encontrada"}), 400
+        user_session = UserSession.query.filter_by(
+            session_token=session_token,
+            usuario_id=current_user.id,
+            is_valid=True
+        ).first()
+        if not user_session:
+            return jsonify({"success": False, "message": "Sesion no encontrada"}), 404
+        user_session.last_activity = datetime.utcnow()
+        user_session.save()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        current_app.logger.error(f"Error al actualizar sesion: {str(e)}")
+        return jsonify({"success": False, "message": f"Error al actualizar sesion: {str(e)}"}), 500
 
 @auth_bp.route('/check-auth', methods=['GET'])
 def check_auth():
@@ -265,7 +305,7 @@ def delete_session(id):
         
         return jsonify({
             "success": True,
-            "message": "Sesión cerrada correctamente"
+            "message": "Sesion cerrada correctamente"
         }), 200
     except Exception as e:
         current_app.logger.error(f"Error al cerrar sesión {id}: {str(e)}")

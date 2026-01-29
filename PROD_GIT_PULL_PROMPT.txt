@@ -1,18 +1,28 @@
 GOAL: Update production with a safe git pull, full backup (events, profiles, docs), save migration state, and restart Nginx + Gunicorn with Redis/MySQL running.
 
 =============================================================================
-CHANGES IN THIS VERSION (2026-01-26):
+CHANGES IN THIS VERSION (2026-01-28):
 =============================================================================
-1) Timeline public + internal management:
+1) Landing Page Redesign (Página de Inicio 2.0):
+   - Background optimized: fixed attachment, crisp rendering, responsive sizing
+   - Reduced from 5 steps to 3 steps (En revisión, Entrevista, Resultado)
+   - Circular step icons with gradient background
+   - "Acceso de Usuarios Internos" button repositioned below steps
+   - Version badge centered at bottom
+   - Full layout centered on screen
+   - Hidden elements: tracking pill, floating plane, form info, recovery link
+   - Files: static/css/styles.css, templates/index.html
+
+2) Timeline public + internal management:
    - Comments visible, long comments are collapsible.
    - Comment toggle styles in timeline.
    - Files: static/js/client.js, static/js/reclutas.js, static/css/new-timeline.css
 
-2) Advanced metrics:
+3) Advanced metrics:
    - New subsection "Actividad" (user activity monitoring).
    - Uses UserSession data for activity metrics.
 
-3) Redis in app:
+4) Redis in app:
    - Redis client initialized in app_factory.py and used for cache.
    - REDIS_URL defines Redis connection (config.py).
    - Guide: REDIS_SETUP.txt
@@ -105,6 +115,12 @@ INSTRUCTIONS (Linux / Nginx + Gunicorn):
 
 10) Quick validation:
    - curl -I https://tu-dominio
+   - Landing page loads with:
+     * Background image sharp (not blurry)
+     * Content centered on screen
+     * 3 steps visible (En revisión, Entrevista, Resultado)
+     * "Acceso de Usuarios Internos" button below steps
+     * Version badge (v1.5.6.6) centered at bottom
    - Login works
    - Timeline shows collapsible comments
    - Advanced metrics -> Actividad loads (no 502)
@@ -115,7 +131,32 @@ INSTRUCTIONS (Linux / Nginx + Gunicorn):
 
 =============================================================================
 
+TROUBLESHOOTING:
+=============================================================================
+A) CSS/Styles not updating (old design showing):
+   - Clear browser cache (Ctrl+Shift+R or Ctrl+F5)
+   - Clear Nginx cache:
+     sudo rm -rf /var/cache/nginx/*
+     sudo systemctl restart nginx
+   - Verify CSS file updated:
+     ls -la static/css/styles.css
+     head -50 static/css/styles.css | grep "LANDING PAGE"
+
+B) Background image blurry:
+   - Check image exists: ls -la static/img/fondo.png
+   - Verify image resolution (should be 1920x1080 or higher)
+   - If still blurry, may need higher resolution source image
+
+C) Layout not centered:
+   - Hard refresh browser (Ctrl+Shift+R)
+   - Check CSS loaded: DevTools -> Network -> styles.css (200 OK)
+   - Verify no local CSS overrides
+
+=============================================================================
+
 NOTES:
 - REDIS_URL must point to your Redis instance (local or cloud).
 - In production, Redis must always be running.
+- Static files (CSS, JS, images) may be cached by Nginx or browser.
+- After CSS changes, always clear caches and hard refresh.
 - If anything fails, use backups in /var/backups/template_app/$TS.
