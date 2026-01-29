@@ -2656,6 +2656,8 @@ def get_actividad_usuarios():
         periodo = request.args.get('periodo', '7dias')  # hoy, 7dias, 30dias, todo
         rol_filtro = request.args.get('rol', 'todos')  # todos, admin, gerente, asesor
 
+        current_app.logger.info(f"📊 Filtros recibidos - período: {periodo}, rol: {rol_filtro}")
+
         # Calcular fechas según período
         ahora = datetime.utcnow()
         if periodo == 'hoy':
@@ -2668,26 +2670,41 @@ def get_actividad_usuarios():
             fecha_inicio = None  # Todo el tiempo
 
         # ===== 1. USUARIOS EN LÍNEA AHORA =====
+        current_app.logger.debug("📡 Obteniendo usuarios online...")
         usuarios_online = _get_usuarios_online()
+        current_app.logger.info(f"✅ Usuarios online: {len(usuarios_online)}")
 
         # ===== 2. ACTIVIDAD POR USUARIO =====
+        current_app.logger.debug("📡 Obteniendo actividad por usuario...")
         actividad_usuarios = _get_actividad_por_usuario(fecha_inicio, rol_filtro)
+        current_app.logger.info(f"✅ Actividad usuarios: {len(actividad_usuarios)} registros")
 
         # ===== 3. KPIs DE ACTIVIDAD =====
+        current_app.logger.debug("📡 Calculando KPIs...")
         kpis = _calcular_kpis_actividad(usuarios_online, actividad_usuarios, fecha_inicio)
+        current_app.logger.info(f"✅ KPIs calculados: {kpis}")
 
         # ===== 4. DATOS PARA GRÁFICOS =====
+        current_app.logger.debug("📡 Obteniendo datos para gráficos...")
         actividad_por_horas = _get_actividad_por_horas(fecha_inicio)
         actividad_por_dias = _get_actividad_por_dias(fecha_inicio)
+        current_app.logger.info(f"✅ Gráficos: horas={len(actividad_por_horas.get('data', []))}, días={len(actividad_por_dias.get('data', []))}")
 
         # ===== 5. ACCIONES FRECUENTES =====
+        current_app.logger.debug("📡 Obteniendo acciones frecuentes...")
         acciones_frecuentes = _get_acciones_frecuentes(fecha_inicio)
+        current_app.logger.info(f"✅ Acciones frecuentes: {len(acciones_frecuentes)}")
 
         # ===== 6. USUARIOS INACTIVOS =====
+        current_app.logger.debug("📡 Obteniendo usuarios inactivos...")
         usuarios_inactivos = _get_usuarios_inactivos()
+        current_app.logger.info(f"✅ Usuarios inactivos: {len(usuarios_inactivos)}")
+
+        current_app.logger.info("✅ Datos de actividad cargados exitosamente - enviando respuesta con datos REALES")
 
         return jsonify({
             "success": True,
+            "data_source": "real",  # Indicador de datos reales
             "kpis": kpis,
             "usuarios_online": usuarios_online,
             "actividad_usuarios": actividad_usuarios,

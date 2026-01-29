@@ -140,30 +140,14 @@ class MetricasAdminV2 {
         const periodo = document.getElementById('filtro-periodo-actividad')?.value || '7dias';
         const rol = document.getElementById('filtro-rol-actividad')?.value || 'todos';
 
-        try {
-            console.log(`🔄 Recargando actividad con filtros: periodo=${periodo}, rol=${rol}`);
+        console.log(`🔄 Recargando actividad con filtros: periodo=${periodo}, rol=${rol}`);
 
-            const response = await fetch(`/admin/metricas/actividad-usuarios?periodo=${periodo}&rol=${rol}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
+        // Limpiar mensajes de error previos
+        const errorContainer = document.getElementById('actividad-error-container');
+        if (errorContainer) errorContainer.innerHTML = '';
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                this.renderActividadData(data);
-            }
-
-        } catch (error) {
-            console.error('Error recargando actividad:', error);
-        }
+        // Usar la función principal con filtros
+        await this.loadActividadData({ periodo, rol });
     }
 
     /**
@@ -1533,18 +1517,31 @@ class MetricasAdminV2 {
     renderActividadTab() {
         console.log('👁️ Renderizando Tab Actividad de Usuarios...');
 
-        // Cargar datos de actividad
-        this.loadActividadData();
+        // Obtener filtros actuales (si el usuario ya los cambió antes de cargar)
+        const periodo = document.getElementById('filtro-periodo-actividad')?.value || '7dias';
+        const rol = document.getElementById('filtro-rol-actividad')?.value || 'todos';
+
+        // Cargar datos de actividad con filtros
+        this.loadActividadData({ periodo, rol });
     }
 
     /**
      * 📡 CARGAR DATOS DE ACTIVIDAD DE USUARIOS
      */
-    async loadActividadData() {
+    async loadActividadData(filtros = {}) {
         try {
             console.log('📡 Cargando datos de actividad...');
+            this.showActividadLoading(true);
 
-            const response = await fetch('/admin/metricas/actividad-usuarios', {
+            // Construir URL con filtros
+            const params = new URLSearchParams();
+            if (filtros.periodo) params.append('periodo', filtros.periodo);
+            if (filtros.rol) params.append('rol', filtros.rol);
+
+            const url = `/admin/metricas/actividad-usuarios${params.toString() ? '?' + params.toString() : ''}`;
+            console.log('📡 Solicitando:', url);
+
+            const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1553,24 +1550,84 @@ class MetricasAdminV2 {
             });
 
             if (!response.ok) {
-                // Si el endpoint no existe, usar datos de demostración
-                console.log('⚠️ Endpoint de actividad no disponible, usando datos demo');
+                const errorText = await response.text();
+                console.error(`❌ Error HTTP ${response.status}: ${errorText}`);
+                this.showActividadError(`Error del servidor (${response.status}). Mostrando datos de demostración.`);
                 this.renderActividadDemo();
                 return;
             }
 
             const data = await response.json();
+            console.log('📡 Respuesta recibida:', data);
 
             if (data.success) {
+                this.dataSource = data.data_source || 'real';
                 this.renderActividadData(data);
+                this.updateDataSourceIndicator(this.dataSource);
             } else {
+                console.error('❌ Respuesta sin éxito:', data.message);
+                this.showActividadError(data.message || 'Error al cargar datos');
                 this.renderActividadDemo();
+                this.updateDataSourceIndicator('demo');
             }
 
         } catch (error) {
-            console.log('⚠️ Error cargando actividad, usando datos demo:', error);
+            console.error('❌ Error de conexión cargando actividad:', error);
+            this.showActividadError(`Error de conexión: ${error.message}. Mostrando datos de demostración.`);
             this.renderActividadDemo();
+            this.updateDataSourceIndicator('demo');
+        } finally {
+            this.showActividadLoading(false);
         }
+    }
+
+    /**
+     * 🔄 MOSTRAR/OCULTAR LOADING DE ACTIVIDAD
+     */
+    showActividadLoading(show) {
+        const container = document.getElementById('tab-actividad');
+        if (!container) return;
+
+        let loader = container.querySelector('.actividad-loader');
+        if (show) {
+            if (!loader) {
+                loader = document.createElement('div');
+                loader.className = 'actividad-loader';
+                loader.innerHTML = `
+                    <div class="loading-overlay">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Cargando datos de actividad...</p>
+                    </div>
+                `;
+                container.prepend(loader);
+            }
+            loader.style.display = 'block';
+        } else if (loader) {
+            loader.style.display = 'none';
+        }
+    }
+
+    /**
+     * ⚠️ MOSTRAR ERROR DE ACTIVIDAD
+     */
+    showActividadError(message) {
+        const container = document.getElementById('actividad-error-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="metricasV2.reloadActividadData()">
+                        <i class="fas fa-redo me-1"></i>Reintentar
+                    </button>
+                </div>
+            `;
+            container.style.display = 'block';
+        }
+        console.warn('⚠️ Actividad:', message);
     }
 
     /**
@@ -1618,6 +1675,9 @@ class MetricasAdminV2 {
             { id: 10, nombre: 'Usuario Inactivo 1', rol: 'asesor', dias_inactivo: 15, ultima_conexion: '11/01/2026' },
             { id: 11, nombre: 'Usuario Inactivo 2', rol: 'asesor', dias_inactivo: 22, ultima_conexion: '04/01/2026' }
         ]);
+
+        // Mostrar indicador de modo demo
+        this.updateDataSourceIndicator('demo');
 
         console.log('✅ Tab Actividad renderizado con datos demo');
     }
@@ -1892,6 +1952,54 @@ class MetricasAdminV2 {
     }
 
     /**
+     * 📊 ACTUALIZAR INDICADOR DE FUENTE DE DATOS
+     */
+    updateDataSourceIndicator(source) {
+        let indicator = document.getElementById('data-source-indicator');
+
+        // Crear indicador si no existe
+        if (!indicator) {
+            const tabActividad = document.getElementById('tab-actividad');
+            if (!tabActividad) return;
+
+            indicator = document.createElement('div');
+            indicator.id = 'data-source-indicator';
+            indicator.className = 'data-source-badge';
+
+            // Insertar al inicio del tab
+            const firstChild = tabActividad.querySelector('.actividad-kpis-row');
+            if (firstChild) {
+                tabActividad.insertBefore(indicator, firstChild);
+            } else {
+                tabActividad.prepend(indicator);
+            }
+        }
+
+        if (source === 'real') {
+            indicator.innerHTML = `
+                <span class="badge bg-success">
+                    <i class="fas fa-database me-1"></i>
+                    Datos en tiempo real
+                </span>
+                <small class="text-muted ms-2">Última actualización: ${new Date().toLocaleTimeString('es-ES')}</small>
+            `;
+            indicator.className = 'data-source-badge mb-3';
+        } else {
+            indicator.innerHTML = `
+                <span class="badge bg-warning text-dark">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    Modo demostración
+                </span>
+                <small class="text-muted ms-2">Los datos mostrados son simulados</small>
+                <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="metricasV2.reloadActividadData()">
+                    <i class="fas fa-sync-alt me-1"></i>Cargar datos reales
+                </button>
+            `;
+            indicator.className = 'data-source-badge mb-3';
+        }
+    }
+
+    /**
      * 🎨 RENDERIZAR DATOS DE ACTIVIDAD (REAL)
      */
     renderActividadData(data) {
@@ -1902,6 +2010,9 @@ class MetricasAdminV2 {
         this.renderActividadDiasChartReal(data.actividad_por_dias);
         this.renderAccionesFrecuentes(data.acciones_frecuentes);
         this.renderUsuariosInactivos(data.usuarios_inactivos);
+
+        // Mostrar indicador de datos reales
+        this.updateDataSourceIndicator('real');
 
         console.log('✅ Tab Actividad renderizado con datos reales');
     }

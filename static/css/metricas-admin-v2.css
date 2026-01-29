@@ -2060,3 +2060,77 @@
         text-align: center;
     }
 }
+
+/* ============================================================================ */
+/* 📊 INDICADOR DE FUENTE DE DATOS */
+/* ============================================================================ */
+
+.data-source-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 1rem;
+}
+
+.data-source-badge .badge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.75rem;
+    font-weight: 600;
+}
+
+.data-source-badge .badge.bg-success {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+}
+
+.data-source-badge .badge.bg-warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+}
+
+.data-source-badge small {
+    font-size: 0.75rem;
+}
+
+/* ============================================================================ */
+/* 🔄 LOADING OVERLAY PARA ACTIVIDAD */
+/* ============================================================================ */
+
+.actividad-loader {
+    position: relative;
+    z-index: 10;
+}
+
+.actividad-loader .loading-overlay {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: rgba(248, 250, 252, 0.9);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.actividad-loader .loading-overlay p {
+    margin-top: 1rem;
+    color: #64748b;
+    font-size: 0.875rem;
+}
+
+/* ============================================================================ */
+/* ⚠️ ALERTAS DE ERROR */
+/* ============================================================================ */
+
+#actividad-error-container .alert {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+#actividad-error-container .alert .btn {
+    margin-left: auto;
+}
