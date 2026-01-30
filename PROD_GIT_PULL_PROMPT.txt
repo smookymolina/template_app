@@ -1,39 +1,59 @@
 GOAL: Update production with a safe git pull, full backup (events, profiles, docs), save migration state, and restart Nginx + Gunicorn with Redis/MySQL running.
 
 =============================================================================
-CHANGES IN THIS VERSION (1.5.6.7 - 2026-01-28):
+CHANGES IN THIS VERSION (1.5.6.8 - 2026-01-30):
 =============================================================================
-1) Landing Page Redesign (Página de Inicio 2.0):
-   - Background optimized: fixed attachment, crisp rendering, responsive sizing
-   - Reduced from 5 steps to 3 steps (En revisión, Entrevista, Resultado)
-   - Circular step icons with gradient background
-   - "Acceso de Usuarios Internos" button repositioned below steps
-   - Version badge centered at bottom
-   - Full layout centered on screen
-   - Hidden elements: tracking pill, floating plane, form info, recovery link
-   - Files: static/css/styles.css, templates/index.html
+1) TRACKING DE TIEMPO DE USO ACTIVO (Activity Tracker):
+   - PROBLEMA RESUELTO: El contador de tiempo de sesión contaba infinitamente
+     mientras la sesión estaba abierta, sin importar si el usuario estaba
+     usando la app o no.
 
-2) Timeline public + internal management:
-   - Comments visible, long comments are collapsible.
-   - Comment toggle styles in timeline.
-   - Files: static/js/client.js, static/js/reclutas.js, static/css/new-timeline.css
+   - SOLUCIÓN: Ahora solo se cuenta el tiempo cuando el usuario está
+     ACTIVAMENTE usando la app (clicks, scroll, teclas, movimiento del mouse).
 
-3) Advanced metrics - User Activity with REAL DATA:
-   - Subsection "Actividad de Usuarios" now uses real production data.
-   - Backend logging improved for debugging endpoint issues.
-   - Visual indicator shows "Datos en tiempo real" (green) or "Modo demostración" (yellow).
-   - Retry button when data loading fails.
-   - Period/role filters now pass correctly to backend.
-   - Files modified:
-     * routes/admin.py - Enhanced logging, data_source field in response
-     * static/js/metricas-admin-v2.js - Error handling, loading states, indicators
-     * static/css/metricas-admin-v2.css - Styles for indicators and alerts
-     * templates/components/seccion_estadisticas.html - Error container
+   - IMPLEMENTACIÓN (5 pasos):
 
-4) Redis in app:
-   - Redis client initialized in app_factory.py and used for cache.
-   - REDIS_URL defines Redis connection (config.py).
-   - Guide: REDIS_SETUP.txt
+     PASO 1 - Modelo UserSession actualizado (models/user_session.py):
+       * Nuevo campo: active_time_seconds (tiempo activo acumulado)
+       * Nuevo campo: last_heartbeat (timestamp del último heartbeat)
+       * Nuevo método: register_activity_heartbeat()
+       * Nueva propiedad: active_time_formatted
+
+     PASO 2 - Nuevo endpoint (routes/auth.py):
+       * POST /auth/activity-heartbeat
+       * Recibe "latidos" del frontend cuando hay actividad
+       * Solo acumula tiempo si hay interacción continua
+
+     PASO 3 - Tracker JavaScript (static/js/activity-tracker.js):
+       * Detecta eventos: clicks, scroll, teclas, movimiento del mouse
+       * Envía heartbeats cada 30 segundos SOLO cuando hay actividad
+       * Se detiene si el usuario está inactivo por 60 segundos
+       * Se pausa cuando la pestaña está en segundo plano
+
+     PASO 4 - Cálculo de tiempo actualizado (routes/admin.py):
+       * _session_duration_minutes() usa active_time_seconds si existe
+       * _get_usuarios_online() muestra tiempo activo real
+       * Fallback al cálculo legacy para sesiones antiguas
+
+     PASO 5 - Integración (templates/base.html, static/js/auth.js):
+       * Script incluido en base.html
+       * Se inicia automáticamente al verificar autenticación
+
+   - FILES MODIFIED:
+     * models/user_session.py - Nuevos campos y métodos
+     * routes/auth.py - Nuevo endpoint activity-heartbeat
+     * routes/admin.py - Cálculos actualizados para tiempo activo
+     * static/js/activity-tracker.js - NUEVO ARCHIVO
+     * static/js/auth.js - Inicialización del tracker
+     * templates/base.html - Inclusión del script
+
+=============================================================================
+PREVIOUS VERSION (1.5.6.7 - 2026-01-28):
+=============================================================================
+- Landing Page Redesign (3 pasos, diseño centrado)
+- Timeline comentarios colapsables
+- Actividad de Usuarios con datos reales
+- Redis integration
 
 =============================================================================
 
@@ -41,7 +61,7 @@ INSTRUCTIONS (Linux / Nginx + Gunicorn):
 
 0) Confirm before starting:
    - Repo path: /var/www/template_app (or actual)
-   - Target branch (ex: 1.5.6.6)
+   - Target branch: 1.5.6.8
    - Gunicorn service name (ex: gunicorn, template_app)
    - Nginx service name (nginx)
 
@@ -85,7 +105,7 @@ INSTRUCTIONS (Linux / Nginx + Gunicorn):
 
 4) Update code:
    - git fetch --all --prune
-   - git pull --ff-only origin <branch>
+   - git pull --ff-only origin 1.5.6.8
    - If ff-only fails: stop and review (no merge in prod)
 
 5) Dependencies and migrations:
@@ -94,14 +114,37 @@ INSTRUCTIONS (Linux / Nginx + Gunicorn):
    - python -m pip install -r requirements.txt --no-cache-dir
    - flask db upgrade 2>&1 | tee "$BACKUP_DIR/migration.log"
 
-6) Verify DB schema (avoid 502 errors):
+6) *** CRITICAL FOR v1.5.6.8 *** Add new columns to user_session table:
+
+   Esta versión requiere 2 nuevas columnas en la tabla user_session.
+   Ejecutar los siguientes comandos SQL:
+
+   A) Si usas SQLite:
+      sqlite3 instance/template_app.db "ALTER TABLE user_session ADD COLUMN active_time_seconds INTEGER DEFAULT 0;"
+      sqlite3 instance/template_app.db "ALTER TABLE user_session ADD COLUMN last_heartbeat DATETIME;"
+      sqlite3 instance/template_app.db "UPDATE user_session SET active_time_seconds = 0 WHERE active_time_seconds IS NULL;"
+
+   B) Si usas MySQL/MariaDB:
+      mysql -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h "${MYSQL_HOST}" "${MYSQL_DB}" -e "
+        ALTER TABLE user_session ADD COLUMN active_time_seconds INT DEFAULT 0;
+        ALTER TABLE user_session ADD COLUMN last_heartbeat DATETIME NULL;
+        UPDATE user_session SET active_time_seconds = 0 WHERE active_time_seconds IS NULL;
+      "
+
+   C) Verificar que las columnas se crearon:
+      - SQLite: sqlite3 instance/template_app.db ".schema user_session"
+      - MySQL: mysql ... -e "DESCRIBE user_session;"
+
+      Debe mostrar: active_time_seconds (INTEGER/INT) y last_heartbeat (DATETIME)
+
+7) Verify DB schema (avoid 502 errors):
    - python scripts/diagnostico_db.py | tee "$BACKUP_DIR/db_diagnostico.log"
    - If any required table is missing (ex: user_session), fix before restart:
      - Run migrations again: flask db upgrade
      - If no migrations exist for new tables, last resort:
        python -c "from app_factory import create_app; from models import db; app=create_app('production'); app.app_context().push(); db.create_all()"
 
-7) Critical services (before app restart):
+8) Critical services (before app restart):
    A) Redis
       - systemctl status redis (or redis-server)
       - systemctl start redis (if down)
@@ -112,34 +155,42 @@ INSTRUCTIONS (Linux / Nginx + Gunicorn):
       - systemctl start mysql (if down)
       - mysqladmin ping -u root -p
 
-8) Clear Redis cache (optional but recommended):
+9) Clear Redis cache (optional but recommended):
    - redis-cli KEYS "metrics_cache_*" | xargs redis-cli DEL
 
-9) Restart services in order:
+10) FIX PERMISSIONS (Critical - evita error 500):
+    - sudo chown -R www-data:www-data /var/www/template_app/instance/
+    - sudo chown -R www-data:www-data /var/www/template_app/uploads/
+    - sudo chmod 755 /var/www/template_app/instance/
+    - sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
+
+    O usar el script automático:
+    - sudo ./scripts/actualizar_app.sh
+
+11) Restart services in order:
    - sudo systemctl restart gunicorn
    - sudo systemctl restart nginx
    - sudo systemctl status gunicorn --no-pager
    - sudo systemctl status nginx --no-pager
 
-10) Quick validation:
+12) Quick validation:
    - curl -I https://tu-dominio
-   - Landing page loads with:
-     * Background image sharp (not blurry)
-     * Content centered on screen
-     * 3 steps visible (En revisión, Entrevista, Resultado)
-     * "Acceso de Usuarios Internos" button below steps
-     * Version badge (v1.5.6.7) centered at bottom
+   - Landing page loads correctly
    - Login works
-   - Timeline shows collapsible comments
-   - Advanced metrics -> Actividad validation:
-     * Tab "Actividad de Usuarios" loads without errors
-     * Green badge "Datos en tiempo real" appears (NOT yellow "Modo demostración")
-     * KPIs show real numbers (usuarios activos, sesiones, etc.)
-     * Users online section shows actual connected users
-     * Activity table shows real user data
-     * If yellow badge appears, check server logs for endpoint errors
 
-11) If stash was used:
+   - *** VALIDACIÓN DE ACTIVITY TRACKER (v1.5.6.8) ***:
+     * Abrir DevTools (F12) -> Console
+     * Debe aparecer: "[ActivityTracker] Activity Tracker módulo cargado"
+     * Al hacer login: "📊 Activity Tracker iniciado"
+     * Cada 30 segundos de actividad: "💓 Heartbeat OK - Tiempo activo: Xm"
+
+     * En Métricas Avanzadas -> Actividad de Usuarios:
+       - El tiempo mostrado ahora es TIEMPO ACTIVO (no tiempo de sesión)
+       - Si un usuario deja la sesión abierta sin interactuar, el contador
+         se detiene después de 60 segundos
+       - El tiempo solo aumenta cuando hay clicks, scroll, teclas, etc.
+
+13) If stash was used:
    - git stash list
    - decide apply or keep
 
@@ -147,34 +198,44 @@ INSTRUCTIONS (Linux / Nginx + Gunicorn):
 
 TROUBLESHOOTING:
 =============================================================================
-A) CSS/Styles not updating (old design showing):
+A) Error 500 después de git pull:
+   - CAUSA MÁS COMÚN: Permisos de archivos
+   - SOLUCIÓN:
+     sudo chown -R www-data:www-data /var/www/template_app/instance/
+     sudo chown -R www-data:www-data /var/www/template_app/uploads/
+     sudo systemctl restart gunicorn
+
+B) Error "no such column: user_session.active_time_seconds":
+   - CAUSA: Las nuevas columnas no se agregaron a la base de datos
+   - SOLUCIÓN: Ejecutar paso 6 (agregar columnas SQL)
+
+C) Activity Tracker no funciona:
+   - Verificar que el script está cargado:
+     DevTools -> Network -> activity-tracker.js (debe dar 200 OK)
+   - Verificar consola por errores JavaScript
+   - Verificar que el endpoint funciona:
+     curl -X POST https://tu-dominio/auth/activity-heartbeat \
+       -H "Content-Type: application/json" \
+       -d '{"heartbeat_interval": 30}'
+     (Debe retornar error de sesión, no error 500)
+
+D) CSS/Styles not updating (old design showing):
    - Clear browser cache (Ctrl+Shift+R or Ctrl+F5)
    - Clear Nginx cache:
      sudo rm -rf /var/cache/nginx/*
      sudo systemctl restart nginx
-   - Verify CSS file updated:
-     ls -la static/css/styles.css
-     head -50 static/css/styles.css | grep "LANDING PAGE"
 
-B) Background image blurry:
-   - Check image exists: ls -la static/img/fondo.png
-   - Verify image resolution (should be 1920x1080 or higher)
-   - If still blurry, may need higher resolution source image
-
-C) Layout not centered:
-   - Hard refresh browser (Ctrl+Shift+R)
-   - Check CSS loaded: DevTools -> Network -> styles.css (200 OK)
-   - Verify no local CSS overrides
-
-D) User Activity showing "Modo demostración" (yellow badge):
+E) User Activity showing "Modo demostración" (yellow badge):
    - Check endpoint works: curl -I https://tu-dominio/admin/metricas/actividad-usuarios
    - Review server logs for errors:
      sudo journalctl -u gunicorn -n 100 --no-pager | grep -i "actividad\|error"
-   - Verify UserSession table exists:
-     python -c "from models import UserSession; print('OK')"
-   - Check database connection is working
-   - If endpoint returns 500, check traceback in logs
-   - Click "Cargar datos reales" button to retry
+   - Verify UserSession table has new columns (paso 6)
+
+F) El tiempo de usuarios sigue contando infinitamente:
+   - Asegurarse de que el navegador tiene caché limpio (Ctrl+Shift+R)
+   - Verificar que activity-tracker.js está cargado (Network tab)
+   - Las sesiones ANTIGUAS seguirán mostrando el cálculo legacy
+   - Las sesiones NUEVAS mostrarán el tiempo activo real
 
 =============================================================================
 
@@ -184,3 +245,7 @@ NOTES:
 - Static files (CSS, JS, images) may be cached by Nginx or browser.
 - After CSS changes, always clear caches and hard refresh.
 - If anything fails, use backups in /var/backups/template_app/$TS.
+- El Activity Tracker solo rastrea tiempo cuando la pestaña está VISIBLE y
+  el usuario está ACTIVO (clicks, scroll, teclas).
+- Sesiones antiguas (antes de v1.5.6.8) mostrarán el tiempo legacy hasta
+  que el usuario inicie una nueva sesión.

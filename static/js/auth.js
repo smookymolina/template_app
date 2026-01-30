@@ -110,12 +110,25 @@ const Auth = {
             
             // ✅ SINCRONIZAR con localStorage
             localStorage.setItem('user_data', JSON.stringify(this.currentUser));
-            
+
             console.log('✅ Usuario autenticado:', this.currentUser.email, 'Rol:', this.currentUser.rol);
+
+            // 📊 INICIAR ACTIVITY TRACKER para medir tiempo de uso real
+            if (window.activityTracker && typeof window.activityTracker.start === 'function') {
+                window.activityTracker.start();
+                console.log('📊 Activity Tracker iniciado');
+            }
+
             return this.currentUser;
         } else {
             this.currentUser = null;
             localStorage.removeItem('user_data');
+
+            // 📊 DETENER ACTIVITY TRACKER si no hay usuario
+            if (window.activityTracker && typeof window.activityTracker.stop === 'function') {
+                window.activityTracker.stop();
+            }
+
             return null;
         }
     } catch (err) {

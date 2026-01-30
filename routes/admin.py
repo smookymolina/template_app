@@ -2730,7 +2730,12 @@ def get_actividad_usuarios():
 
 
 def _get_usuarios_online():
-    """Obtiene usuarios actualmente en línea (sesión activa en últimos 15 minutos)"""
+    """
+    Obtiene usuarios actualmente en línea (sesión activa en últimos 15 minutos).
+
+    NUEVO: Usa active_time_seconds para mostrar el tiempo REAL de uso activo,
+    no el tiempo desde que se creó la sesión.
+    """
     try:
         limite_actividad = datetime.utcnow() - timedelta(minutes=15)
 
@@ -2738,6 +2743,7 @@ def _get_usuarios_online():
             UserSession.usuario_id,
             UserSession.created_at,
             UserSession.last_activity,
+            UserSession.active_time_seconds,  # NUEVO: tiempo activo real
             Usuario.nombre,
             Usuario.email,
             Usuario.rol,
@@ -2750,8 +2756,15 @@ def _get_usuarios_online():
 
         usuarios_online = []
         for sesion in sesiones_activas:
-            tiempo_sesion = datetime.utcnow() - sesion.created_at
-            horas, resto = divmod(int(tiempo_sesion.total_seconds()), 3600)
+            # NUEVO: Usar tiempo activo real si está disponible
+            if sesion.active_time_seconds and sesion.active_time_seconds > 0:
+                total_seconds = sesion.active_time_seconds
+            else:
+                # Fallback para sesiones antiguas sin tracking
+                tiempo_sesion = datetime.utcnow() - sesion.created_at
+                total_seconds = int(tiempo_sesion.total_seconds())
+
+            horas, resto = divmod(total_seconds, 3600)
             minutos = resto // 60
 
             if horas > 0:
@@ -2766,6 +2779,7 @@ def _get_usuarios_online():
                 "rol": sesion.rol,
                 "foto_url": url_for('main.serve_profile_image', filename=sesion.foto_url, _external=False) if sesion.foto_url else None,
                 "tiempo_sesion": tiempo_str,
+                "tiempo_activo_segundos": sesion.active_time_seconds or 0,  # NUEVO: dato adicional
                 "last_activity": sesion.last_activity.isoformat() if sesion.last_activity else None
             })
 
@@ -2778,7 +2792,18 @@ def _get_usuarios_online():
 
 
 def _session_duration_minutes(session, now):
-    """Calcula la duracion de una sesion en minutos."""
+    """
+    Calcula la duracion de una sesion en minutos.
+
+    NUEVO: Si la sesión tiene tiempo activo registrado (active_time_seconds),
+    usa ese valor que representa el tiempo REAL de uso activo.
+    Si no, usa el cálculo legacy (last_activity - created_at) como fallback.
+    """
+    # PRIORIDAD: Usar tiempo activo real si está disponible
+    if hasattr(session, 'active_time_seconds') and session.active_time_seconds and session.active_time_seconds > 0:
+        return session.active_time_seconds // 60
+
+    # FALLBACK: Cálculo legacy para sesiones antiguas sin tracking de actividad
     start = session.created_at or session.last_activity or now
     end = session.last_activity or session.created_at or now
     if session.expires_at and end > session.expires_at:

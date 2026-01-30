@@ -143,7 +143,7 @@ def logout_usuario():
 @auth_bp.route('/activity-ping', methods=['POST'])
 @login_required
 def activity_ping():
-    """Actualiza la actividad de la sesion actual."""
+    """Actualiza la actividad de la sesion actual (solo last_activity, sin acumular tiempo)."""
     try:
         cookie_name = current_app.config.get('USER_SESSION_COOKIE_NAME', 'user_session')
         session_token = request.cookies.get(cookie_name, '')
@@ -162,6 +162,64 @@ def activity_ping():
     except Exception as e:
         current_app.logger.error(f"Error al actualizar sesion: {str(e)}")
         return jsonify({"success": False, "message": f"Error al actualizar sesion: {str(e)}"}), 500
+
+
+@auth_bp.route('/activity-heartbeat', methods=['POST'])
+@login_required
+def activity_heartbeat():
+    """
+    📊 ENDPOINT: Registra heartbeat de actividad REAL del usuario.
+
+    Este endpoint debe llamarse solo cuando el usuario está ACTIVAMENTE usando la app:
+    - Clicks, scroll, teclas, movimiento del mouse, etc.
+    - NO se debe llamar si la pestaña está en segundo plano o el usuario está inactivo.
+
+    El frontend envía heartbeats cada X segundos SOLO cuando detecta actividad.
+    El tiempo activo se acumula de forma inteligente (no cuenta gaps largos).
+
+    Request body (opcional):
+        {
+            "heartbeat_interval": 30  // Intervalo en segundos (default: 30)
+        }
+
+    Response:
+        {
+            "success": true,
+            "active_time_seconds": 1234,
+            "active_time_formatted": "20m"
+        }
+    """
+    try:
+        cookie_name = current_app.config.get('USER_SESSION_COOKIE_NAME', 'user_session')
+        session_token = request.cookies.get(cookie_name, '')
+
+        if not session_token:
+            return jsonify({"success": False, "message": "Sesion no encontrada"}), 400
+
+        user_session = UserSession.query.filter_by(
+            session_token=session_token,
+            usuario_id=current_user.id,
+            is_valid=True
+        ).first()
+
+        if not user_session:
+            return jsonify({"success": False, "message": "Sesion no encontrada"}), 404
+
+        # Obtener intervalo del request (default 30 segundos)
+        data = request.get_json(silent=True) or {}
+        heartbeat_interval = data.get('heartbeat_interval', 30)
+
+        # Registrar el heartbeat y acumular tiempo activo
+        result = user_session.register_activity_heartbeat(heartbeat_interval_seconds=heartbeat_interval)
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error al registrar heartbeat de actividad: {str(e)}")
+        return jsonify({
+            "success": False,
+            "message": f"Error al registrar heartbeat: {str(e)}"
+        }), 500
 
 @auth_bp.route('/check-auth', methods=['GET'])
 def check_auth():
