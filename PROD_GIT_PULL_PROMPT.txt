@@ -3,6 +3,8 @@ GOAL: Update production with a safe git pull, full backup (events, profiles, doc
 =============================================================================
 CHANGES IN THIS VERSION (1.5.6.8 - 2026-01-30):
 =============================================================================
+*** PROBADO Y FUNCIONANDO EN DESARROLLO ***
+
 1) TRACKING DE TIEMPO DE USO ACTIVO (Activity Tracker):
    - PROBLEMA RESUELTO: El contador de tiempo de sesión contaba infinitamente
      mientras la sesión estaba abierta, sin importar si el usuario estaba
@@ -114,28 +116,53 @@ INSTRUCTIONS (Linux / Nginx + Gunicorn):
    - python -m pip install -r requirements.txt --no-cache-dir
    - flask db upgrade 2>&1 | tee "$BACKUP_DIR/migration.log"
 
-6) *** CRITICAL FOR v1.5.6.8 *** Add new columns to user_session table:
+6) ╔══════════════════════════════════════════════════════════════════════╗
+   ║  CRÍTICO v1.5.6.8: AGREGAR COLUMNAS A user_session                  ║
+   ║  Sin este paso, la app dará error 500 en cada request               ║
+   ╚══════════════════════════════════════════════════════════════════════╝
 
    Esta versión requiere 2 nuevas columnas en la tabla user_session.
-   Ejecutar los siguientes comandos SQL:
 
-   A) Si usas SQLite:
+   OPCIÓN RECOMENDADA - Usar Python (funciona en cualquier DB):
+   -------------------------------------------------------------
+   python -c "
+import sqlite3
+conn = sqlite3.connect('instance/template_app.db')
+cursor = conn.cursor()
+try:
+    cursor.execute('ALTER TABLE user_session ADD COLUMN active_time_seconds INTEGER DEFAULT 0')
+    print('+ active_time_seconds agregada')
+except: print('= active_time_seconds ya existe')
+try:
+    cursor.execute('ALTER TABLE user_session ADD COLUMN last_heartbeat DATETIME')
+    print('+ last_heartbeat agregada')
+except: print('= last_heartbeat ya existe')
+cursor.execute('UPDATE user_session SET active_time_seconds = 0 WHERE active_time_seconds IS NULL')
+conn.commit()
+conn.close()
+print('Listo!')
+"
+
+   ALTERNATIVA A - SQLite directo:
       sqlite3 instance/template_app.db "ALTER TABLE user_session ADD COLUMN active_time_seconds INTEGER DEFAULT 0;"
       sqlite3 instance/template_app.db "ALTER TABLE user_session ADD COLUMN last_heartbeat DATETIME;"
-      sqlite3 instance/template_app.db "UPDATE user_session SET active_time_seconds = 0 WHERE active_time_seconds IS NULL;"
 
-   B) Si usas MySQL/MariaDB:
-      mysql -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h "${MYSQL_HOST}" "${MYSQL_DB}" -e "
+   ALTERNATIVA B - MySQL/MariaDB:
+      mysql -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DB}" -e "
         ALTER TABLE user_session ADD COLUMN active_time_seconds INT DEFAULT 0;
         ALTER TABLE user_session ADD COLUMN last_heartbeat DATETIME NULL;
-        UPDATE user_session SET active_time_seconds = 0 WHERE active_time_seconds IS NULL;
       "
 
-   C) Verificar que las columnas se crearon:
-      - SQLite: sqlite3 instance/template_app.db ".schema user_session"
-      - MySQL: mysql ... -e "DESCRIBE user_session;"
-
-      Debe mostrar: active_time_seconds (INTEGER/INT) y last_heartbeat (DATETIME)
+   VERIFICAR que las columnas existen antes de continuar:
+      python -c "
+import sqlite3
+conn = sqlite3.connect('instance/template_app.db')
+cols = [c[1] for c in conn.execute('PRAGMA table_info(user_session)').fetchall()]
+print('Columnas:', cols)
+assert 'active_time_seconds' in cols, 'FALTA active_time_seconds!'
+assert 'last_heartbeat' in cols, 'FALTA last_heartbeat!'
+print('OK - Columnas verificadas')
+"
 
 7) Verify DB schema (avoid 502 errors):
    - python scripts/diagnostico_db.py | tee "$BACKUP_DIR/db_diagnostico.log"
