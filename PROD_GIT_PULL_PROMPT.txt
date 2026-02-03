@@ -1,11 +1,51 @@
 GOAL: Update production with a safe git pull, full backup (events, profiles, docs), save migration state, and restart Nginx + Gunicorn with Redis/MySQL running.
 
 =============================================================================
-CHANGES IN THIS VERSION (1.5.6.8 - 2026-01-30):
+CHANGES IN THIS VERSION (1.5.6.8 - 2026-02-03):
 =============================================================================
 *** PROBADO Y FUNCIONANDO EN DESARROLLO ***
 
-1) TRACKING DE TIEMPO DE USO ACTIVO (Activity Tracker):
+1) FIX: CAMBIO DE ESTADO DE RECLUTAS PARA GERENTES:
+   - PROBLEMA RESUELTO: Los gerentes no podían guardar cambios al modificar
+     el estado de un recluta desde la sección de gestión de reclutas.
+     El error mostraba: "Error interno: No se pudo identificar el recluta"
+
+   - CAUSAS IDENTIFICADAS:
+     * Faltaba verificación de permisos para gerentes en el backend
+     * La variable currentReclutaId no se preservaba entre llamadas
+     * Mensajes de error poco descriptivos
+
+   - SOLUCIÓN IMPLEMENTADA (5 pasos):
+
+     PASO 1 - Verificación de permisos para gerentes (routes/api.py):
+       * Gerentes ahora solo pueden modificar reclutas de su equipo:
+         - Reclutas asignados directamente al gerente (asesor_id = gerente.id)
+         - Reclutas de sus asesores (asesor_id IN [ids de sus asesores])
+       * Log de advertencia cuando un gerente intenta modificar sin permisos
+
+     PASO 2 - Mejor manejo de errores (static/js/reclutas.js):
+       * Mensajes de error más específicos según el tipo de problema
+       * Diferencia entre errores de permisos (403) y validación (400)
+
+     PASO 3 - Logs de depuración (static/js/reclutas.js):
+       * Console logs detallados en updateRecluta para rastrear cada paso
+       * Información del rol del usuario, datos enviados y respuestas
+
+     PASO 4 - Validación de estado (static/js/reclutas.js):
+       * Validación del estado antes de enviar al servidor
+       * Solo acepta: 'Activo', 'En proceso', 'Rechazado'
+
+     PASO 5 - Fallbacks para currentReclutaId (static/js/reclutas.js):
+       * enableEditMode() y saveReclutaChanges() ahora obtienen el ID de:
+         - this.currentReclutaId (fuente principal)
+         - modal.dataset.reclutaId (del atributo data del modal)
+         - window.Reclutas.currentReclutaId (respaldo global)
+
+   - FILES MODIFIED:
+     * routes/api.py - Verificación de permisos para gerentes + logging
+     * static/js/reclutas.js - Fallbacks, validación y mejor manejo de errores
+
+2) TRACKING DE TIEMPO DE USO ACTIVO (Activity Tracker):
    - PROBLEMA RESUELTO: El contador de tiempo de sesión contaba infinitamente
      mientras la sesión estaba abierta, sin importar si el usuario estaba
      usando la app o no.
@@ -50,8 +90,9 @@ CHANGES IN THIS VERSION (1.5.6.8 - 2026-01-30):
      * templates/base.html - Inclusión del script
 
 =============================================================================
-PREVIOUS VERSION (1.5.6.7 - 2026-01-28):
+PREVIOUS VERSION (1.5.6.7 - 2026-01-30):
 =============================================================================
+- Tracking de tiempo de uso activo (Activity Tracker)
 - Landing Page Redesign (3 pasos, diseño centrado)
 - Timeline comentarios colapsables
 - Actividad de Usuarios con datos reales
@@ -205,6 +246,16 @@ print('OK - Columnas verificadas')
    - Landing page loads correctly
    - Login works
 
+   - *** VALIDACIÓN DE CAMBIO DE ESTADO (v1.5.6.8) ***:
+     * Iniciar sesión como GERENTE (gerente1@example.com)
+     * Ir a Gestión de Reclutas
+     * Hacer clic en un recluta de su equipo -> Ver detalles
+     * Hacer clic en "Editar"
+     * Cambiar el estado (Activo/En proceso/Rechazado)
+     * Hacer clic en "Guardar Cambios"
+     * Debe aparecer: "Recluta X actualizado con éxito"
+     * Si hay error, revisar consola (F12) para logs detallados
+
    - *** VALIDACIÓN DE ACTIVITY TRACKER (v1.5.6.8) ***:
      * Abrir DevTools (F12) -> Console
      * Debe aparecer: "[ActivityTracker] Activity Tracker módulo cargado"
@@ -225,18 +276,33 @@ print('OK - Columnas verificadas')
 
 TROUBLESHOOTING:
 =============================================================================
-A) Error 500 después de git pull:
+A) Gerente no puede guardar cambios en reclutas:
+   - CAUSA 1: "Error interno: No se pudo identificar el recluta"
+     * El ID del recluta no se está preservando
+     * SOLUCIÓN: Limpiar caché del navegador (Ctrl+Shift+R)
+     * El fix agrega fallbacks automáticos para obtener el ID
+
+   - CAUSA 2: "No tienes permisos para modificar este recluta"
+     * El gerente intenta modificar un recluta que NO es de su equipo
+     * Solo puede modificar: reclutas propios o de sus asesores asignados
+     * VERIFICAR: El recluta tiene asesor_id = gerente.id o asesor asignado
+
+   - DEPURACIÓN: Abrir consola (F12) y buscar logs:
+     * "[saveReclutaChanges]" muestra el flujo de guardado
+     * "[updateRecluta]" muestra datos enviados y respuesta del servidor
+
+B) Error 500 después de git pull:
    - CAUSA MÁS COMÚN: Permisos de archivos
    - SOLUCIÓN:
      sudo chown -R www-data:www-data /var/www/template_app/instance/
      sudo chown -R www-data:www-data /var/www/template_app/uploads/
      sudo systemctl restart gunicorn
 
-B) Error "no such column: user_session.active_time_seconds":
+C) Error "no such column: user_session.active_time_seconds":
    - CAUSA: Las nuevas columnas no se agregaron a la base de datos
    - SOLUCIÓN: Ejecutar paso 6 (agregar columnas SQL)
 
-C) Activity Tracker no funciona:
+D) Activity Tracker no funciona:
    - Verificar que el script está cargado:
      DevTools -> Network -> activity-tracker.js (debe dar 200 OK)
    - Verificar consola por errores JavaScript
@@ -246,19 +312,19 @@ C) Activity Tracker no funciona:
        -d '{"heartbeat_interval": 30}'
      (Debe retornar error de sesión, no error 500)
 
-D) CSS/Styles not updating (old design showing):
+E) CSS/Styles not updating (old design showing):
    - Clear browser cache (Ctrl+Shift+R or Ctrl+F5)
    - Clear Nginx cache:
      sudo rm -rf /var/cache/nginx/*
      sudo systemctl restart nginx
 
-E) User Activity showing "Modo demostración" (yellow badge):
+F) User Activity showing "Modo demostración" (yellow badge):
    - Check endpoint works: curl -I https://tu-dominio/admin/metricas/actividad-usuarios
    - Review server logs for errors:
      sudo journalctl -u gunicorn -n 100 --no-pager | grep -i "actividad\|error"
    - Verify UserSession table has new columns (paso 6)
 
-F) El tiempo de usuarios sigue contando infinitamente:
+G) El tiempo de usuarios sigue contando infinitamente:
    - Asegurarse de que el navegador tiene caché limpio (Ctrl+Shift+R)
    - Verificar que activity-tracker.js está cargado (Network tab)
    - Las sesiones ANTIGUAS seguirán mostrando el cálculo legacy
