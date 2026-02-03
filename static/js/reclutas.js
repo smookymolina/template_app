@@ -2503,6 +2503,10 @@ const Reclutas = {
     updateRecluta: async function(id, reclutaData, foto = null) {
         try {
             let response;
+            console.log(`🔄 [updateRecluta] Iniciando actualización del recluta ${id}`);
+            console.log(`📋 [updateRecluta] Datos a enviar:`, JSON.stringify(reclutaData, null, 2));
+            console.log(`📷 [updateRecluta] Con foto:`, foto ? 'Sí' : 'No');
+            console.log(`👤 [updateRecluta] Rol del usuario actual:`, this.userRole);
 
             // Si hay foto, usar FormData
             if (foto) {
@@ -2516,12 +2520,14 @@ const Reclutas = {
                 // Añadir foto
                 formData.append('foto', foto);
 
+                console.log(`📤 [updateRecluta] Enviando con FormData a: ${CONFIG.API_URL}/reclutas/${id}`);
                 response = await fetch(`${CONFIG.API_URL}/reclutas/${id}`, {
                     method: 'PUT',
                     body: formData
                 });
             } else {
                 // Sin foto, usar JSON
+                console.log(`📤 [updateRecluta] Enviando JSON a: ${CONFIG.API_URL}/reclutas/${id}`);
                 response = await fetch(`${CONFIG.API_URL}/reclutas/${id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -2529,25 +2535,32 @@ const Reclutas = {
                 });
             }
 
+            console.log(`📥 [updateRecluta] Respuesta recibida - Status: ${response.status}`);
+
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error(`❌ [updateRecluta] Error del servidor:`, errorData);
                 throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
             }
 
             const data = await response.json();
+            console.log(`📥 [updateRecluta] Datos de respuesta:`, data);
+
             if (data.success) {
                 // Actualizar en la lista local si ya está cargado
                 const index = this.reclutas.findIndex(r => r.id === id);
                 if (index !== -1) {
                     this.reclutas[index] = data.recluta;
+                    console.log(`✅ [updateRecluta] Lista local actualizada en índice ${index}`);
                 }
 
                 return data.recluta;
             } else {
+                console.error(`❌ [updateRecluta] Respuesta sin éxito:`, data);
                 throw new Error(data.message || 'Error al actualizar recluta');
             }
         } catch (error) {
-            console.error(`Error al actualizar recluta ${id}:`, error);
+            console.error(`❌ [updateRecluta] Error al actualizar recluta ${id}:`, error);
             throw error;
         }
     },
@@ -2705,16 +2718,38 @@ const Reclutas = {
      * Habilita el modo de edición en el modal de detalles
      */
     enableEditMode: function() {
-        if (!this.currentReclutaId) return;
+        // Intentar obtener el ID del recluta de múltiples fuentes
+        let reclutaId = this.currentReclutaId;
+
+        // Fallback: obtener del dataset del modal
+        if (!reclutaId) {
+            const viewModal = document.getElementById('view-recluta-modal');
+            const modalReclutaId = viewModal ? viewModal.dataset.reclutaId : null;
+            if (modalReclutaId) {
+                reclutaId = parseInt(modalReclutaId, 10);
+                if (!Number.isNaN(reclutaId)) {
+                    this.currentReclutaId = reclutaId;
+                    console.log('🔄 [enableEditMode] ID recuperado del modal:', reclutaId);
+                }
+            }
+        }
+
+        if (!reclutaId) {
+            console.error('❌ [enableEditMode] No hay recluta seleccionado');
+            return;
+        }
 
         const viewButtons = document.getElementById('view-mode-buttons');
         const editForm = document.getElementById('edit-mode-form');
-        
+
         if (!viewButtons || !editForm) return;
 
         // Obtener datos actuales
-        const recluta = this.reclutas.find(r => r.id === this.currentReclutaId);
-        if (!recluta) return;
+        const recluta = this.reclutas.find(r => r.id === reclutaId);
+        if (!recluta) {
+            console.error('❌ [enableEditMode] Recluta no encontrado en la lista local, ID:', reclutaId);
+            return;
+        }
 
         // Rellenar formulario
         document.getElementById('edit-recluta-nombre').value = recluta.nombre || '';
@@ -2775,21 +2810,66 @@ const Reclutas = {
      * Guarda los cambios realizados en la edición del recluta
      */
     saveReclutaChanges: async function() {
-        if (!this.currentReclutaId) return;
+        // Intentar obtener el ID del recluta de múltiples fuentes
+        let reclutaId = this.currentReclutaId;
+
+        // Fallback: obtener del dataset del modal
+        if (!reclutaId) {
+            const viewModal = document.getElementById('view-recluta-modal');
+            const modalReclutaId = viewModal ? viewModal.dataset.reclutaId : null;
+            if (modalReclutaId) {
+                reclutaId = parseInt(modalReclutaId, 10);
+                if (!Number.isNaN(reclutaId)) {
+                    this.currentReclutaId = reclutaId;
+                    console.log('🔄 [saveReclutaChanges] ID recuperado del modal:', reclutaId);
+                }
+            }
+        }
+
+        // Fallback: obtener de window.Reclutas
+        if (!reclutaId && window.Reclutas && window.Reclutas.currentReclutaId) {
+            reclutaId = window.Reclutas.currentReclutaId;
+            this.currentReclutaId = reclutaId;
+            console.log('🔄 [saveReclutaChanges] ID recuperado de window.Reclutas:', reclutaId);
+        }
+
+        if (!reclutaId) {
+            console.error('❌ [saveReclutaChanges] No hay currentReclutaId definido');
+            showError('Error interno: No se pudo identificar el recluta. Cierra el modal e intenta de nuevo.');
+            return;
+        }
+
+        console.log('💾 [saveReclutaChanges] Iniciando guardado para recluta:', reclutaId);
 
         // Obtener datos del formulario de edición
+        const estadoElement = document.getElementById('edit-recluta-estado');
+        const estadoValue = estadoElement?.value || '';
+
+        console.log('📊 [saveReclutaChanges] Estado seleccionado:', estadoValue);
+        console.log('📊 [saveReclutaChanges] Opciones disponibles:', estadoElement ? Array.from(estadoElement.options).map(o => o.value) : 'N/A');
+
         const reclutaData = {
             nombre: document.getElementById('edit-recluta-nombre')?.value || '',
             email: document.getElementById('edit-recluta-email')?.value || '',
             telefono: document.getElementById('edit-recluta-telefono')?.value || '',
             puesto: document.getElementById('edit-recluta-puesto')?.value || '',
-            estado: document.getElementById('edit-recluta-estado')?.value || '',
+            estado: estadoValue,
             notas: document.getElementById('edit-recluta-notas')?.value || ''
         };
+
+        console.log('📋 [saveReclutaChanges] Datos recopilados:', reclutaData);
 
         // Validaciones básicas
         if (!reclutaData.nombre || !reclutaData.email || !reclutaData.telefono) {
             showError('Completa todos los campos requeridos');
+            return;
+        }
+
+        // Validar estado
+        const estadosValidos = ['Activo', 'En proceso', 'Rechazado'];
+        if (!reclutaData.estado || !estadosValidos.includes(reclutaData.estado)) {
+            console.error('❌ [saveReclutaChanges] Estado inválido:', reclutaData.estado);
+            showError('Por favor selecciona un estado válido');
             return;
         }
 
@@ -2800,21 +2880,34 @@ const Reclutas = {
         }
 
         try {
-            const updatedRecluta = await this.updateRecluta(this.currentReclutaId, reclutaData);
+            console.log('📤 Enviando datos para actualizar recluta:', reclutaId, reclutaData);
+            const updatedRecluta = await this.updateRecluta(reclutaId, reclutaData);
+            console.log('✅ Recluta actualizado correctamente:', updatedRecluta);
             showSuccess(`Recluta "${updatedRecluta.nombre}" actualizado con éxito`);
-            
+
             // Volver al modo vista
             this.cancelEdit();
-            
+
             // Actualizar la vista de detalles
-            this.viewRecluta(this.currentReclutaId);
+            this.viewRecluta(reclutaId);
 
             // Recargar dashboard completo
             this.refreshDashboard();
-            
+
         } catch (error) {
-            console.error('Error al guardar cambios:', error);
-            showError('Error al guardar los cambios: ' + error.message);
+            console.error('❌ Error al guardar cambios:', error);
+            // Mostrar mensaje de error más específico
+            let mensajeError = 'Error al guardar los cambios';
+            if (error.message) {
+                if (error.message.includes('permisos') || error.message.includes('403')) {
+                    mensajeError = 'No tienes permisos para modificar este recluta';
+                } else if (error.message.includes('validación') || error.message.includes('400')) {
+                    mensajeError = 'Error de validación: ' + error.message;
+                } else {
+                    mensajeError = error.message;
+                }
+            }
+            showError(mensajeError);
         } finally {
             if (saveButton) {
                 saveButton.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios';

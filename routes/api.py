@@ -413,41 +413,71 @@ def update_recluta(id):
     """
     Actualiza un recluta existente.
     Para asesores, verifica que el recluta esté asignado a ellos.
+    Para gerentes, verifica que el recluta pertenezca a su equipo.
     """
     try:
         recluta = Recluta.get_by_id(id)
         if not recluta:
             return jsonify({"success": False, "message": "Recluta no encontrado"}), 404
-        
+
         # Verificar permisos según rol
-        if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+        user_role = getattr(current_user, 'rol', None)
+
+        if user_role == 'asesor':
             if recluta.asesor_id != current_user.id:
                 return jsonify({
-                    "success": False, 
+                    "success": False,
                     "message": "No tienes permisos para modificar este recluta"
                 }), 403
+        elif user_role == 'gerente':
+            # Gerente puede modificar sus propios reclutas y los de sus asesores
+            mis_asesores_ids = [asesor.id for asesor in current_user.get_mis_asesores()]
+            recluta_permitido = (
+                recluta.asesor_id == current_user.id or  # Recluta propio del gerente
+                recluta.asesor_id in mis_asesores_ids    # Recluta de uno de sus asesores
+            )
+            if not recluta_permitido:
+                current_app.logger.warning(f"Gerente {current_user.id} intentó modificar recluta {id} sin permisos")
+                return jsonify({
+                    "success": False,
+                    "message": "No tienes permisos para modificar este recluta. Solo puedes modificar reclutas de tu equipo."
+                }), 403
         
+        # Log de acceso permitido
+        current_app.logger.info(f"Usuario {current_user.id} ({user_role}) - Actualizando recluta {id}")
+
         if request.is_json:
             data = request.get_json()
         else:
             data = request.form.to_dict()
-            
+
+        current_app.logger.debug(f"Datos recibidos para actualización: {data}")
+
         # Validar datos
         try:
             validated_data = validate_recluta_data(data, is_update=True)
+            current_app.logger.debug(f"Datos validados: {validated_data}")
         except ValidationError as e:
+            current_app.logger.warning(f"Error de validación en recluta {id}: {e.args[0]}")
             return jsonify({"success": False, "message": "Error de validación", "errors": e.args[0]}), 400
-        
+
         # Para asesores, no permitir cambiar el asesor_id
-        if hasattr(current_user, 'rol') and current_user.rol == 'asesor':
+        if user_role == 'asesor':
             if 'asesor_id' in validated_data:
                 # Ignorar el asesor_id enviado y mantener el actual
                 validated_data['asesor_id'] = current_user.id
-        
+
+        # Log de cambio de estado si aplica
+        if 'estado' in validated_data and validated_data['estado'] != recluta.estado:
+            current_app.logger.info(
+                f"Cambio de estado recluta {id}: '{recluta.estado}' -> '{validated_data['estado']}' "
+                f"por usuario {current_user.id} ({user_role})"
+            )
+
         # Actualizar campos
         for key, value in validated_data.items():
             setattr(recluta, key, value)
-        
+
         # Procesar foto si existe
         if 'foto' in request.files:
             archivo = request.files['foto']
@@ -455,15 +485,18 @@ def update_recluta(id):
                 # Eliminar foto anterior si existe
                 if recluta.foto_url:
                     eliminar_archivo(recluta.foto_url)
-                    
+
                 ruta_relativa = guardar_archivo(archivo, 'recluta')
                 if ruta_relativa:
                     recluta.foto_url = ruta_relativa
-        
+
         # Guardar cambios
         try:
             recluta.save()
-            current_app.logger.info(f"Recluta actualizado: {recluta.id} - {recluta.nombre}")
+            current_app.logger.info(
+                f"✅ Recluta {recluta.id} actualizado exitosamente por {user_role} {current_user.id} - "
+                f"Nombre: {recluta.nombre}, Estado: {recluta.estado}"
+            )
             return jsonify({"success": True, "recluta": recluta.serialize()})
         except DatabaseError as e:
             return jsonify({"success": False, "message": str(e)}), 500
