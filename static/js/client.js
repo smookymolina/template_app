@@ -316,128 +316,6 @@ const Client = {
     },
     
     /**
-     * Renderiza la sección de próxima entrevista
-     * @param {Object} entrevista - Datos de la entrevista
-     * @returns {string} - HTML de la sección
-     */
-    renderEntrevistaSection: function(entrevista) {
-        if (!entrevista) return '';
-        
-        return `
-            <div class="tracking-section">
-                <h4>Próxima Entrevista</h4>
-                <div class="tracking-row">
-                    <div class="tracking-label">Fecha:</div>
-                    <div class="tracking-value">${entrevista.fecha}</div>
-                </div>
-                <div class="tracking-row">
-                    <div class="tracking-label">Hora:</div>
-                    <div class="tracking-value">${entrevista.hora}</div>
-                </div>
-                <div class="tracking-row">
-                    <div class="tracking-label">Tipo:</div>
-                    <div class="tracking-value">${this.getEntrevistaType(entrevista.tipo)}</div>
-                </div>
-            </div>
-        `;
-    },
-    
-    /**
-     * Obtiene el texto descriptivo del tipo de entrevista
-     * @param {string} tipo - Tipo de entrevista
-     * @returns {string} - Descripción del tipo
-     */
-    getEntrevistaType: function(tipo) {
-        switch(tipo) {
-            case 'presencial': return 'Presencial';
-            case 'virtual': return 'Virtual (Videollamada)';
-            case 'telefonica': return 'Telefónica';
-            default: return tipo;
-        }
-    },
-    
-    /**
-     * Renderiza los items de la timeline según el estado
-     * @param {string} currentStatus - Estado actual del recluta
-     * @returns {string} - HTML de la timeline
-     */
-    renderTimelineItems: function(currentStatus) {
-        // Mapear estados del sistema a estados de la timeline
-        const statusMap = {
-            'En proceso': 'revision',
-            'Activo': 'finalizada',
-            'Rechazado': 'finalizada'
-        };
-        
-        // Estado mapeado o por defecto
-        const timelineStatus = statusMap[currentStatus] || 'recibida';
-        
-        // Orden de los estados
-        const statusOrder = ['recibida', 'revision', 'entrevista', 'evaluacion', 'finalizada'];
-        const currentIndex = statusOrder.indexOf(timelineStatus);
-        
-        // Generar los items
-        let timelineHTML = '';
-        
-        statusOrder.forEach((status, index) => {
-            // Determinar clase según el estado actual
-            let itemClass = 'timeline-item';
-            if (index < currentIndex) {
-                itemClass += ' completed';
-            } else if (index === currentIndex) {
-                itemClass += ' active';
-            }
-            
-            // Contenido según el estado
-            let content = '';
-            switch(status) {
-                case 'recibida':
-                    content = `
-                        <h4>Recibida</h4>
-                        <p>Documentación recibida y registrada en el sistema.</p>
-                    `;
-                    break;
-                case 'revision':
-                    content = `
-                        <h4>En revisión</h4>
-                        <p>Evaluación inicial de requisitos y perfil.</p>
-                    `;
-                    break;
-                case 'entrevista':
-                    content = `
-                        <h4>Entrevista</h4>
-                        <p>Programación y realización de entrevistas.</p>
-                    `;
-                    break;
-                case 'evaluacion':
-                    content = `
-                        <h4>Evaluación</h4>
-                        <p>Análisis de resultados y toma de decisiones.</p>
-                    `;
-                    break;
-                case 'finalizada':
-                    content = `
-                        <h4>Finalizada</h4>
-                        <p>Proceso completado con decisión final.</p>
-                    `;
-                    break;
-            }
-            
-            // Generar HTML del item
-            timelineHTML += `
-                <div class="${itemClass}" data-status="${status}">
-                    <div class="timeline-marker"></div>
-                    <div class="timeline-content">
-                        ${content}
-                    </div>
-                </div>
-            `;
-        });
-        
-        return timelineHTML;
-    },
-    
-    /**
      * Muestra los resultados del seguimiento
      * @param {Object} info - Información del seguimiento
      * @param {boolean} isInModal - Indica si se muestra en el modal o en la página principal
@@ -448,66 +326,123 @@ const Client = {
             this.setFormState('error', 'No se encontró información para este folio');
             return;
         }
-        
+
         const formId = isInModal ? 'modal-tracking-form' : 'tracking-form';
         const resultsId = isInModal ? 'modal-results' : 'tracking-results';
-        
+
         const trackingForm = document.getElementById(formId);
         const resultsContainer = document.getElementById(resultsId);
-        
+
         if (!resultsContainer) {
             console.error(`Error: No se encontró el contenedor de resultados: ${resultsId}`);
             this.setFormState('error', 'Error interno al mostrar resultados');
             return;
         }
-        
+
         if (trackingForm) trackingForm.style.display = 'none';
-        
+
+        // Expandir modal si estamos dentro de uno
+        const modalContent = resultsContainer.closest('.modal-content');
+        if (modalContent) modalContent.classList.add('modal-tracking-expanded');
+
         const estadoBadge = info.estado ? this.getBadgeClass(info.estado) : 'badge-secondary';
-        
-        resultsContainer.innerHTML = `
-            <div class="tracking-result-card">
-                <h3>Información de Proceso</h3>
-                <div class="tracking-info">
-                     <div class="tracking-row">
-                        <div class="tracking-label">Candidato:</div>
-                        <div class="tracking-value">${info.nombre || 'No disponible'}</div>
+        const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 120'%3E%3Cdefs%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%23667eea'/%3E%3Cstop offset='100%25' style='stop-color:%23764ba2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='60' cy='60' r='60' fill='url(%23bg)'/%3E%3Ccircle cx='60' cy='45' r='20' fill='rgba(255,255,255,0.85)'/%3E%3Cellipse cx='60' cy='95' rx='32' ry='24' fill='rgba(255,255,255,0.85)'/%3E%3C/svg%3E";
+        const fotoSrc = info.foto_url ? this.buildFotoUrl(info.foto_url) : defaultAvatar;
+        const nombre = this.escapeHtml(info.nombre || 'Candidato');
+        const estado = this.escapeHtml(info.estado || 'Desconocido');
+        const puesto = info.puesto ? this.escapeHtml(info.puesto) : '';
+        const folioDisplay = folio ? this.escapeHtml(folio) : '';
+
+        // Entrevista HTML
+        let entrevistaHTML = '';
+        if (info.proxima_entrevista) {
+            const ent = info.proxima_entrevista;
+            const tipoTexto = this.getEntrevistaType(ent.tipo);
+            entrevistaHTML = `
+                <div class="tp-interview">
+                    <div class="tp-interview-icon"><i class="fas fa-calendar-check"></i></div>
+                    <div class="tp-interview-info">
+                        <span class="tp-interview-label">Proxima entrevista</span>
+                        <span class="tp-interview-date">${this.escapeHtml(ent.fecha)} - ${this.escapeHtml(ent.hora)}</span>
+                        <span class="tp-interview-type">${this.escapeHtml(tipoTexto)}</span>
                     </div>
-                    <div class="tracking-row">
-                        <div class="tracking-label">Estado:</div>
-                        <div class="tracking-value">
-                            <span class="badge ${estadoBadge}">${info.estado || 'Desconocido'}</span>
+                </div>
+            `;
+        }
+
+        resultsContainer.innerHTML = `
+            <div class="tracking-profile">
+                <div class="tp-header">
+                    <div class="tp-photo-wrapper">
+                        <img class="tp-photo" src="${fotoSrc}" alt="Foto del candidato" onerror="this.src='${defaultAvatar}'">
+                    </div>
+                    <div class="tp-info">
+                        <h2 class="tp-name">${nombre}</h2>
+                        ${puesto ? `<p class="tp-position"><i class="fas fa-briefcase"></i> ${puesto}</p>` : ''}
+                        <div class="tp-status">
+                            <span class="badge ${estadoBadge}">${estado}</span>
+                            ${folioDisplay ? `<span class="tp-folio"><i class="fas fa-hashtag"></i> ${folioDisplay}</span>` : ''}
                         </div>
                     </div>
                 </div>
+
+                <div class="tp-details">
+                    ${info.fecha_registro ? `
+                        <div class="tp-detail-item">
+                            <i class="fas fa-calendar-plus"></i>
+                            <div>
+                                <span class="tp-detail-label">Registro</span>
+                                <span class="tp-detail-value">${this.escapeHtml(info.fecha_registro)}</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${info.ultima_actualizacion ? `
+                        <div class="tp-detail-item">
+                            <i class="fas fa-sync-alt"></i>
+                            <div>
+                                <span class="tp-detail-label">Actualizado</span>
+                                <span class="tp-detail-value">${this.escapeHtml(info.ultima_actualizacion)}</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                ${entrevistaHTML}
             </div>
-            
+
             <div class="timeline-container" id="client-timeline-container">
-                <h3>Línea de Tiempo del Proceso</h3>
-                <div class="timeline-filter-controls">
-                    <button class="filter-btn active" data-status="all">Todos</button>
-                    <button class="filter-btn" data-status="completed">Completados</button>
-                    <button class="filter-btn" data-status="pending">Pendientes</button>
+                <div class="tp-timeline-header">
+                    <h3><i class="fas fa-route"></i> Linea de Seguimiento</h3>
+                    <div class="timeline-filter-controls">
+                        <button class="filter-btn active" data-status="all">Todos</button>
+                        <button class="filter-btn" data-status="completed">Completados</button>
+                        <button class="filter-btn" data-status="pending">Pendientes</button>
+                    </div>
                 </div>
                 <div class="timeline" id="client-timeline">
                     <div class="loading-timeline">
                         <i class="fas fa-spinner fa-spin"></i>
-                        <span>Cargando línea de tiempo...</span>
+                        <span>Cargando linea de tiempo...</span>
                     </div>
                 </div>
             </div>
 
-            <button class="download-docs-btn" type="button">
-                <i class="fas fa-file-archive"></i> Descargar documentos
-            </button>
-            
-            <button class="btn-secondary new-query-btn">
-                <i class="fas fa-arrow-left"></i> Realizar otra consulta
-            </button>
+            <div class="tp-actions">
+                <button class="download-docs-btn" type="button">
+                    <i class="fas fa-file-archive"></i> Descargar documentos
+                </button>
+                <button class="btn-secondary new-query-btn">
+                    <i class="fas fa-arrow-left"></i> Nueva consulta
+                </button>
+            </div>
         `;
-        
+
         resultsContainer.style.display = 'block';
-        
+
+        // Ocultar iconos decorativos para dar espacio al perfil
+        const trackingIcons = document.querySelector('.tracking-icons');
+        if (trackingIcons) trackingIcons.style.display = 'none';
+
         this.fetchAndRenderClientTimeline(folio);
         this.setupClientTimelineFilters();
         this.setupClientTimelineCommentToggles();
@@ -526,10 +461,7 @@ const Client = {
             const data = await response.json();
             
             if (response.ok && data.success && Array.isArray(data.custom_events)) {
-                const reclutaId = data.recluta_id || null;
-                this.clientTimelineData = reclutaId
-                    ? data.custom_events.filter(item => item.recluta_id === reclutaId)
-                    : data.custom_events;
+                this.clientTimelineData = data.custom_events;
                 this.renderClientTimeline('all');
             } else {
                 this.clientTimelineData = [];
@@ -561,10 +493,11 @@ const Client = {
     },
     
     calculateDaysAgo: function(dateString) {
-        const eventDate = new Date(dateString);
-        eventDate.setUTCHours(0, 0, 0, 0);
+        const [year, month, day] = dateString.split('-').map(Number);
+        const eventDate = new Date(year, month - 1, day);
+        eventDate.setHours(0, 0, 0, 0);
         const now = new Date();
-        now.setUTCHours(0, 0, 0, 0);
+        now.setHours(0, 0, 0, 0);
         const diffTime = now - eventDate;
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
@@ -623,11 +556,11 @@ const Client = {
                         <i class="fas ${iconClass}"></i>
                     </div>
                     <div class="timeline-card-content">
-                        <div class="timeline-card-title">${item.title}</div>
+                        <div class="timeline-card-title">${this.escapeHtml(item.title)}</div>
                         <div class="timeline-card-meta">
                             <span class="timeline-card-date">
                                 <i class="fas fa-calendar-alt"></i>
-                                ${new Date(item.date).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                ${(() => { const [y,m,d] = item.date.split('-').map(Number); return new Date(y, m-1, d).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }); })()}
                             </span>
                             <span class="timeline-card-status" style="background-color: ${statusColor}20; color: ${statusColor};">
                                 ${statusLabel}
@@ -645,6 +578,18 @@ const Client = {
                 ${commentHTML}
             </div>
         `;
+    },
+
+    /**
+     * Construye la URL correcta para la foto de un recluta
+     * @param {string} fotoUrl - Valor de foto_url del recluta
+     * @returns {string} - URL completa para el src de la imagen
+     */
+    buildFotoUrl: function(fotoUrl) {
+        if (!fotoUrl) return '';
+        if (fotoUrl.startsWith('http')) return fotoUrl;
+        const filename = fotoUrl.includes('/') ? fotoUrl.split('/').pop() : fotoUrl;
+        return `/media/profiles/${filename}`;
     },
 
     /**
@@ -908,10 +853,14 @@ const Client = {
         }
         
         if (resultsContainer) {
+            // Colapsar modal si estaba expandido
+            const modalContent = resultsContainer.closest('.modal-content');
+            if (modalContent) modalContent.classList.remove('modal-tracking-expanded');
+
             resultsContainer.innerHTML = '';
             resultsContainer.style.display = 'none';
         }
-        
+
         // Limpiar el input del folio
         const folioInput = document.getElementById('folio') || 
                           document.getElementById('folio-input');
@@ -920,6 +869,10 @@ const Client = {
             folioInput.classList.remove('input-error', 'input-success');
         }
         
+        // Restaurar iconos decorativos
+        const trackingIcons = document.querySelector('.tracking-icons');
+        if (trackingIcons) trackingIcons.style.display = '';
+
         // Restaurar estado normal del formulario
         this.setFormState('normal');
     }

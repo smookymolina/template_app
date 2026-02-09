@@ -1,50 +1,68 @@
 GOAL: Update production with a safe git pull - BACKUP FIRST, then update code, and restart services.
 
 =============================================================================
-CHANGES IN THIS VERSION (1.5.6.9 - 2026-02-09):
+CHANGES IN THIS VERSION (1.5.7.0 - 2026-02-09):
 =============================================================================
 *** PROBADO Y FUNCIONANDO EN DESARROLLO ***
 
-1) PHOTO LIGHTBOX - Ver fotos ampliadas:
-   - Nueva clase PhotoLightbox en photo-cropper.js
-   - Click en cualquier foto de perfil para verla en grande
-   - Estilos CSS con animaciones suaves
-   - Soporte para fotos de reclutas, usuarios, gerentes, asesores
-   - Placeholder SVG en lugar de /api/placeholder
+1) AUDITORIA COMPLETA DE LINEA DE SEGUIMIENTO:
+   - Fix CRITICO: Permisos de gerentes en get_by_id() - podian acceder reclutas de otros equipos
+   - Fix CRITICO: XSS en timeline (item.title, info.nombre sin escapeHtml)
+   - Fix: Info leakage - recluta_id expuesto en API publica de timeline
+   - Fix: Timezone bugs en client.js (new Date("YYYY-MM-DD") parseaba como UTC)
+   - Fix: Normalizacion inconsistente de folios en endpoints publicos
+   - Fix: Dead code en serialize() asesor_nombre fallback inalcanzable
+   - Eliminacion de codigo muerto legacy (loadTimelineData, saveTimelineItem, etc.)
+
+2) PERFIL DE RECLUTA EN TRACKING PUBLICO:
+   - Nuevo diseno de tarjeta de perfil con foto, nombre, puesto, estado
+   - foto_url y puesto incluidos en API /api/tracking/<folio>
+   - Funcion buildFotoUrl() para construccion correcta de URL de fotos
+   - Modal expandible automaticamente al mostrar resultados
+   - CSS completo con responsive (600px), dark mode, animaciones
+   - Filtros inline en timeline del cliente (Todos/Completados/Pendientes)
 
    FILES MODIFIED:
-   * static/js/photo-cropper.js - PhotoLightbox class + helpers
-   * static/css/styles.css - Estilos del lightbox
-   * templates/components/modals.html - Modal del lightbox
-   * templates/components/seccion_configuracion.html - Clase clickeable
-   * static/js/configuracion.js - Refresh de fotos clickeables
+   * models/recluta.py - Fix permisos gerente en get_by_id(), fix serialize()
+   * routes/api.py - Normalizacion folios, foto_url/puesto en tracking, quitar recluta_id publico
+   * routes/main.py - Normalizacion folios, redirect con folio normalizado
+   * static/js/reclutas.js - XSS fix en renderTimelineItem, eliminar dead code
+   * static/js/client.js - Rediseno completo tracking, XSS fixes, timezone fixes, buildFotoUrl
+   * static/css/new-timeline.css - CSS perfil tracking, modal expandible, responsive, dark mode
+   * templates/index.html - Modal clase modal-tracking
 
 =============================================================================
-PREVIOUS VERSION (1.5.6.8 - 2026-02-03):
+PREVIOUS VERSIONS:
 =============================================================================
-- Fix: Cambio de estado de reclutas para gerentes
-- Tracking de tiempo de uso activo (Activity Tracker)
-- Nuevas columnas: active_time_seconds, last_heartbeat en user_session
+v1.5.6.9 (2026-02-09):
+   - Photo Lightbox - Ver fotos ampliadas con click
+   - Placeholder SVG en lugar de /api/placeholder
+
+v1.5.6.8 (2026-02-03):
+   - Fix: Cambio de estado de reclutas para gerentes
+   - Tracking de tiempo de uso activo (Activity Tracker)
+   - Nuevas columnas: active_time_seconds, last_heartbeat en user_session
 
 =============================================================================
 
 ###########################################################################
 #                                                                         #
-#   INSTRUCCIONES DE ACTUALIZACION EN PRODUCCION (6 PASOS)               #
+#   INSTRUCCIONES DE ACTUALIZACION EN PRODUCCION (7 PASOS)               #
 #   Linux / Nginx + Gunicorn / MySQL o SQLite                            #
 #                                                                         #
 ###########################################################################
 
 ANTES DE EMPEZAR - Confirmar:
    - Ruta del repositorio: /var/www/template_app (o la actual)
-   - Branch destino: 1.5.6.9
+   - Branch destino: 1.5.7.0
    - Servicio Gunicorn: gunicorn o template_app
    - Base de datos: SQLite (instance/template_app.db) o MySQL
+   - Token de GitHub (necesario para autenticacion HTTPS)
 
 =============================================================================
 PASO 1: BACKUP COMPLETO DE DATOS (CRITICO - HACER PRIMERO)
 =============================================================================
-   Este paso es OBLIGATORIO. Sin backup, NO continuar.
+   *** SIN BACKUP, NO CONTINUAR. ESTO ES OBLIGATORIO. ***
 
    cd /var/www/template_app
    TS=$(date +%Y%m%d_%H%M%S)
@@ -55,10 +73,6 @@ PASO 1: BACKUP COMPLETO DE DATOS (CRITICO - HACER PRIMERO)
    # -----------------------------------------------
    # SQLite:
    cp instance/template_app.db "$BACKUP_DIR/template_app.db"
-
-   # Actualizar permisos de la BD antes de continuar
-   sudo chown www-data:www-data instance/template_app.db
-   sudo chmod 664 instance/template_app.db
 
    # MySQL (alternativa):
    # set -a && [ -f .env ] && . ./.env && set +a
@@ -102,15 +116,31 @@ PASO 2: VERIFICAR ESTADO DEL REPOSITORIO
    git remote -v
 
 =============================================================================
-PASO 3: ACTUALIZAR CODIGO (GIT PULL)
+PASO 3: CONFIGURAR AUTENTICACION Y ACTUALIZAR CODIGO (GIT PULL)
 =============================================================================
    cd /var/www/template_app
 
-   # Obtener cambios del remoto
+   # 3A) Configurar autenticacion con token de GitHub
+   # -------------------------------------------------
+   # Si git pull pide autenticacion, configurar el remote con token:
+   #
+   #   git remote set-url origin https://<TU_TOKEN>@github.com/smookymolina/template_app.git
+   #
+   # Para generar un token: GitHub > Settings > Developer settings >
+   #   Personal access tokens > Tokens (classic) > Generate new token
+   #   Permisos necesarios: repo (Full control of private repositories)
+   #
+   # Verificar que el remote esta configurado:
+   git remote -v
+
+   # 3B) Obtener cambios del remoto
    git fetch --all --prune
 
-   # Actualizar (solo fast-forward, sin merge manual)
-   git pull --ff-only origin 1.5.6.9
+   # 3C) Cambiar al branch destino si es necesario
+   git checkout 1.5.7.0 2>/dev/null || git checkout -b 1.5.7.0 origin/1.5.7.0
+
+   # 3D) Actualizar (solo fast-forward, sin merge manual)
+   git pull --ff-only origin 1.5.7.0
 
    # Si falla el ff-only, DETENER y revisar manualmente
    # NUNCA hacer merge en produccion sin revision
@@ -159,7 +189,7 @@ print('Columnas verificadas!')
    python scripts/diagnostico_db.py 2>/dev/null || echo "Script de diagnostico no disponible"
 
 =============================================================================
-PASO 5: VERIFICAR SERVICIOS Y PERMISOS
+PASO 5: VERIFICAR SERVICIOS
 =============================================================================
    # 5A) Verificar Redis
    systemctl status redis --no-pager || systemctl status redis-server --no-pager
@@ -173,12 +203,6 @@ PASO 5: VERIFICAR SERVICIOS Y PERMISOS
 
    # 5C) Limpiar cache de Redis (opcional)
    redis-cli KEYS "metrics_cache_*" | xargs -r redis-cli DEL
-
-   # 5D) Corregir permisos (CRITICO para evitar error 500)
-   sudo chown -R www-data:www-data /var/www/template_app/instance/
-   sudo chown -R www-data:www-data /var/www/template_app/uploads/
-   sudo chmod 755 /var/www/template_app/instance/
-   sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
 
 =============================================================================
 PASO 6: REINICIAR SERVICIOS Y VALIDAR
@@ -194,75 +218,120 @@ PASO 6: REINICIAR SERVICIOS Y VALIDAR
    # 6C) Validacion rapida
    curl -I https://tu-dominio
 
-   # 6D) Validaciones especificas de v1.5.6.9:
+   # 6D) Validaciones especificas de v1.5.7.0:
    #
-   # PHOTO LIGHTBOX:
-   #   - Ir a cualquier seccion con fotos de perfil
-   #   - Click en una foto -> debe abrirse en grande
+   # TRACKING PUBLICO CON PERFIL:
+   #   - Abrir pagina principal sin login
+   #   - Click en "Seguimiento" o boton de consulta
+   #   - Ingresar un folio valido (REC-XXXXXXXX)
+   #   - Debe mostrar: foto del candidato, nombre, puesto, estado, fechas
+   #   - Debe mostrar: linea de tiempo con filtros (Todos/Completados/Pendientes)
+   #   - Los filtros deben funcionar correctamente
+   #   - "Nueva consulta" debe resetear todo
+   #
+   # PERMISOS DE GERENTE:
+   #   - Login como gerente
+   #   - Solo debe ver reclutas de su equipo (no todos)
+   #   - Intentar acceder a recluta de otro equipo -> debe fallar
+   #
+   # SEGURIDAD XSS:
+   #   - Crear un evento con titulo: <script>alert(1)</script>
+   #   - Debe mostrarse como texto, NO ejecutarse
+   #
+   # PHOTO LIGHTBOX (v1.5.6.9):
+   #   - Click en foto de perfil -> debe abrirse en grande
    #   - Click fuera o Escape -> debe cerrarse
-   #   - Las fotos placeholder (silueta gris) NO deben abrirse
    #
    # ACTIVITY TRACKER (v1.5.6.8):
    #   - DevTools (F12) -> Console
    #   - Debe aparecer: "[ActivityTracker] Activity Tracker modulo cargado"
-   #   - Interactuar con la app -> cada 30s: "Heartbeat OK"
-   #
-   # CAMBIO DE ESTADO GERENTES (v1.5.6.8):
-   #   - Login como gerente
-   #   - Ir a Gestion de Reclutas
-   #   - Editar estado de un recluta de su equipo
-   #   - Debe guardar sin error
 
    # 6E) Si usaste stash, revisar:
    git stash list
    # Decidir si aplicar: git stash pop
 
 =============================================================================
+PASO 7: ACTUALIZAR PERMISOS (ULTIMO PASO - OBLIGATORIO)
+=============================================================================
+   # Este paso SIEMPRE debe ejecutarse al final para evitar errores 500.
+
+   # 7A) Permisos de base de datos
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chmod 755 /var/www/template_app/instance/
+   sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
+
+   # 7B) Permisos de archivos subidos (fotos, documentos)
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo chmod -R 755 /var/www/template_app/uploads/
+
+   # 7C) Permisos de archivos estaticos (por si git cambio ownership)
+   sudo chown -R www-data:www-data /var/www/template_app/static/
+   sudo chown -R www-data:www-data /var/www/template_app/templates/
+
+   # 7D) Verificar que todo funciona despues de permisos
+   curl -I https://tu-dominio
+   echo "Permisos actualizados. Despliegue completo."
+
+=============================================================================
 
 TROUBLESHOOTING:
 =============================================================================
-A) Error 500 despues de git pull:
+A) Error de autenticacion en git pull/push:
+   - CAUSA: Remote URL sin token o token expirado
+   - SOLUCION:
+     git remote set-url origin https://<TU_TOKEN>@github.com/smookymolina/template_app.git
+   - VERIFICAR: git remote -v (debe mostrar URL con token)
+   - GENERAR TOKEN: GitHub > Settings > Developer settings > Personal access tokens
+
+B) Error 500 despues de git pull:
    - CAUSA: Permisos de archivos
    - SOLUCION:
      sudo chown -R www-data:www-data /var/www/template_app/instance/
      sudo chown -R www-data:www-data /var/www/template_app/uploads/
      sudo systemctl restart gunicorn
 
-B) Error "no such column: user_session.active_time_seconds":
+C) Error "no such column: user_session.active_time_seconds":
    - CAUSA: Columnas no agregadas
    - SOLUCION: Ejecutar paso 4C
 
-C) Fotos no se ven / broken images:
-   - Verificar permisos de uploads/
+D) Fotos de perfil no se ven en tracking publico:
+   - Verificar que foto_url existe en la BD del recluta
+   - Verificar permisos de uploads/ (paso 7B)
+   - Fotos se sirven en /media/profiles/<filename>
    - Limpiar cache del navegador (Ctrl+Shift+R)
 
-D) Lightbox no funciona:
+E) Lightbox no funciona:
    - Limpiar cache del navegador
    - Verificar que photo-cropper.js carga (Network tab -> 200 OK)
    - Verificar consola por errores JavaScript
 
-E) Activity Tracker no registra tiempo:
+F) Activity Tracker no registra tiempo:
    - Verificar columnas en user_session (paso 4C)
    - Verificar que activity-tracker.js carga correctamente
 
-F) CSS/estilos antiguos:
+G) CSS/estilos antiguos:
    - Limpiar cache Nginx: sudo rm -rf /var/cache/nginx/*
    - Reiniciar Nginx
    - Hard refresh en navegador (Ctrl+Shift+R)
 
-G) ROLLBACK (si algo falla):
+H) ROLLBACK (si algo falla):
    - Restaurar base de datos:
      cp "$BACKUP_DIR/template_app.db" instance/template_app.db
    - Restaurar uploads:
      tar -xzf "$BACKUP_DIR/uploads.tar.gz" -C /
    - Regresar a version anterior:
-     git checkout <branch-anterior>
-   - Reiniciar servicios
+     git checkout 1.5.6.9
+   - Reiniciar servicios:
+     sudo systemctl restart gunicorn && sudo systemctl restart nginx
+   - Actualizar permisos:
+     sudo chown -R www-data:www-data /var/www/template_app/instance/
+     sudo chown -R www-data:www-data /var/www/template_app/uploads/
 
 =============================================================================
 
 NOTAS IMPORTANTES:
-- SIEMPRE hacer backup ANTES de cualquier cambio
+- SIEMPRE hacer backup ANTES de cualquier cambio (PASO 1)
+- SIEMPRE actualizar permisos AL FINAL de todo (PASO 7)
 - NUNCA eliminar la base de datos directamente
 - El backup permite rollback inmediato si algo falla
 - Redis debe estar corriendo para metricas y cache

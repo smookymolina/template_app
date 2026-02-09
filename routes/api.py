@@ -1730,7 +1730,7 @@ def track_by_folio(folio):
     No requiere autenticación, pues es accesible públicamente.
     """
     try:
-        recluta = Recluta.query.filter_by(folio=folio).first()
+        recluta = Recluta.get_by_folio(folio)
         
         if not recluta:
             return jsonify({"success": False, "message": "Folio no encontrado"}), 404
@@ -1739,6 +1739,8 @@ def track_by_folio(folio):
         tracking_info = {
             "nombre": recluta.nombre,
             "estado": recluta.estado,
+            "puesto": recluta.puesto,
+            "foto_url": recluta.foto_url,
             "fecha_registro": recluta.fecha_registro.strftime('%d/%m/%Y') if recluta.fecha_registro else None,
             "ultima_actualizacion": recluta.ultima_actualizacion.strftime('%d/%m/%Y') if recluta.ultima_actualizacion else None
         }
@@ -1793,7 +1795,6 @@ def get_timeline_folio(folio):
         return jsonify({
             "success": True,
             "folio": recluta.folio,
-            "recluta_id": recluta.id,
             "nombre_candidato": recluta.nombre,
             "estado_actual": recluta.estado,
             "custom_events": custom_events,
@@ -1819,7 +1820,7 @@ def verificar_folio(folio):
     Útil para validaciones rápidas sin devolver datos sensibles.
     """
     try:
-        recluta = Recluta.query.filter_by(folio=folio).first()
+        recluta = Recluta.get_by_folio(folio)
         
         if not recluta:
             return jsonify({"success": False, "exists": False, "message": "Folio no encontrado"}), 404

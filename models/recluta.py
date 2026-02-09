@@ -87,7 +87,7 @@ class Recluta(db.Model):
             'fecha_registro': self.fecha_registro.isoformat() if self.fecha_registro else None,
             'ultima_actualizacion': self.ultima_actualizacion.isoformat() if self.ultima_actualizacion else None,
             'asesor_id': self.asesor_id,
-            'asesor_nombre': self.asesor.nombre if self.asesor else (self.asesor.email if self.asesor else None)
+            'asesor_nombre': (self.asesor.nombre or self.asesor.email) if self.asesor else None
         }
     
     def save(self):
@@ -168,16 +168,21 @@ class Recluta(db.Model):
         ✅ OBTENER RECLUTA POR ID CON VERIFICACIÓN DE PERMISOS
         """
         recluta = cls.query.get(recluta_id)
-        
+
         if not recluta:
             return None
-        
-        # Si hay usuario y es asesor, verificar que tenga permiso
-        if current_user and hasattr(current_user, 'rol') and current_user.rol == 'asesor':
-            if recluta.asesor_id != current_user.id:
-                logging.warning(f"🚫 Asesor {current_user.id} sin permisos para recluta {recluta_id}")
-                return None
-        
+
+        if current_user and hasattr(current_user, 'rol'):
+            if current_user.rol == 'asesor':
+                if recluta.asesor_id != current_user.id:
+                    logging.warning(f"🚫 Asesor {current_user.id} sin permisos para recluta {recluta_id}")
+                    return None
+            elif current_user.rol == 'gerente':
+                mis_asesores_ids = [a.id for a in current_user.get_mis_asesores()]
+                if recluta.asesor_id != current_user.id and recluta.asesor_id not in mis_asesores_ids:
+                    logging.warning(f"🚫 Gerente {current_user.id} sin permisos para recluta {recluta_id}")
+                    return None
+
         return recluta
 
     @classmethod

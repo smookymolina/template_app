@@ -83,12 +83,12 @@ def estado_folio(folio):
         Redirección a la página principal con folio preseleccionado
     """
     # Verificar si el folio existe
-    recluta = Recluta.query.filter_by(folio=folio).first()
+    recluta = Recluta.get_by_folio(folio)
     if not recluta:
         return redirect(url_for('main.index') + f'?tab=seguimiento&error=folio_no_existe')
     
-    # Redirigir con el folio preseleccionado
-    return redirect(url_for('main.index') + f'?tab=seguimiento&folio={folio}&auto_consulta=true')
+    # Redirigir con el folio normalizado
+    return redirect(url_for('main.index') + f'?tab=seguimiento&folio={recluta.folio}&auto_consulta=true')
 
 @main_bp.route('/cliente')
 def portal_cliente():
@@ -113,7 +113,7 @@ def validar_folio_publico(folio):
     Returns:
         JSON con resultado de la verificación
     """
-    recluta = Recluta.query.filter_by(folio=folio).first()
+    recluta = Recluta.get_by_folio(folio)
     return jsonify({
         "success": recluta is not None,
         "exists": recluta is not None,

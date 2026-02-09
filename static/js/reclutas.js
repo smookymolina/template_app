@@ -4055,41 +4055,6 @@ const Reclutas = {
     },
 
     /**
-     * Carga los datos de timeline (simulados por ahora)
-     */
-    loadTimelineData: function() {
-        console.log('📊 Cargando datos de timeline...');
-        
-        // Datos simulados hasta implementar backend
-        this.currentTimelineData = [
-            {
-                id: 1,
-                date: '2025-08-28',
-                status: 'completed',
-                title: 'Recepción de CV',
-                description: 'Se recibió y procesó el currículum vitae del candidato.'
-            },
-            {
-                id: 2,
-                date: '2025-08-30',
-                status: 'completed',
-                title: 'Primera Entrevista',
-                description: 'Entrevista inicial telefónica realizada exitosamente.'
-            },
-            {
-                id: 3,
-                date: '2025-09-02',
-                status: 'pending',
-                title: 'Entrevista Técnica',
-                description: 'Programada entrevista técnica con el equipo de desarrollo.'
-            }
-        ];
-        
-        this.renderTimeline();
-        this.updateTimelineStats();
-    },
-
-    /**
      * Renderiza la línea de seguimiento completa
      */
     renderTimeline: function(filterStatus = 'all') {
@@ -4211,7 +4176,7 @@ const Reclutas = {
                         <i class="fas ${iconClass}"></i>
                     </div>
                     <div class="timeline-card-content" onclick="Reclutas.editTimelineItem(${item.id})" style="cursor: pointer; flex: 1;">
-                        <div class="timeline-card-title">${item.title}</div>
+                        <div class="timeline-card-title">${this.escapeHtml(item.title)}</div>
                         <div class="timeline-card-date">${formattedDate}</div>
                     </div>
                     <div class="timeline-card-days">
@@ -4356,83 +4321,6 @@ const Reclutas = {
             form.style.display = 'block';
             form.scrollIntoView({ behavior: 'smooth' });
         }
-    },
-
-    /**
-     * Guarda un evento de timeline (nuevo o editado)
-     */
-    saveTimelineItem: function() {
-        // Obtener fecha y asegurar formato correcto (evitar que la zona horaria cambie el dia elegido)
-        const dateInput = document.getElementById('event-date').value;
-        const dateObj = dateInput ? new Date(dateInput + 'T12:00:00') : new Date();
-        if (Number.isNaN(dateObj.getTime())) {
-            showError('La fecha seleccionada no es valida');
-            return;
-        }
-        const date = dateObj.toISOString().split('T')[0];
-        const status = document.getElementById('event-status').value;
-        const title = document.getElementById('event-title').value;
-        const description = document.getElementById('event-description').value;
-        
-        // Validaciones básicas
-        if (!date || !status || !title) {
-            showError('Por favor completa todos los campos obligatorios');
-            return;
-        }
-        
-        const eventData = {
-            date,
-            status,
-            title,
-            description: description || ''
-        };
-        
-        if (this.currentEditingTimelineId) {
-            // Editar existente
-            const index = this.currentTimelineData.findIndex(item => item.id === this.currentEditingTimelineId);
-            if (index !== -1) {
-                this.currentTimelineData[index] = {
-                    ...eventData,
-                    id: this.currentEditingTimelineId
-                };
-            }
-            showSuccess('Evento actualizado correctamente');
-        } else {
-            // Crear nuevo
-            const newId = Math.max(...this.currentTimelineData.map(item => item.id), 0) + 1;
-            this.currentTimelineData.push({
-                ...eventData,
-                id: newId
-            });
-            showSuccess('Evento creado correctamente');
-        }
-        
-        // Actualizar vista
-        this.renderTimeline();
-        this.updateTimelineStats();
-        this.cancelTimelineForm();
-        
-        // TODO: Aquí se implementará la llamada al backend
-        console.log('💾 Datos de timeline actualizados:', this.currentTimelineData);
-    },
-
-    /**
-     * Elimina un evento de timeline
-     */
-    deleteTimelineItem: function(id) {
-        if (!confirm('¿Estás seguro de que deseas eliminar este evento?')) {
-            return;
-        }
-        
-        this.currentTimelineData = this.currentTimelineData.filter(item => item.id !== id);
-        
-        this.renderTimeline();
-        this.updateTimelineStats();
-        
-        showSuccess('Evento eliminado correctamente');
-        
-        // TODO: Aquí se implementará la llamada al backend
-        console.log('🗑️ Evento eliminado, timeline actualizada:', this.currentTimelineData);
     },
 
     /**
