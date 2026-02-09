@@ -1841,6 +1841,11 @@ const Reclutas = {
                 if (photoButtonText) {
                     photoButtonText.textContent = recluta.foto_url ? 'Actualizar foto' : 'Subir foto';
                 }
+
+                // Refrescar fotos clickeables para lightbox
+                if (typeof refreshClickablePhotos === 'function') {
+                    refreshClickablePhotos();
+                }
             }
             if (elements.nombre) elements.nombre.textContent = recluta.nombre || 'N/A';
             if (elements.email) elements.email.textContent = recluta.email || 'N/A';
@@ -2152,7 +2157,7 @@ const Reclutas = {
             
             // ✅ SIEMPRE RENDERIZAR TODAS LAS COLUMNAS - CSS se encarga de ocultar
             row.innerHTML = `
-                <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"></td>
+                <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto profile-pic-clickable" title="Clic para ver en grande" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"></td>
                 <td>${recluta.nombre}</td>
                 <td>${recluta.email}</td>
                 <td>${recluta.telefono}</td>
@@ -2203,15 +2208,18 @@ const Reclutas = {
      * @param {string} fotoUrl - URL de la foto del recluta
      * @returns {string} - URL final de la foto
      */
+    // Placeholder SVG para cuando no hay foto
+    defaultPlaceholder: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e2e8f0'/%3E%3Ccircle cx='50' cy='40' r='18' fill='%23a0aec0'/%3E%3Cellipse cx='50' cy='80' rx='28' ry='20' fill='%23a0aec0'/%3E%3C/svg%3E",
+
     getFotoUrl: function(fotoUrl) {
-        if (!fotoUrl) return '/api/placeholder/40/40';
+        if (!fotoUrl) return this.defaultPlaceholder;
 
         if (fotoUrl.startsWith('http')) {
             return fotoUrl;
         }
 
         if (fotoUrl === 'default_profile.jpg') {
-            return '/api/placeholder/40/40';
+            return this.defaultPlaceholder;
         }
 
         // Si la foto_url contiene 'recluta/' (formato antiguo), extraer solo el nombre del archivo
@@ -2945,7 +2953,11 @@ const Reclutas = {
         const dateInput = document.getElementById('interview-date');
         const timeInput = document.getElementById('interview-time');
         
-        if (candidatePic) candidatePic.src = recluta.foto_url || '/api/placeholder/40/40';
+        if (candidatePic) {
+            candidatePic.src = recluta.foto_url || window.DEFAULT_PROFILE_PLACEHOLDER || this.defaultPlaceholder;
+            candidatePic.classList.add('profile-pic-clickable');
+            candidatePic.title = 'Clic para ver en grande';
+        }
         if (candidateName) candidateName.textContent = recluta.nombre;
         if (candidatePuesto) candidatePuesto.textContent = recluta.puesto || 'No especificado';
         

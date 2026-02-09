@@ -38,6 +38,10 @@
     {% block modals %}{% endblock %}
 
     {% block scripts %}
+    <!-- Placeholder global para fotos de perfil -->
+    <script>
+        window.DEFAULT_PROFILE_PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e2e8f0'/%3E%3Ccircle cx='50' cy='40' r='18' fill='%23a0aec0'/%3E%3Cellipse cx='50' cy='80' rx='28' ry='20' fill='%23a0aec0'/%3E%3C/svg%3E";
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script type="module" src="{{ url_for('static', filename='js/config.js') }}?v={{ v }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/notifications.js') }}?v={{ v }}"></script>

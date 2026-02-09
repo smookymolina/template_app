@@ -498,7 +498,7 @@ const MetricasAdmin = {
 
             const avatarFallback = `<div class="gerente-avatar-fallback">${(gerente.nombre || 'G').charAt(0).toUpperCase()}</div>`;
             const fotoHTML = gerente.foto_url
-                ? `<img src="${gerente.foto_url}" alt="Foto de ${gerente.nombre}" class="gerente-foto" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex'/>${avatarFallback}`
+                ? `<img src="${gerente.foto_url}" alt="Foto de ${gerente.nombre}" class="gerente-foto profile-pic-clickable" title="Clic para ver en grande" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='flex'/>${avatarFallback}`
                 : avatarFallback;
 
             return `
@@ -1076,7 +1076,7 @@ const MetricasAdmin = {
             <div class="asesor-detalle-header">
                 <div class="asesor-avatar-large">
                     ${asesor.foto_url ?
-                        `<img src="${asesor.foto_url}" alt="${asesor.nombre}">` :
+                        `<img src="${asesor.foto_url}" alt="${asesor.nombre}" class="profile-pic-clickable" title="Clic para ver en grande">` :
                         `<span>${asesor.nombre.charAt(0).toUpperCase()}</span>`
                     }
                 </div>
@@ -2008,7 +2008,7 @@ MetricasAdmin.createGerenteCard = function(equipo) {
             <div class="gerente-header">
                 <div class="gerente-avatar">
                     ${equipo.gerente.foto_url ?
-                        `<img src="${equipo.gerente.foto_url}" alt="${equipo.gerente.nombre}">` :
+                        `<img src="${equipo.gerente.foto_url}" alt="${equipo.gerente.nombre}" class="profile-pic-clickable" title="Clic para ver en grande">` :
                         `<span>${equipo.gerente.nombre.charAt(0)}</span>`
                     }
                 </div>

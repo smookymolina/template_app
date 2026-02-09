@@ -140,7 +140,7 @@
             <div class="recluta-details">
                 <div class="recluta-details-header">
                     <div class="profile-pic-container modal-profile">
-                        <img id="detail-recluta-pic" class="profile-pic" src="/api/placeholder/100/100" alt="Foto del recluta">
+                        <img id="detail-recluta-pic" class="profile-pic profile-pic-clickable" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e2e8f0'/%3E%3Ccircle cx='50' cy='40' r='18' fill='%23a0aec0'/%3E%3Cellipse cx='50' cy='80' rx='28' ry='20' fill='%23a0aec0'/%3E%3C/svg%3E" alt="Foto del recluta" title="Clic para ver en grande">
                         <div class="profile-pic-actions">
                             <button id="btn-update-photo" class="btn-update-photo" onclick="openPhotoUpdateModal()">
                                 <i class="fas fa-camera"></i>
@@ -305,7 +305,7 @@
 
         <div class="modal-body">
             <div class="interview-candidate">
-                <img id="interview-candidate-pic" class="recluta-foto" src="/api/placeholder/40/40" alt="Foto del candidato">
+                <img id="interview-candidate-pic" class="recluta-foto profile-pic-clickable" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e2e8f0'/%3E%3Ccircle cx='50' cy='40' r='18' fill='%23a0aec0'/%3E%3Cellipse cx='50' cy='80' rx='28' ry='20' fill='%23a0aec0'/%3E%3C/svg%3E" alt="Foto del candidato" title="Clic para ver en grande">
                 <div class="interview-candidate-info">
                     <h4 id="interview-candidate-name">Nombre del Candidato</h4>
                     <p id="interview-candidate-puesto">Puesto al que aplica</p>
@@ -917,6 +917,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<!-- ===========================================
+     Modal Lightbox para Ver Fotos Ampliadas
+=========================================== -->
+<div id="photo-lightbox-modal" class="modal photo-lightbox">
+    <div class="lightbox-content">
+        <span class="lightbox-close">&times;</span>
+        <img id="lightbox-image" src="" alt="Foto ampliada">
+        <div class="lightbox-caption" id="lightbox-caption"></div>
+    </div>
+</div>
 
 <!-- ===========================================
      Modal para ver Entrevistas del Día

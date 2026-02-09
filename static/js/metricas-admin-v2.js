@@ -746,7 +746,7 @@ class MetricasAdminV2 {
                     <div class="gerente-info">
                         <div class="gerente-avatar">
                             ${equipo.gerente.foto_url ?
-                                `<img src="${equipo.gerente.foto_url}" alt="${equipo.gerente.nombre}">` :
+                                `<img src="${equipo.gerente.foto_url}" alt="${equipo.gerente.nombre}" class="profile-pic-clickable" title="Clic para ver en grande">` :
                                 `<div class="avatar-placeholder">${this.getInitials(equipo.gerente.nombre)}</div>`
                             }
                         </div>
@@ -808,7 +808,7 @@ class MetricasAdminV2 {
                 `<div class="performer-item top">
                     <div class="performer-avatar">
                         ${asesor.foto_url ?
-                            `<img src="${asesor.foto_url}" alt="${asesor.nombre}">` :
+                            `<img src="${asesor.foto_url}" alt="${asesor.nombre}" class="profile-pic-clickable" title="Clic para ver en grande">` :
                             `<div class="avatar-placeholder">${this.getInitials(asesor.nombre)}</div>`
                         }
                     </div>
@@ -830,7 +830,7 @@ class MetricasAdminV2 {
                 `<div class="performer-item improvement">
                     <div class="performer-avatar">
                         ${asesor.foto_url ?
-                            `<img src="${asesor.foto_url}" alt="${asesor.nombre}">` :
+                            `<img src="${asesor.foto_url}" alt="${asesor.nombre}" class="profile-pic-clickable" title="Clic para ver en grande">` :
                             `<div class="avatar-placeholder">${this.getInitials(asesor.nombre)}</div>`
                         }
                     </div>
@@ -856,7 +856,7 @@ class MetricasAdminV2 {
                 <div class="asesor-header">
                     <div class="asesor-avatar">
                         ${asesor.foto_url ?
-                            `<img src="${asesor.foto_url}" alt="${asesor.nombre}">` :
+                            `<img src="${asesor.foto_url}" alt="${asesor.nombre}" class="profile-pic-clickable" title="Clic para ver en grande">` :
                             `<div class="avatar-placeholder">${this.getInitials(asesor.nombre)}</div>`
                         }
                     </div>
@@ -1074,7 +1074,7 @@ class MetricasAdminV2 {
                                 <td>
                                     <div class="gerente-info-cell">
                                         <div class="gerente-avatar">
-                                            ${equipo.gerente.foto_url ? `<img src="${equipo.gerente.foto_url}" alt="${equipo.gerente.nombre}">` : `<div class="avatar-placeholder">${this.getInitials(equipo.gerente.nombre)}</div>`}
+                                            ${equipo.gerente.foto_url ? `<img src="${equipo.gerente.foto_url}" alt="${equipo.gerente.nombre}" class="profile-pic-clickable" title="Clic para ver en grande">` : `<div class="avatar-placeholder">${this.getInitials(equipo.gerente.nombre)}</div>`}
                                         </div>
                                         <div>
                                             <strong>${equipo.gerente.nombre}</strong>
@@ -1726,7 +1726,7 @@ class MetricasAdminV2 {
             <div class="usuario-online-card">
                 <div class="usuario-online-avatar">
                     ${usuario.foto_url
-                        ? `<img src="${usuario.foto_url}" alt="${usuario.nombre}">`
+                        ? `<img src="${usuario.foto_url}" alt="${usuario.nombre}" class="profile-pic-clickable" title="Clic para ver en grande">`
                         : `<span>${this.getInitials(usuario.nombre)}</span>`
                     }
                 </div>
@@ -1754,7 +1754,7 @@ class MetricasAdminV2 {
                     <div class="usuario-cell">
                         <div class="usuario-avatar-small">
                             ${usuario.foto_url
-                                ? `<img src="${usuario.foto_url}" alt="${usuario.nombre}">`
+                                ? `<img src="${usuario.foto_url}" alt="${usuario.nombre}" class="profile-pic-clickable" title="Clic para ver en grande">`
                                 : this.getInitials(usuario.nombre)
                             }
                         </div>
@@ -1904,7 +1904,7 @@ class MetricasAdminV2 {
             <div class="usuario-inactivo-card">
                 <div class="usuario-inactivo-avatar">
                     ${usuario.foto_url
-                        ? `<img src="${usuario.foto_url}" alt="${usuario.nombre}">`
+                        ? `<img src="${usuario.foto_url}" alt="${usuario.nombre}" class="profile-pic-clickable" title="Clic para ver en grande">`
                         : `<i class="fas fa-user"></i>`
                     }
                 </div>

@@ -1248,7 +1248,7 @@ function updateUserDisplayElements(usuario) {
  */
 function updateProfileElements(usuario) {
     const profilePic = document.getElementById('dashboard-profile-pic');
-    profilePic?.src && (profilePic.src = usuario.foto_url || '/api/placeholder/100/100');
+    profilePic?.src && (profilePic.src = usuario.foto_url || window.DEFAULT_PROFILE_PLACEHOLDER);
     
     const userFields = {
         'user-name': usuario.nombre || '',

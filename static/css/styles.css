@@ -1541,6 +1541,170 @@ body.modal-open {
     width: auto;
 }
 
+/* ===== PHOTO LIGHTBOX ===== */
+.photo-lightbox {
+    z-index: 2000;
+    background-color: rgba(0, 0, 0, 0.9);
+}
+
+.photo-lightbox .lightbox-content {
+    background: transparent;
+    box-shadow: none;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: lightboxZoomIn 0.3s ease;
+}
+
+@keyframes lightboxZoomIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.photo-lightbox .lightbox-close {
+    position: fixed;
+    top: 20px;
+    right: 30px;
+    font-size: 40px;
+    font-weight: bold;
+    color: #fff;
+    cursor: pointer;
+    z-index: 2001;
+    transition: color 0.3s ease, transform 0.2s ease;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.photo-lightbox .lightbox-close:hover {
+    color: #ff6b6b;
+    transform: scale(1.1);
+}
+
+.photo-lightbox #lightbox-image {
+    max-width: 85vw;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.photo-lightbox .lightbox-caption {
+    color: #fff;
+    text-align: center;
+    padding: 15px 20px;
+    font-size: 16px;
+    max-width: 600px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Estilos para fotos clickeables */
+.profile-pic-clickable,
+.lightbox-initialized {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-pic-clickable:hover,
+.lightbox-initialized:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Indicador de zoom para contenedores de fotos */
+.profile-pic-container .profile-pic-clickable,
+.profile-pic-container .lightbox-initialized {
+    position: relative;
+}
+
+/* Indicador de zoom en hover - usando pseudo elemento del contenedor */
+.profile-pic-container {
+    position: relative;
+}
+
+.profile-pic-container::after {
+    content: '\f00e';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.profile-pic-container:hover::after {
+    opacity: 1;
+}
+
+/* Estilos para fotos en cards y tablas */
+.recluta-foto.lightbox-initialized,
+.user-avatar-img.lightbox-initialized,
+.profile-image-large.lightbox-initialized,
+.profile-image-small.lightbox-initialized,
+.gerente-foto.lightbox-initialized,
+.avatar-img.lightbox-initialized {
+    cursor: pointer;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.recluta-foto.lightbox-initialized:hover,
+.user-avatar-img.lightbox-initialized:hover,
+.profile-image-large.lightbox-initialized:hover,
+.profile-image-small.lightbox-initialized:hover,
+.gerente-foto.lightbox-initialized:hover,
+.avatar-img.lightbox-initialized:hover {
+    transform: scale(1.1);
+    filter: brightness(1.1);
+}
+
+/* Fotos en cards de gerentes, asesores, equipos */
+.gerente-card img.lightbox-initialized,
+.asesor-card img.lightbox-initialized,
+.equipo-card img.lightbox-initialized,
+.user-card img.lightbox-initialized,
+.usuario-activo-card img.lightbox-initialized {
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gerente-card img.lightbox-initialized:hover,
+.asesor-card img.lightbox-initialized:hover,
+.equipo-card img.lightbox-initialized:hover,
+.user-card img.lightbox-initialized:hover,
+.usuario-activo-card img.lightbox-initialized:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+/* Tooltip para indicar que se puede ampliar */
+.lightbox-initialized[title]::before {
+    content: attr(title);
+}
+
 /* ===== ESTADÍSTICAS ===== */
 .stats-grid {
     display: grid;

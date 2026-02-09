@@ -413,7 +413,7 @@ clearProfileImages: function() {
         const elements = document.querySelectorAll(selector);
         elements.forEach(element => {
             if (element.tagName === 'IMG') {
-                element.src = '/api/placeholder/100/100'; // Imagen por defecto
+                element.src = window.DEFAULT_PROFILE_PLACEHOLDER; // Imagen por defecto
                 console.log(`📸 Limpiada imagen: ${selector}`);
             } else if (element.style) {
                 element.style.backgroundImage = '';

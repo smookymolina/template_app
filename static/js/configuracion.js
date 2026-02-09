@@ -499,7 +499,12 @@ class ConfigurationManager {
             const finalUrl = `${photoUrl}?t=${new Date().getTime()}`;
             console.log(`[displayPhotoPreview] URL final a mostrar: ${finalUrl}`);
 
-            this.userPhotoPreview.innerHTML = `<img src="${finalUrl}" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+            this.userPhotoPreview.innerHTML = `<img src="${finalUrl}" alt="Foto de perfil" class="profile-pic-clickable" title="Clic para ver en grande" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+
+            // Refrescar fotos clickeables para lightbox
+            if (typeof refreshClickablePhotos === 'function') {
+                setTimeout(() => refreshClickablePhotos(), 100);
+            }
 
             const label = document.getElementById('user-photo-label');
             if (label) {

@@ -501,7 +501,7 @@ class UserAccountManager {
 
         // Generar avatar con imagen o icono según disponibilidad
         const avatarContent = user.foto_url
-            ? `<img src="${user.foto_url}" alt="${user.nombre || 'Usuario'}" class="user-avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            ? `<img src="${user.foto_url}" alt="${user.nombre || 'Usuario'}" class="user-avatar-img profile-pic-clickable" title="Clic para ver en grande" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                <i class="fas fa-user-circle user-avatar-fallback" style="display: none;"></i>`
             : `<i class="fas fa-user-circle"></i>`;
 
@@ -599,7 +599,7 @@ class UserAccountManager {
                                 <div class="user-header">
                                     <div class="user-avatar-large">
                                         ${usuario.foto_url ?
-                                            `<img src="${usuario.foto_url}" alt="Foto de perfil" class="profile-image-large">` :
+                                            `<img src="${usuario.foto_url}" alt="Foto de perfil" class="profile-image-large profile-pic-clickable" title="Clic para ver en grande">` :
                                             '<i class="fas fa-user-circle"></i>'
                                         }
                                     </div>
@@ -893,7 +893,7 @@ class UserAccountManager {
                                 <div class="user-info-to-delete">
                                     <div class="user-avatar-small">
                                         ${usuario.foto_url ?
-                                            `<img src="${usuario.foto_url}" alt="Foto de perfil" class="profile-image-small">` :
+                                            `<img src="${usuario.foto_url}" alt="Foto de perfil" class="profile-image-small profile-pic-clickable" title="Clic para ver en grande">` :
                                             '<i class="fas fa-user-circle"></i>'
                                         }
                                     </div>

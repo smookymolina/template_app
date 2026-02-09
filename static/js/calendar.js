@@ -716,7 +716,7 @@ const Calendar = {
         
         // Información del candidato
         if (formElements.candidateName) formElements.candidateName.textContent = event.candidato_nombre || 'Candidato';
-        if (formElements.candidatePic) formElements.candidatePic.src = '/api/placeholder/40/40';
+        if (formElements.candidatePic) formElements.candidatePic.src = window.DEFAULT_PROFILE_PLACEHOLDER;
         if (formElements.candidatePuesto) formElements.candidatePuesto.textContent = 'Edición de entrevista';
         
         // Cambiar función del botón de guardar
@@ -1272,10 +1272,10 @@ const Calendar = {
                 const badgeClass = CONFIG.ESTADOS_RECLUTA.find(e => e.value === recluta.estado)?.badgeClass || 'badge-secondary';
                 
                 // Determinar la URL de la foto
-                const fotoUrl = recluta.foto_url || '/api/placeholder/40/40';
+                const fotoUrl = recluta.foto_url || window.DEFAULT_PROFILE_PLACEHOLDER;
                 
                 row.innerHTML = `
-                    <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto"></td>
+                    <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto profile-pic-clickable" title="Clic para ver en grande"></td>
                     <td>${recluta.nombre}</td>
                     <td><span class="badge ${badgeClass}">${recluta.estado}</span></td>
                     <td>
@@ -1352,7 +1352,7 @@ const Calendar = {
         // Configurar título y datos del candidato
         if (formElements.title) formElements.title.textContent = 'Programar Entrevista';
         if (formElements.candidateName) formElements.candidateName.textContent = recluta.name;
-        if (formElements.candidatePic) formElements.candidatePic.src = '/api/placeholder/40/40';
+        if (formElements.candidatePic) formElements.candidatePic.src = window.DEFAULT_PROFILE_PLACEHOLDER;
         if (formElements.candidatePuesto) formElements.candidatePuesto.textContent = recluta.puesto || 'Candidato';
         
         // Configurar fecha

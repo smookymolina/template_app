@@ -1,171 +1,136 @@
-GOAL: Update production with a safe git pull, full backup (events, profiles, docs), save migration state, and restart Nginx + Gunicorn with Redis/MySQL running.
+GOAL: Update production with a safe git pull - BACKUP FIRST, then update code, and restart services.
 
 =============================================================================
-CHANGES IN THIS VERSION (1.5.6.8 - 2026-02-03):
+CHANGES IN THIS VERSION (1.5.6.9 - 2026-02-09):
 =============================================================================
 *** PROBADO Y FUNCIONANDO EN DESARROLLO ***
 
-1) FIX: CAMBIO DE ESTADO DE RECLUTAS PARA GERENTES:
-   - PROBLEMA RESUELTO: Los gerentes no podían guardar cambios al modificar
-     el estado de un recluta desde la sección de gestión de reclutas.
-     El error mostraba: "Error interno: No se pudo identificar el recluta"
+1) PHOTO LIGHTBOX - Ver fotos ampliadas:
+   - Nueva clase PhotoLightbox en photo-cropper.js
+   - Click en cualquier foto de perfil para verla en grande
+   - Estilos CSS con animaciones suaves
+   - Soporte para fotos de reclutas, usuarios, gerentes, asesores
+   - Placeholder SVG en lugar de /api/placeholder
 
-   - CAUSAS IDENTIFICADAS:
-     * Faltaba verificación de permisos para gerentes en el backend
-     * La variable currentReclutaId no se preservaba entre llamadas
-     * Mensajes de error poco descriptivos
-
-   - SOLUCIÓN IMPLEMENTADA (5 pasos):
-
-     PASO 1 - Verificación de permisos para gerentes (routes/api.py):
-       * Gerentes ahora solo pueden modificar reclutas de su equipo:
-         - Reclutas asignados directamente al gerente (asesor_id = gerente.id)
-         - Reclutas de sus asesores (asesor_id IN [ids de sus asesores])
-       * Log de advertencia cuando un gerente intenta modificar sin permisos
-
-     PASO 2 - Mejor manejo de errores (static/js/reclutas.js):
-       * Mensajes de error más específicos según el tipo de problema
-       * Diferencia entre errores de permisos (403) y validación (400)
-
-     PASO 3 - Logs de depuración (static/js/reclutas.js):
-       * Console logs detallados en updateRecluta para rastrear cada paso
-       * Información del rol del usuario, datos enviados y respuestas
-
-     PASO 4 - Validación de estado (static/js/reclutas.js):
-       * Validación del estado antes de enviar al servidor
-       * Solo acepta: 'Activo', 'En proceso', 'Rechazado'
-
-     PASO 5 - Fallbacks para currentReclutaId (static/js/reclutas.js):
-       * enableEditMode() y saveReclutaChanges() ahora obtienen el ID de:
-         - this.currentReclutaId (fuente principal)
-         - modal.dataset.reclutaId (del atributo data del modal)
-         - window.Reclutas.currentReclutaId (respaldo global)
-
-   - FILES MODIFIED:
-     * routes/api.py - Verificación de permisos para gerentes + logging
-     * static/js/reclutas.js - Fallbacks, validación y mejor manejo de errores
-
-2) TRACKING DE TIEMPO DE USO ACTIVO (Activity Tracker):
-   - PROBLEMA RESUELTO: El contador de tiempo de sesión contaba infinitamente
-     mientras la sesión estaba abierta, sin importar si el usuario estaba
-     usando la app o no.
-
-   - SOLUCIÓN: Ahora solo se cuenta el tiempo cuando el usuario está
-     ACTIVAMENTE usando la app (clicks, scroll, teclas, movimiento del mouse).
-
-   - IMPLEMENTACIÓN (5 pasos):
-
-     PASO 1 - Modelo UserSession actualizado (models/user_session.py):
-       * Nuevo campo: active_time_seconds (tiempo activo acumulado)
-       * Nuevo campo: last_heartbeat (timestamp del último heartbeat)
-       * Nuevo método: register_activity_heartbeat()
-       * Nueva propiedad: active_time_formatted
-
-     PASO 2 - Nuevo endpoint (routes/auth.py):
-       * POST /auth/activity-heartbeat
-       * Recibe "latidos" del frontend cuando hay actividad
-       * Solo acumula tiempo si hay interacción continua
-
-     PASO 3 - Tracker JavaScript (static/js/activity-tracker.js):
-       * Detecta eventos: clicks, scroll, teclas, movimiento del mouse
-       * Envía heartbeats cada 30 segundos SOLO cuando hay actividad
-       * Se detiene si el usuario está inactivo por 60 segundos
-       * Se pausa cuando la pestaña está en segundo plano
-
-     PASO 4 - Cálculo de tiempo actualizado (routes/admin.py):
-       * _session_duration_minutes() usa active_time_seconds si existe
-       * _get_usuarios_online() muestra tiempo activo real
-       * Fallback al cálculo legacy para sesiones antiguas
-
-     PASO 5 - Integración (templates/base.html, static/js/auth.js):
-       * Script incluido en base.html
-       * Se inicia automáticamente al verificar autenticación
-
-   - FILES MODIFIED:
-     * models/user_session.py - Nuevos campos y métodos
-     * routes/auth.py - Nuevo endpoint activity-heartbeat
-     * routes/admin.py - Cálculos actualizados para tiempo activo
-     * static/js/activity-tracker.js - NUEVO ARCHIVO
-     * static/js/auth.js - Inicialización del tracker
-     * templates/base.html - Inclusión del script
+   FILES MODIFIED:
+   * static/js/photo-cropper.js - PhotoLightbox class + helpers
+   * static/css/styles.css - Estilos del lightbox
+   * templates/components/modals.html - Modal del lightbox
+   * templates/components/seccion_configuracion.html - Clase clickeable
+   * static/js/configuracion.js - Refresh de fotos clickeables
 
 =============================================================================
-PREVIOUS VERSION (1.5.6.7 - 2026-01-30):
+PREVIOUS VERSION (1.5.6.8 - 2026-02-03):
 =============================================================================
+- Fix: Cambio de estado de reclutas para gerentes
 - Tracking de tiempo de uso activo (Activity Tracker)
-- Landing Page Redesign (3 pasos, diseño centrado)
-- Timeline comentarios colapsables
-- Actividad de Usuarios con datos reales
-- Redis integration
+- Nuevas columnas: active_time_seconds, last_heartbeat en user_session
 
 =============================================================================
 
-INSTRUCTIONS (Linux / Nginx + Gunicorn):
+###########################################################################
+#                                                                         #
+#   INSTRUCCIONES DE ACTUALIZACION EN PRODUCCION (6 PASOS)               #
+#   Linux / Nginx + Gunicorn / MySQL o SQLite                            #
+#                                                                         #
+###########################################################################
 
-0) Confirm before starting:
-   - Repo path: /var/www/template_app (or actual)
-   - Target branch: 1.5.6.8
-   - Gunicorn service name (ex: gunicorn, template_app)
-   - Nginx service name (nginx)
+ANTES DE EMPEZAR - Confirmar:
+   - Ruta del repositorio: /var/www/template_app (o la actual)
+   - Branch destino: 1.5.6.9
+   - Servicio Gunicorn: gunicorn o template_app
+   - Base de datos: SQLite (instance/template_app.db) o MySQL
 
-1) Go to repo and check status:
-   - cd /var/www/template_app
-   - git rev-parse --show-toplevel
-   - git status -sb
-   - git branch --show-current
-   - git remote -v
+=============================================================================
+PASO 1: BACKUP COMPLETO DE DATOS (CRITICO - HACER PRIMERO)
+=============================================================================
+   Este paso es OBLIGATORIO. Sin backup, NO continuar.
 
-2) MANDATORY BACKUP (events, profiles, docs, DB):
-   - mkdir -p /var/backups/template_app
-   - TS=$(date +%Y%m%d_%H%M%S)
-   - BACKUP_DIR=/var/backups/template_app/$TS
-   - mkdir -p "$BACKUP_DIR"
+   cd /var/www/template_app
+   TS=$(date +%Y%m%d_%H%M%S)
+   BACKUP_DIR=/var/backups/template_app/$TS
+   mkdir -p "$BACKUP_DIR"
 
-   A) Full DB backup:
-      - /scripts/backup_db.sh "$BACKUP_DIR"
-      - (If script does not exist)
-        set -a
-        [ -f .env ] && . ./.env
-        set +a
-        mysqldump -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h "${MYSQL_HOST}" -P "${MYSQL_PORT:-3306}" "${MYSQL_DB}" > "$BACKUP_DIR/db.sql"
+   # 1A) Backup de base de datos (PRIORIDAD MAXIMA)
+   # -----------------------------------------------
+   # SQLite:
+   cp instance/template_app.db "$BACKUP_DIR/template_app.db"
 
-   B) Full CSV backup (events, reclutas, users, etc):
-      - python scripts/export_data.py
-      - LATEST=$(ls -dt backup_* | head -1)
-      - mv "$LATEST" "$BACKUP_DIR/"
+   # Actualizar permisos de la BD antes de continuar
+   sudo chown www-data:www-data instance/template_app.db
+   sudo chmod 664 instance/template_app.db
 
-   C) Backup uploaded files (profiles + docs):
-      - tar -czf "$BACKUP_DIR/uploads.tar.gz" uploads/
+   # MySQL (alternativa):
+   # set -a && [ -f .env ] && . ./.env && set +a
+   # mysqldump -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h "${MYSQL_HOST}" "${MYSQL_DB}" > "$BACKUP_DIR/db.sql"
 
-   D) Save migration state:
-      - flask db current > "$BACKUP_DIR/db_current.txt"
-      - flask db history > "$BACKUP_DIR/db_history.txt"
+   # 1B) Backup de archivos subidos (fotos, documentos)
+   # ---------------------------------------------------
+   tar -czf "$BACKUP_DIR/uploads.tar.gz" uploads/
 
-3) Local changes:
-   - If there are local changes: choose STASH or ABORT
-   - Recommended stash:
-     git stash push -u -m "prod-pull-$TS"
+   # 1C) Backup de estado de migraciones
+   # ------------------------------------
+   source .venv/bin/activate
+   flask db current > "$BACKUP_DIR/db_current.txt" 2>&1 || echo "No migrations" > "$BACKUP_DIR/db_current.txt"
 
-4) Update code:
-   - git fetch --all --prune
-   - git pull --ff-only origin 1.5.6.8
-   - If ff-only fails: stop and review (no merge in prod)
+   # 1D) Export de datos a CSV (opcional pero recomendado)
+   # ------------------------------------------------------
+   python scripts/export_data.py 2>/dev/null && \
+   LATEST=$(ls -dt backup_* 2>/dev/null | head -1) && \
+   [ -n "$LATEST" ] && mv "$LATEST" "$BACKUP_DIR/"
 
-5) Dependencies and migrations:
-   - source .venv/bin/activate  (or venv/bin/activate)
-   - python -m pip install --upgrade pip
-   - python -m pip install -r requirements.txt --no-cache-dir
-   - flask db upgrade 2>&1 | tee "$BACKUP_DIR/migration.log"
+   # Verificar que el backup existe
+   ls -la "$BACKUP_DIR"
+   echo "Backup completo en: $BACKUP_DIR"
 
-6) ╔══════════════════════════════════════════════════════════════════════╗
-   ║  CRÍTICO v1.5.6.8: AGREGAR COLUMNAS A user_session                  ║
-   ║  Sin este paso, la app dará error 500 en cada request               ║
-   ╚══════════════════════════════════════════════════════════════════════╝
+=============================================================================
+PASO 2: VERIFICAR ESTADO DEL REPOSITORIO
+=============================================================================
+   cd /var/www/template_app
 
-   Esta versión requiere 2 nuevas columnas en la tabla user_session.
+   # Verificar que estamos en el directorio correcto
+   git rev-parse --show-toplevel
 
-   OPCIÓN RECOMENDADA - Usar Python (funciona en cualquier DB):
-   -------------------------------------------------------------
+   # Ver estado actual
+   git status -sb
+   git branch --show-current
+
+   # Si hay cambios locales, hacer stash:
+   git stash push -u -m "prod-pre-update-$TS"
+
+   # Verificar conexion al remoto
+   git remote -v
+
+=============================================================================
+PASO 3: ACTUALIZAR CODIGO (GIT PULL)
+=============================================================================
+   cd /var/www/template_app
+
+   # Obtener cambios del remoto
+   git fetch --all --prune
+
+   # Actualizar (solo fast-forward, sin merge manual)
+   git pull --ff-only origin 1.5.6.9
+
+   # Si falla el ff-only, DETENER y revisar manualmente
+   # NUNCA hacer merge en produccion sin revision
+
+=============================================================================
+PASO 4: ACTUALIZAR DEPENDENCIAS Y ESQUEMA DE BD
+=============================================================================
+   cd /var/www/template_app
+   source .venv/bin/activate
+
+   # 4A) Actualizar dependencias Python
+   python -m pip install --upgrade pip
+   python -m pip install -r requirements.txt --no-cache-dir
+
+   # 4B) Ejecutar migraciones de Flask-Migrate
+   flask db upgrade 2>&1 | tee "$BACKUP_DIR/migration.log"
+
+   # 4C) Agregar columnas de v1.5.6.8 si no existen
+   # -----------------------------------------------
+   # SQLite:
    python -c "
 import sqlite3
 conn = sqlite3.connect('instance/template_app.db')
@@ -181,164 +146,125 @@ except: print('= last_heartbeat ya existe')
 cursor.execute('UPDATE user_session SET active_time_seconds = 0 WHERE active_time_seconds IS NULL')
 conn.commit()
 conn.close()
-print('Listo!')
+print('Columnas verificadas!')
 "
 
-   ALTERNATIVA A - SQLite directo:
-      sqlite3 instance/template_app.db "ALTER TABLE user_session ADD COLUMN active_time_seconds INTEGER DEFAULT 0;"
-      sqlite3 instance/template_app.db "ALTER TABLE user_session ADD COLUMN last_heartbeat DATETIME;"
+   # MySQL (alternativa):
+   # mysql -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DB}" -e "
+   #   ALTER TABLE user_session ADD COLUMN active_time_seconds INT DEFAULT 0;
+   #   ALTER TABLE user_session ADD COLUMN last_heartbeat DATETIME NULL;
+   # " 2>/dev/null || echo "Columnas ya existen"
 
-   ALTERNATIVA B - MySQL/MariaDB:
-      mysql -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DB}" -e "
-        ALTER TABLE user_session ADD COLUMN active_time_seconds INT DEFAULT 0;
-        ALTER TABLE user_session ADD COLUMN last_heartbeat DATETIME NULL;
-      "
+   # 4D) Verificar esquema de base de datos
+   python scripts/diagnostico_db.py 2>/dev/null || echo "Script de diagnostico no disponible"
 
-   VERIFICAR que las columnas existen antes de continuar:
-      python -c "
-import sqlite3
-conn = sqlite3.connect('instance/template_app.db')
-cols = [c[1] for c in conn.execute('PRAGMA table_info(user_session)').fetchall()]
-print('Columnas:', cols)
-assert 'active_time_seconds' in cols, 'FALTA active_time_seconds!'
-assert 'last_heartbeat' in cols, 'FALTA last_heartbeat!'
-print('OK - Columnas verificadas')
-"
+=============================================================================
+PASO 5: VERIFICAR SERVICIOS Y PERMISOS
+=============================================================================
+   # 5A) Verificar Redis
+   systemctl status redis --no-pager || systemctl status redis-server --no-pager
+   redis-cli ping  # Debe responder PONG
 
-7) Verify DB schema (avoid 502 errors):
-   - python scripts/diagnostico_db.py | tee "$BACKUP_DIR/db_diagnostico.log"
-   - If any required table is missing (ex: user_session), fix before restart:
-     - Run migrations again: flask db upgrade
-     - If no migrations exist for new tables, last resort:
-       python -c "from app_factory import create_app; from models import db; app=create_app('production'); app.app_context().push(); db.create_all()"
+   # Si Redis no esta corriendo:
+   # sudo systemctl start redis
 
-8) Critical services (before app restart):
-   A) Redis
-      - systemctl status redis (or redis-server)
-      - systemctl start redis (if down)
-      - redis-cli ping -> PONG
+   # 5B) Verificar MySQL (si aplica)
+   # systemctl status mysql --no-pager
 
-   B) MySQL/MariaDB
-      - systemctl status mysql (or mariadb)
-      - systemctl start mysql (if down)
-      - mysqladmin ping -u root -p
+   # 5C) Limpiar cache de Redis (opcional)
+   redis-cli KEYS "metrics_cache_*" | xargs -r redis-cli DEL
 
-9) Clear Redis cache (optional but recommended):
-   - redis-cli KEYS "metrics_cache_*" | xargs redis-cli DEL
+   # 5D) Corregir permisos (CRITICO para evitar error 500)
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo chmod 755 /var/www/template_app/instance/
+   sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
 
-10) FIX PERMISSIONS (Critical - evita error 500):
-    - sudo chown -R www-data:www-data /var/www/template_app/instance/
-    - sudo chown -R www-data:www-data /var/www/template_app/uploads/
-    - sudo chmod 755 /var/www/template_app/instance/
-    - sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
+=============================================================================
+PASO 6: REINICIAR SERVICIOS Y VALIDAR
+=============================================================================
+   # 6A) Reiniciar servicios en orden
+   sudo systemctl restart gunicorn
+   sudo systemctl restart nginx
 
-    O usar el script automático:
-    - sudo ./scripts/actualizar_app.sh
+   # 6B) Verificar estado
+   sudo systemctl status gunicorn --no-pager
+   sudo systemctl status nginx --no-pager
 
-11) Restart services in order:
-   - sudo systemctl restart gunicorn
-   - sudo systemctl restart nginx
-   - sudo systemctl status gunicorn --no-pager
-   - sudo systemctl status nginx --no-pager
+   # 6C) Validacion rapida
+   curl -I https://tu-dominio
 
-12) Quick validation:
-   - curl -I https://tu-dominio
-   - Landing page loads correctly
-   - Login works
+   # 6D) Validaciones especificas de v1.5.6.9:
+   #
+   # PHOTO LIGHTBOX:
+   #   - Ir a cualquier seccion con fotos de perfil
+   #   - Click en una foto -> debe abrirse en grande
+   #   - Click fuera o Escape -> debe cerrarse
+   #   - Las fotos placeholder (silueta gris) NO deben abrirse
+   #
+   # ACTIVITY TRACKER (v1.5.6.8):
+   #   - DevTools (F12) -> Console
+   #   - Debe aparecer: "[ActivityTracker] Activity Tracker modulo cargado"
+   #   - Interactuar con la app -> cada 30s: "Heartbeat OK"
+   #
+   # CAMBIO DE ESTADO GERENTES (v1.5.6.8):
+   #   - Login como gerente
+   #   - Ir a Gestion de Reclutas
+   #   - Editar estado de un recluta de su equipo
+   #   - Debe guardar sin error
 
-   - *** VALIDACIÓN DE CAMBIO DE ESTADO (v1.5.6.8) ***:
-     * Iniciar sesión como GERENTE (gerente1@example.com)
-     * Ir a Gestión de Reclutas
-     * Hacer clic en un recluta de su equipo -> Ver detalles
-     * Hacer clic en "Editar"
-     * Cambiar el estado (Activo/En proceso/Rechazado)
-     * Hacer clic en "Guardar Cambios"
-     * Debe aparecer: "Recluta X actualizado con éxito"
-     * Si hay error, revisar consola (F12) para logs detallados
-
-   - *** VALIDACIÓN DE ACTIVITY TRACKER (v1.5.6.8) ***:
-     * Abrir DevTools (F12) -> Console
-     * Debe aparecer: "[ActivityTracker] Activity Tracker módulo cargado"
-     * Al hacer login: "📊 Activity Tracker iniciado"
-     * Cada 30 segundos de actividad: "💓 Heartbeat OK - Tiempo activo: Xm"
-
-     * En Métricas Avanzadas -> Actividad de Usuarios:
-       - El tiempo mostrado ahora es TIEMPO ACTIVO (no tiempo de sesión)
-       - Si un usuario deja la sesión abierta sin interactuar, el contador
-         se detiene después de 60 segundos
-       - El tiempo solo aumenta cuando hay clicks, scroll, teclas, etc.
-
-13) If stash was used:
-   - git stash list
-   - decide apply or keep
+   # 6E) Si usaste stash, revisar:
+   git stash list
+   # Decidir si aplicar: git stash pop
 
 =============================================================================
 
 TROUBLESHOOTING:
 =============================================================================
-A) Gerente no puede guardar cambios en reclutas:
-   - CAUSA 1: "Error interno: No se pudo identificar el recluta"
-     * El ID del recluta no se está preservando
-     * SOLUCIÓN: Limpiar caché del navegador (Ctrl+Shift+R)
-     * El fix agrega fallbacks automáticos para obtener el ID
-
-   - CAUSA 2: "No tienes permisos para modificar este recluta"
-     * El gerente intenta modificar un recluta que NO es de su equipo
-     * Solo puede modificar: reclutas propios o de sus asesores asignados
-     * VERIFICAR: El recluta tiene asesor_id = gerente.id o asesor asignado
-
-   - DEPURACIÓN: Abrir consola (F12) y buscar logs:
-     * "[saveReclutaChanges]" muestra el flujo de guardado
-     * "[updateRecluta]" muestra datos enviados y respuesta del servidor
-
-B) Error 500 después de git pull:
-   - CAUSA MÁS COMÚN: Permisos de archivos
-   - SOLUCIÓN:
+A) Error 500 despues de git pull:
+   - CAUSA: Permisos de archivos
+   - SOLUCION:
      sudo chown -R www-data:www-data /var/www/template_app/instance/
      sudo chown -R www-data:www-data /var/www/template_app/uploads/
      sudo systemctl restart gunicorn
 
-C) Error "no such column: user_session.active_time_seconds":
-   - CAUSA: Las nuevas columnas no se agregaron a la base de datos
-   - SOLUCIÓN: Ejecutar paso 6 (agregar columnas SQL)
+B) Error "no such column: user_session.active_time_seconds":
+   - CAUSA: Columnas no agregadas
+   - SOLUCION: Ejecutar paso 4C
 
-D) Activity Tracker no funciona:
-   - Verificar que el script está cargado:
-     DevTools -> Network -> activity-tracker.js (debe dar 200 OK)
+C) Fotos no se ven / broken images:
+   - Verificar permisos de uploads/
+   - Limpiar cache del navegador (Ctrl+Shift+R)
+
+D) Lightbox no funciona:
+   - Limpiar cache del navegador
+   - Verificar que photo-cropper.js carga (Network tab -> 200 OK)
    - Verificar consola por errores JavaScript
-   - Verificar que el endpoint funciona:
-     curl -X POST https://tu-dominio/auth/activity-heartbeat \
-       -H "Content-Type: application/json" \
-       -d '{"heartbeat_interval": 30}'
-     (Debe retornar error de sesión, no error 500)
 
-E) CSS/Styles not updating (old design showing):
-   - Clear browser cache (Ctrl+Shift+R or Ctrl+F5)
-   - Clear Nginx cache:
-     sudo rm -rf /var/cache/nginx/*
-     sudo systemctl restart nginx
+E) Activity Tracker no registra tiempo:
+   - Verificar columnas en user_session (paso 4C)
+   - Verificar que activity-tracker.js carga correctamente
 
-F) User Activity showing "Modo demostración" (yellow badge):
-   - Check endpoint works: curl -I https://tu-dominio/admin/metricas/actividad-usuarios
-   - Review server logs for errors:
-     sudo journalctl -u gunicorn -n 100 --no-pager | grep -i "actividad\|error"
-   - Verify UserSession table has new columns (paso 6)
+F) CSS/estilos antiguos:
+   - Limpiar cache Nginx: sudo rm -rf /var/cache/nginx/*
+   - Reiniciar Nginx
+   - Hard refresh en navegador (Ctrl+Shift+R)
 
-G) El tiempo de usuarios sigue contando infinitamente:
-   - Asegurarse de que el navegador tiene caché limpio (Ctrl+Shift+R)
-   - Verificar que activity-tracker.js está cargado (Network tab)
-   - Las sesiones ANTIGUAS seguirán mostrando el cálculo legacy
-   - Las sesiones NUEVAS mostrarán el tiempo activo real
+G) ROLLBACK (si algo falla):
+   - Restaurar base de datos:
+     cp "$BACKUP_DIR/template_app.db" instance/template_app.db
+   - Restaurar uploads:
+     tar -xzf "$BACKUP_DIR/uploads.tar.gz" -C /
+   - Regresar a version anterior:
+     git checkout <branch-anterior>
+   - Reiniciar servicios
 
 =============================================================================
 
-NOTES:
-- REDIS_URL must point to your Redis instance (local or cloud).
-- In production, Redis must always be running.
-- Static files (CSS, JS, images) may be cached by Nginx or browser.
-- After CSS changes, always clear caches and hard refresh.
-- If anything fails, use backups in /var/backups/template_app/$TS.
-- El Activity Tracker solo rastrea tiempo cuando la pestaña está VISIBLE y
-  el usuario está ACTIVO (clicks, scroll, teclas).
-- Sesiones antiguas (antes de v1.5.6.8) mostrarán el tiempo legacy hasta
-  que el usuario inicie una nueva sesión.
+NOTAS IMPORTANTES:
+- SIEMPRE hacer backup ANTES de cualquier cambio
+- NUNCA eliminar la base de datos directamente
+- El backup permite rollback inmediato si algo falla
+- Redis debe estar corriendo para metricas y cache
+- Los archivos estaticos pueden estar en cache del navegador
+- Sesiones antiguas (antes de v1.5.6.8) usaran calculo legacy de tiempo

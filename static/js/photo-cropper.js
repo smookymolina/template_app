@@ -413,10 +413,11 @@ class PhotoCropper {
                     const detailPic = document.getElementById('detail-recluta-pic');
                     if (detailPic && result.foto_url) {
                         // Usar la misma función getFotoUrl que usa reclutas.js
+                        const placeholder = window.DEFAULT_PROFILE_PLACEHOLDER || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e2e8f0'/%3E%3Ccircle cx='50' cy='40' r='18' fill='%23a0aec0'/%3E%3Cellipse cx='50' cy='80' rx='28' ry='20' fill='%23a0aec0'/%3E%3C/svg%3E";
                         const getFotoUrl = (fotoUrl) => {
-                            if (!fotoUrl) return '/api/placeholder/100/100';
+                            if (!fotoUrl) return placeholder;
                             if (fotoUrl.startsWith('http')) return fotoUrl;
-                            if (fotoUrl === 'default_profile.jpg') return '/api/placeholder/100/100';
+                            if (fotoUrl === 'default_profile.jpg') return placeholder;
                             if (fotoUrl.includes('recluta/')) {
                                 const filename = fotoUrl.split('/').pop();
                                 return `/media/profiles/${filename}`;
@@ -513,4 +514,253 @@ function handlePhotoDrop(event) {
 
 function saveUpdatedPhoto() {
     photoCropper.savePhoto();
+}
+
+/**
+ * Photo Lightbox - Sistema para ver fotos ampliadas
+ * Permite hacer clic en fotos de perfil para verlas en tamaño completo
+ */
+class PhotoLightbox {
+    constructor() {
+        this.modal = null;
+        this.image = null;
+        this.caption = null;
+        this.init();
+    }
+
+    init() {
+        document.addEventListener('DOMContentLoaded', () => {
+            this.setupModal();
+            this.setupClickablePhotos();
+        });
+    }
+
+    setupModal() {
+        this.modal = document.getElementById('photo-lightbox-modal');
+        this.image = document.getElementById('lightbox-image');
+        this.caption = document.getElementById('lightbox-caption');
+
+        if (!this.modal) return;
+
+        // Cerrar al hacer clic en X
+        const closeBtn = this.modal.querySelector('.lightbox-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.close());
+        }
+
+        // Cerrar al hacer clic fuera de la imagen
+        this.modal.addEventListener('click', (e) => {
+            if (e.target === this.modal || e.target.classList.contains('lightbox-content')) {
+                this.close();
+            }
+        });
+
+        // Cerrar con tecla Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.modal.style.display === 'block') {
+                this.close();
+            }
+        });
+    }
+
+    setupClickablePhotos() {
+        // Lista de selectores de fotos que deben ser clickeables
+        const photoSelectors = [
+            // Fotos principales
+            '#detail-recluta-pic',            // Foto en modal de ver recluta
+            '#dashboard-profile-pic',         // Foto en header del dashboard
+            '#user-photo-preview img',        // Foto en configuración
+
+            // Tablas y listas
+            '.recluta-foto',                  // Fotos en tabla de reclutas
+            '.user-avatar-img',               // Avatar de usuarios en admin
+            '.profile-image-large',           // Perfil grande en admin
+            '.profile-image-small',           // Perfil pequeño en admin
+            '.gerente-foto',                  // Fotos de gerentes en métricas
+
+            // Cards de métricas y equipos
+            '.gerente-card img',              // Foto en card de gerente
+            '.asesor-card img',               // Foto en card de asesor
+            '.equipo-card img',               // Foto en card de equipo
+            '.team-member-avatar img',        // Avatar en miembros de equipo
+            '.user-card img',                 // Foto en card de usuario
+            '.usuario-activo-card img',       // Foto en card de usuario activo
+
+            // Entrevistas y calendario
+            '#interview-candidate-pic',       // Foto de candidato en entrevista
+            '.interview-candidate img',       // Foto en lista de entrevistas
+
+            // Genéricos que contengan fotos de perfil
+            '.profile-pic:not(.profile-pic-edit)',  // Cualquier foto de perfil
+            '.avatar-img',                    // Cualquier avatar
+            '[class*="foto-perfil"]',         // Clases que contengan foto-perfil
+            '[class*="profile-photo"]'        // Clases que contengan profile-photo
+        ];
+
+        photoSelectors.forEach(selector => {
+            this.makePhotosClickable(selector);
+        });
+
+        // Observar cambios en el DOM para nuevas fotos
+        this.observeDOMChanges();
+    }
+
+    makePhotosClickable(selector) {
+        const photos = document.querySelectorAll(selector);
+        photos.forEach(photo => {
+            if (photo.tagName === 'IMG' && !photo.classList.contains('lightbox-initialized')) {
+                this.initializePhoto(photo);
+            }
+        });
+    }
+
+    initializePhoto(imgElement) {
+        // No inicializar si es placeholder
+        if (this.isPlaceholder(imgElement.src)) return;
+
+        imgElement.classList.add('profile-pic-clickable', 'lightbox-initialized');
+        imgElement.style.cursor = 'pointer';
+        imgElement.title = 'Clic para ver en grande';
+
+        imgElement.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+
+            // No abrir lightbox si es placeholder
+            if (this.isPlaceholder(imgElement.src)) return;
+
+            this.open(imgElement.src, imgElement.alt || 'Foto de perfil');
+        });
+    }
+
+    isPlaceholder(src) {
+        if (!src) return true;
+        return src.includes('placeholder') ||
+               src.includes('default_profile') ||
+               src.includes('fa-user') ||
+               src.includes('data:image/svg+xml') ||
+               src === '';
+    }
+
+    open(imageSrc, caption = '') {
+        if (!this.modal || !this.image) return;
+        if (this.isPlaceholder(imageSrc)) return;
+
+        this.image.src = imageSrc;
+        if (this.caption) {
+            this.caption.textContent = caption;
+        }
+
+        this.modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+
+    close() {
+        if (!this.modal) return;
+
+        this.modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+
+        if (this.image) {
+            this.image.src = '';
+        }
+    }
+
+    // Observar cambios en el DOM para inicializar nuevas fotos
+    observeDOMChanges() {
+        // Selectores de imágenes que deben ser clickeables
+        const imgSelectors = [
+            'img.profile-pic',
+            'img.recluta-foto',
+            'img.user-avatar-img',
+            'img.profile-image-large',
+            'img.profile-image-small',
+            'img.gerente-foto',
+            'img.avatar-img',
+            '.gerente-card img',
+            '.asesor-card img',
+            '.equipo-card img',
+            '.team-member-avatar img',
+            '.user-card img',
+            '.usuario-activo-card img',
+            '#detail-recluta-pic',
+            '#dashboard-profile-pic',
+            '#interview-candidate-pic'
+        ].join(', ');
+
+        // Clases que indican una foto clickeable
+        const photoClasses = [
+            'profile-pic', 'recluta-foto', 'user-avatar-img',
+            'profile-image-large', 'profile-image-small', 'gerente-foto',
+            'avatar-img'
+        ];
+
+        const observer = new MutationObserver((mutations) => {
+            let hasNewImages = false;
+
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1) { // Element node
+                        // Buscar imágenes dentro del nodo agregado
+                        if (node.querySelectorAll) {
+                            const imgs = node.querySelectorAll(imgSelectors);
+                            imgs.forEach(img => {
+                                if (!img.classList.contains('lightbox-initialized') && !this.isPlaceholder(img.src)) {
+                                    this.initializePhoto(img);
+                                    hasNewImages = true;
+                                }
+                            });
+                        }
+
+                        // Si el nodo mismo es una imagen
+                        if (node.tagName === 'IMG' && !node.classList.contains('lightbox-initialized')) {
+                            const hasPhotoClass = photoClasses.some(cls => node.classList.contains(cls));
+                            const isInPhotoContainer = node.closest('.gerente-card, .asesor-card, .equipo-card, .user-card, .team-member-avatar');
+
+                            if ((hasPhotoClass || isInPhotoContainer) && !this.isPlaceholder(node.src)) {
+                                this.initializePhoto(node);
+                                hasNewImages = true;
+                            }
+                        }
+                    }
+                });
+
+                // También verificar atributos modificados (cambio de src)
+                if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
+                    const img = mutation.target;
+                    if (img.tagName === 'IMG' && !this.isPlaceholder(img.src)) {
+                        const hasPhotoClass = photoClasses.some(cls => img.classList.contains(cls));
+                        if (hasPhotoClass && !img.classList.contains('lightbox-initialized')) {
+                            this.initializePhoto(img);
+                        }
+                    }
+                }
+            });
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['src']
+        });
+    }
+
+    // Método para reinicializar fotos (útil después de cargar datos)
+    refresh() {
+        this.setupClickablePhotos();
+    }
+}
+
+// Instancia global del lightbox
+const photoLightbox = new PhotoLightbox();
+
+// Función global para abrir el lightbox desde cualquier lugar
+function openPhotoLightbox(imageSrc, caption) {
+    photoLightbox.open(imageSrc, caption);
+}
+
+// Función global para refrescar fotos clickeables
+function refreshClickablePhotos() {
+    photoLightbox.refresh();
 }
