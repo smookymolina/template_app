@@ -5,6 +5,13 @@ import random
 import string
 from faker import Faker
 
+# Configurar stdout para UTF-8 en Windows (evita errores con emojis)
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 # Añadir el directorio raíz al path para las importaciones
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

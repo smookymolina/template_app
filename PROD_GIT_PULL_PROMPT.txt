@@ -22,13 +22,24 @@ CHANGES IN THIS VERSION (1.5.7.0 - 2026-02-09):
    - CSS completo con responsive (600px), dark mode, animaciones
    - Filtros inline en timeline del cliente (Todos/Completados/Pendientes)
 
+3) HOTFIX UI + FOTO + TRACKING (ESTABILIDAD):
+   - Seguimiento publico: comentarios se despliegan solo al hacer click en el evento
+   - Seguimiento publico: fix visual (timeline sin linea encimada sobre cards)
+   - Reclutas: botones de acciones (ver/editar/eliminar) sin iconos duplicados
+   - Reclutas: click en folio copia el folio completo
+   - Configuracion: recorte de foto antes de subir (perfil usuario)
+   - Reclutas: guardado con validacion robusta (evita falsos "Error de validacion")
+
    FILES MODIFIED:
    * models/recluta.py - Fix permisos gerente en get_by_id(), fix serialize()
    * routes/api.py - Normalizacion folios, foto_url/puesto en tracking, quitar recluta_id publico
    * routes/main.py - Normalizacion folios, redirect con folio normalizado
    * static/js/reclutas.js - XSS fix en renderTimelineItem, eliminar dead code
-   * static/js/client.js - Rediseno completo tracking, XSS fixes, timezone fixes, buildFotoUrl
-   * static/css/new-timeline.css - CSS perfil tracking, modal expandible, responsive, dark mode
+   * static/js/client.js - Rediseno tracking, XSS fixes, timezone fixes, comentarios toggle
+   * static/js/photo-cropper.js - Recorte robusto, soporte perfil usuario
+   * static/js/configuracion.js - Recorte antes de subir foto
+   * static/css/new-timeline.css - Perfil tracking, modal expandible, fix timeline publico
+   * static/css/styles.css - Estilos foto perfil, botones acciones, folio copiable
    * templates/index.html - Modal clase modal-tracking
 
 =============================================================================
@@ -96,6 +107,28 @@ PASO 1: BACKUP COMPLETO DE DATOS (CRITICO - HACER PRIMERO)
    # Verificar que el backup existe
    ls -la "$BACKUP_DIR"
    echo "Backup completo en: $BACKUP_DIR"
+
+=============================================================================
+PASO 1B: RESUMEN RAPIDO POST-BACKUP (COPIAR/PEGAR)
+=============================================================================
+   # SOLO ejecutar despues del PASO 1 completado
+   cd /var/www/template_app
+   git status -sb
+   git stash push -u -m "prod-pre-update-$TS"
+   git fetch --all --prune
+   git checkout 1.5.7.0 2>/dev/null || git checkout -b 1.5.7.0 origin/1.5.7.0
+   git pull --ff-only origin 1.5.7.0
+   source .venv/bin/activate
+   python -m pip install -r requirements.txt --no-cache-dir
+   flask db upgrade 2>&1 | tee "$BACKUP_DIR/migration.log"
+   # Verificar columnas v1.5.6.8 si aplica (ver PASO 4C)
+   sudo systemctl restart gunicorn
+   sudo systemctl restart nginx
+   # Actualizar permisos (PASO 7)
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo chmod 755 /var/www/template_app/instance/
+   sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
 
 =============================================================================
 PASO 2: VERIFICAR ESTADO DEL REPOSITORIO

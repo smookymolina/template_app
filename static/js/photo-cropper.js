@@ -1,5 +1,5 @@
 /**
- * Photo Cropper - Sistema de recorte de imágenes para perfiles
+ * Photo Cropper - Sistema de recorte de imÃƒÂ¡genes para perfiles
  * Permite seleccionar, recortar y guardar fotos de perfil de reclutas
  */
 
@@ -12,6 +12,7 @@ class PhotoCropper {
         this.startX = 0;
         this.startY = 0;
         this.currentReclutaId = null;
+        this.currentMode = 'recluta';
 
         this.initializeEventListeners();
     }
@@ -36,10 +37,11 @@ class PhotoCropper {
     }
 
     openModal(reclutaId = null) {
-        this.currentReclutaId = reclutaId;
+        this.currentMode = 'recluta';
+        this.currentReclutaId = reclutaId || this.resolveReclutaId();
         this.resetModal();
 
-        // Actualizar texto del botón según si hay foto actual
+        // Actualizar texto del botÃƒÂ³n segÃƒÂºn si hay foto actual
         const currentPhoto = document.getElementById('detail-recluta-pic');
         const buttonText = document.getElementById('photo-btn-text');
 
@@ -56,6 +58,22 @@ class PhotoCropper {
         }
     }
 
+    openModalForUserPhoto(file = null) {
+        this.currentMode = 'user';
+        this.currentReclutaId = null;
+        this.resetModal();
+
+        const modal = document.getElementById('photo-update-modal');
+        if (modal) {
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        if (file) {
+            this.handleFileSelect(file);
+        }
+    }
+
     closeModal() {
         const modal = document.getElementById('photo-update-modal');
         if (modal) {
@@ -67,6 +85,7 @@ class PhotoCropper {
 
     resetModal() {
         this.currentFile = null;
+        this.cropBox = null;
 
         // Resetear areas
         const uploadZone = document.getElementById('photo-upload-zone');
@@ -85,14 +104,14 @@ class PhotoCropper {
     validateFile(file) {
         // Validar tipo
         if (!file.type.startsWith('image/')) {
-            this.showError('Por favor selecciona un archivo de imagen válido.');
+            this.showError('Por favor selecciona un archivo de imagen vÃƒÂ¡lido.');
             return false;
         }
 
-        // Validar tamaño (5MB máximo)
+        // Validar tamaÃƒÂ±o (5MB mÃƒÂ¡ximo)
         const maxSize = 5 * 1024 * 1024; // 5MB
         if (file.size > maxSize) {
-            this.showError('El archivo es demasiado grande. El tamaño máximo es 5MB.');
+            this.showError('El archivo es demasiado grande. El tamaÃƒÂ±o mÃƒÂ¡ximo es 5MB.');
             return false;
         }
 
@@ -124,7 +143,7 @@ class PhotoCropper {
         errorDiv.textContent = message;
         errorDiv.style.display = 'block';
 
-        // Auto-ocultar después de 5 segundos
+        // Auto-ocultar despuÃƒÂ©s de 5 segundos
         setTimeout(() => {
             if (errorDiv) errorDiv.style.display = 'none';
         }, 5000);
@@ -168,10 +187,14 @@ class PhotoCropper {
         cropImage.onload = () => {
             this.initializeCropBox();
             this.updatePreview();
+            if (saveBtn) saveBtn.disabled = false;
+        };
+        cropImage.onerror = () => {
+            this.showError('No se pudo cargar la imagen. Intenta con otro archivo.');
         };
 
-        // Habilitar botón de guardar
-        if (saveBtn) saveBtn.disabled = false;
+        // Mantener boton deshabilitado hasta que cargue la imagen
+        if (saveBtn) saveBtn.disabled = true;
     }
 
     initializeCropBox() {
@@ -277,7 +300,7 @@ class PhotoCropper {
 
         const containerRect = imageContainer.getBoundingClientRect();
 
-        // Calcular nuevas dimensiones según el handle
+        // Calcular nuevas dimensiones segÃƒÂºn el handle
         if (this.isResizing.includes('right')) {
             this.cropBox.width = Math.min(
                 containerRect.width - this.cropBox.x,
@@ -357,9 +380,17 @@ class PhotoCropper {
     }
 
     async savePhoto() {
-        if (!this.currentFile || !this.cropBox || !this.currentReclutaId) {
-            this.showError('Error: No hay imagen seleccionada o recluta identificado.');
+        if (!this.currentFile || !this.cropBox) {
+            this.showError('Error: selecciona una imagen y espera a que cargue el recorte.');
             return;
+        }
+
+        if (this.currentMode === 'recluta') {
+            this.currentReclutaId = this.resolveReclutaId();
+            if (!this.currentReclutaId) {
+                this.showError('Error: no hay recluta identificado.');
+                return;
+            }
         }
 
         const saveBtn = document.getElementById('save-photo-btn');
@@ -400,49 +431,74 @@ class PhotoCropper {
                 const formData = new FormData();
                 formData.append('foto', blob, 'profile.jpg');
 
+                const isUserMode = this.currentMode === "user";
+                const requestUrl = isUserMode
+                    ? "/auth/upload-profile-photo"
+                    : `/api/reclutas/${this.currentReclutaId}`;
+                const requestMethod = isUserMode ? "POST" : "PUT";
+
                 // Enviar a la API
-                const response = await fetch(`/api/reclutas/${this.currentReclutaId}`, {
-                    method: 'PUT',
+                const response = await fetch(requestUrl, {
+                    method: requestMethod,
                     body: formData
                 });
 
                 if (response.ok) {
                     const result = await response.json();
 
-                    // Actualizar imagen en el modal de vista
-                    const detailPic = document.getElementById('detail-recluta-pic');
-                    if (detailPic && result.foto_url) {
-                        // Usar la misma función getFotoUrl que usa reclutas.js
-                        const placeholder = window.DEFAULT_PROFILE_PLACEHOLDER || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e2e8f0'/%3E%3Ccircle cx='50' cy='40' r='18' fill='%23a0aec0'/%3E%3Cellipse cx='50' cy='80' rx='28' ry='20' fill='%23a0aec0'/%3E%3C/svg%3E";
-                        const getFotoUrl = (fotoUrl) => {
-                            if (!fotoUrl) return placeholder;
-                            if (fotoUrl.startsWith('http')) return fotoUrl;
-                            if (fotoUrl === 'default_profile.jpg') return placeholder;
-                            if (fotoUrl.includes('recluta/')) {
-                                const filename = fotoUrl.split('/').pop();
-                                return `/media/profiles/${filename}`;
+                    if (isUserMode) {
+                        if (result.success && result.foto_url) {
+                            if (window.configManager && typeof window.configManager.displayPhotoPreview === "function") {
+                                window.configManager.displayPhotoPreview(result.foto_url);
+                            } else {
+                                const preview = document.getElementById("user-photo-preview");
+                                if (preview) {
+                                    preview.innerHTML = `<img src="${result.foto_url}?t=${Date.now()}" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                                }
                             }
-                            if (fotoUrl.startsWith('uploads/')) {
-                                const filename = fotoUrl.split('/').pop();
-                                return `/media/profiles/${filename}`;
-                            }
-                            return `/media/profiles/${fotoUrl}`;
-                        };
+                            this.closeModal();
+                            this.showSuccess("Foto de perfil actualizada correctamente");
+                        } else {
+                            throw new Error(result.message || "Error al guardar la foto");
+                        }
+                    } else {
+                        const reclutaFotoUrl = result.foto_url || (result.recluta && result.recluta.foto_url) || null;
 
-                        detailPic.src = getFotoUrl(result.foto_url) + '?t=' + Date.now(); // Cache busting
+                        // Actualizar imagen en el modal de vista
+                        const detailPic = document.getElementById("detail-recluta-pic");
+                        if (detailPic && reclutaFotoUrl) {
+                            // Usar la misma funcion getFotoUrl que usa reclutas.js
+                            const placeholder = window.DEFAULT_PROFILE_PLACEHOLDER || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e2e8f0'/%3E%3Ccircle cx='50' cy='40' r='18' fill='%23a0aec0'/%3E%3Cellipse cx='50' cy='80' rx='28' ry='20' fill='%23a0aec0'/%3E%3C/svg%3E";
+                            const getFotoUrl = (fotoUrl) => {
+                                if (!fotoUrl) return placeholder;
+                                if (fotoUrl.startsWith("http")) return fotoUrl;
+                                if (fotoUrl === "default_profile.jpg") return placeholder;
+                                if (fotoUrl.includes("recluta/")) {
+                                    const filename = fotoUrl.split("/").pop();
+                                    return `/media/profiles/${filename}`;
+                                }
+                                if (fotoUrl.startsWith("uploads/")) {
+                                    const filename = fotoUrl.split("/").pop();
+                                    return `/media/profiles/${filename}`;
+                                }
+                                return `/media/profiles/${fotoUrl}`;
+                            };
+
+                            detailPic.src = getFotoUrl(reclutaFotoUrl) + "?t=" + Date.now();
+                        }
+
+                        // Actualizar imagen en la tabla
+                        if (window.Reclutas && window.Reclutas.loadReclutas) {
+                            window.Reclutas.loadReclutas();
+                        }
+
+                        // Actualizar texto del boton
+                        const buttonText = document.getElementById("photo-btn-text");
+                        if (buttonText) buttonText.textContent = "Actualizar foto";
+
+                        this.closeModal();
+                        this.showSuccess("Foto actualizada correctamente");
                     }
-
-                    // Actualizar imagen en la tabla
-                    if (window.Reclutas && window.Reclutas.loadReclutas) {
-                        window.Reclutas.loadReclutas();
-                    }
-
-                    // Actualizar texto del botón
-                    const buttonText = document.getElementById('photo-btn-text');
-                    if (buttonText) buttonText.textContent = 'Actualizar foto';
-
-                    this.closeModal();
-                    this.showSuccess('Foto actualizada correctamente');
 
                 } else {
                     const error = await response.json();
@@ -462,8 +518,21 @@ class PhotoCropper {
         }
     }
 
+    resolveReclutaId() {
+        if (this.currentReclutaId) return this.currentReclutaId;
+        const modal = document.getElementById('view-recluta-modal');
+        const modalId = modal && modal.dataset ? modal.dataset.reclutaId : null;
+        if (modalId) {
+            const parsed = Number(modalId);
+            if (!Number.isNaN(parsed)) {
+                this.currentReclutaId = parsed;
+            }
+        }
+        return this.currentReclutaId;
+    }
+
     showSuccess(message) {
-        // Crear notificación de éxito
+        // Crear notificaciÃƒÂ³n de ÃƒÂ©xito
         const successDiv = document.createElement('div');
         successDiv.style.cssText = `
             position: fixed;
@@ -481,7 +550,7 @@ class PhotoCropper {
 
         document.body.appendChild(successDiv);
 
-        // Auto-eliminar después de 3 segundos
+        // Auto-eliminar despuÃƒÂ©s de 3 segundos
         setTimeout(() => {
             if (successDiv.parentNode) {
                 successDiv.parentNode.removeChild(successDiv);
@@ -492,10 +561,23 @@ class PhotoCropper {
 
 // Instancia global
 const photoCropper = new PhotoCropper();
+window.photoCropper = photoCropper;
 
 // Funciones globales para usar desde HTML
 function openPhotoUpdateModal() {
-    const currentReclutaId = window.Reclutas ? window.Reclutas.currentReclutaId : null;
+    const modal = document.getElementById('view-recluta-modal');
+    const modalId = modal && modal.dataset ? modal.dataset.reclutaId : null;
+    const currentReclutaId = (window.Reclutas && window.Reclutas.currentReclutaId) ||
+        (window.reclutaManager && window.reclutaManager.currentReclutaId) ||
+        (modalId ? Number(modalId) : null);
+
+    if (!currentReclutaId) {
+        if (window.showError) {
+            window.showError('Selecciona un recluta antes de subir foto.');
+        }
+        return;
+    }
+
     photoCropper.openModal(currentReclutaId);
 }
 
@@ -516,9 +598,13 @@ function saveUpdatedPhoto() {
     photoCropper.savePhoto();
 }
 
+function openUserPhotoCropper(file) {
+    photoCropper.openModalForUserPhoto(file);
+}
+
 /**
  * Photo Lightbox - Sistema para ver fotos ampliadas
- * Permite hacer clic en fotos de perfil para verlas en tamaño completo
+ * Permite hacer clic en fotos de perfil para verlas en tamaÃƒÂ±o completo
  */
 class PhotoLightbox {
     constructor() {
@@ -569,16 +655,16 @@ class PhotoLightbox {
             // Fotos principales
             '#detail-recluta-pic',            // Foto en modal de ver recluta
             '#dashboard-profile-pic',         // Foto en header del dashboard
-            '#user-photo-preview img',        // Foto en configuración
+            '#user-photo-preview img',        // Foto en configuraciÃƒÂ³n
 
             // Tablas y listas
             '.recluta-foto',                  // Fotos en tabla de reclutas
             '.user-avatar-img',               // Avatar de usuarios en admin
             '.profile-image-large',           // Perfil grande en admin
-            '.profile-image-small',           // Perfil pequeño en admin
-            '.gerente-foto',                  // Fotos de gerentes en métricas
+            '.profile-image-small',           // Perfil pequeÃƒÂ±o en admin
+            '.gerente-foto',                  // Fotos de gerentes en mÃƒÂ©tricas
 
-            // Cards de métricas y equipos
+            // Cards de mÃƒÂ©tricas y equipos
             '.gerente-card img',              // Foto en card de gerente
             '.asesor-card img',               // Foto en card de asesor
             '.equipo-card img',               // Foto en card de equipo
@@ -590,7 +676,7 @@ class PhotoLightbox {
             '#interview-candidate-pic',       // Foto de candidato en entrevista
             '.interview-candidate img',       // Foto en lista de entrevistas
 
-            // Genéricos que contengan fotos de perfil
+            // GenÃƒÂ©ricos que contengan fotos de perfil
             '.profile-pic:not(.profile-pic-edit)',  // Cualquier foto de perfil
             '.avatar-img',                    // Cualquier avatar
             '[class*="foto-perfil"]',         // Clases que contengan foto-perfil
@@ -668,7 +754,7 @@ class PhotoLightbox {
 
     // Observar cambios en el DOM para inicializar nuevas fotos
     observeDOMChanges() {
-        // Selectores de imágenes que deben ser clickeables
+        // Selectores de imÃƒÂ¡genes que deben ser clickeables
         const imgSelectors = [
             'img.profile-pic',
             'img.recluta-foto',
@@ -701,7 +787,7 @@ class PhotoLightbox {
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
                     if (node.nodeType === 1) { // Element node
-                        // Buscar imágenes dentro del nodo agregado
+                        // Buscar imÃƒÂ¡genes dentro del nodo agregado
                         if (node.querySelectorAll) {
                             const imgs = node.querySelectorAll(imgSelectors);
                             imgs.forEach(img => {
@@ -725,7 +811,7 @@ class PhotoLightbox {
                     }
                 });
 
-                // También verificar atributos modificados (cambio de src)
+                // TambiÃƒÂ©n verificar atributos modificados (cambio de src)
                 if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
                     const img = mutation.target;
                     if (img.tagName === 'IMG' && !this.isPlaceholder(img.src)) {
@@ -746,7 +832,7 @@ class PhotoLightbox {
         });
     }
 
-    // Método para reinicializar fotos (útil después de cargar datos)
+    // MÃƒÂ©todo para reinicializar fotos (ÃƒÂºtil despuÃƒÂ©s de cargar datos)
     refresh() {
         this.setupClickablePhotos();
     }
@@ -755,12 +841,12 @@ class PhotoLightbox {
 // Instancia global del lightbox
 const photoLightbox = new PhotoLightbox();
 
-// Función global para abrir el lightbox desde cualquier lugar
+// FunciÃƒÂ³n global para abrir el lightbox desde cualquier lugar
 function openPhotoLightbox(imageSrc, caption) {
     photoLightbox.open(imageSrc, caption);
 }
 
-// Función global para refrescar fotos clickeables
+// FunciÃƒÂ³n global para refrescar fotos clickeables
 function refreshClickablePhotos() {
     photoLightbox.refresh();
 }

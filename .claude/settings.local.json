@@ -1,22 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python:*)",
-      "Bash(curl:*)",
-      "Read(//c/Users/GIRTEC/Documents/**)",
-      "Bash(pkill:*)",
-      "Bash(dir:*)",
-      "Bash(pip install:*)",
-      "mcp__ide__getDiagnostics",
       "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "WebFetch(domain:freted.info)",
-      "Bash(git branch:*)",
-      "Bash(git checkout:*)",
-      "Bash(git cherry-pick:*)"
-    ],
-    "deny": [],
-    "ask": []
+      "Bash(git commit:*)"
+    ]
   }
 }

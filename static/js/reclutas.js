@@ -2162,18 +2162,22 @@ const Reclutas = {
                 <td>${recluta.email}</td>
                 <td>${recluta.telefono}</td>
                 <td>${recluta.puesto || 'No especificado'}</td>
-                <td><span class="folio-display">${recluta.folio || 'N/A'}</span></td>
+                <td>
+                    <button type="button" class="folio-display copy-folio" data-folio="${this.escapeHtml(recluta.folio || 'N/A')}" title="Copiar folio">
+                        ${this.escapeHtml(recluta.folio || 'N/A')}
+                    </button>
+                </td>
                 <td><span class="badge ${badgeClass}">${recluta.estado}</span></td>
                 <td class="asesor-column">${recluta.asesor_nombre || 'No asignado'}</td>
                 <td class="actions-column">
-                    <button class="action-btn view-btn" title="Ver detalles" data-id="${recluta.id}">
+                    <button class="action-btn view-btn has-fa" title="Ver detalles" data-id="${recluta.id}">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="action-btn edit-btn" title="Editar" data-id="${recluta.id}">
+                    <button class="action-btn edit-btn has-fa" title="Editar" data-id="${recluta.id}">
                         <i class="fas fa-edit"></i>
                     </button>
                     ${['admin', 'gerente'].includes(this.userRole) ? `
-                    <button class="action-btn delete-btn" title="Eliminar" data-id="${recluta.id}">
+                    <button class="action-btn delete-btn has-fa" title="Eliminar" data-id="${recluta.id}">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                     ` : ''}
@@ -2666,6 +2670,44 @@ const Reclutas = {
         }
         
         console.log(`🔧 Configurando botones para recluta ${reclutaId}`);
+
+        // Copiar folio al hacer click
+        const folioBtn = row.querySelector('.copy-folio');
+        if (folioBtn) {
+            const newFolioBtn = folioBtn.cloneNode(true);
+            folioBtn.parentNode.replaceChild(newFolioBtn, folioBtn);
+
+            newFolioBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const folioValue = (newFolioBtn.dataset.folio || newFolioBtn.textContent || '').trim();
+                if (!folioValue || folioValue === 'N/A' || folioValue === 'S/F') {
+                    if (window.showError) showError('Folio no disponible para copiar');
+                    return;
+                }
+
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(folioValue);
+                    } else {
+                        const tempInput = document.createElement('input');
+                        tempInput.value = folioValue;
+                        document.body.appendChild(tempInput);
+                        tempInput.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(tempInput);
+                    }
+
+                    newFolioBtn.classList.add('folio-copied');
+                    setTimeout(() => newFolioBtn.classList.remove('folio-copied'), 1200);
+                    if (window.showSuccess) showSuccess('Folio copiado');
+                } catch (error) {
+                    console.error('Error al copiar folio:', error);
+                    if (window.showError) showError('No se pudo copiar el folio');
+                }
+            });
+        }
         
         // Botón de ver detalles
         const viewBtn = row.querySelector('.view-btn');
@@ -2851,18 +2893,24 @@ const Reclutas = {
 
         // Obtener datos del formulario de edición
         const estadoElement = document.getElementById('edit-recluta-estado');
-        const estadoValue = estadoElement?.value || '';
+        const reclutaActual = this.reclutas.find(r => r.id === reclutaId) || {};
+        const getTrimmedValue = (id, fallback = '') => {
+            const el = document.getElementById(id);
+            const value = el ? (el.value || '').trim() : '';
+            return value || (fallback || '');
+        };
+        const estadoValue = (estadoElement?.value || '').trim() || (reclutaActual.estado || '');
 
         console.log('📊 [saveReclutaChanges] Estado seleccionado:', estadoValue);
         console.log('📊 [saveReclutaChanges] Opciones disponibles:', estadoElement ? Array.from(estadoElement.options).map(o => o.value) : 'N/A');
 
         const reclutaData = {
-            nombre: document.getElementById('edit-recluta-nombre')?.value || '',
-            email: document.getElementById('edit-recluta-email')?.value || '',
-            telefono: document.getElementById('edit-recluta-telefono')?.value || '',
-            puesto: document.getElementById('edit-recluta-puesto')?.value || '',
+            nombre: getTrimmedValue('edit-recluta-nombre', reclutaActual.nombre),
+            email: getTrimmedValue('edit-recluta-email', reclutaActual.email),
+            telefono: getTrimmedValue('edit-recluta-telefono', reclutaActual.telefono),
+            puesto: getTrimmedValue('edit-recluta-puesto', reclutaActual.puesto),
             estado: estadoValue,
-            notas: document.getElementById('edit-recluta-notas')?.value || ''
+            notas: getTrimmedValue('edit-recluta-notas', reclutaActual.notas)
         };
 
         console.log('📋 [saveReclutaChanges] Datos recopilados:', reclutaData);

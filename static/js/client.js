@@ -535,15 +535,13 @@ const Client = {
         // Renderizar comentario si existe
         const commentText = item.description ? item.description.trim() : '';
         const hasComment = commentText.length > 0;
-        const isLongComment = commentText.length > 180;
         const commentHTML = hasComment
-            ? `<div class="timeline-card-comment ${isLongComment ? 'is-collapsed' : ''}">
+            ? `<div class="timeline-card-comment is-collapsed">
                    <div class="comment-header">
                        <div class="comment-title">
                            <i class="fas fa-comment-dots"></i>
                            <span>Comentario del asesor:</span>
                        </div>
-                       ${isLongComment ? '<button class="comment-toggle" type="button" aria-expanded="false">Ver mas</button>' : ''}
                    </div>
                    <div class="comment-text">${this.escapeHtml(commentText)}</div>
                </div>`
@@ -593,6 +591,20 @@ const Client = {
     },
 
     /**
+     * Obtiene el texto descriptivo del tipo de entrevista
+     * @param {string} tipo - Tipo de entrevista
+     * @returns {string} - Descripcion del tipo
+     */
+    getEntrevistaType: function(tipo) {
+        switch (tipo) {
+            case 'presencial': return 'Presencial';
+            case 'virtual': return 'Virtual (Videollamada)';
+            case 'telefonica': return 'Telefonica';
+            default: return tipo || '';
+        }
+    },
+
+    /**
      * Escapa caracteres HTML para prevenir XSS
      * @param {string} text - Texto a escapar
      * @returns {string} - Texto escapado
@@ -624,22 +636,13 @@ const Client = {
         timelineContainer.dataset.commentToggleBound = 'true';
 
         timelineContainer.addEventListener('click', (e) => {
-            const toggleBtn = e.target.closest('.comment-toggle');
-            if (!toggleBtn) return;
+            const card = e.target.closest('.timeline-card');
+            if (!card) return;
 
-            const commentBlock = toggleBtn.closest('.timeline-card-comment');
+            const commentBlock = card.querySelector('.timeline-card-comment');
             if (!commentBlock) return;
 
-            const isCollapsed = commentBlock.classList.contains('is-collapsed');
-            if (isCollapsed) {
-                commentBlock.classList.remove('is-collapsed');
-                toggleBtn.textContent = 'Ver menos';
-                toggleBtn.setAttribute('aria-expanded', 'true');
-            } else {
-                commentBlock.classList.add('is-collapsed');
-                toggleBtn.textContent = 'Ver mas';
-                toggleBtn.setAttribute('aria-expanded', 'false');
-            }
+            commentBlock.classList.toggle('is-collapsed');
         });
     },
     

@@ -1,6 +1,6 @@
 /**
- * ✅ MÓDULO DE CONFIGURACIÓN - GESTIÓN DE PREFERENCIAS DE USUARIO
- * Maneja la funcionalidad de configuración de la aplicación
+ * âœ… MÃ“DULO DE CONFIGURACIÃ“N - GESTIÃ“N DE PREFERENCIAS DE USUARIO
+ * Maneja la funcionalidad de configuraciÃ³n de la aplicaciÃ³n
  */
 
 class ConfigurationManager {
@@ -14,11 +14,11 @@ class ConfigurationManager {
         console.log('= Inicializando ConfigurationManager...');
         this.bindElements();
         this.bindEvents();
-        // this.loadUserSettings(); // Se cargará después de la autenticación
-        console.log('✅ ConfigurationManager inicializado correctamente');
+        // this.loadUserSettings(); // Se cargarÃ¡ despuÃ©s de la autenticaciÃ³n
+        console.log('âœ… ConfigurationManager inicializado correctamente');
     }
 
-    // ✅ NUEVA FUNCIÓN: Cargar configuraciones solo para usuarios autenticados
+    // âœ… NUEVA FUNCIÃ“N: Cargar configuraciones solo para usuarios autenticados
     async loadSettingsForAuthenticatedUser() {
         console.log('ConfigurationManager: intentando cargar configuraciones para usuario autenticado...');
         this.showLoader();
@@ -133,7 +133,7 @@ class ConfigurationManager {
         this.emailInput = document.getElementById('email-input');
         this.phoneInput = document.getElementById('user-phone');
         
-        // Campos de contraseña
+        // Campos de contraseÃ±a
         this.currentPasswordInput = document.getElementById('current-password-input');
         this.newPasswordInput = document.getElementById('new-password-input');
         this.confirmNewPasswordInput = document.getElementById('confirm-new-password-input');
@@ -157,7 +157,7 @@ class ConfigurationManager {
     }
 
     bindEvents() {
-        console.log('✅ Binding configuration events...');
+        console.log('âœ… Binding configuration events...');
         
         // Eventos de botones principales
         if (this.saveChangesBtn) {
@@ -197,7 +197,7 @@ class ConfigurationManager {
             this.removeUserPhoto.addEventListener('click', () => this.handleRemovePhoto());
         }
         
-        // Cargar sesiones activas cuando se muestra la sección
+        // Cargar sesiones activas cuando se muestra la secciÃ³n
         document.addEventListener('sectionChanged', (event) => {
             if (event.detail.section === 'configuracion-section') {
                 this.loadActiveSessions();
@@ -208,7 +208,7 @@ class ConfigurationManager {
     async handleSaveChanges() {
         if (this.isLoading) return;
         
-        console.log('🔄 Guardando cambios de perfil...');
+        console.log('ðŸ”„ Guardando cambios de perfil...');
         this.isLoading = true;
         this.updateButton(this.saveChangesBtn, true, 'Guardando...');
         
@@ -236,8 +236,8 @@ class ConfigurationManager {
             }
             
         } catch (error) {
-            console.error('❌ Error al guardar cambios:', error);
-            this.showNotification('Error de conexión al guardar cambios', 'error');
+            console.error('âŒ Error al guardar cambios:', error);
+            this.showNotification('Error de conexiÃ³n al guardar cambios', 'error');
         } finally {
             this.isLoading = false;
             this.updateButton(this.saveChangesBtn, false, '<i class="fas fa-save"></i> Guardar Cambios');
@@ -247,7 +247,7 @@ class ConfigurationManager {
     async handleChangePassword() {
         if (this.isLoading) return;
         
-        console.log('🔄 Cambiando contraseña...');
+        console.log('ðŸ”„ Cambiando contraseÃ±a...');
         
         // Validar campos
         const currentPassword = this.currentPasswordInput?.value || '';
@@ -255,17 +255,17 @@ class ConfigurationManager {
         const confirmPassword = this.confirmNewPasswordInput?.value || '';
         
         if (!currentPassword || !newPassword || !confirmPassword) {
-            this.showNotification('Todos los campos de contraseña son obligatorios', 'error');
+            this.showNotification('Todos los campos de contraseÃ±a son obligatorios', 'error');
             return;
         }
         
         if (newPassword.length < 6) {
-            this.showNotification('La nueva contraseña debe tener al menos 6 caracteres', 'error');
+            this.showNotification('La nueva contraseÃ±a debe tener al menos 6 caracteres', 'error');
             return;
         }
         
         if (newPassword !== confirmPassword) {
-            this.showNotification('Las contraseñas no coinciden', 'error');
+            this.showNotification('Las contraseÃ±as no coinciden', 'error');
             return;
         }
         
@@ -287,33 +287,33 @@ class ConfigurationManager {
             const result = await response.json();
             
             if (response.ok && result.success) {
-                this.showNotification('Contraseña cambiada correctamente', 'success');
+                this.showNotification('ContraseÃ±a cambiada correctamente', 'success');
                 // Limpiar campos
                 this.currentPasswordInput.value = '';
                 this.newPasswordInput.value = '';
                 this.confirmNewPasswordInput.value = '';
             } else {
-                this.showNotification(result.message || 'Error al cambiar contraseña', 'error');
+                this.showNotification(result.message || 'Error al cambiar contraseÃ±a', 'error');
             }
             
         } catch (error) {
-            console.error('❌ Error al cambiar contraseña:', error);
-            this.showNotification('Error de conexión al cambiar contraseña', 'error');
+            console.error('âŒ Error al cambiar contraseÃ±a:', error);
+            this.showNotification('Error de conexiÃ³n al cambiar contraseÃ±a', 'error');
         } finally {
             this.isLoading = false;
-            this.updateButton(this.changePasswordBtn, false, '<i class="fas fa-key"></i> Cambiar Contraseña');
+            this.updateButton(this.changePasswordBtn, false, '<i class="fas fa-key"></i> Cambiar ContraseÃ±a');
         }
     }
 
     
 
     handleColorChange(color) {
-        console.log('🎨 Cambiando color principal a:', color);
+        console.log('ðŸŽ¨ Cambiando color principal a:', color);
 
         // Aplicar color inmediatamente
         this.applyColorTheme(color);
 
-        // Actualizar selección visual
+        // Actualizar selecciÃ³n visual
         this.updateColorSelection(color);
 
         // Guardar preferencia y sincronizar
@@ -346,7 +346,7 @@ class ConfigurationManager {
     }
 
     updateDynamicColors(primaryColor) {
-        // Actualizar elementos que usan colores dinámicos
+        // Actualizar elementos que usan colores dinÃ¡micos
         const dynamicElements = document.querySelectorAll('.btn-primary, .badge-primary, .nav-link.active');
         dynamicElements.forEach(element => {
             element.style.backgroundColor = primaryColor;
@@ -377,9 +377,9 @@ class ConfigurationManager {
 
     handleCustomColorChange() {
         const customColor = this.customColorInput.value;
-        console.log('🎨 Color personalizado:', customColor);
+        console.log('ðŸŽ¨ Color personalizado:', customColor);
 
-        // ✅ USAR FUNCIÓN COMPLETA DE APLICACIÓN DE COLOR
+        // âœ… USAR FUNCIÃ“N COMPLETA DE APLICACIÃ“N DE COLOR
         this.applyColorTheme(customColor);
 
         // Deseleccionar opciones predefinidas
@@ -392,7 +392,7 @@ class ConfigurationManager {
         this.saveSetting('primary_color', customColor);
         this.syncUIChanges();
 
-        // ✅ ACTUALIZAR TAMBIÉN EL UI.js SI EXISTE
+        // âœ… ACTUALIZAR TAMBIÃ‰N EL UI.js SI EXISTE
         if (window.UI && typeof window.UI.changePrimaryColor === 'function') {
             window.UI.changePrimaryColor(customColor);
         }
@@ -402,7 +402,7 @@ class ConfigurationManager {
         const emailNotifications = this.emailNotificationsToggle?.checked || false;
         const interviewReminders = this.interviewRemindersToggle?.checked || false;
         
-        console.log('🔄 Configuración de notificaciones:', {
+        console.log('ðŸ”„ ConfiguraciÃ³n de notificaciones:', {
             email: emailNotifications,
             reminders: interviewReminders
         });
@@ -411,7 +411,7 @@ class ConfigurationManager {
         this.saveSetting('email_notifications', emailNotifications);
         this.saveSetting('interview_reminders', interviewReminders);
         
-        this.showNotification('Configuración de notificaciones actualizada', 'success');
+        this.showNotification('ConfiguraciÃ³n de notificaciones actualizada', 'success');
     }
 
     async handlePhotoUpload() {
@@ -419,7 +419,7 @@ class ConfigurationManager {
         if (!file) return;
 
         if (!file.type.startsWith('image/')) {
-            this.showNotification('Por favor selecciona un archivo de imagen válido', 'error');
+            this.showNotification('Por favor selecciona un archivo de imagen vÃ¡lido', 'error');
             return;
         }
 
@@ -428,7 +428,14 @@ class ConfigurationManager {
             return;
         }
 
-        console.log('📸 Subiendo foto de perfil...');
+        // Si el cropper esta disponible, abrirlo para ajustar el recorte
+        if (window.openUserPhotoCropper && typeof window.openUserPhotoCropper === 'function') {
+            window.openUserPhotoCropper(file);
+            this.userPhotoFile.value = '';
+            return;
+        }
+
+        console.log('ðŸ“¸ Subiendo foto de perfil...');
         this.isLoading = true;
 
         try {
@@ -449,13 +456,13 @@ class ConfigurationManager {
                 this.displayPhotoPreview(result.foto_url);
                 this.showNotification('Foto de perfil actualizada correctamente', 'success');
             } else {
-                console.error('[handlePhotoUpload] El servidor indicó un error:', result.message);
+                console.error('[handlePhotoUpload] El servidor indicÃ³ un error:', result.message);
                 this.showNotification(result.message || 'Error al subir la foto', 'error');
             }
 
         } catch (error) {
-            console.error('❌ Error de red o de JSON en handlePhotoUpload:', error);
-            this.showNotification('Error de conexión al subir la foto', 'error');
+            console.error('âŒ Error de red o de JSON en handlePhotoUpload:', error);
+            this.showNotification('Error de conexiÃ³n al subir la foto', 'error');
         } finally {
             this.isLoading = false;
             this.userPhotoFile.value = '';
@@ -463,11 +470,11 @@ class ConfigurationManager {
     }
 
     async handleRemovePhoto() {
-        if (!confirm('¿Estás seguro de que quieres eliminar tu foto de perfil?')) {
+        if (!confirm('Â¿EstÃ¡s seguro de que quieres eliminar tu foto de perfil?')) {
             return;
         }
 
-        console.log('🗑️ Eliminando foto de perfil...');
+        console.log('ðŸ—‘ï¸ Eliminando foto de perfil...');
         this.isLoading = true;
 
         try {
@@ -485,8 +492,8 @@ class ConfigurationManager {
             }
 
         } catch (error) {
-            console.error('❌ Error al eliminar foto:', error);
-            this.showNotification('Error de conexión al eliminar la foto', 'error');
+            console.error('âŒ Error al eliminar foto:', error);
+            this.showNotification('Error de conexiÃ³n al eliminar la foto', 'error');
         } finally {
             this.isLoading = false;
         }
@@ -495,7 +502,7 @@ class ConfigurationManager {
     displayPhotoPreview(photoUrl) {
         console.log(`[displayPhotoPreview] Recibida URL: ${photoUrl}`);
         if (this.userPhotoPreview && photoUrl) {
-            // Añadir un "cache buster" para forzar la recarga de la imagen
+            // AÃ±adir un "cache buster" para forzar la recarga de la imagen
             const finalUrl = `${photoUrl}?t=${new Date().getTime()}`;
             console.log(`[displayPhotoPreview] URL final a mostrar: ${finalUrl}`);
 
@@ -515,7 +522,7 @@ class ConfigurationManager {
                 this.removeUserPhoto.style.display = 'inline-block';
             }
 
-            // ✅ ACTUALIZAR TODAS LAS FOTOS DE PERFIL EN LA UI
+            // âœ… ACTUALIZAR TODAS LAS FOTOS DE PERFIL EN LA UI
             this.updateAllProfileImages(finalUrl);
         } else {
             console.warn('[displayPhotoPreview] Llamado sin URL o sin elemento de preview.');
@@ -523,9 +530,9 @@ class ConfigurationManager {
     }
 
     updateAllProfileImages(photoUrl) {
-        console.log('🔄 Actualizando todas las fotos de perfil en la UI...');
+        console.log('ðŸ”„ Actualizando todas las fotos de perfil en la UI...');
 
-        // Lista de selectores de fotos de perfil en la aplicación
+        // Lista de selectores de fotos de perfil en la aplicaciÃ³n
         const profileImageSelectors = [
             '#dashboard-profile-pic',
             '#user-avatar',
@@ -539,10 +546,10 @@ class ConfigurationManager {
             elements.forEach(element => {
                 if (element.tagName === 'IMG') {
                     element.src = photoUrl;
-                    console.log(`📸 Actualizada imagen: ${selector}`);
+                    console.log(`ðŸ“¸ Actualizada imagen: ${selector}`);
                 } else if (element.style) {
                     element.style.backgroundImage = `url(${photoUrl})`;
-                    console.log(`📸 Actualizado background: ${selector}`);
+                    console.log(`ðŸ“¸ Actualizado background: ${selector}`);
                 }
             });
         });
@@ -551,10 +558,10 @@ class ConfigurationManager {
         if (window.Auth && window.Auth.currentUser) {
             window.Auth.currentUser.foto_url = photoUrl.split('?')[0]; // Sin cache buster
             localStorage.setItem('user_data', JSON.stringify(window.Auth.currentUser));
-            console.log('👤 Actualizado foto en Auth.currentUser');
+            console.log('ðŸ‘¤ Actualizado foto en Auth.currentUser');
         }
 
-        console.log('✅ Todas las fotos de perfil actualizadas');
+        console.log('âœ… Todas las fotos de perfil actualizadas');
     }
 
     resetPhotoPreview() {
@@ -573,7 +580,7 @@ class ConfigurationManager {
     }
 
     async loadUserSettings() {
-        console.log('🔄 Cargando configuración de usuario...');
+        console.log('ðŸ”„ Cargando configuraciÃ³n de usuario...');
         
         try {
             const response = await fetch('/auth/user-settings', {
@@ -588,16 +595,16 @@ class ConfigurationManager {
             if (response.ok && result.success) {
                 this.populateUserData(result.user, result.settings);
             } else {
-                console.warn('⚠️ No se pudieron cargar las configuraciones:', result.message);
+                console.warn('âš ï¸ No se pudieron cargar las configuraciones:', result.message);
             }
             
         } catch (error) {
-            console.error('❌ Error al cargar configuraciones:', error);
+            console.error('âŒ Error al cargar configuraciones:', error);
         }
     }
 
     populateUserData(user, settings = {}) {
-        console.log('🔄 Poblando datos de usuario:', user);
+        console.log('ðŸ”„ Poblando datos de usuario:', user);
         
         // Poblar campos de perfil
         if (this.usernameInput && user.nombre) {
@@ -626,7 +633,7 @@ class ConfigurationManager {
         } else if (settings.primary_color && settings.primary_color !== 'default') {
             this.applyColorTheme(settings.primary_color);
 
-            // Seleccionar opción correspondiente
+            // Seleccionar opciÃ³n correspondiente
             const matchingRadio = document.querySelector(`input[value="${settings.primary_color}"]`);
             if (matchingRadio) {
                 matchingRadio.checked = true;
@@ -649,7 +656,7 @@ class ConfigurationManager {
     async loadActiveSessions() {
         if (!this.activeSessionsContainer) return;
         
-        console.log('🔄 Cargando sesiones activas...');
+        console.log('ðŸ”„ Cargando sesiones activas...');
         this.activeSessionsContainer.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando sesiones...';
         
         try {
@@ -669,8 +676,8 @@ class ConfigurationManager {
             }
             
         } catch (error) {
-            console.error('❌ Error al cargar sesiones:', error);
-            this.activeSessionsContainer.innerHTML = '<p>Error de conexión</p>';
+            console.error('âŒ Error al cargar sesiones:', error);
+            this.activeSessionsContainer.innerHTML = '<p>Error de conexiÃ³n</p>';
         }
     }
 
@@ -679,7 +686,7 @@ class ConfigurationManager {
         const sessionsCount = document.getElementById('sessions-count');
         if (sessionsCount) {
             const count = sessions.length;
-            sessionsCount.textContent = `${count} sesión${count !== 1 ? 'es' : ''}`;
+            sessionsCount.textContent = `${count} sesiÃ³n${count !== 1 ? 'es' : ''}`;
         }
 
         if (sessions.length === 0) {
@@ -693,11 +700,11 @@ class ConfigurationManager {
                     <strong>IP:</strong> ${session.ip_address || 'N/A'}<br>
                     <strong>Navegador:</strong> ${this.truncateUserAgent(session.user_agent) || 'N/A'}<br>
                     <strong>Inicio:</strong> ${new Date(session.created_at).toLocaleString('es-ES')}<br>
-                    <strong>Ubicación:</strong> ${session.location || 'Desconocida'}
+                    <strong>UbicaciÃ³n:</strong> ${session.location || 'Desconocida'}
                 </div>
                 <div class="session-actions">
                     ${session.is_current ?
-                        '<span class="current-session">Sesión actual</span>' :
+                        '<span class="current-session">SesiÃ³n actual</span>' :
                         `<button class="btn-sm btn-danger" onclick="window.configManager?.terminateSession('${session.id}')">
                             <i class="fas fa-sign-out-alt"></i> Cerrar
                         </button>`
@@ -712,7 +719,7 @@ class ConfigurationManager {
     truncateUserAgent(userAgent) {
         if (!userAgent) return 'N/A';
 
-        // Extraer información más legible del user agent
+        // Extraer informaciÃ³n mÃ¡s legible del user agent
         const browserInfo = this.parseBrowserInfo(userAgent);
         return browserInfo || userAgent.substring(0, 50) + (userAgent.length > 50 ? '...' : '');
     }
@@ -739,7 +746,7 @@ class ConfigurationManager {
     }
 
     async terminateSession(sessionId) {
-        console.log('🔄 Terminando sesión:', sessionId);
+        console.log('ðŸ”„ Terminando sesiÃ³n:', sessionId);
         
         try {
             const response = await fetch(`/auth/terminate-session/${sessionId}`, {
@@ -752,15 +759,15 @@ class ConfigurationManager {
             const result = await response.json();
             
             if (response.ok && result.success) {
-                this.showNotification('Sesión terminada correctamente', 'success');
+                this.showNotification('SesiÃ³n terminada correctamente', 'success');
                 this.loadActiveSessions(); // Recargar lista
             } else {
-                this.showNotification(result.message || 'Error al terminar sesión', 'error');
+                this.showNotification(result.message || 'Error al terminar sesiÃ³n', 'error');
             }
             
         } catch (error) {
-            console.error('❌ Error al terminar sesión:', error);
-            this.showNotification('Error de conexión al terminar sesión', 'error');
+            console.error('âŒ Error al terminar sesiÃ³n:', error);
+            this.showNotification('Error de conexiÃ³n al terminar sesiÃ³n', 'error');
         }
     }
 
@@ -777,13 +784,13 @@ class ConfigurationManager {
                 })
             });
         } catch (error) {
-            console.error(`❌ Error al guardar configuración ${key}:`, error);
+            console.error(`âŒ Error al guardar configuraciÃ³n ${key}:`, error);
         }
     }
 
-    // ✅ NUEVA FUNCIÓN: Sincronizar cambios de UI inmediatamente
+    // âœ… NUEVA FUNCIÃ“N: Sincronizar cambios de UI inmediatamente
     syncUIChanges() {
-        console.log('🔄 Sincronizando cambios de UI...');
+        console.log('ðŸ”„ Sincronizando cambios de UI...');
 
         // Disparar evento personalizado para notificar cambios
         document.dispatchEvent(new CustomEvent('userSettingsChanged', {
@@ -795,22 +802,22 @@ class ConfigurationManager {
 
         // Actualizar Auth.currentUser si existe
         if (window.Auth && window.Auth.currentUser) {
-            // Forzar actualización del estado
+            // Forzar actualizaciÃ³n del estado
             window.Auth.checkAuth().then(user => {
                 if (user) {
                     this.updateUIWithUserData(user);
                 }
             }).catch(err => {
-                console.warn('⚠️ Error al verificar auth tras cambios:', err);
+                console.warn('âš ï¸ Error al verificar auth tras cambios:', err);
             });
         }
 
-        console.log('✅ Sincronización de UI completada');
+        console.log('âœ… SincronizaciÃ³n de UI completada');
     }
 
-    // ✅ NUEVA FUNCIÓN: Actualizar UI con datos de usuario actualizados
+    // âœ… NUEVA FUNCIÃ“N: Actualizar UI con datos de usuario actualizados
     updateUIWithUserData(userData) {
-        console.log('👤 Actualizando UI con datos de usuario:', userData.email);
+        console.log('ðŸ‘¤ Actualizando UI con datos de usuario:', userData.email);
 
         // Actualizar elementos de texto que muestran info del usuario
         const userNameElements = document.querySelectorAll('#gerente-name, #dropdown-user-name, #user-name');
@@ -828,7 +835,7 @@ class ConfigurationManager {
             emailElement.value = userData.email;
         }
 
-        // Actualizar teléfono si existe
+        // Actualizar telÃ©fono si existe
         const phoneElement = document.getElementById('user-phone');
         if (phoneElement && userData.telefono) {
             phoneElement.value = userData.telefono;
@@ -839,7 +846,7 @@ class ConfigurationManager {
             this.updateAllProfileImages(userData.foto_url + '?t=' + Date.now());
         }
 
-        console.log('✅ UI actualizada con datos de usuario');
+        console.log('âœ… UI actualizada con datos de usuario');
     }
 
     updateButton(button, loading, text) {
@@ -858,15 +865,15 @@ class ConfigurationManager {
         } else if (window.showError && type === 'error') {
             window.showError(message);
         } else {
-            console.log(`🔄 CONFIGURACIÓN [${type.toUpperCase()}]: ${message}`);
+            console.log(`ðŸ”„ CONFIGURACIÃ“N [${type.toUpperCase()}]: ${message}`);
         }
     }
 
-    // ✅ NUEVA FUNCIÓN: Resetear a configuraciones por defecto
+    // âœ… NUEVA FUNCIÃ“N: Resetear a configuraciones por defecto
     resetToDefaults() {
-        console.log('🔄 Reseteando ConfigurationManager a valores por defecto...');
+        console.log('ðŸ”„ Reseteando ConfigurationManager a valores por defecto...');
 
-        // Resetear campos de perfil a vacío
+        // Resetear campos de perfil a vacÃ­o
         if (this.usernameInput) this.usernameInput.value = '';
         if (this.emailInput) this.emailInput.value = '';
         if (this.phoneInput) this.phoneInput.value = '';
@@ -893,7 +900,7 @@ class ConfigurationManager {
         if (this.emailNotificationsToggle) this.emailNotificationsToggle.checked = true;
         if (this.interviewRemindersToggle) this.interviewRemindersToggle.checked = true;
 
-        // Limpiar campos de contraseña
+        // Limpiar campos de contraseÃ±a
         if (this.currentPasswordInput) this.currentPasswordInput.value = '';
         if (this.newPasswordInput) this.newPasswordInput.value = '';
         if (this.confirmNewPasswordInput) this.confirmNewPasswordInput.value = '';
@@ -903,7 +910,7 @@ class ConfigurationManager {
             this.activeSessionsContainer.innerHTML = '';
         }
 
-        console.log('✅ ConfigurationManager reseteado a valores por defecto');
+        console.log('âœ… ConfigurationManager reseteado a valores por defecto');
     }
 
     showLoader() {
@@ -928,7 +935,7 @@ class ConfigurationManager {
         }
     }
 
-    // Método de debug
+    // MÃ©todo de debug
     debugStatus() {
         return {
             isLoading: this.isLoading,
@@ -943,38 +950,38 @@ class ConfigurationManager {
     }
 }
 
-// Inicializar cuando el DOM esté listo
+// Inicializar cuando el DOM estÃ© listo
 document.addEventListener('DOMContentLoaded', function() {
-    // Verificar si estamos en una página con elementos de configuración
+    // Verificar si estamos en una pÃ¡gina con elementos de configuraciÃ³n
     const configSection = document.getElementById('configuracion-section');
     const saveChangesBtn = document.getElementById('save-changes-btn');
     
     if (configSection || saveChangesBtn) {
-        console.log('⚙️ Detectados elementos de configuración, inicializando...');
+        console.log('âš™ï¸ Detectados elementos de configuraciÃ³n, inicializando...');
         window.configManager = new ConfigurationManager();
     } else {
-        console.log('ℹ️ No se encontraron elementos de configuración - configuracion.js en standby');
+        console.log('â„¹ï¸ No se encontraron elementos de configuraciÃ³n - configuracion.js en standby');
     }
 });
 
-// Listener adicional para cuando se cambia a la sección de configuración
+// Listener adicional para cuando se cambia a la secciÃ³n de configuraciÃ³n
 document.addEventListener('sectionChanged', function(event) {
     if (event.detail && event.detail.section === 'configuracion-section') {
-        console.log('🔄 Cambiando a sección configuración');
+        console.log('ðŸ”„ Cambiando a secciÃ³n configuraciÃ³n');
         
         // Re-inicializar si no existe
         if (!window.configManager) {
-            console.log('🔄 Inicializando ConfigurationManager para sección configuración');
+            console.log('ðŸ”„ Inicializando ConfigurationManager para secciÃ³n configuraciÃ³n');
             window.configManager = new ConfigurationManager();
         }
-        // ✅ NUEVO: Cargar configuraciones solo si el usuario está autenticado
+        // âœ… NUEVO: Cargar configuraciones solo si el usuario estÃ¡ autenticado
         if (window.configManager && window.Auth && window.Auth.isAuthenticated()) {
             window.configManager.loadSettingsForAuthenticatedUser();
         }
     }
 });
 
-// Función global para debugging
+// FunciÃ³n global para debugging
 window.debugConfigManager = function() {
     if (window.configManager) {
         console.log('Debug ConfigurationManager:', window.configManager.debugStatus());
@@ -988,7 +995,7 @@ window.debugConfigManager = function() {
 // Exponer globalmente para debugging
 window.ConfigurationManager = ConfigurationManager;
 
-// ===== FUNCIÓN GLOBAL PARA CONTROLAR EL DESPLEGABLE DE SESIONES =====
+// ===== FUNCIÃ“N GLOBAL PARA CONTROLAR EL DESPLEGABLE DE SESIONES =====
 window.toggleActiveSessionsDropdown = function() {
     const dropdown = document.getElementById('active-sessions-dropdown');
     const header = document.querySelector('.sessions-header');
@@ -1018,4 +1025,4 @@ window.toggleActiveSessionsDropdown = function() {
     }
 };
 
-console.log('✅ configuracion.js cargado - Módulo de configuración listo');
+console.log('âœ… configuracion.js cargado - MÃ³dulo de configuraciÃ³n listo');

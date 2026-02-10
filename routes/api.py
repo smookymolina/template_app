@@ -1782,7 +1782,10 @@ def get_timeline_folio(folio):
                 .order_by(EventoRecluta.fecha.asc(), EventoRecluta.id.asc())
                 .all()
             )
-            custom_events = [e.serialize() for e in personalizados]
+            custom_events = [
+                {k: v for k, v in e.serialize().items() if k != 'recluta_id'}
+                for e in personalizados
+            ]
             current_app.logger.info(
                 f"Timeline folio {recluta.folio}: {len(custom_events)} eventos encontrados"
             )

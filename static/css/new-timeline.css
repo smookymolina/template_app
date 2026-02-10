@@ -302,6 +302,11 @@
     font-family: Georgia, serif;
 }
 
+/* En tracking publico: mostrar comentarios solo al hacer click */
+#client-timeline .timeline-card-comment.is-collapsed {
+    display: none;
+}
+
 /* Responsive para comentarios */
 @media (max-width: 480px) {
     .timeline-card-header {
@@ -707,4 +712,28 @@
 .modal-tracking:has(#modal-results[style*="display: block"]),
 .modal-tracking-expanded {
     max-width: 600px;
+}
+
+/* ============================================
+   PUBLIC TRACKING TIMELINE OVERRIDES
+   ============================================ */
+#client-timeline-container {
+    padding: 0;
+}
+
+#client-timeline {
+    position: static;
+    padding: 0;
+}
+
+#client-timeline::before {
+    display: none !important;
+}
+
+#client-timeline.timeline {
+    border-left: none !important;
+}
+
+#client-timeline .timeline-card {
+    margin-left: 0;
 }
