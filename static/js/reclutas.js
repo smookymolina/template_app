@@ -2913,6 +2913,12 @@ const Reclutas = {
             notas: getTrimmedValue('edit-recluta-notas', reclutaActual.notas)
         };
 
+        // Normalizar telefono (evita errores de validacion por formatos con letras/extensiones)
+        if (reclutaData.telefono) {
+            const telefonoLimpio = reclutaData.telefono.replace(/\D/g, '');
+            reclutaData.telefono = telefonoLimpio;
+        }
+
         console.log('📋 [saveReclutaChanges] Datos recopilados:', reclutaData);
 
         // Validaciones básicas
