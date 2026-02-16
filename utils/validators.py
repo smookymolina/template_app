@@ -216,6 +216,20 @@ def validate_entrevista_data(data, is_update=False):
         recluta_id = data['recluta_id']
         if not Recluta.query.get(recluta_id):
             errors['recluta_id'] = 'El recluta especificado no existe'
+
+    # Validar fecha (acepta YYYY-MM-DD o ISO con hora y/o timezone)
+    normalized_fecha = None
+    if 'fecha' in data:
+        fecha = data.get('fecha')
+        if isinstance(fecha, str):
+            # Normalizar a fecha YYYY-MM-DD para evitar valores no parseables
+            fecha_str = fecha.split('T')[0].split(' ')[0]
+            if not validate_date_format(fecha_str):
+                errors['fecha'] = 'Formato de fecha inválido. Use YYYY-MM-DD'
+            else:
+                normalized_fecha = fecha_str
+        else:
+            errors['fecha'] = 'Formato de fecha inválido. Use YYYY-MM-DD'
     
     # Validar hora
     if 'hora' in data:
@@ -254,7 +268,10 @@ def validate_entrevista_data(data, is_update=False):
     fields = ['recluta_id', 'fecha', 'hora', 'duracion', 'tipo', 'ubicacion', 'notas', 'estado']
     for field in fields:
         if field in data and data[field] is not None:
-            validated_data[field] = data[field]
+            if field == 'fecha' and normalized_fecha is not None:
+                validated_data[field] = normalized_fecha
+            else:
+                validated_data[field] = data[field]
     
     return validated_data
 

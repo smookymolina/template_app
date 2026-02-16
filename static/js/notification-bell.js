@@ -143,13 +143,8 @@ class NotificationBell {
     updateBadge() {
         if (!this.elements.badge) return;
 
-        this.elements.badge.textContent = this.unreadCount;
-
         if (this.unreadCount > 0) {
             this.elements.badge.classList.add('show');
-            if (this.unreadCount > 99) {
-                this.elements.badge.textContent = '99+';
-            }
         } else {
             this.elements.badge.classList.remove('show');
         }
@@ -266,7 +261,7 @@ class NotificationBell {
         }
     }
 
-    async markAllAsRead() {
+    async markAllAsRead(silent = false) {
         try {
             const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
                 method: 'POST'
@@ -277,11 +272,15 @@ class NotificationBell {
                 this.notifications.forEach(n => n.leida = true);
                 this.unreadCount = 0;
                 this.updateUI();
-                showSuccess('Todas las notificaciones marcadas como leídas');
+                if (!silent) {
+                    showSuccess('Todas las notificaciones marcadas como leídas');
+                }
             }
         } catch (error) {
             console.error('Error marking all notifications as read:', error);
-            showError('Error al marcar las notificaciones como leídas');
+            if (!silent) {
+                showError('Error al marcar las notificaciones como leídas');
+            }
         }
     }
 
@@ -318,14 +317,19 @@ class NotificationBell {
         }
     }
 
-    openDropdown() {
+    async openDropdown() {
         if (!this.elements.dropdown) return;
 
         this.isOpen = true;
         this.elements.dropdown.classList.add('show');
 
         // Load latest notifications when opening
-        this.loadNotifications();
+        await this.loadNotifications();
+
+        // Marcar como leídas al revisar (sin toast)
+        if (this.unreadCount > 0) {
+            await this.markAllAsRead(true);
+        }
     }
 
     closeDropdown() {

@@ -1,6 +1,27 @@
 GOAL: Update production with a safe git pull - BACKUP FIRST, then update code, and restart services.
 
 =============================================================================
+CHANGES IN THIS VERSION (v1.5.7.1 - 2026-02-09):
+=============================================================================
+*** PROBADO Y FUNCIONANDO EN DESARROLLO ***
+
+1) MEJORAS CRÍTICAS EN CALENDARIO Y NOTIFICACIONES:
+   - Fix CRITICO: Errores de visualización de fechas en el calendario debido a inconsistencias de zonas horarias entre frontend y backend. Las fechas de entrevistas ahora se muestran correctamente.
+   - Fix CRITICO: Indicador de notificaciones no funcional/confuso. La campana de notificaciones ahora muestra un punto rojo simple como indicador visual de nuevas notificaciones.
+   - Backend: Columna `fecha` del modelo `Entrevista` actualizada de `db.Date` a `db.DateTime(timezone=True)`. Eliminada la columna `hora` separada, consolidando fecha y hora en un solo campo timezone-aware.
+   - Backend: API de `entrevistas` actualizada para manejar y almacenar correctamente los objetos `DateTime` con zona horaria.
+   - Frontend: Refactorización de `static/js/calendar.js` para mejorar la legibilidad y mantenimiento, extrayendo la generación de HTML compleja en funciones auxiliares.
+   - Frontend: Mejoras de UI/UX para el calendario incluyendo estilos responsivos (`static/css/styles.css`) y atributos de accesibilidad (`aria-label`, `role`) para una mejor experiencia.
+
+   FILES MODIFIED:
+   * models/entrevista.py - Cambio de tipo de columna 'fecha', eliminacion de 'hora', timezone-aware DateTime.
+   * routes/api.py - Manejo de DateTime con timezone en endpoints de entrevistas.
+   * static/js/calendar.js - Corrección de lógica de fechas, refactorización de funciones.
+   * static/js/notification-bell.js - Lógica simplificada para indicador de notificaciones.
+   * static/css/styles.css - Estilos responsivos para calendario.
+   * static/css/notifications.css - Estilos para el nuevo indicador de notificaciones.
+
+=============================================================================
 CHANGES IN THIS VERSION (1.5.7.0 - 2026-02-09):
 =============================================================================
 *** PROBADO Y FUNCIONANDO EN DESARROLLO ***
@@ -191,32 +212,14 @@ PASO 4: ACTUALIZAR DEPENDENCIAS Y ESQUEMA DE BD
    # 4B) Ejecutar migraciones de Flask-Migrate
    flask db upgrade 2>&1 | tee "$BACKUP_DIR/migration.log"
 
-   # 4C) Agregar columnas de v1.5.6.8 si no existen
-   # -----------------------------------------------
-   # SQLite:
-   python -c "
-import sqlite3
-conn = sqlite3.connect('instance/template_app.db')
-cursor = conn.cursor()
-try:
-    cursor.execute('ALTER TABLE user_session ADD COLUMN active_time_seconds INTEGER DEFAULT 0')
-    print('+ active_time_seconds agregada')
-except: print('= active_time_seconds ya existe')
-try:
-    cursor.execute('ALTER TABLE user_session ADD COLUMN last_heartbeat DATETIME')
-    print('+ last_heartbeat agregada')
-except: print('= last_heartbeat ya existe')
-cursor.execute('UPDATE user_session SET active_time_seconds = 0 WHERE active_time_seconds IS NULL')
-conn.commit()
-conn.close()
-print('Columnas verificadas!')
-"
-
-   # MySQL (alternativa):
-   # mysql -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" "${MYSQL_DB}" -e "
-   #   ALTER TABLE user_session ADD COLUMN active_time_seconds INT DEFAULT 0;
-   #   ALTER TABLE user_session ADD COLUMN last_heartbeat DATETIME NULL;
-   # " 2>/dev/null || echo "Columnas ya existen"
+   # 4C) Actualizaciones de esquema de BD para Entrevistas (v1.5.7.1)
+   # -----------------------------------------------------------------
+   # IMPORTANTE: La columna `fecha` en la tabla `entrevista` ha cambiado de `DATE`
+   # a `DATETIME WITH TIMEZONE`. Esto permite un manejo preciso de las zonas horarias.
+   # La columna `hora` separada ha sido eliminada.
+   # El comando `flask db upgrade` ejecutado en el paso 4B ya maneja este cambio
+   # automáticamente a través del script de migración generado.
+   # No se requiere acción manual adicional para este cambio de columna.
 
    # 4D) Verificar esquema de base de datos
    python scripts/diagnostico_db.py 2>/dev/null || echo "Script de diagnostico no disponible"

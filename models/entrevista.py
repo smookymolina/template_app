@@ -7,15 +7,14 @@ class Entrevista(db.Model):
     """
     id = db.Column(db.Integer, primary_key=True)
     recluta_id = db.Column(db.Integer, db.ForeignKey('recluta.id'), nullable=False)
-    fecha = db.Column(db.Date, nullable=False)
-    hora = db.Column(db.String(10), nullable=False)  # Formato "HH:MM"
+    fecha = db.Column(db.DateTime(timezone=True), nullable=False)
     duracion = db.Column(db.Integer, default=60)  # Duración en minutos
     tipo = db.Column(db.String(20), default='presencial')  # presencial, virtual, telefonica
     ubicacion = db.Column(db.String(200), nullable=True)
     notas = db.Column(db.Text, nullable=True)
     estado = db.Column(db.String(20), default='pendiente')  # pendiente, completada, cancelada
-    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
-    ultima_actualizacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    fecha_creacion = db.Column(db.DateTime(timezone=True), default=datetime.utcnow)
+    ultima_actualizacion = db.Column(db.DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
     
     def serialize(self):
         """Retorna una representación serializable de la entrevista"""
@@ -27,7 +26,8 @@ class Entrevista(db.Model):
             'asesor_id': self.recluta.asesor_id if self.recluta else None,  # ID del asesor asignado al recluta
             'asesor_nombre': self.recluta.asesor.nombre if self.recluta and self.recluta.asesor else None,  # Nombre del asesor
             'fecha': self.fecha.isoformat() if self.fecha else None,
-            'hora': self.hora,
+            'hora': self.fecha.strftime('%H:%M') if self.fecha else None, # For backward compatibility
+            'fecha_date': self.fecha.strftime('%Y-%m-%d') if self.fecha else None,
             'duracion': self.duracion,
             'tipo': self.tipo,
             'ubicacion': self.ubicacion,
@@ -66,26 +66,26 @@ class Entrevista(db.Model):
     @classmethod
     def get_for_recluta(cls, recluta_id):
         """Obtiene todas las entrevistas de un recluta específico"""
-        return cls.query.filter_by(recluta_id=recluta_id).order_by(cls.fecha, cls.hora).all()
+        return cls.query.filter_by(recluta_id=recluta_id).order_by(cls.fecha).all()
     
     @classmethod
     def get_pending(cls):
         """Obtiene todas las entrevistas pendientes"""
-        return cls.query.filter_by(estado='pendiente').order_by(cls.fecha, cls.hora).all()
+        return cls.query.filter_by(estado='pendiente').order_by(cls.fecha).all()
     
     @classmethod
     def get_for_date(cls, date):
         """Obtiene todas las entrevistas para una fecha específica"""
-        return cls.query.filter_by(fecha=date).order_by(cls.hora).all()
+        return cls.query.filter(db.func.date(cls.fecha) == date).order_by(cls.fecha).all()
     
     @classmethod
     def get_upcoming(cls, limit=5):
         """Obtiene las próximas entrevistas pendientes"""
-        today = datetime.now().date()
+        today = datetime.now(timezone.utc).date()
         return cls.query.filter(
             cls.fecha >= today,
             cls.estado == 'pendiente'
-        ).order_by(cls.fecha, cls.hora).limit(limit).all()
+        ).order_by(cls.fecha).limit(limit).all()
     
     @classmethod
     def count_by_month(cls, year):

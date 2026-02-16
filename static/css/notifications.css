@@ -41,22 +41,18 @@
 /* Notification Badge (Facebook-style) */
 .notification-badge {
     position: absolute;
-    top: -5px;
-    right: -5px;
+    top: 0px;
+    right: 0px;
     background: #ff3040;
-    color: white;
-    border-radius: 10px;
-    min-width: 20px;
-    height: 20px;
-    font-size: 11px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid #fff;
-    box-shadow: 0 2px 4px rgba(255, 48, 64, 0.3);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     transform: scale(0);
     transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    font-size: 0;
+    color: transparent;
 }
 
 .notification-badge.show {

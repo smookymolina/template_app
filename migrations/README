@@ -1,18 +1,1 @@
-Single-database configuration for Flask-Migrate.
-
-Comandos utiles:
-
-1. Crear nueva migracion:
-   flask db migrate -m "Descripcion del cambio"
-
-2. Aplicar migraciones pendientes:
-   flask db upgrade
-
-3. Revertir ultima migracion:
-   flask db downgrade
-
-4. Ver estado actual:
-   flask db current
-
-5. Ver historial de migraciones:
-   flask db history
+Single-database configuration for Flask.

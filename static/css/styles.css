@@ -68,6 +68,12 @@ body.admin-view .nav-admin-only {
     display: list-item !important;
 }
 
+/* Evitar bullet de list-item en elementos admin-only fuera del nav */
+body.admin-view .header-actions .nav-admin-only {
+    display: inline-flex !important;
+    list-style: none;
+}
+
 /* ===== FILTROS ESPECÍFICOS POR ROLES ===== */
 .gerente-only-filter {
     display: none !important;
@@ -2350,6 +2356,47 @@ body.modal-open {
 .interview-item-modal:last-child {
     border-bottom: none;
 }
+
+/* ===== CALENDAR RESPONSIVE ADJUSTMENTS ===== */
+@media (max-width: 768px) {
+    .calendar-container {
+        flex-direction: column;
+    }
+
+    .calendar-sidebar {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    .calendar-main {
+        width: 100%;
+    }
+
+    .calendar-header .day-name {
+        font-size: 12px; /* Reducir tamaño de fuente */
+    }
+    
+    .calendar-day {
+        min-height: 80px; /* Reducir altura mínima */
+        padding: 4px; /* Reducir padding */
+    }
+
+    .calendar-day-number {
+        font-size: 12px; /* Reducir tamaño del número */
+    }
+
+    .calendar-day.today .calendar-day-number {
+        width: 22px; /* Ajustar tamaño del indicador 'hoy' */
+        height: 22px;
+        line-height: 22px;
+    }
+
+    .upcoming-events .event-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 
 .interview-item-modal .interview-time {
     font-weight: 600;

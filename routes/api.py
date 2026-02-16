@@ -630,9 +630,24 @@ def add_entrevista():
             if not recluta:
                 return jsonify({"success": False, "message": "Recluta no encontrado o sin permisos para acceder"}), 404
         
-        # Convertir la fecha de string a objeto Date si es necesario
-        if 'fecha' in validated_data and isinstance(validated_data['fecha'], str):
-            validated_data['fecha'] = datetime.strptime(validated_data['fecha'], '%Y-%m-%d').date()
+        # Combinar fecha y hora en un solo objeto datetime con timezone
+        if 'fecha' in validated_data and 'hora' in validated_data:
+            from datetime import datetime
+            import pytz
+            
+            try:
+                # Combinar fecha y hora
+                dt_string = f"{validated_data['fecha']}T{validated_data['hora']}"
+                # Crear un objeto datetime naive
+                naive_dt = datetime.fromisoformat(dt_string)
+                # Asignar la zona horaria UTC
+                utc_dt = pytz.utc.localize(naive_dt)
+                
+                validated_data['fecha'] = utc_dt
+                del validated_data['hora']
+            except (ValueError, TypeError) as e:
+                current_app.logger.error(f"Error al combinar fecha y hora: {e}")
+                return jsonify({"success": False, "message": "Formato de fecha u hora inválido"}), 400
         
         # Crear nueva entrevista
         nueva = Entrevista(**validated_data)
@@ -696,9 +711,25 @@ def update_entrevista(id):
             if not nuevo_recluta:
                 return jsonify({"success": False, "message": "No tienes permisos para asignar esta entrevista al recluta especificado"}), 403
         
-        # Convertir la fecha de string a objeto Date si es necesario
-        if 'fecha' in validated_data and isinstance(validated_data['fecha'], str):
-            validated_data['fecha'] = datetime.strptime(validated_data['fecha'], '%Y-%m-%d').date()
+        # Combinar fecha y hora en un solo objeto datetime con timezone
+        if 'fecha' in validated_data and 'hora' in validated_data:
+            from datetime import datetime
+            import pytz
+            
+            try:
+                # Combinar fecha y hora
+                dt_string = f"{validated_data['fecha']}T{validated_data['hora']}"
+                # Crear un objeto datetime naive
+                naive_dt = datetime.fromisoformat(dt_string)
+                # Asignar la zona horaria UTC
+                utc_dt = pytz.utc.localize(naive_dt)
+                
+                validated_data['fecha'] = utc_dt
+                if 'hora' in validated_data:
+                    del validated_data['hora']
+            except (ValueError, TypeError) as e:
+                current_app.logger.error(f"Error al combinar fecha y hora para actualización: {e}")
+                return jsonify({"success": False, "message": "Formato de fecha u hora inválido"}), 400
         
         # Actualizar campos
         for key, value in validated_data.items():

@@ -150,12 +150,9 @@ const Calendar = {
         
         calendarGrid.innerHTML = '';
         
-        // Primer día del mes
         const firstDay = new Date(this.currentYear, this.currentMonth, 1);
-        // Último día del mes
         const lastDay = new Date(this.currentYear, this.currentMonth + 1, 0);
         
-        // Día de la semana en que empieza el mes (0 = domingo)
         const startDayOfWeek = firstDay.getDay();
         
         // Días del mes anterior
@@ -163,8 +160,16 @@ const Calendar = {
             const prevMonthDate = new Date(this.currentYear, this.currentMonth, -startDayOfWeek + i + 1);
             const dayDiv = document.createElement('div');
             dayDiv.className = 'calendar-day other-month';
+            dayDiv.setAttribute('role', 'gridcell');
+            const dateString = this.formatDateForDataset(prevMonthDate);
+            const interviewCount = this.interviewCounts[dateString] || 0;
+            let ariaLabel = `${prevMonthDate.getDate()} ${this.monthNames[prevMonthDate.getMonth()]} ${prevMonthDate.getFullYear()}`;
+            if (interviewCount > 0) {
+                ariaLabel += `, ${interviewCount} interview${interviewCount > 1 ? 's' : ''}`;
+            }
+            dayDiv.setAttribute('aria-label', ariaLabel);
             dayDiv.innerHTML = `<div class="calendar-day-number">${prevMonthDate.getDate()}</div>`;
-            dayDiv.dataset.date = this.formatDateForDataset(prevMonthDate);
+            dayDiv.dataset.date = dateString;
             
             dayDiv.addEventListener('click', (e) => {
                 const date = dayDiv.dataset.date;
@@ -180,16 +185,21 @@ const Calendar = {
             const currentDate = new Date(this.currentYear, this.currentMonth, i);
             const dayDiv = document.createElement('div');
             dayDiv.className = 'calendar-day';
+            dayDiv.setAttribute('role', 'gridcell');
             
-            // Marcar el día actual
-            if (today.getDate() === i && 
-                today.getMonth() === this.currentMonth && 
-                today.getFullYear() === this.currentYear) {
+            if (today.getDate() === i && today.getMonth() === this.currentMonth && today.getFullYear() === this.currentYear) {
                 dayDiv.classList.add('today');
             }
             
+            const dateString = this.formatDateForDataset(currentDate);
+            const interviewCount = this.interviewCounts[dateString] || 0;
+            let ariaLabel = `${i} ${this.monthNames[this.currentMonth]} ${this.currentYear}`;
+            if (interviewCount > 0) {
+                ariaLabel += `, ${interviewCount} interview${interviewCount > 1 ? 's' : ''}`;
+            }
+            dayDiv.setAttribute('aria-label', ariaLabel);
             dayDiv.innerHTML = `<div class="calendar-day-number">${i}</div>`;
-            dayDiv.dataset.date = this.formatDateForDataset(currentDate);
+            dayDiv.dataset.date = dateString;
             
             dayDiv.addEventListener('click', (e) => {
                 const date = dayDiv.dataset.date;
@@ -199,17 +209,23 @@ const Calendar = {
             calendarGrid.appendChild(dayDiv);
         }
         
-        // Calcular casillas restantes para completar la cuadrícula (6 filas x 7 columnas = 42 casillas)
         const totalCells = 42;
         const remainingCells = totalCells - (startDayOfWeek + lastDay.getDate());
         
-        // Días del mes siguiente
         for (let i = 1; i <= remainingCells; i++) {
             const nextMonthDate = new Date(this.currentYear, this.currentMonth + 1, i);
             const dayDiv = document.createElement('div');
             dayDiv.className = 'calendar-day other-month';
+            dayDiv.setAttribute('role', 'gridcell');
+            const dateString = this.formatDateForDataset(nextMonthDate);
+            const interviewCount = this.interviewCounts[dateString] || 0;
+            let ariaLabel = `${nextMonthDate.getDate()} ${this.monthNames[nextMonthDate.getMonth()]} ${nextMonthDate.getFullYear()}`;
+            if (interviewCount > 0) {
+                ariaLabel += `, ${interviewCount} interview${interviewCount > 1 ? 's' : ''}`;
+            }
+            dayDiv.setAttribute('aria-label', ariaLabel);
             dayDiv.innerHTML = `<div class="calendar-day-number">${i}</div>`;
-            dayDiv.dataset.date = this.formatDateForDataset(nextMonthDate);
+            dayDiv.dataset.date = dateString;
             
             dayDiv.addEventListener('click', (e) => {
                 const date = dayDiv.dataset.date;
@@ -391,12 +407,16 @@ const Calendar = {
         const nextMonthBtn = document.getElementById('next-month');
         
         if (prevMonthBtn) {
+            prevMonthBtn.setAttribute('role', 'button');
+            prevMonthBtn.setAttribute('aria-label', 'Previous month');
             prevMonthBtn.addEventListener('click', () => {
                 this.navigateMonth(-1);
             });
         }
         
         if (nextMonthBtn) {
+            nextMonthBtn.setAttribute('role', 'button');
+            nextMonthBtn.setAttribute('aria-label', 'Next month');
             nextMonthBtn.addEventListener('click', () => {
                 this.navigateMonth(1);
             });
@@ -932,14 +952,14 @@ const Calendar = {
      * @returns {Array} - Lista de eventos para esa fecha
      */
     getEventsForDate: function(dateString) {
-        const targetDate = new Date(dateString);
-        const formattedDate = this.formatDateForDataset(targetDate);
-        
+        // dateString is YYYY-MM-DD, treat it as UTC
+        const targetDate = new Date(dateString + 'T00:00:00Z');
+
         // Filtrar eventos por fecha
         return this.calendarEvents.filter(event => {
+            // event.fecha is also YYYY-MM-DD from the server
             const eventDate = new Date(event.fecha);
-            const formattedEventDate = this.formatDateForDataset(eventDate);
-            return formattedEventDate === formattedDate;
+            return eventDate.getTime() === targetDate.getTime();
         });
     },
     
@@ -1069,27 +1089,50 @@ const Calendar = {
         const day = eventDate.getDate();
         const month = this.monthShortNames[eventDate.getMonth()];
 
-        // Determinar si es hoy, mañana o fecha futura/pasada
         const today = new Date();
-        const todayString = today.toISOString().split('T')[0];
+        today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        const tomorrowString = tomorrow.toISOString().split('T')[0];
 
         let timeIndicator = '';
-        if (event.fecha === todayString) {
+        const eventDateForCompare = new Date(event.fecha);
+        eventDateForCompare.setHours(0, 0, 0, 0);
+
+        if (eventDateForCompare.getTime() === today.getTime()) {
             timeIndicator = 'HOY';
-        } else if (event.fecha === tomorrowString) {
+        } else if (eventDateForCompare.getTime() === tomorrow.getTime()) {
             timeIndicator = 'MAÑANA';
-        } else if (event.fecha < todayString) {
+        } else if (eventDateForCompare.getTime() < today.getTime()) {
             timeIndicator = 'PASADA';
         }
 
+        const eventItemHTML = this._createUpcomingEventHTML(event, day, month, timeIndicator);
+        
         const eventItem = document.createElement('div');
         eventItem.className = 'event-item upcoming-interview-item';
         eventItem.dataset.eventId = event.id;
+        eventItem.innerHTML = eventItemHTML;
 
-        eventItem.innerHTML = `
+        // Add event listeners for action buttons
+        this._bindUpcomingEventActions(eventItem, event);
+
+        container.appendChild(eventItem);
+    },
+
+    /**
+     * Creates the HTML for a single upcoming event item.
+     * @param {Object} event - The event object.
+     * @param {number} day - The day of the month.
+     * @param {string} month - The short name of the month.
+     * @param {string} timeIndicator - A string like 'HOY', 'MAÑANA', or 'PASADA'.
+     * @returns {string} The HTML string for the event item.
+     * @private
+     */
+    _createUpcomingEventHTML: function(event, day, month, timeIndicator) {
+        const canEdit = this.canEditInterview(event);
+        const canDelete = this.canDeleteInterview(event);
+
+        return `
             <div class="event-date-container">
                 <div class="event-date">
                     <span class="event-day">${day}</span>
@@ -1107,8 +1150,8 @@ const Calendar = {
                         <i class="fas fa-clock"></i> ${event.hora}
                         <span class="duration">(${event.duracion || 60} min)</span>
                     </p>
-                    ${event.tipo && event.tipo !== 'presencial' ?
-                        `<p class="event-type">
+                    ${event.tipo && event.tipo !== 'presencial' ? `
+                        <p class="event-type">
                             <i class="fas fa-${event.tipo === 'virtual' ? 'video' : 'phone'}"></i>
                             ${event.tipo.charAt(0).toUpperCase() + event.tipo.slice(1)}
                         </p>` : ''
@@ -1119,20 +1162,27 @@ const Calendar = {
                 <button class="btn-icon-small view-interview" title="Ver detalles">
                     <i class="fas fa-eye"></i>
                 </button>
-                ${this.canEditInterview(event) ?
-                    `<button class="btn-icon-small edit-interview" title="Editar">
+                ${canEdit ? `
+                    <button class="btn-icon-small edit-interview" title="Editar">
                         <i class="fas fa-edit"></i>
-                     </button>` : ''
+                    </button>` : ''
                 }
-                ${this.canDeleteInterview(event) ?
-                    `<button class="btn-icon-small delete-interview" title="Eliminar entrevista">
+                ${canDelete ? `
+                    <button class="btn-icon-small delete-interview" title="Eliminar entrevista">
                         <i class="fas fa-trash-alt"></i>
-                     </button>` : ''
+                    </button>` : ''
                 }
             </div>
         `;
+    },
 
-        // Añadir eventos para los botones de acción
+    /**
+     * Binds event listeners to the action buttons of an upcoming event item.
+     * @param {HTMLElement} eventItem - The HTML element for the event item.
+     * @param {Object} event - The event object.
+     * @private
+     */
+    _bindUpcomingEventActions: function(eventItem, event) {
         const viewBtn = eventItem.querySelector('.view-interview');
         const editBtn = eventItem.querySelector('.edit-interview');
         const deleteBtn = eventItem.querySelector('.delete-interview');
@@ -1147,7 +1197,6 @@ const Calendar = {
         if (editBtn) {
             editBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                console.log('Calendar: addEventToUpcomingList - Click en botón editar, evento:', event);
                 this.editEvent(event);
             });
         }
@@ -1155,17 +1204,13 @@ const Calendar = {
         if (deleteBtn) {
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                console.log('Calendar: addEventToUpcomingList - Click en botón eliminar, evento:', event);
                 this.confirmDeleteEvent(event);
             });
         }
 
-        // Añadir evento de clic general para ver detalles
         eventItem.addEventListener('click', () => {
             this.viewEventDetails(event);
         });
-
-        container.appendChild(eventItem);
     },
     
     /**
@@ -1196,25 +1241,68 @@ const Calendar = {
      * Abre el modal para añadir un nuevo evento
      * @param {string} dateString - Fecha en formato YYYY-MM-DD
      */
-    openAddEventModal: function(dateString) {
+    openAddEventModal: async function(dateString) {
         console.log('Calendar: openAddEventModal - Abriendo modal para fecha:', dateString);
-        import('./reclutas.js').then(module => {
-            const Reclutas = module.default;
-            
+
+        try {
+            let reclutas = [];
+
+            // Preferir el módulo ya cargado en window para evitar fallos de import dinámico
+            const reclutasModule = window.Reclutas || window.reclutaManager;
+            if (reclutasModule) {
+                if (Array.isArray(reclutasModule.reclutas) && reclutasModule.reclutas.length > 0) {
+                    reclutas = reclutasModule.reclutas;
+                } else if (typeof reclutasModule.loadReclutas === 'function') {
+                    reclutas = await reclutasModule.loadReclutas();
+                }
+            }
+
+            // Fallback: pedir directamente al API si aún no hay reclutas
+            if (!Array.isArray(reclutas) || reclutas.length === 0) {
+                reclutas = await this.fetchReclutasForSelector();
+            }
+
             // Si no hay reclutas, mostrar error
-            if (!Reclutas.reclutas || Reclutas.reclutas.length === 0) {
+            if (!Array.isArray(reclutas) || reclutas.length === 0) {
                 showError('Primero debes añadir reclutas para programar entrevistas');
                 console.warn('Calendar: openAddEventModal - No hay reclutas disponibles.');
                 return;
             }
-            
+
             // Abrir modal para seleccionar recluta
-            this.showReclutaSelectorModal(dateString, Reclutas.reclutas);
+            this.showReclutaSelectorModal(dateString, reclutas);
             console.log('Calendar: openAddEventModal - Mostrando selector de reclutas.');
-        }).catch(error => {
-            console.error('Calendar: openAddEventModal - Error al cargar módulo reclutas:', error);
+        } catch (error) {
+            console.error('Calendar: openAddEventModal - Error al cargar reclutas:', error);
             showError('Error al cargar la lista de candidatos.');
-        });
+        }
+    },
+
+    /**
+     * Carga reclutas desde API para el selector del calendario
+     * @returns {Promise<Array>}
+     */
+    fetchReclutasForSelector: async function() {
+        const perPage = 50;
+        let page = 1;
+        let hasNext = true;
+        let all = [];
+
+        while (hasNext && page <= 20) { // hard stop por seguridad
+            const response = await fetch(`${API_BASE_URL}/reclutas?page=${page}&per_page=${perPage}&sort_by=nombre&sort_order=asc`);
+            if (!response.ok) {
+                throw new Error(`Error al cargar reclutas: ${response.status}`);
+            }
+            const data = await response.json();
+            if (!data.success) {
+                throw new Error(data.message || 'Error al obtener reclutas');
+            }
+            all = all.concat(data.reclutas || []);
+            hasNext = Boolean(data.has_next) && page < (data.pages || page);
+            page += 1;
+        }
+
+        return all;
     },
     
     /**
@@ -1222,107 +1310,110 @@ const Calendar = {
      * @param {string} dateString - Fecha para la entrevista
      * @param {Array} reclutas - Lista de reclutas disponibles
      */
+    /**
+     * Shows a modal to select a recruit for an interview.
+     * @param {string} dateString - The date for the interview.
+     * @param {Array} reclutas - The list of available recruits.
+     */
     showReclutaSelectorModal: function(dateString, reclutas) {
-        // Crear modal temporal
-        const modal = document.createElement('div');
-        modal.className = 'modal';
-        modal.id = 'select-recluta-modal';
-        modal.style.display = 'block';
+        const modalHTML = this._createReclutaSelectorModalHTML();
         
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Seleccionar Candidato</h3>
-                    <span class="close-modal">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <p>Selecciona un candidato para programar la entrevista:</p>
-                    <div class="reclutas-list-container" style="max-height: 300px; overflow-y: auto; margin-top: 15px;">
-                        <table id="select-recluta-table" style="width: 100%;">
-                            <thead>
-                                <tr>
-                                    <th width="60">Foto</th>
-                                    <th>Nombre</th>
-                                    <th>Estado</th>
-                                    <th width="80">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody id="select-recluta-list">
-                                <!-- Se llenará dinámicamente -->
-                            </tbody>
-                        </table>
+        // Create a temporary div to hold the modal and append it to the body
+        const modalContainer = document.createElement('div');
+        modalContainer.innerHTML = modalHTML;
+        const modal = modalContainer.firstChild;
+        document.body.appendChild(modal);
+
+        const reclutasList = modal.querySelector('#select-recluta-list');
+        if (reclutasList) {
+            reclutas.forEach(recluta => {
+                const rowHTML = this._createReclutaTableRowHTML(recluta);
+                reclutasList.insertAdjacentHTML('beforeend', rowHTML);
+            });
+        }
+        
+        // Add event listeners
+        modal.addEventListener('click', (e) => {
+            const selectBtn = e.target.closest('.select-recluta-btn');
+            const closeModalBtn = e.target.closest('.close-modal, #cancel-select-recluta');
+
+            if (selectBtn) {
+                const reclutaId = selectBtn.dataset.id;
+                const reclutaName = selectBtn.dataset.name;
+                const reclutaPuesto = selectBtn.dataset.puesto;
+                
+                document.body.removeChild(modal);
+                this.openScheduleModal(dateString, { id: reclutaId, name: reclutaName, puesto: reclutaPuesto });
+            } else if (closeModalBtn) {
+                document.body.removeChild(modal);
+            }
+        });
+
+        modal.style.display = 'block';
+    },
+
+    /**
+     * Creates the HTML for the recluta selector modal.
+     * @returns {string} The HTML string for the modal.
+     * @private
+     */
+    _createReclutaSelectorModalHTML: function() {
+        return `
+            <div class="modal" id="select-recluta-modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Seleccionar Candidato</h3>
+                        <span class="close-modal">&times;</span>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn-secondary" id="cancel-select-recluta">
-                        <i class="fas fa-times"></i> Cancelar
-                    </button>
+                    <div class="modal-body">
+                        <p>Selecciona un candidato para programar la entrevista:</p>
+                        <div class="reclutas-list-container" style="max-height: 300px; overflow-y: auto; margin-top: 15px;">
+                            <table id="select-recluta-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th width="60">Foto</th>
+                                        <th>Nombre</th>
+                                        <th>Estado</th>
+                                        <th width="80">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="select-recluta-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" id="cancel-select-recluta">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
+    },
+
+    /**
+     * Creates the HTML for a single row in the recluta selection table.
+     * @param {Object} recluta - The recruit object.
+     * @returns {string} The HTML string for the table row.
+     * @private
+     */
+    _createReclutaTableRowHTML: function(recluta) {
+        const badgeClass = CONFIG.ESTADOS_RECLUTA.find(e => e.value === recluta.estado)?.badgeClass || 'badge-secondary';
+        const fotoUrl = recluta.foto_url || window.DEFAULT_PROFILE_PLACEHOLDER;
         
-        // Añadir al DOM
-        document.body.appendChild(modal);
-        
-        // Llenar la tabla de reclutas
-        const reclutasList = document.getElementById('select-recluta-list');
-        if (reclutasList) {
-            reclutas.forEach(recluta => {
-                const row = document.createElement('tr');
-                const badgeClass = CONFIG.ESTADOS_RECLUTA.find(e => e.value === recluta.estado)?.badgeClass || 'badge-secondary';
-                
-                // Determinar la URL de la foto
-                const fotoUrl = recluta.foto_url || window.DEFAULT_PROFILE_PLACEHOLDER;
-                
-                row.innerHTML = `
-                    <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto profile-pic-clickable" title="Clic para ver en grande"></td>
-                    <td>${recluta.nombre}</td>
-                    <td><span class="badge ${badgeClass}">${recluta.estado}</span></td>
-                    <td>
-                        <button class="btn-primary select-recluta-btn" style="width: auto; padding: 5px 10px; font-size: 12px;" 
-                                data-id="${recluta.id}" data-name="${recluta.nombre}" data-puesto="${recluta.puesto || ''}">
-                            <i class="fas fa-calendar-plus"></i> Seleccionar
-                        </button>
-                    </td>
-                `;
-                reclutasList.appendChild(row);
-            });
-            
-            // Configurar eventos para botones de selección
-            document.querySelectorAll('.select-recluta-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const reclutaId = btn.dataset.id;
-                    const reclutaName = btn.dataset.name;
-                    const reclutaPuesto = btn.dataset.puesto;
-                    
-                    // Eliminar el modal temporal
-                    document.body.removeChild(modal);
-                    
-                    // Abrir modal de programación con el recluta seleccionado
-                    this.openScheduleModal(dateString, {
-                        id: reclutaId,
-                        name: reclutaName,
-                        puesto: reclutaPuesto
-                    });
-                });
-            });
-        }
-        
-        // Configurar cierre del modal
-        const closeButton = modal.querySelector('.close-modal');
-        const cancelButton = document.getElementById('cancel-select-recluta');
-        
-        if (closeButton) {
-            closeButton.addEventListener('click', () => {
-                document.body.removeChild(modal);
-            });
-        }
-        
-        if (cancelButton) {
-            cancelButton.addEventListener('click', () => {
-                document.body.removeChild(modal);
-            });
-        }
+        return `
+            <tr>
+                <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto profile-pic-clickable" title="Clic para ver en grande"></td>
+                <td>${recluta.nombre}</td>
+                <td><span class="badge ${badgeClass}">${recluta.estado}</span></td>
+                <td>
+                    <button class="btn-primary select-recluta-btn" style="width: auto; padding: 5px 10px; font-size: 12px;" 
+                            data-id="${recluta.id}" data-name="${recluta.nombre}" data-puesto="${recluta.puesto || ''}">
+                        <i class="fas fa-calendar-plus"></i> Seleccionar
+                    </button>
+                </td>
+            </tr>
+        `;
     },
     
     /**
