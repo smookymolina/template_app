@@ -8,6 +8,7 @@ from models.notification import Notification
 from utils.decorators import admin_required, role_required, gerente_or_admin_required, gerente_required
 from models.entrevista import Entrevista  # Importación específica desde el módulo
 from models.evento_recluta import EventoRecluta
+from models.consulta_folio import ConsultaFolio
 from utils.helpers import guardar_archivo, eliminar_archivo
 from utils.validators import (
     validate_recluta_data,
@@ -1765,7 +1766,26 @@ def track_by_folio(folio):
         
         if not recluta:
             return jsonify({"success": False, "message": "Folio no encontrado"}), 404
-        
+
+        # Registrar esta consulta publica (deduplicar por IP en ventana de 60s)
+        try:
+            client_ip = request.access_route[0] if request.access_route else request.remote_addr
+            recent_cutoff = datetime.utcnow() - timedelta(seconds=60)
+            already_logged = ConsultaFolio.query.filter_by(
+                recluta_id=recluta.id,
+                ip_address=client_ip
+            ).filter(ConsultaFolio.timestamp >= recent_cutoff).first()
+
+            if not already_logged:
+                consulta = ConsultaFolio(
+                    recluta_id=recluta.id,
+                    ip_address=client_ip,
+                    user_agent=(request.headers.get('User-Agent', '') or '')[:512]
+                )
+                consulta.save()
+        except Exception as e:
+            current_app.logger.warning(f"No se pudo registrar consulta de folio: {str(e)}")
+
         # Devolver solo información limitada por seguridad
         tracking_info = {
             "nombre": recluta.nombre,
@@ -1793,6 +1813,33 @@ def track_by_folio(folio):
     except Exception as e:
         current_app.logger.error(f"Error al buscar por folio: {str(e)}")
         return jsonify({"success": False, "message": "Error al procesar la solicitud"}), 500
+
+
+@api_bp.route('/reclutas/<int:recluta_id>/consultas-folio', methods=['GET'])
+@login_required
+def get_consultas_folio(recluta_id):
+    """
+    Retorna el conteo de consultas publicas del folio y la fecha de la ultima consulta.
+    """
+    try:
+        recluta = Recluta.get_by_id(recluta_id, current_user)
+        if not recluta:
+            return jsonify({"success": False, "message": "Recluta no encontrado"}), 404
+
+        total = ConsultaFolio.count_for_recluta(recluta_id)
+        ultima = ConsultaFolio.last_consulta_for_recluta(recluta_id)
+
+        return jsonify({
+            "success": True,
+            "consultas_folio": {
+                "total": total,
+                "ultima_consulta": (ultima.timestamp.isoformat() + 'Z') if ultima else None
+            }
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener consultas folio: {str(e)}")
+        return jsonify({"success": False, "message": "Error al obtener consultas"}), 500
+
 
 @api_bp.route('/tracking/<folio>/timeline', methods=['GET'])
 def get_timeline_folio(folio):

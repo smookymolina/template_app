@@ -1880,7 +1880,10 @@ const Reclutas = {
             }
             
             console.log('✅ Modal de detalles mostrado correctamente');
-            
+
+            // Cargar contador de consultas del folio
+            this.loadConsultasFolio(id);
+
         } catch (error) {
             console.error('❌ Error al ver recluta:', error);
             showError('Error al cargar los detalles: ' + error.message);
@@ -1891,6 +1894,51 @@ const Reclutas = {
                 timelineButton.disabled = false;
                 timelineButton.innerHTML = '<i class="fas fa-route"></i> Gestionar Línea de Seguimiento';
             }
+        }
+    },
+
+    /**
+     * Carga el conteo de consultas publicas del folio para un recluta
+     * @param {number} reclutaId - ID del recluta
+     */
+    loadConsultasFolio: async function(reclutaId) {
+        const countEl = document.getElementById('consultas-folio-count');
+        const ultimaEl = document.getElementById('consultas-folio-ultima');
+        if (!countEl) return;
+
+        countEl.textContent = '...';
+        if (ultimaEl) ultimaEl.textContent = '';
+
+        try {
+            const response = await fetch(`${CONFIG.API_URL}/reclutas/${reclutaId}/consultas-folio`);
+            if (!response.ok) {
+                countEl.textContent = '--';
+                return;
+            }
+
+            const data = await response.json();
+            if (data.success) {
+                const info = data.consultas_folio;
+                countEl.textContent = info.total;
+
+                if (info.ultima_consulta && ultimaEl) {
+                    const fecha = new Date(info.ultima_consulta);
+                    if (!isNaN(fecha.getTime())) {
+                        ultimaEl.textContent = '(\u00FAltima: ' + fecha.toLocaleDateString('es-ES', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }) + ')';
+                    }
+                }
+            } else {
+                countEl.textContent = '0';
+            }
+        } catch (error) {
+            console.warn('No se pudo cargar consultas folio:', error);
+            countEl.textContent = '--';
         }
     },
 

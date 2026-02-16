@@ -28,6 +28,8 @@ class Usuario(db.Model, UserMixin):
     
     # Relación con sesiones de usuario
     sessions = db.relationship('UserSession', backref='usuario', lazy='dynamic', cascade="all, delete-orphan")
+
+
     
     @property
     def password(self):

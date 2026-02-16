@@ -28,8 +28,8 @@ class Notification(db.Model):
     fecha_lectura = db.Column(db.DateTime, nullable=True)
 
     # Relaciones
-    usuario_origen = db.relationship('Usuario', foreign_keys=[usuario_origen_id], backref='notificaciones_enviadas')
-    usuario_destino = db.relationship('Usuario', foreign_keys=[usuario_destino_id], backref='notificaciones_recibidas')
+    usuario_origen = db.relationship('Usuario', foreign_keys=[usuario_origen_id], backref=db.backref('notificaciones_enviadas', cascade="all, delete-orphan"))
+    usuario_destino = db.relationship('Usuario', foreign_keys=[usuario_destino_id], backref=db.backref('notificaciones_recibidas', cascade="all, delete-orphan"))
 
     def serialize(self):
         """Retorna una representación serializable de la notificación"""
