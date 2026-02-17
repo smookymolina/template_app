@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, url_for
 from flask_login import login_user, logout_user, login_required, current_user
 from models.usuario import Usuario
 from models.user_session import UserSession
@@ -558,11 +558,6 @@ def save_setting():
             "message": f"Error al guardar configuración: {str(e)}"
         }), 500
 
-import os
-from werkzeug.utils import secure_filename
-
-from flask import url_for
-
 @auth_bp.route('/upload-profile-photo', methods=['POST'])
 @login_required
 def upload_profile_photo():
@@ -570,45 +565,40 @@ def upload_profile_photo():
     Sube o actualiza la foto de perfil para el usuario actual.
     """
     if 'foto' not in request.files:
-        return jsonify({"success": False, "message": "No se encontró el archivo de imagen."}), 400
+        return jsonify({"success": False, "message": "No se encontro el archivo de imagen."}), 400
 
     file = request.files['foto']
 
     if file.filename == '':
-        return jsonify({"success": False, "message": "No se seleccionó ningún archivo."}), 400
+        return jsonify({"success": False, "message": "No se selecciono ningun archivo."}), 400
 
-    if file:
-        filename = secure_filename(file.filename)
-        unique_filename = f"{current_user.id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{filename}"
-        upload_folder = current_app.config['PROFILE_IMG_FOLDER']
-        save_path = os.path.join(upload_folder, unique_filename)
+    try:
+        # Eliminar foto anterior (si existe)
+        if current_user.foto_url:
+            eliminar_archivo(current_user.foto_url)
 
-        try:
-            if current_user.foto_url:
-                old_photo_path = os.path.join(upload_folder, current_user.foto_url)
-                if os.path.exists(old_photo_path):
-                    os.remove(old_photo_path)
-
-            file.save(save_path)
-            current_user.foto_url = unique_filename
-            current_user.save()
-
-            # Construir la URL completa para devolver al frontend
-            photo_url = url_for('main.serve_profile_image', filename=unique_filename)
-
-            current_app.logger.info(f"Foto de perfil actualizada para {current_user.email}: {photo_url}")
-
+        nombre_archivo = guardar_archivo(file, 'usuario')
+        if not nombre_archivo:
             return jsonify({
-                "success": True, 
-                "message": "Foto de perfil actualizada correctamente",
-                "foto_url": photo_url
-            }), 200
+                "success": False,
+                "message": "No se pudo procesar la imagen. Verifica formato y tamano."
+            }), 400
 
-        except Exception as e:
-            current_app.logger.error(f"Error al guardar la foto de perfil: {str(e)}")
-            return jsonify({"success": False, "message": "Ocurrió un error en el servidor al guardar la imagen."}), 500
+        current_user.foto_url = nombre_archivo
+        current_user.save()
 
-    return jsonify({"success": False, "message": "Tipo de archivo no permitido."}), 400
+        photo_url = url_for('main.serve_profile_image', filename=nombre_archivo)
+        current_app.logger.info(f"Foto de perfil actualizada para {current_user.email}: {photo_url}")
+
+        return jsonify({
+            "success": True,
+            "message": "Foto de perfil actualizada correctamente",
+            "foto_url": photo_url
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error al guardar la foto de perfil: {str(e)}")
+        return jsonify({"success": False, "message": "Ocurrio un error en el servidor al guardar la imagen."}), 500
 
 @auth_bp.route('/remove-profile-photo', methods=['DELETE'])
 @login_required  
@@ -624,7 +614,11 @@ def remove_profile_photo():
             }), 400
         
         # Eliminar archivo
-        eliminar_archivo(current_user.foto_url)
+        delete_result = eliminar_archivo(current_user.foto_url)
+        if not delete_result.get('success'):
+            current_app.logger.warning(
+                f"No se pudo eliminar archivo de foto para usuario {current_user.id}: {delete_result.get('message')}"
+            )
         
         # Actualizar usuario
         current_user.foto_url = None

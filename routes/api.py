@@ -991,12 +991,20 @@ def create_timeline_event(recluta_id):
             except ValueError:
                 return jsonify({"success": False, "message": "Formato de fecha inválido. Use YYYY-MM-DD"}), 400
                 
+            documento_id = data.get('documento_id')
+            if documento_id is not None:
+                from models.documento import Documento
+                doc = Documento.query.filter_by(id=documento_id, recluta_id=recluta_id).first()
+                if not doc:
+                    documento_id = None
+
             ev = EventoRecluta(
                 recluta_id=recluta_id,
                 fecha=fecha_obj,
                 estado=data['status'],
                 titulo=data['title'],
                 descripcion=data.get('description', ''),
+                documento_id=documento_id,
             )
             
             try:
@@ -1055,6 +1063,16 @@ def update_timeline_event(recluta_id, event_id):
             ev.titulo = validated['title']
         if 'description' in validated:
             ev.descripcion = validated['description']
+
+        # Actualizar documento vinculado
+        if 'documento_id' in data:
+            doc_id = data['documento_id']
+            if doc_id:
+                from models.documento import Documento
+                doc = Documento.query.filter_by(id=doc_id, recluta_id=recluta_id).first()
+                ev.documento_id = doc.id if doc else None
+            else:
+                ev.documento_id = None
 
         ev.save()
         return jsonify({"success": True, "item": ev.serialize()})
@@ -2238,6 +2256,45 @@ def download_documentos_by_folio(folio):
             "success": False,
             "message": "Error interno al procesar la descarga"
         }), 500
+
+@api_bp.route('/tracking/<folio>/documents/<int:doc_id>', methods=['GET'])
+def download_documento_individual_by_folio(folio, doc_id):
+    """
+    Descarga un documento individual de un recluta por su folio y ID de documento.
+    Ruta pública, no requiere autenticación.
+    Valida que el documento pertenezca al recluta del folio.
+    """
+    try:
+        import os
+        from flask import send_file
+        from models.documento import Documento
+
+        recluta = Recluta.get_by_folio(folio)
+        if not recluta:
+            return jsonify({"success": False, "message": "Folio no encontrado"}), 404
+
+        documento = Documento.query.filter_by(id=doc_id, recluta_id=recluta.id).first()
+        if not documento:
+            return jsonify({"success": False, "message": "Documento no encontrado"}), 404
+
+        if documento.url.startswith('uploads/'):
+            ruta_archivo = os.path.join(current_app.root_path, documento.url)
+        else:
+            ruta_archivo = os.path.join(current_app.config['UPLOAD_FOLDER'], documento.url)
+
+        if not os.path.exists(ruta_archivo):
+            return jsonify({"success": False, "message": "Archivo no disponible"}), 404
+
+        return send_file(
+            ruta_archivo,
+            as_attachment=True,
+            download_name=documento.nombre,
+            mimetype='application/pdf'
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"Error al descargar documento {doc_id} por folio {folio}: {str(e)}")
+        return jsonify({"success": False, "message": "Error interno al procesar la descarga"}), 500
 
 @api_bp.route('/reclutas/distribuir-excel', methods=['POST'])
 @gerente_or_admin_required

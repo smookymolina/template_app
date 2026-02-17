@@ -1,5 +1,5 @@
 /**
- * Photo Cropper - Sistema de recorte de imÃƒÂ¡genes para perfiles
+ * Photo Cropper - Sistema de recorte de imÃƒÆ’Ã‚¡genes para perfiles
  * Permite seleccionar, recortar y guardar fotos de perfil de reclutas
  */
 
@@ -11,8 +11,15 @@ class PhotoCropper {
         this.isResizing = false;
         this.startX = 0;
         this.startY = 0;
+        this.initialCropSize = 0;
         this.currentReclutaId = null;
         this.currentMode = 'recluta';
+        this.cropEventsBound = false;
+        this.activePointerId = null;
+
+        this.handlePointerMoveBound = (e) => this.handlePointerMove(e);
+        this.stopDragResizeBound = (e) => this.stopDragResize(e);
+        this.handleViewportResizeBound = () => this.handleViewportResize();
 
         this.initializeEventListeners();
     }
@@ -22,6 +29,7 @@ class PhotoCropper {
         document.addEventListener('DOMContentLoaded', () => {
             this.setupModalEvents();
         });
+        window.addEventListener('resize', this.handleViewportResizeBound);
     }
 
     setupModalEvents() {
@@ -41,14 +49,16 @@ class PhotoCropper {
         this.currentReclutaId = reclutaId || this.resolveReclutaId();
         this.resetModal();
 
-        // Actualizar texto del botÃƒÂ³n segÃƒÂºn si hay foto actual
+        // Actualizar texto del botÃƒÆ’Ã‚Â³n segÃƒÆ’Ã‚ºn si hay foto actual
         const currentPhoto = document.getElementById('detail-recluta-pic');
         const buttonText = document.getElementById('photo-btn-text');
 
-        if (currentPhoto && currentPhoto.src && !currentPhoto.src.includes('placeholder')) {
-            buttonText.textContent = 'Actualizar foto';
-        } else {
-            buttonText.textContent = 'Subir foto';
+        if (buttonText) {
+            if (currentPhoto && currentPhoto.src && !currentPhoto.src.includes('placeholder')) {
+                buttonText.textContent = 'Actualizar foto';
+            } else {
+                buttonText.textContent = 'Subir foto';
+            }
         }
 
         const modal = document.getElementById('photo-update-modal');
@@ -86,6 +96,7 @@ class PhotoCropper {
     resetModal() {
         this.currentFile = null;
         this.cropBox = null;
+        this.stopDragResize();
 
         // Resetear areas
         const uploadZone = document.getElementById('photo-upload-zone');
@@ -104,14 +115,14 @@ class PhotoCropper {
     validateFile(file) {
         // Validar tipo
         if (!file.type.startsWith('image/')) {
-            this.showError('Por favor selecciona un archivo de imagen vÃƒÂ¡lido.');
+            this.showError('Por favor selecciona un archivo de imagen vÃƒÆ’Ã‚¡lido.');
             return false;
         }
 
-        // Validar tamaÃƒÂ±o (5MB mÃƒÂ¡ximo)
+        // Validar tamaÃƒÆ’Ã‚Â±o (5MB mÃƒÆ’Ã‚¡ximo)
         const maxSize = 5 * 1024 * 1024; // 5MB
         if (file.size > maxSize) {
-            this.showError('El archivo es demasiado grande. El tamaÃƒÂ±o mÃƒÂ¡ximo es 5MB.');
+            this.showError('El archivo es demasiado grande. El tamaÃƒÆ’Ã‚Â±o mÃƒÆ’Ã‚¡ximo es 5MB.');
             return false;
         }
 
@@ -143,7 +154,7 @@ class PhotoCropper {
         errorDiv.textContent = message;
         errorDiv.style.display = 'block';
 
-        // Auto-ocultar despuÃƒÂ©s de 5 segundos
+        // Auto-ocultar despuÃƒÆ’Ã‚©s de 5 segundos
         setTimeout(() => {
             if (errorDiv) errorDiv.style.display = 'none';
         }, 5000);
@@ -227,10 +238,10 @@ class PhotoCropper {
 
     setupCropBoxEvents() {
         const cropBox = document.getElementById('crop-box');
-        if (!cropBox) return;
+        if (!cropBox || this.cropEventsBound) return;
 
-        // Drag para mover
-        cropBox.addEventListener('mousedown', (e) => {
+        // Drag para mover (mouse + touch + pen)
+        cropBox.addEventListener('pointerdown', (e) => {
             if (e.target === cropBox) {
                 this.startDrag(e);
             }
@@ -239,32 +250,62 @@ class PhotoCropper {
         // Handles para redimensionar
         const handles = cropBox.querySelectorAll('.crop-handle');
         handles.forEach(handle => {
-            handle.addEventListener('mousedown', (e) => {
+            handle.addEventListener('pointerdown', (e) => {
                 this.startResize(e, handle.className);
             });
         });
 
         // Event listeners globales
-        document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        document.addEventListener('mouseup', () => this.stopDragResize());
+        document.addEventListener('pointermove', this.handlePointerMoveBound, { passive: false });
+        document.addEventListener('pointerup', this.stopDragResizeBound);
+        document.addEventListener('pointercancel', this.stopDragResizeBound);
+        this.cropEventsBound = true;
+    }
+
+    getPointerCoordinates(event) {
+        return {
+            x: event.clientX,
+            y: event.clientY
+        };
     }
 
     startDrag(e) {
+        if (!this.cropBox || this.activePointerId !== null) return;
+
+        const { x, y } = this.getPointerCoordinates(e);
         this.isDragging = true;
-        this.startX = e.clientX - this.cropBox.x;
-        this.startY = e.clientY - this.cropBox.y;
+        this.isResizing = false;
+        this.activePointerId = e.pointerId ?? null;
+        this.startX = x - this.cropBox.x;
+        this.startY = y - this.cropBox.y;
+        if (e.target && e.target.setPointerCapture && e.pointerId !== undefined) {
+            e.target.setPointerCapture(e.pointerId);
+        }
         e.preventDefault();
     }
 
     startResize(e, handleClass) {
+        if (!this.cropBox || this.activePointerId !== null) return;
+
+        const { x, y } = this.getPointerCoordinates(e);
         this.isResizing = handleClass;
-        this.startX = e.clientX;
-        this.startY = e.clientY;
+        this.isDragging = false;
+        this.activePointerId = e.pointerId ?? null;
+        this.initialCropSize = this.cropBox.width;
+        this.startX = x;
+        this.startY = y;
+        if (e.target && e.target.setPointerCapture && e.pointerId !== undefined) {
+            e.target.setPointerCapture(e.pointerId);
+        }
         e.preventDefault();
         e.stopPropagation();
     }
 
-    handleMouseMove(e) {
+    handlePointerMove(e) {
+        if (this.activePointerId !== null && e.pointerId !== undefined && this.activePointerId !== e.pointerId) {
+            return;
+        }
+
         if (this.isDragging) {
             this.dragCropBox(e);
         } else if (this.isResizing) {
@@ -274,11 +315,12 @@ class PhotoCropper {
 
     dragCropBox(e) {
         const imageContainer = document.querySelector('.image-container');
-        if (!imageContainer) return;
+        if (!imageContainer || !this.cropBox) return;
 
         const containerRect = imageContainer.getBoundingClientRect();
-        const newX = e.clientX - this.startX;
-        const newY = e.clientY - this.startY;
+        const { x, y } = this.getPointerCoordinates(e);
+        const newX = x - this.startX;
+        const newY = y - this.startY;
 
         // Limitar movimiento dentro del contenedor
         const maxX = containerRect.width - this.cropBox.width;
@@ -289,47 +331,132 @@ class PhotoCropper {
 
         this.updateCropBoxPosition();
         this.updatePreview();
+        e.preventDefault();
     }
 
     resizeCropBox(e) {
-        const deltaX = e.clientX - this.startX;
-        const deltaY = e.clientY - this.startY;
+        if (!this.cropBox || !this.isResizing) return;
+
+        const { x, y } = this.getPointerCoordinates(e);
+        const deltaX = x - this.startX;
+        const deltaY = y - this.startY;
 
         const imageContainer = document.querySelector('.image-container');
         if (!imageContainer) return;
 
         const containerRect = imageContainer.getBoundingClientRect();
+        const minSize = 80;
+        const hasLeft = this.isResizing.includes('left');
+        const hasRight = this.isResizing.includes('right');
+        const hasTop = this.isResizing.includes('top');
+        const hasBottom = this.isResizing.includes('bottom');
 
-        // Calcular nuevas dimensiones segÃƒÂºn el handle
-        if (this.isResizing.includes('right')) {
-            this.cropBox.width = Math.min(
-                containerRect.width - this.cropBox.x,
-                Math.max(100, this.cropBox.width + deltaX)
-            );
+        let nextX = this.cropBox.x;
+        let nextY = this.cropBox.y;
+        let nextSize = this.cropBox.width;
+
+        if (hasLeft || hasRight || hasTop || hasBottom) {
+            if (hasLeft) {
+                nextX = this.cropBox.x + deltaX;
+            }
+            if (hasTop) {
+                nextY = this.cropBox.y + deltaY;
+            }
+
+            if (hasLeft || hasRight) {
+                nextSize = hasLeft
+                    ? this.initialCropSize - (nextX - this.cropBox.x)
+                    : this.initialCropSize + deltaX;
+            }
+            if (hasTop || hasBottom) {
+                const verticalSize = hasTop
+                    ? this.initialCropSize - (nextY - this.cropBox.y)
+                    : this.initialCropSize + deltaY;
+                nextSize = hasLeft || hasRight ? Math.max(nextSize, verticalSize) : verticalSize;
+            }
         }
 
-        if (this.isResizing.includes('bottom')) {
-            this.cropBox.height = Math.min(
-                containerRect.height - this.cropBox.y,
-                Math.max(100, this.cropBox.height + deltaY)
-            );
+        nextSize = Math.max(minSize, nextSize);
+
+        if (hasLeft) {
+            nextX = this.cropBox.x + (this.initialCropSize - nextSize);
+        }
+        if (hasTop) {
+            nextY = this.cropBox.y + (this.initialCropSize - nextSize);
         }
 
-        // Mantener aspecto cuadrado
-        const size = Math.min(this.cropBox.width, this.cropBox.height);
-        this.cropBox.width = size;
-        this.cropBox.height = size;
+        // Limites del contenedor
+        nextX = Math.max(0, nextX);
+        nextY = Math.max(0, nextY);
+        if (nextX + nextSize > containerRect.width) {
+            nextSize = containerRect.width - nextX;
+        }
+        if (nextY + nextSize > containerRect.height) {
+            nextSize = containerRect.height - nextY;
+        }
+        nextSize = Math.max(minSize, nextSize);
 
-        this.startX = e.clientX;
-        this.startY = e.clientY;
+        // Reajustar posicion para handles izquierdos/superiores despues de clamps
+        if (hasLeft) {
+            nextX = this.cropBox.x + (this.initialCropSize - nextSize);
+            nextX = Math.max(0, nextX);
+        }
+        if (hasTop) {
+            nextY = this.cropBox.y + (this.initialCropSize - nextSize);
+            nextY = Math.max(0, nextY);
+        }
+
+        if (nextX + nextSize > containerRect.width) {
+            nextX = Math.max(0, containerRect.width - nextSize);
+        }
+        if (nextY + nextSize > containerRect.height) {
+            nextY = Math.max(0, containerRect.height - nextSize);
+        }
+
+        this.cropBox.x = nextX;
+        this.cropBox.y = nextY;
+        this.cropBox.width = nextSize;
+        this.cropBox.height = nextSize;
 
         this.updateCropBoxPosition();
         this.updatePreview();
+        e.preventDefault();
     }
 
-    stopDragResize() {
+    stopDragResize(e = null) {
+        if (
+            e &&
+            this.activePointerId !== null &&
+            e.pointerId !== undefined &&
+            this.activePointerId !== e.pointerId
+        ) {
+            return;
+        }
+
         this.isDragging = false;
         this.isResizing = false;
+        this.activePointerId = null;
+        this.initialCropSize = 0;
+    }
+
+    handleViewportResize() {
+        if (!this.cropBox) return;
+
+        const imageContainer = document.querySelector('.image-container');
+        if (!imageContainer) return;
+
+        const containerRect = imageContainer.getBoundingClientRect();
+        if (!containerRect.width || !containerRect.height) return;
+
+        this.cropBox.width = Math.min(this.cropBox.width, containerRect.width);
+        this.cropBox.height = Math.min(this.cropBox.height, containerRect.height);
+        this.cropBox.x = Math.min(this.cropBox.x, containerRect.width - this.cropBox.width);
+        this.cropBox.y = Math.min(this.cropBox.y, containerRect.height - this.cropBox.height);
+        this.cropBox.x = Math.max(0, this.cropBox.x);
+        this.cropBox.y = Math.max(0, this.cropBox.y);
+
+        this.updateCropBoxPosition();
+        this.updatePreview();
     }
 
     updateCropBoxPosition() {
@@ -349,6 +476,7 @@ class PhotoCropper {
         const finalPreview = document.getElementById('final-preview-img');
 
         if (!cropImage || !finalPreview) return;
+        if (!cropImage.width || !cropImage.height) return;
 
         // Crear canvas para el recorte
         const canvas = document.createElement('canvas');
@@ -404,6 +532,9 @@ class PhotoCropper {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             const cropImage = document.getElementById('crop-image');
+            if (!cropImage || !cropImage.width || !cropImage.height) {
+                throw new Error('La imagen aun no esta lista para recorte.');
+            }
 
             // Dimensiones finales (300x300 para buena calidad)
             canvas.width = 300;
@@ -426,86 +557,89 @@ class PhotoCropper {
                 0, 0, 300, 300
             );
 
-            // Convertir a blob
-            canvas.toBlob(async (blob) => {
-                const formData = new FormData();
-                formData.append('foto', blob, 'profile.jpg');
-
-                const isUserMode = this.currentMode === "user";
-                const requestUrl = isUserMode
-                    ? "/auth/upload-profile-photo"
-                    : `/api/reclutas/${this.currentReclutaId}`;
-                const requestMethod = isUserMode ? "POST" : "PUT";
-
-                // Enviar a la API
-                const response = await fetch(requestUrl, {
-                    method: requestMethod,
-                    body: formData
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-
-                    if (isUserMode) {
-                        if (result.success && result.foto_url) {
-                            if (window.configManager && typeof window.configManager.displayPhotoPreview === "function") {
-                                window.configManager.displayPhotoPreview(result.foto_url);
-                            } else {
-                                const preview = document.getElementById("user-photo-preview");
-                                if (preview) {
-                                    preview.innerHTML = `<img src="${result.foto_url}?t=${Date.now()}" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-                                }
-                            }
-                            this.closeModal();
-                            this.showSuccess("Foto de perfil actualizada correctamente");
-                        } else {
-                            throw new Error(result.message || "Error al guardar la foto");
-                        }
-                    } else {
-                        const reclutaFotoUrl = result.foto_url || (result.recluta && result.recluta.foto_url) || null;
-
-                        // Actualizar imagen en el modal de vista
-                        const detailPic = document.getElementById("detail-recluta-pic");
-                        if (detailPic && reclutaFotoUrl) {
-                            // Usar la misma funcion getFotoUrl que usa reclutas.js
-                            const placeholder = window.DEFAULT_PROFILE_PLACEHOLDER || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e2e8f0'/%3E%3Ccircle cx='50' cy='40' r='18' fill='%23a0aec0'/%3E%3Cellipse cx='50' cy='80' rx='28' ry='20' fill='%23a0aec0'/%3E%3C/svg%3E";
-                            const getFotoUrl = (fotoUrl) => {
-                                if (!fotoUrl) return placeholder;
-                                if (fotoUrl.startsWith("http")) return fotoUrl;
-                                if (fotoUrl === "default_profile.jpg") return placeholder;
-                                if (fotoUrl.includes("recluta/")) {
-                                    const filename = fotoUrl.split("/").pop();
-                                    return `/media/profiles/${filename}`;
-                                }
-                                if (fotoUrl.startsWith("uploads/")) {
-                                    const filename = fotoUrl.split("/").pop();
-                                    return `/media/profiles/${filename}`;
-                                }
-                                return `/media/profiles/${fotoUrl}`;
-                            };
-
-                            detailPic.src = getFotoUrl(reclutaFotoUrl) + "?t=" + Date.now();
-                        }
-
-                        // Actualizar imagen en la tabla
-                        if (window.Reclutas && window.Reclutas.loadReclutas) {
-                            window.Reclutas.loadReclutas();
-                        }
-
-                        // Actualizar texto del boton
-                        const buttonText = document.getElementById("photo-btn-text");
-                        if (buttonText) buttonText.textContent = "Actualizar foto";
-
-                        this.closeModal();
-                        this.showSuccess("Foto actualizada correctamente");
+            const blob = await new Promise((resolve, reject) => {
+                canvas.toBlob((generatedBlob) => {
+                    if (!generatedBlob) {
+                        reject(new Error('No se pudo procesar la imagen.'));
+                        return;
                     }
+                    resolve(generatedBlob);
+                }, 'image/jpeg', 0.9);
+            });
 
+            const formData = new FormData();
+            formData.append('foto', blob, 'profile.jpg');
+
+            const isUserMode = this.currentMode === "user";
+            const requestUrl = isUserMode
+                ? "/auth/upload-profile-photo"
+                : `/api/reclutas/${this.currentReclutaId}`;
+            const requestMethod = isUserMode ? "POST" : "PUT";
+
+            // Enviar a la API
+            const response = await fetch(requestUrl, {
+                method: requestMethod,
+                body: formData
+            });
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || result.error || 'Error al guardar la foto');
+            }
+
+            if (isUserMode) {
+                if (result.success && result.foto_url) {
+                    if (window.configManager && typeof window.configManager.displayPhotoPreview === "function") {
+                        window.configManager.displayPhotoPreview(result.foto_url);
+                    } else {
+                        const preview = document.getElementById("user-photo-preview");
+                        if (preview) {
+                            preview.innerHTML = `<img src="${result.foto_url}?t=${Date.now()}" alt="Foto de perfil" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                        }
+                    }
+                    this.closeModal();
+                    this.showSuccess("Foto de perfil actualizada correctamente");
                 } else {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Error al guardar la foto');
+                    throw new Error(result.message || "Error al guardar la foto");
+                }
+            } else {
+                const reclutaFotoUrl = result.foto_url || (result.recluta && result.recluta.foto_url) || null;
+
+                // Actualizar imagen en el modal de vista
+                const detailPic = document.getElementById("detail-recluta-pic");
+                if (detailPic && reclutaFotoUrl) {
+                    // Usar la misma funcion getFotoUrl que usa reclutas.js
+                    const placeholder = window.DEFAULT_PROFILE_PLACEHOLDER || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e2e8f0'/%3E%3Ccircle cx='50' cy='40' r='18' fill='%23a0aec0'/%3E%3Cellipse cx='50' cy='80' rx='28' ry='20' fill='%23a0aec0'/%3E%3C/svg%3E";
+                    const getFotoUrl = (fotoUrl) => {
+                        if (!fotoUrl) return placeholder;
+                        if (fotoUrl.startsWith("http")) return fotoUrl;
+                        if (fotoUrl === "default_profile.jpg") return placeholder;
+                        if (fotoUrl.includes("recluta/")) {
+                            const filename = fotoUrl.split("/").pop();
+                            return `/media/profiles/${filename}`;
+                        }
+                        if (fotoUrl.startsWith("uploads/")) {
+                            const filename = fotoUrl.split("/").pop();
+                            return `/media/profiles/${filename}`;
+                        }
+                        return `/media/profiles/${fotoUrl}`;
+                    };
+
+                    detailPic.src = getFotoUrl(reclutaFotoUrl) + "?t=" + Date.now();
                 }
 
-            }, 'image/jpeg', 0.9);
+                // Actualizar imagen en la tabla
+                if (window.Reclutas && window.Reclutas.loadReclutas) {
+                    window.Reclutas.loadReclutas();
+                }
+
+                // Actualizar texto del boton
+                const buttonText = document.getElementById("photo-btn-text");
+                if (buttonText) buttonText.textContent = "Actualizar foto";
+
+                this.closeModal();
+                this.showSuccess("Foto actualizada correctamente");
+            }
 
         } catch (error) {
             console.error('Error al guardar foto:', error);
@@ -532,7 +666,7 @@ class PhotoCropper {
     }
 
     showSuccess(message) {
-        // Crear notificaciÃƒÂ³n de ÃƒÂ©xito
+        // Crear notificaciÃƒÆ’Ã‚Â³n de ÃƒÆ’Ã‚©xito
         const successDiv = document.createElement('div');
         successDiv.style.cssText = `
             position: fixed;
@@ -550,7 +684,7 @@ class PhotoCropper {
 
         document.body.appendChild(successDiv);
 
-        // Auto-eliminar despuÃƒÂ©s de 3 segundos
+        // Auto-eliminar despuÃƒÆ’Ã‚©s de 3 segundos
         setTimeout(() => {
             if (successDiv.parentNode) {
                 successDiv.parentNode.removeChild(successDiv);
@@ -604,7 +738,7 @@ function openUserPhotoCropper(file) {
 
 /**
  * Photo Lightbox - Sistema para ver fotos ampliadas
- * Permite hacer clic en fotos de perfil para verlas en tamaÃƒÂ±o completo
+ * Permite hacer clic en fotos de perfil para verlas en tamaÃƒÆ’Ã‚±o completo
  */
 class PhotoLightbox {
     constructor() {
@@ -655,16 +789,16 @@ class PhotoLightbox {
             // Fotos principales
             '#detail-recluta-pic',            // Foto en modal de ver recluta
             '#dashboard-profile-pic',         // Foto en header del dashboard
-            '#user-photo-preview img',        // Foto en configuraciÃƒÂ³n
+            '#user-photo-preview img',        // Foto en configuraciÃƒÆ’Ã‚³n
 
             // Tablas y listas
             '.recluta-foto',                  // Fotos en tabla de reclutas
             '.user-avatar-img',               // Avatar de usuarios en admin
             '.profile-image-large',           // Perfil grande en admin
-            '.profile-image-small',           // Perfil pequeÃƒÂ±o en admin
-            '.gerente-foto',                  // Fotos de gerentes en mÃƒÂ©tricas
+            '.profile-image-small',           // Perfil pequeÃƒÆ’Ã‚±o en admin
+            '.gerente-foto',                  // Fotos de gerentes en mÃƒÆ’Ã‚©tricas
 
-            // Cards de mÃƒÂ©tricas y equipos
+            // Cards de mÃƒÆ’Ã‚©tricas y equipos
             '.gerente-card img',              // Foto en card de gerente
             '.asesor-card img',               // Foto en card de asesor
             '.equipo-card img',               // Foto en card de equipo
@@ -676,7 +810,7 @@ class PhotoLightbox {
             '#interview-candidate-pic',       // Foto de candidato en entrevista
             '.interview-candidate img',       // Foto en lista de entrevistas
 
-            // GenÃƒÂ©ricos que contengan fotos de perfil
+            // GenÃƒÆ’Ã‚©ricos que contengan fotos de perfil
             '.profile-pic:not(.profile-pic-edit)',  // Cualquier foto de perfil
             '.avatar-img',                    // Cualquier avatar
             '[class*="foto-perfil"]',         // Clases que contengan foto-perfil
@@ -754,7 +888,7 @@ class PhotoLightbox {
 
     // Observar cambios en el DOM para inicializar nuevas fotos
     observeDOMChanges() {
-        // Selectores de imÃƒÂ¡genes que deben ser clickeables
+        // Selectores de imÃƒÆ’Ã‚¡genes que deben ser clickeables
         const imgSelectors = [
             'img.profile-pic',
             'img.recluta-foto',
@@ -787,7 +921,7 @@ class PhotoLightbox {
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
                     if (node.nodeType === 1) { // Element node
-                        // Buscar imÃƒÂ¡genes dentro del nodo agregado
+                        // Buscar imÃƒÆ’Ã‚¡genes dentro del nodo agregado
                         if (node.querySelectorAll) {
                             const imgs = node.querySelectorAll(imgSelectors);
                             imgs.forEach(img => {
@@ -811,7 +945,7 @@ class PhotoLightbox {
                     }
                 });
 
-                // TambiÃƒÂ©n verificar atributos modificados (cambio de src)
+                // TambiÃƒÆ’Ã‚©n verificar atributos modificados (cambio de src)
                 if (mutation.type === 'attributes' && mutation.attributeName === 'src') {
                     const img = mutation.target;
                     if (img.tagName === 'IMG' && !this.isPlaceholder(img.src)) {
@@ -832,7 +966,7 @@ class PhotoLightbox {
         });
     }
 
-    // MÃƒÂ©todo para reinicializar fotos (ÃƒÂºtil despuÃƒÂ©s de cargar datos)
+    // MÃƒÆ’Ã‚Â©todo para reinicializar fotos (ÃƒÆ’Ã‚Âºtil despuÃƒÆ’Ã‚©s de cargar datos)
     refresh() {
         this.setupClickablePhotos();
     }
@@ -841,12 +975,13 @@ class PhotoLightbox {
 // Instancia global del lightbox
 const photoLightbox = new PhotoLightbox();
 
-// FunciÃƒÂ³n global para abrir el lightbox desde cualquier lugar
+// FunciÃƒÆ’Ã‚³n global para abrir el lightbox desde cualquier lugar
 function openPhotoLightbox(imageSrc, caption) {
     photoLightbox.open(imageSrc, caption);
 }
 
-// FunciÃƒÂ³n global para refrescar fotos clickeables
+// FunciÃƒÆ’Ã‚³n global para refrescar fotos clickeables
 function refreshClickablePhotos() {
     photoLightbox.refresh();
 }
+

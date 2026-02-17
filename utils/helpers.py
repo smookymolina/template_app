@@ -2,7 +2,7 @@ import os
 import uuid
 import hashlib
 import logging
-from PIL import Image
+from PIL import Image, ImageOps
 from werkzeug.utils import secure_filename
 from flask import current_app, request
 from datetime import datetime, date, timedelta
@@ -24,71 +24,177 @@ MAX_FILE_SIZES = {
     'excel': 15 * 1024 * 1024
 }
 
+PROFILE_IMAGE_SUBFOLDERS = {'recluta', 'usuario'}
+PROFILE_IMAGE_MAX_DIMENSION = 1024
+PROFILE_IMAGE_QUALITY = 85
+
 def validate_file_extension(filename, file_type):
     if not filename or '.' not in filename:
         return False
     extension = filename.rsplit('.', 1)[1].lower()
     return extension in ALLOWED_EXTENSIONS.get(file_type, set())
 
+def _is_profile_image_subfolder(subcarpeta):
+    return subcarpeta in PROFILE_IMAGE_SUBFOLDERS
+
+def _get_file_size(archivo):
+    """Obtiene el tamano real del archivo sin romper el stream."""
+    if not archivo or not getattr(archivo, 'stream', None):
+        return 0
+    stream = archivo.stream
+    current_pos = stream.tell()
+    stream.seek(0, os.SEEK_END)
+    size = stream.tell()
+    stream.seek(current_pos)
+    return size
+
+def _process_profile_image(archivo, ruta_completa):
+    """Normaliza orientacion y reduce tamano/peso para fotos de perfil."""
+    try:
+        archivo.stream.seek(0)
+        with Image.open(archivo.stream) as image:
+            image = ImageOps.exif_transpose(image)
+
+            resampling = getattr(Image, 'Resampling', Image).LANCZOS
+            image.thumbnail((PROFILE_IMAGE_MAX_DIMENSION, PROFILE_IMAGE_MAX_DIMENSION), resampling)
+
+            # Convertir a RGB para estandarizar salida JPG.
+            if image.mode in ('RGBA', 'LA', 'P'):
+                rgba = image.convert('RGBA')
+                background = Image.new('RGB', rgba.size, (255, 255, 255))
+                background.paste(rgba, mask=rgba.split()[-1])
+                image = background
+            elif image.mode != 'RGB':
+                image = image.convert('RGB')
+
+            image.save(
+                ruta_completa,
+                format='JPEG',
+                quality=PROFILE_IMAGE_QUALITY,
+                optimize=True
+            )
+        return True
+    except Exception as error:
+        current_app.logger.error(f'Error procesando imagen de perfil: {str(error)}')
+        return False
+
 def guardar_archivo(archivo, subcarpeta, tipos_permitidos=None):
     """
     Guarda un archivo en la carpeta de uploads con la estructura especificada.
-    
+
     Args:
         archivo: Archivo a guardar (werkzeug FileStorage)
         subcarpeta: Subcarpeta dentro de uploads (ej: 'reclutas/123/documentos')
         tipos_permitidos: Lista de extensiones permitidas (ej: ['pdf'])
-    
+
     Returns:
         str: Ruta relativa del archivo guardado o None si hay error
     """
     if not archivo:
         return None
+
     try:
         filename = secure_filename(archivo.filename)
-        nombre_base, extension = os.path.splitext(filename)
-        nombre_unico = f'{nombre_base}_{uuid.uuid4().hex}{extension}'
+        if not filename:
+            raise ValueError('Nombre de archivo invalido')
 
-        # Validación de extensión si se especifica
+        nombre_base, extension = os.path.splitext(filename)
+        extension = extension.lower()
+        is_profile_image = _is_profile_image_subfolder(subcarpeta)
+
+        # Validacion de extension
         if tipos_permitidos is not None:
-            ext = extension.lower().lstrip('.')
-            if ext not in [e.lower().lstrip('.') for e in tipos_permitidos]:
-                raise ValueError('Extensión de archivo no permitida')
-        
-        # Crear el directorio completo dentro de PROFILE_IMG_FOLDER para imágenes de perfil
-        if subcarpeta == 'recluta':
+            ext = extension.lstrip('.')
+            valid_extensions = {e.lower().lstrip('.') for e in tipos_permitidos}
+            if ext not in valid_extensions:
+                raise ValueError('Extension de archivo no permitida')
+        elif is_profile_image and not validate_file_extension(filename, 'image'):
+            raise ValueError('Formato de imagen no permitido')
+
+        # Validacion de tamano
+        file_type = 'image' if is_profile_image else ('document' if tipos_permitidos else 'excel')
+        max_size = MAX_FILE_SIZES.get(file_type)
+        file_size = _get_file_size(archivo)
+        if max_size and file_size > max_size:
+            raise ValueError(f'El archivo excede el limite permitido para {file_type}')
+
+        # Seleccionar directorio de guardado
+        if is_profile_image:
             directorio = current_app.config['PROFILE_IMG_FOLDER']
+            base = nombre_base if nombre_base else 'profile'
+            nombre_unico = f'{base}_{uuid.uuid4().hex}.jpg'
         else:
             directorio = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads'), subcarpeta)
+            nombre_unico = f'{nombre_base}_{uuid.uuid4().hex}{extension}'
+
         if not os.path.exists(directorio):
             os.makedirs(directorio, exist_ok=True)
-        
-        ruta_completa = os.path.join(directorio, nombre_unico)
-        archivo.save(ruta_completa)
 
-        # Retornar la ruta relativa adecuada
-        if subcarpeta == 'recluta':
-            return nombre_unico  # Solo el nombre del archivo para imágenes de perfil
+        ruta_completa = os.path.join(directorio, nombre_unico)
+        if is_profile_image:
+            if not _process_profile_image(archivo, ruta_completa):
+                return None
         else:
-            return os.path.join(subcarpeta, nombre_unico).replace('\\', '/')
+            archivo.save(ruta_completa)
+
+        if is_profile_image:
+            return nombre_unico
+        return os.path.join(subcarpeta, nombre_unico).replace('\\', '/')
+
     except Exception as e:
         current_app.logger.error(f'Error al guardar archivo: {str(e)}')
         return None
 
+
 def eliminar_archivo(ruta_relativa):
     if not ruta_relativa:
         return {'success': False, 'message': 'No se proporciono ruta de archivo.'}
+
     try:
-        ruta_completa = os.path.join(current_app.root_path, ruta_relativa)
-        upload_folder = os.path.join(current_app.root_path, current_app.config['UPLOAD_FOLDER'])
-        if not os.path.abspath(ruta_completa).startswith(os.path.abspath(upload_folder)):
-            return {'success': False, 'message': 'Ruta de archivo no valida.'}
-        
-        if os.path.exists(ruta_completa):
-            os.remove(ruta_completa)
-            return {'success': True, 'message': 'Archivo eliminado correctamente.'}
+        normalized_path = str(ruta_relativa).replace('\\', '/').strip().lstrip('/')
+
+        upload_folder = current_app.config.get(
+            'UPLOAD_FOLDER',
+            os.path.join(current_app.root_path, 'uploads')
+        )
+        profile_folder = current_app.config.get(
+            'PROFILE_IMG_FOLDER',
+            os.path.join(upload_folder, 'profile_images')
+        )
+
+        upload_abs = os.path.abspath(upload_folder)
+        profile_abs = os.path.abspath(profile_folder)
+        allowed_roots = (upload_abs, profile_abs)
+
+        candidate_paths = []
+        if os.path.isabs(normalized_path):
+            candidate_paths.append(os.path.abspath(normalized_path))
         else:
-            return {'success': False, 'message': 'Archivo no encontrado.'}
+            if normalized_path.startswith('uploads/'):
+                rel_upload = normalized_path[len('uploads/'):]
+                candidate_paths.append(os.path.abspath(os.path.join(upload_folder, rel_upload)))
+
+            candidate_paths.append(os.path.abspath(os.path.join(upload_folder, normalized_path)))
+
+            filename = os.path.basename(normalized_path)
+            if filename:
+                candidate_paths.append(os.path.abspath(os.path.join(profile_folder, filename)))
+
+        checked_paths = set()
+        for full_path in candidate_paths:
+            if full_path in checked_paths:
+                continue
+            checked_paths.add(full_path)
+
+            if not any(full_path == root or full_path.startswith(root + os.sep) for root in allowed_roots):
+                continue
+
+            if os.path.exists(full_path):
+                os.remove(full_path)
+                return {'success': True, 'message': 'Archivo eliminado correctamente.'}
+
+        return {'success': False, 'message': 'Archivo no encontrado.'}
+
     except Exception as e:
         return {'success': False, 'message': f'Error al eliminar archivo: {str(e)}'}
 

@@ -3,7 +3,10 @@
     "allow": [
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(source:*)",
+      "Bash(flask db migrate:*)",
+      "Bash(flask db:*)"
     ]
   }
 }

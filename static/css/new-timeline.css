@@ -302,6 +302,39 @@
     font-family: Georgia, serif;
 }
 
+/* Botón de descarga individual por evento */
+.timeline-download-btn {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+    margin-left: 8px;
+}
+
+.timeline-download-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.timeline-download-btn:active {
+    transform: scale(0.95);
+}
+
+.timeline-download-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
 /* En tracking publico: mostrar comentarios solo al hacer click */
 #client-timeline .timeline-card-comment.is-collapsed {
     display: none;

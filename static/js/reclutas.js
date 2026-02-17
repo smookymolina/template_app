@@ -1975,6 +1975,7 @@ const Reclutas = {
             const data = await response.json();
             if (data.success) {
                 this.gerentes = data.gerentes_ranking || [];
+                this._gerentesLoaded = true;
                 this.renderGerenteFilterOptions();
                 this.updateGerenteFilterButtonLabel();
                 console.log(`✅ ${this.gerentes.length} gerentes cargados`);
@@ -1985,6 +1986,7 @@ const Reclutas = {
         } catch (error) {
             console.error('❌ Error cargando gerentes:', error);
             this.gerentes = [];
+            this._gerentesLoaded = true;
             throw error;
         }
     },
@@ -2364,6 +2366,7 @@ const Reclutas = {
         const editSelector = document.getElementById('edit-recluta-gerente');
 
         if (!this.gerentes || this.gerentes.length === 0) {
+            if (this._gerentesLoaded) return; // Ya se intentó cargar, no hay gerentes disponibles
             console.log('No hay gerentes cargados, intentando cargar...');
             this.loadGerentes()
                 .then(() => this.populateGerenteSelectors())
@@ -4130,7 +4133,9 @@ const Reclutas = {
                     date: e.date,
                     status: e.status,
                     title: e.title,
-                    description: e.description || ''
+                    description: e.description || '',
+                    documento_id: e.documento_id || null,
+                    documento: e.documento || null
                 }));
             } else {
                 this.currentTimelineData = [];
@@ -4375,22 +4380,25 @@ const Reclutas = {
 
     addTimelineItem: function() {
         this.currentEditingTimelineId = null;
-        
+
         // Resetear formulario
         const form = document.getElementById('timeline-form');
         const formTitle = document.getElementById('form-title');
-        
+
         if (formTitle) formTitle.textContent = 'Agregar Evento de Timeline';
-        
+
         // Limpiar campos
         document.getElementById('event-date').value = this.getTodayDateString();
         document.getElementById('event-status').value = 'pending';
         document.getElementById('event-title').value = '';
         document.getElementById('event-description').value = '';
-        
+
+        // Cargar documentos disponibles y resetear selección
+        this.loadDocumentosForSelect('');
+
         // Mostrar formulario
         if (form) form.style.display = 'block';
-        
+
         // Scroll al formulario
         form.scrollIntoView({ behavior: 'smooth' });
     },
@@ -4404,19 +4412,22 @@ const Reclutas = {
             showError('Evento no encontrado');
             return;
         }
-        
+
         this.currentEditingTimelineId = id;
-        
+
         // Rellenar formulario
         const formTitle = document.getElementById('form-title');
         if (formTitle) formTitle.textContent = 'Editar Evento de Timeline';
-        
+
         // Usar la fecha directamente (ya viene en formato YYYY-MM-DD del backend)
         document.getElementById('event-date').value = item.date;
         document.getElementById('event-status').value = item.status;
         document.getElementById('event-title').value = item.title;
         document.getElementById('event-description').value = item.description || '';
-        
+
+        // Cargar documentos disponibles y preseleccionar el vinculado
+        this.loadDocumentosForSelect(item.documento_id || '');
+
         // Mostrar formulario
         const form = document.getElementById('timeline-form');
         if (form) {
@@ -4433,6 +4444,37 @@ const Reclutas = {
         if (form) form.style.display = 'none';
         
         this.currentEditingTimelineId = null;
+    },
+
+    /**
+     * Carga los documentos del recluta actual en el select del formulario de timeline
+     * @param {string|number} selectedId - ID del documento a preseleccionar
+     */
+    loadDocumentosForSelect: async function(selectedId) {
+        const select = document.getElementById('event-documento');
+        if (!select) return;
+
+        select.innerHTML = '<option value="">— Sin documento —</option>';
+
+        if (!this.currentReclutaId) return;
+
+        try {
+            const resp = await fetch(`${CONFIG.API_URL}/reclutas/${this.currentReclutaId}/documentos`);
+            const data = await resp.json();
+            if (resp.ok && data.success && Array.isArray(data.documentos)) {
+                data.documentos.forEach(doc => {
+                    const option = document.createElement('option');
+                    option.value = doc.id;
+                    option.textContent = doc.nombre;
+                    if (String(doc.id) === String(selectedId)) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            }
+        } catch (e) {
+            console.error('Error cargando documentos para select:', e);
+        }
     },
 
     /**
@@ -4507,7 +4549,10 @@ Reclutas.saveTimelineItemApi = async function() {
         saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
     }
 
-    const payload = { date, status, title, description: description || '' };
+    const documentoSelect = document.getElementById('event-documento');
+    const documento_id = documentoSelect && documentoSelect.value ? parseInt(documentoSelect.value, 10) : null;
+
+    const payload = { date, status, title, description: description || '', documento_id };
 
     try {
         let url = `${CONFIG.API_URL}/reclutas/${Reclutas.currentReclutaId}/timeline`;

@@ -455,6 +455,8 @@ const Client = {
         const timelineContainer = document.getElementById('client-timeline');
         if (!timelineContainer) return;
 
+        this.currentFolio = folio;
+
         try {
             this.clientTimelineData = [];
             const response = await fetch(`/api/tracking/${folio}/timeline`);
@@ -547,6 +549,14 @@ const Client = {
                </div>`
             : '';
 
+        // Botón de descarga individual si el evento tiene documento vinculado
+        const hasDoc = item.documento && item.documento.id;
+        const downloadBtnHTML = hasDoc
+            ? `<button class="timeline-download-btn" type="button" data-doc-id="${item.documento.id}" data-doc-name="${this.escapeHtml(item.documento.nombre)}" title="Descargar ${this.escapeHtml(item.documento.nombre)}">
+                   <i class="fas fa-download"></i>
+               </button>`
+            : '';
+
         return `
             <div class="timeline-card ${hasComment ? 'has-comment' : ''}" data-event-id="${item.id}">
                 <div class="timeline-card-header">
@@ -565,6 +575,7 @@ const Client = {
                             </span>
                         </div>
                     </div>
+                    ${downloadBtnHTML}
                     <div class="timeline-card-days">
                         <div class="days-ago-number">
                             ${daysAgo.prefix ? `<span class="days-ago-prefix">${daysAgo.prefix}</span>` : ''}
@@ -636,6 +647,17 @@ const Client = {
         timelineContainer.dataset.commentToggleBound = 'true';
 
         timelineContainer.addEventListener('click', (e) => {
+            // Manejar click en botón de descarga individual
+            const downloadBtn = e.target.closest('.timeline-download-btn');
+            if (downloadBtn) {
+                e.stopPropagation();
+                const docId = downloadBtn.dataset.docId;
+                if (docId && this.currentFolio) {
+                    this.downloadSingleDocument(this.currentFolio, docId, downloadBtn);
+                }
+                return;
+            }
+
             const card = e.target.closest('.timeline-card');
             if (!card) return;
 
@@ -644,6 +666,51 @@ const Client = {
 
             commentBlock.classList.toggle('is-collapsed');
         });
+    },
+
+    /**
+     * Descarga un documento individual de un evento
+     * @param {string} folio - Folio del recluta
+     * @param {string} docId - ID del documento
+     * @param {HTMLElement} btn - Botón que disparó la descarga
+     */
+    downloadSingleDocument: async function(folio, docId, btn) {
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch(`/api/tracking/${folio}/documents/${docId}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || 'No se pudo descargar el documento');
+            }
+
+            const blob = await response.blob();
+            const disposition = response.headers.get('Content-Disposition');
+            let filename = btn.dataset.docName || `documento_${docId}.pdf`;
+            if (disposition) {
+                const match = disposition.match(/filename[^;=\n]*=(['"]?)([^'";\n]*)\1/);
+                if (match && match[2]) filename = match[2];
+            }
+
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showSuccess('Documento descargado correctamente');
+        } catch (error) {
+            console.error('Error al descargar documento:', error);
+            showError(error.message || 'Error al descargar el documento');
+        } finally {
+            btn.innerHTML = originalHTML;
+            btn.disabled = false;
+        }
     },
     
     /**
