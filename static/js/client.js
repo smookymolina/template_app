@@ -549,12 +549,32 @@ const Client = {
                </div>`
             : '';
 
-        // Botón de descarga individual si el evento tiene documento vinculado
-        const hasDoc = item.documento && item.documento.id;
-        const downloadBtnHTML = hasDoc
-            ? `<button class="timeline-download-btn" type="button" data-doc-id="${item.documento.id}" data-doc-name="${this.escapeHtml(item.documento.nombre)}" title="Descargar ${this.escapeHtml(item.documento.nombre)}">
+        // Documentos vinculados al evento (soporta múltiples)
+        const docs = Array.isArray(item.documentos) && item.documentos.length > 0
+            ? item.documentos
+            : (item.documento && item.documento.id ? [item.documento] : []);
+
+        // 1 documento: botón icono en el header (comportamiento original)
+        const headerDownloadBtn = docs.length === 1
+            ? `<button class="timeline-download-btn" type="button" data-doc-id="${docs[0].id}" data-doc-name="${this.escapeHtml(docs[0].nombre)}" title="Descargar ${this.escapeHtml(docs[0].nombre)}">
                    <i class="fas fa-download"></i>
                </button>`
+            : '';
+
+        // 2+ documentos: chips con nombre y botón de descarga debajo del header
+        const multiDocsHTML = docs.length > 1
+            ? `<div class="timeline-card-docs" style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 14px 10px 14px;border-top:1px solid rgba(0,0,0,0.06);">
+                ${docs.map(doc => `
+                    <button class="timeline-download-btn" type="button"
+                            data-doc-id="${doc.id}" data-doc-name="${this.escapeHtml(doc.nombre)}"
+                            title="Descargar ${this.escapeHtml(doc.nombre)}"
+                            style="display:inline-flex;align-items:center;gap:5px;background:#fff5f5;border:1px solid #fed7d7;border-radius:5px;padding:4px 10px;font-size:0.8rem;color:#c53030;cursor:pointer;font-family:inherit;">
+                        <i class="fas fa-file-pdf" style="font-size:0.75rem;flex-shrink:0;"></i>
+                        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">${this.escapeHtml(doc.nombre)}</span>
+                        <i class="fas fa-download" style="font-size:0.7rem;flex-shrink:0;opacity:0.7;"></i>
+                    </button>
+                `).join('')}
+               </div>`
             : '';
 
         return `
@@ -575,7 +595,7 @@ const Client = {
                             </span>
                         </div>
                     </div>
-                    ${downloadBtnHTML}
+                    ${headerDownloadBtn}
                     <div class="timeline-card-days">
                         <div class="days-ago-number">
                             ${daysAgo.prefix ? `<span class="days-ago-prefix">${daysAgo.prefix}</span>` : ''}
@@ -585,6 +605,7 @@ const Client = {
                     </div>
                 </div>
                 ${commentHTML}
+                ${multiDocsHTML}
             </div>
         `;
     },

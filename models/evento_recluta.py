@@ -1,6 +1,13 @@
 from datetime import datetime
 from models import db, DatabaseError
 
+# Tabla de asociación many-to-many entre EventoRecluta y Documento
+evento_recluta_documento = db.Table(
+    'evento_recluta_documento',
+    db.Column('evento_id', db.Integer, db.ForeignKey('evento_recluta.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('documento_id', db.Integer, db.ForeignKey('documento.id', ondelete='CASCADE'), primary_key=True)
+)
+
 
 class EventoRecluta(db.Model):
     """
@@ -10,7 +17,7 @@ class EventoRecluta(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     recluta_id = db.Column(db.Integer, db.ForeignKey('recluta.id'), nullable=False, index=True)
-    documento_id = db.Column(db.Integer, db.ForeignKey('documento.id'), nullable=True)
+    documento_id = db.Column(db.Integer, db.ForeignKey('documento.id'), nullable=True)  # legado
     fecha = db.Column(db.Date, nullable=False)
     estado = db.Column(db.String(20), nullable=False, default='pending')  # pending, completed, cancelled
     titulo = db.Column(db.String(200), nullable=False)
@@ -20,25 +27,35 @@ class EventoRecluta(db.Model):
 
     recluta = db.relationship('Recluta', backref=db.backref('eventos', lazy='dynamic', cascade='all, delete-orphan'))
     documento = db.relationship('Documento', backref=db.backref('evento', uselist=False), foreign_keys=[documento_id])
+    documentos = db.relationship(
+        'Documento',
+        secondary=evento_recluta_documento,
+        lazy='joined',
+        backref=db.backref('eventos_asociados', lazy='dynamic')
+    )
 
     def serialize(self):
+        docs_list = [
+            {'id': doc.id, 'nombre': doc.nombre, 'tipo': doc.tipo}
+            for doc in (self.documentos or [])
+        ]
         data = {
             'id': self.id,
             'recluta_id': self.recluta_id,
-            'documento_id': self.documento_id,
             'date': self.fecha.isoformat() if self.fecha else None,
             'status': self.estado,
             'title': self.titulo,
             'description': self.descripcion or '',
             'created_at': self.fecha_creacion.isoformat() if self.fecha_creacion else None,
             'updated_at': self.ultima_actualizacion.isoformat() if self.ultima_actualizacion else None,
+            'documentos': docs_list,
         }
-        if self.documento:
-            data['documento'] = {
-                'id': self.documento.id,
-                'nombre': self.documento.nombre,
-                'tipo': self.documento.tipo,
-            }
+        # Retrocompatibilidad: campos singulares para código existente
+        data['documento_id'] = docs_list[0]['id'] if docs_list else self.documento_id
+        data['documento'] = docs_list[0] if docs_list else (
+            {'id': self.documento.id, 'nombre': self.documento.nombre, 'tipo': self.documento.tipo}
+            if self.documento else None
+        )
         return data
 
     def save(self):
@@ -71,4 +88,3 @@ class EventoRecluta(db.Model):
     @classmethod
     def get_by_id(cls, event_id):
         return cls.query.get(event_id)
-

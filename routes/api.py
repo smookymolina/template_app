@@ -991,12 +991,18 @@ def create_timeline_event(recluta_id):
             except ValueError:
                 return jsonify({"success": False, "message": "Formato de fecha inválido. Use YYYY-MM-DD"}), 400
                 
-            documento_id = data.get('documento_id')
-            if documento_id is not None:
-                from models.documento import Documento
-                doc = Documento.query.filter_by(id=documento_id, recluta_id=recluta_id).first()
-                if not doc:
-                    documento_id = None
+            from models.documento import Documento
+            # Soporte para múltiples documentos: acepta documento_ids (lista) o documento_id (legado)
+            doc_ids = data.get('documento_ids') or []
+            if not doc_ids and data.get('documento_id'):
+                doc_ids = [data['documento_id']]
+            documentos = (
+                Documento.query.filter(
+                    Documento.id.in_(doc_ids),
+                    Documento.recluta_id == recluta_id
+                ).all()
+                if doc_ids else []
+            )
 
             ev = EventoRecluta(
                 recluta_id=recluta_id,
@@ -1004,8 +1010,9 @@ def create_timeline_event(recluta_id):
                 estado=data['status'],
                 titulo=data['title'],
                 descripcion=data.get('description', ''),
-                documento_id=documento_id,
+                documento_id=documentos[0].id if documentos else None,
             )
+            ev.documentos = documentos
             
             try:
                 ev.save()
@@ -1064,14 +1071,21 @@ def update_timeline_event(recluta_id, event_id):
         if 'description' in validated:
             ev.descripcion = validated['description']
 
-        # Actualizar documento vinculado
-        if 'documento_id' in data:
-            doc_id = data['documento_id']
-            if doc_id:
-                from models.documento import Documento
-                doc = Documento.query.filter_by(id=doc_id, recluta_id=recluta_id).first()
-                ev.documento_id = doc.id if doc else None
+        # Actualizar documentos vinculados (soporta documento_ids lista y documento_id legado)
+        from models.documento import Documento
+        if 'documento_ids' in data or 'documento_id' in data:
+            doc_ids = data.get('documento_ids') or []
+            if not doc_ids and data.get('documento_id'):
+                doc_ids = [data['documento_id']]
+            if doc_ids:
+                documentos = Documento.query.filter(
+                    Documento.id.in_(doc_ids),
+                    Documento.recluta_id == recluta_id
+                ).all()
+                ev.documentos = documentos
+                ev.documento_id = documentos[0].id if documentos else None
             else:
+                ev.documentos = []
                 ev.documento_id = None
 
         ev.save()

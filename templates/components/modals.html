@@ -496,15 +496,24 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="event-documento">
+                    <label>
                         <i class="fas fa-file-pdf" style="margin-right: 5px; color: #e74c3c;"></i>
-                        Documento adjunto
+                        Documentos adjuntos
                     </label>
-                    <select id="event-documento" class="form-control timeline-input">
-                        <option value="">— Sin documento —</option>
-                    </select>
-                    <small style="color: #718096; font-size: 0.8rem;">
-                        <i class="fas fa-info-circle"></i> El cliente podrá descargar este documento desde su línea de seguimiento.
+                    <div id="event-documentos-container" class="documentos-checkbox-container" style="
+                        border: 1px solid #e2e8f0;
+                        border-radius: 8px;
+                        max-height: 160px;
+                        overflow-y: auto;
+                        padding: 8px;
+                        background: #f9fafb;
+                    ">
+                        <p class="documentos-empty-msg" style="color: #a0aec0; font-style: italic; margin: 0; padding: 4px 0; font-size: 0.875rem;">
+                            Sin documentos disponibles
+                        </p>
+                    </div>
+                    <small style="color: #718096; font-size: 0.8rem; margin-top: 4px; display: block;">
+                        <i class="fas fa-info-circle"></i> Puedes seleccionar varios documentos. El cliente podrá descargarlos desde su línea de seguimiento.
                     </small>
                 </div>
 

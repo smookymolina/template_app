@@ -4276,6 +4276,18 @@ const Reclutas = {
             `
             : '';
 
+        const docs = Array.isArray(item.documentos) ? item.documentos : (item.documento ? [item.documento] : []);
+        const docsHTML = docs.length > 0
+            ? `<div class="timeline-card-docs" style="display:flex;flex-wrap:wrap;gap:5px;padding:6px 12px 8px 12px;">
+                ${docs.map(doc => `
+                    <span style="display:inline-flex;align-items:center;gap:4px;background:#fff5f5;border:1px solid #fed7d7;border-radius:4px;padding:2px 8px;font-size:0.78rem;color:#c53030;">
+                        <i class="fas fa-file-pdf" style="font-size:0.7rem;"></i>
+                        ${this.escapeHtml(doc.nombre)}
+                    </span>
+                `).join('')}
+               </div>`
+            : '';
+
         return `
             <div class="timeline-card ${hasComment ? 'has-comment' : ''}" data-event-id="${item.id}">
                 <div class="timeline-card-header">
@@ -4298,6 +4310,7 @@ const Reclutas = {
                     </button>
                 </div>
                 ${commentHTML}
+                ${docsHTML}
             </div>
         `;
     },
@@ -4394,7 +4407,7 @@ const Reclutas = {
         document.getElementById('event-description').value = '';
 
         // Cargar documentos disponibles y resetear selección
-        this.loadDocumentosForSelect('');
+        this.loadDocumentosForSelect([]);
 
         // Mostrar formulario
         if (form) form.style.display = 'block';
@@ -4425,8 +4438,9 @@ const Reclutas = {
         document.getElementById('event-title').value = item.title;
         document.getElementById('event-description').value = item.description || '';
 
-        // Cargar documentos disponibles y preseleccionar el vinculado
-        this.loadDocumentosForSelect(item.documento_id || '');
+        // Cargar documentos disponibles y preseleccionar los vinculados
+        const docIds = Array.isArray(item.documentos) ? item.documentos.map(d => d.id) : (item.documento_id ? [item.documento_id] : []);
+        this.loadDocumentosForSelect(docIds);
 
         // Mostrar formulario
         const form = document.getElementById('timeline-form');
@@ -4447,33 +4461,42 @@ const Reclutas = {
     },
 
     /**
-     * Carga los documentos del recluta actual en el select del formulario de timeline
-     * @param {string|number} selectedId - ID del documento a preseleccionar
+     * Carga los documentos del recluta como checkboxes en el contenedor del formulario de timeline.
+     * @param {number[]} selectedIds - Array de IDs de documentos a preseleccionar
      */
-    loadDocumentosForSelect: async function(selectedId) {
-        const select = document.getElementById('event-documento');
-        if (!select) return;
+    loadDocumentosForSelect: async function(selectedIds) {
+        const container = document.getElementById('event-documentos-container');
+        if (!container) return;
 
-        select.innerHTML = '<option value="">— Sin documento —</option>';
+        const ids = Array.isArray(selectedIds) ? selectedIds.map(String) : (selectedIds ? [String(selectedIds)] : []);
 
-        if (!this.currentReclutaId) return;
+        container.innerHTML = '<p style="color:#a0aec0;font-style:italic;margin:0;padding:4px 0;font-size:0.875rem;">Cargando documentos...</p>';
+
+        if (!this.currentReclutaId) {
+            container.innerHTML = '<p style="color:#a0aec0;font-style:italic;margin:0;padding:4px 0;font-size:0.875rem;">Sin documentos disponibles</p>';
+            return;
+        }
 
         try {
             const resp = await fetch(`${CONFIG.API_URL}/reclutas/${this.currentReclutaId}/documentos`);
             const data = await resp.json();
-            if (resp.ok && data.success && Array.isArray(data.documentos)) {
-                data.documentos.forEach(doc => {
-                    const option = document.createElement('option');
-                    option.value = doc.id;
-                    option.textContent = doc.nombre;
-                    if (String(doc.id) === String(selectedId)) {
-                        option.selected = true;
-                    }
-                    select.appendChild(option);
-                });
+            if (resp.ok && data.success && Array.isArray(data.documentos) && data.documentos.length > 0) {
+                container.innerHTML = data.documentos.map(doc => `
+                    <label style="display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:5px;cursor:pointer;transition:background 0.15s;"
+                           onmouseover="this.style.background='#edf2f7'" onmouseout="this.style.background='transparent'">
+                        <input type="checkbox" class="evento-doc-checkbox" value="${doc.id}"
+                               ${ids.includes(String(doc.id)) ? 'checked' : ''}
+                               style="width:15px;height:15px;accent-color:#e74c3c;cursor:pointer;">
+                        <i class="fas fa-file-pdf" style="color:#e74c3c;font-size:0.85rem;flex-shrink:0;"></i>
+                        <span style="font-size:0.875rem;color:#2d3748;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${this.escapeHtml(doc.nombre)}</span>
+                    </label>
+                `).join('');
+            } else {
+                container.innerHTML = '<p style="color:#a0aec0;font-style:italic;margin:0;padding:4px 0;font-size:0.875rem;">Sin documentos disponibles — sube documentos en "Gestión de Documentos"</p>';
             }
         } catch (e) {
-            console.error('Error cargando documentos para select:', e);
+            console.error('Error cargando documentos para checkboxes:', e);
+            container.innerHTML = '<p style="color:#e53e3e;font-size:0.875rem;margin:0;">Error al cargar documentos</p>';
         }
     },
 
@@ -4549,10 +4572,10 @@ Reclutas.saveTimelineItemApi = async function() {
         saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
     }
 
-    const documentoSelect = document.getElementById('event-documento');
-    const documento_id = documentoSelect && documentoSelect.value ? parseInt(documentoSelect.value, 10) : null;
+    const checkedBoxes = document.querySelectorAll('#event-documentos-container .evento-doc-checkbox:checked');
+    const documento_ids = Array.from(checkedBoxes).map(cb => parseInt(cb.value, 10));
 
-    const payload = { date, status, title, description: description || '', documento_id };
+    const payload = { date, status, title, description: description || '', documento_ids };
 
     try {
         let url = `${CONFIG.API_URL}/reclutas/${Reclutas.currentReclutaId}/timeline`;

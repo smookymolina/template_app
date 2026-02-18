@@ -6,7 +6,10 @@
       "mcp__ide__getDiagnostics",
       "Bash(source:*)",
       "Bash(flask db migrate:*)",
-      "Bash(flask db:*)"
+      "Bash(flask db:*)",
+      "Bash(python -m flask db:*)",
+      "Bash(python:*)",
+      "Bash(.venv/Scripts/python.exe:*)"
     ]
   }
 }

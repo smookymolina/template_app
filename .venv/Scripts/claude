@@ -1,0 +1,2 @@
+#!/bin/sh
+"C:/Users/Lenovo/AppData/Roaming/npm/claude" "$@"

@@ -115,18 +115,24 @@ def initialize_extensions(app):
         health_check_interval=30,
         retry_on_timeout=True
     )
-    app.redis_client = redis_client
-
+    
+    # Intentar conexión con Redis de forma segura
+    redis_available = False
     for attempt in range(1, 4):
         try:
             redis_client.ping()
-            app.logger.info("Conexion con Redis establecida exitosamente.")
+            app.logger.info("Conexión con Redis establecida exitosamente.")
+            redis_available = True
             break
-        except redis.exceptions.ConnectionError as e:
+        except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as e:
             if attempt == 3:
-                app.logger.error(f"No se pudo conectar a Redis despues de {attempt} intentos: {e}")
+                app.logger.warning(f"No se pudo conectar a Redis después de {attempt} intentos: {e}. Las funciones de caché y notificaciones en tiempo real podrían estar limitadas.")
             else:
                 time.sleep(1)
+    
+    app.redis_client = redis_client if redis_available else None
+    app.redis_available = redis_available
+
     # Inicializar SQLAlchemy
     db.init_app(app)
 

@@ -1,0 +1,122 @@
+{
+  "timestamp": "2026-02-18T20:22:39.660463",
+  "tests_passed": 12,
+  "tests_failed": 2,
+  "scenarios": [
+    {
+      "test_name": "Admin Access - Usuarios Accesibles",
+      "status": "✅ PASS",
+      "passed": true,
+      "message": "Admin ve 13 de 13 usuarios activos",
+      "details": {
+        "accessible_users": 13,
+        "total_active_users": 13
+      }
+    },
+    {
+      "test_name": "Admin Access - Reclutas Accesibles",
+      "status": "✅ PASS",
+      "passed": true,
+      "message": "Admin ve 100 de 100 reclutas",
+      "details": {
+        "accessible_reclutas": 100,
+        "total_reclutas": 100
+      }
+    },
+    {
+      "test_name": "Gerente Access - Usuarios de Equipo",
+      "status": "✅ PASS",
+      "passed": true,
+      "message": "Gerente ve 6 usuarios (esperado: 6)",
+      "details": {
+        "gerente_id": 2,
+        "asesores_asignados": 5,
+        "accessible_users": 6
+      }
+    },
+    {
+      "test_name": "Gerente Access - Auto-inclusión",
+      "status": "✅ PASS",
+      "passed": true,
+      "message": "Gerente se incluye a sí mismo en usuarios accesibles",
+      "details": {}
+    },
+    {
+      "test_name": "Gerente Access - Reclutas de Equipo",
+      "status": "✅ PASS",
+      "passed": true,
+      "message": "Gerente ve 50 reclutas (esperado: 50)",
+      "details": {
+        "accessible_reclutas": 50,
+        "expected_reclutas": 50
+      }
+    },
+    {
+      "test_name": "Asesor Access - Solo Acceso Propio",
+      "status": "✅ PASS",
+      "passed": true,
+      "message": "Asesor ve 1 usuario(s), solo debería verse a sí mismo",
+      "details": {}
+    },
+    {
+      "test_name": "Asesor Access - Solo Reclutas Propios",
+      "status": "✅ PASS",
+      "passed": true,
+      "message": "Asesor ve 10 reclutas (esperado: 10)",
+      "details": {
+        "asesor_id": 3,
+        "accessible_reclutas": 10,
+        "reclutas_propios": 10
+      }
+    },
+    {
+      "test_name": "Data Filtering - Admin Sin Filtros",
+      "status": "✅ PASS",
+      "passed": true,
+      "message": "Admin recibe datos completos sin filtrar",
+      "details": {}
+    },
+    {
+      "test_name": "Data Filtering - Gerente Filtrado",
+      "status": "✅ PASS",
+      "passed": true,
+      "message": "Gerente recibe datos filtrados según su equipo",
+      "details": {}
+    },
+    {
+      "test_name": "Data Filtering - Asesor Limitado",
+      "status": "✅ PASS",
+      "passed": true,
+      "message": "Asesor recibe datos muy limitados y recalculados",
+      "details": {}
+    },
+    {
+      "test_name": "Cache Isolation - Claves Únicas",
+      "status": "✅ PASS",
+      "passed": true,
+      "message": "Generadas 3 claves únicas para diferentes roles",
+      "details": {}
+    },
+    {
+      "test_name": "Cache Isolation - Set Cache",
+      "status": "❌ FAIL",
+      "passed": false,
+      "message": "Caché se establece correctamente",
+      "details": {}
+    },
+    {
+      "test_name": "Cache Isolation - Get Cache",
+      "status": "❌ FAIL",
+      "passed": false,
+      "message": "Caché se recupera correctamente",
+      "details": {}
+    },
+    {
+      "test_name": "Edge Cases - Rol Inválido",
+      "status": "✅ PASS",
+      "passed": true,
+      "message": "Usuario con rol inválido no ve usuarios: 0",
+      "details": {}
+    }
+  ]
+}
