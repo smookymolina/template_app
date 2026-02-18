@@ -220,6 +220,8 @@
                 <li id="nav-gestion-gerentes" class="nav-admin-only"><a href="#" data-section="gestion-gerentes-section"><i class="fas fa-users-cog"></i> Gestión de Gerentes</a></li>
                 <!-- NUEVA: Panel Administrativo de Reclutas (Solo Admin) -->
                 <li id="nav-admin-reclutas" class="nav-admin-only"><a href="#" data-section="admin-reclutas-management"><i class="fas fa-tools"></i> Panel Administrativo</a></li>
+                <!-- NUEVA: Panel Administrativo de Gerente (Solo Gerente) -->
+                <li id="nav-gerente-panel" class="nav-gerente-only"><a href="#" data-section="gerente-panel-section"><i class="fas fa-shield-alt"></i> Panel de Gerente</a></li>
                 <li><a href="#" data-section="configuracion-section"><i class="fas fa-cog"></i> Configuración</a></li>
             </ul>
         </div>
@@ -404,6 +406,108 @@
 
             <!-- Loading indicator -->
             <div id="admin-loading" class="loading-indicator" style="display: none;">
+                <i class="fas fa-spinner fa-spin"></i> Cargando reclutas...
+            </div>
+        </div>
+
+        <!-- NUEVA SECCIÓN: Panel Administrativo de Gerente (SOLO GERENTE) -->
+        <div id="gerente-panel-section" class="dashboard-content-section" style="display: none;">
+            <div class="section-header">
+                <h2><i class="fas fa-shield-alt"></i> Panel Administrativo</h2>
+                <p class="section-description">Visualiza y reasigna los reclutas de tu equipo entre tus asesores</p>
+            </div>
+
+            <!-- Controles superiores -->
+            <div class="admin-management-controls">
+                <div class="controls-row">
+                    <div class="search-filters">
+                        <div class="filter-group">
+                            <label for="gp-search">Buscar:</label>
+                            <input type="text" id="gp-search" placeholder="Nombre, email, teléfono, folio...">
+                        </div>
+                        <div class="filter-group">
+                            <label for="gp-estado-filter">Estado:</label>
+                            <select id="gp-estado-filter">
+                                <option value="">Todos</option>
+                                <option value="Activo">Activo</option>
+                                <option value="En proceso">En proceso</option>
+                                <option value="Rechazado">Rechazado</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="gp-asesor-filter">Asesor:</label>
+                            <select id="gp-asesor-filter">
+                                <option value="">Todos mis asesores</option>
+                                <!-- Se poblará dinámicamente con los asesores del gerente -->
+                            </select>
+                        </div>
+                        <button id="gp-apply-filters" class="btn-primary">
+                            <i class="fas fa-search"></i> Filtrar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Acciones en lote -->
+                <div class="bulk-actions" id="gp-bulk-actions" style="display: none;">
+                    <div class="selection-info">
+                        <span id="gp-selected-count">0 seleccionados</span>
+                        <button id="gp-select-all" class="btn-link">Seleccionar todos</button>
+                        <button id="gp-clear-selection" class="btn-link">Limpiar selección</button>
+                    </div>
+                    <div class="action-buttons">
+                        <select id="gp-bulk-asesor" class="bulk-asesor-select">
+                            <option value="">Seleccionar asesor...</option>
+                            <!-- Se poblará dinámicamente -->
+                        </select>
+                        <button id="gp-bulk-assign" class="btn-warning">
+                            <i class="fas fa-user-edit"></i> Reasignar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de reclutas -->
+            <div class="admin-table-container">
+                <table id="gp-reclutas-table" class="admin-table">
+                    <thead>
+                        <tr>
+                            <th width="40">
+                                <input type="checkbox" id="gp-select-all-checkbox">
+                            </th>
+                            <th>Folio</th>
+                            <th>Nombre</th>
+                            <th>Email</th>
+                            <th>Teléfono</th>
+                            <th>Estado</th>
+                            <th>Asesor Actual</th>
+                            <th>Fecha Registro</th>
+                            <th width="260">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gp-reclutas-tbody">
+                        <!-- Se poblará dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            <div class="admin-pagination">
+                <div class="pagination-info">
+                    <span id="gp-pagination-info">Mostrando 0 - 0 de 0 reclutas</span>
+                </div>
+                <div class="pagination-controls">
+                    <button id="gp-prev-page" class="btn-secondary" disabled>
+                        <i class="fas fa-chevron-left"></i> Anterior
+                    </button>
+                    <span id="gp-page-info">Página 1 de 1</span>
+                    <button id="gp-next-page" class="btn-secondary" disabled>
+                        Siguiente <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading indicator -->
+            <div id="gp-loading" class="loading-indicator" style="display: none;">
                 <i class="fas fa-spinner fa-spin"></i> Cargando reclutas...
             </div>
         </div>

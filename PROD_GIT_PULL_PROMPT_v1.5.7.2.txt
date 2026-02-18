@@ -1,0 +1,426 @@
+###########################################################################
+#                                                                         #
+#   TEMPLATE ESTANDARIZADO DE ACTUALIZACION EN PRODUCCION                 #
+#   Linux / Nginx + Gunicorn / SQLite o MySQL                             #
+#                                                                         #
+###########################################################################
+
+# =========================================================================
+# BLOQUE DE VERSION
+# =========================================================================
+# VERSION      : 1.5.7.2
+# BRANCH       : 1.5.7.2
+# FECHA        : 2026-02-18
+# PROBADO EN DESARROLLO : SI
+# DESCRIPCION  : Multi-documento por evento en linea de seguimiento de reclutas
+# =========================================================================
+
+
+# =========================================================================
+# ██████╗  █████╗  ██████╗██╗  ██╗██╗   ██╗██████╗
+# ██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██║   ██║██╔══██╗
+# ██████╔╝███████║██║     █████╔╝ ██║   ██║██████╔╝
+# ██╔══██╗██╔══██║██║     ██╔═██╗ ██║   ██║██╔═══╝
+# ██████╔╝██║  ██║╚██████╗██║  ██╗╚██████╔╝██║
+# ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝
+#
+#   *** SIN BACKUP, NO CONTINUAR ***
+#   *** ESTO ES OBLIGATORIO ***
+#   *** PRIMER PASO SIEMPRE ***
+# =========================================================================
+
+=============================================================================
+PASO 1: BACKUP COMPLETO (CRITICO - OBLIGATORIO ANTES DE CUALQUIER CAMBIO)
+=============================================================================
+
+   cd /var/www/template_app
+   TS=$(date +%Y%m%d_%H%M%S)
+   BACKUP_DIR=/var/backups/template_app/$TS
+   mkdir -p "$BACKUP_DIR"
+
+   # 1A) BASE DE DATOS (PRIORIDAD MAXIMA)
+   # -------------------------------------------------------
+   # SQLite (predeterminado):
+   cp instance/template_app.db "$BACKUP_DIR/template_app.db"
+   echo "[OK] Base de datos respaldada"
+
+   # MySQL (si aplica):
+   # set -a && [ -f .env ] && . ./.env && set +a
+   # mysqldump -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h "${MYSQL_HOST}" "${MYSQL_DB}" \
+   #   > "$BACKUP_DIR/db.sql"
+   # echo "[OK] MySQL respaldado"
+
+   # 1B) ARCHIVOS SUBIDOS (fotos y documentos)
+   # -------------------------------------------------------
+   tar -czf "$BACKUP_DIR/uploads.tar.gz" uploads/
+   echo "[OK] Uploads respaldados"
+
+   # 1C) ESTADO DE MIGRACIONES
+   # -------------------------------------------------------
+   source .venv/bin/activate
+   flask db current > "$BACKUP_DIR/db_current.txt" 2>&1 || \
+     echo "No migrations applied" > "$BACKUP_DIR/db_current.txt"
+   echo "[OK] Estado de migraciones guardado"
+
+   # 1D) EXPORT DE DATOS CSV (recomendado)
+   # -------------------------------------------------------
+   python scripts/export_data.py 2>/dev/null && \
+     LATEST=$(ls -dt backup_* 2>/dev/null | head -1) && \
+     [ -n "$LATEST" ] && mv "$LATEST" "$BACKUP_DIR/" && echo "[OK] CSV exportado"
+
+   # VERIFICAR QUE EL BACKUP EXISTE ANTES DE CONTINUAR
+   ls -lh "$BACKUP_DIR"
+   echo ""
+   echo "===> BACKUP COMPLETO EN: $BACKUP_DIR <=="
+   echo "===> CONTINUA SOLO SI VES LOS ARCHIVOS ARRIBA <=="
+
+=============================================================================
+PASO 1B: RUTA RAPIDA — COPIAR Y PEGAR COMPLETO (post-backup)
+=============================================================================
+   # EJECUTAR SOLO DESPUES DEL PASO 1 COMPLETADO Y VERIFICADO
+
+   cd /var/www/template_app
+   git status -sb
+   git stash push -u -m "prod-pre-update-$TS"
+   git fetch --all --prune
+   git checkout 1.5.7.2 2>/dev/null || git checkout -b 1.5.7.2 origin/1.5.7.2
+   git pull --ff-only origin 1.5.7.2
+   source .venv/bin/activate
+   python -m pip install -r requirements.txt --no-cache-dir
+   flask db upgrade 2>&1 | tee "$BACKUP_DIR/migration.log"
+   sudo systemctl restart gunicorn
+   sudo systemctl restart nginx
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo chmod 755 /var/www/template_app/instance/
+   sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
+   sudo chown -R www-data:www-data /var/www/template_app/static/
+   curl -I https://tu-dominio
+   echo "=== DESPLIEGUE v1.5.7.2 COMPLETO ==="
+
+=============================================================================
+PASO 2: VERIFICAR ESTADO DEL REPOSITORIO
+=============================================================================
+   cd /var/www/template_app
+
+   git rev-parse --show-toplevel          # Confirmar directorio correcto
+   git status -sb                         # Ver cambios locales
+   git branch --show-current              # Ver branch actual
+   git remote -v                          # Verificar remote
+
+   # Si hay cambios locales no commiteados:
+   git stash push -u -m "prod-pre-update-$TS"
+
+=============================================================================
+PASO 3: AUTENTICACION Y GIT PULL
+=============================================================================
+   cd /var/www/template_app
+
+   # 3A) Si git pide autenticacion (token expirado o primera vez):
+   #   git remote set-url origin https://<TOKEN>@github.com/smookymolina/template_app.git
+   #   Generar token: GitHub > Settings > Developer settings >
+   #     Personal access tokens > Tokens (classic) > scope: repo
+
+   git fetch --all --prune
+   git checkout 1.5.7.2 2>/dev/null || git checkout -b 1.5.7.2 origin/1.5.7.2
+   git pull --ff-only origin 1.5.7.2
+   # Si falla --ff-only: DETENERSE. No hacer merge en produccion sin revision manual.
+
+=============================================================================
+PASO 4: DEPENDENCIAS Y BASE DE DATOS
+=============================================================================
+   cd /var/www/template_app
+   source .venv/bin/activate
+
+   # 4A) Actualizar dependencias Python
+   python -m pip install --upgrade pip
+   python -m pip install -r requirements.txt --no-cache-dir
+
+   # 4B) Migraciones de Flask-Migrate
+   flask db upgrade 2>&1 | tee "$BACKUP_DIR/migration.log"
+   cat "$BACKUP_DIR/migration.log"
+
+   # 4C) CAMBIOS DE BD PARA v1.5.7.2
+   # -------------------------------------------------------
+   # NUEVA TABLA: evento_recluta_documento
+   #   Tabla de asociacion many-to-many entre eventos de timeline y documentos.
+   #   Permite vincular MULTIPLES documentos a un mismo evento de seguimiento.
+   #
+   #   Columnas:
+   #     - evento_id   INTEGER  FK -> evento_recluta.id  ON DELETE CASCADE
+   #     - documento_id INTEGER FK -> documento.id       ON DELETE CASCADE
+   #     - PRIMARY KEY (evento_id, documento_id)
+   #
+   #   MIGRACION AUTOMATICA: El archivo migrations/versions/f3a9b2c1d0e4_...py
+   #   crea la tabla y migra las relaciones documento_id existentes automaticamente.
+   #   El comando flask db upgrade del PASO 4B la aplica.
+   #
+   #   Si flask db upgrade falla con "table already exists" (BD creada por
+   #   db.create_all), es seguro ignorarlo — la tabla ya existe correctamente.
+   #   En ese caso ejecutar:
+   #     flask db stamp f3a9b2c1d0e4
+   #
+   #   Verificar que la tabla existe:
+   #     sqlite3 instance/template_app.db ".schema evento_recluta_documento"
+   #     # Debe mostrar CREATE TABLE con evento_id y documento_id
+   #
+   #   Verificar migracion de datos legados (documento_id existentes):
+   #     sqlite3 instance/template_app.db \
+   #       "SELECT COUNT(*) FROM evento_recluta_documento;"
+   #     # Debe mostrar un numero >= 0 sin error
+   # -------------------------------------------------------
+
+   # 4D) Verificar esquema
+   python scripts/diagnostico_db.py 2>/dev/null || echo "Script no disponible"
+   sqlite3 instance/template_app.db ".schema evento_recluta_documento" 2>/dev/null \
+     && echo "[OK] Tabla evento_recluta_documento existe" \
+     || echo "[FALTA] Crear tabla manualmente — ver PASO 4C"
+
+=============================================================================
+PASO 5: VERIFICAR SERVICIOS
+=============================================================================
+   # Redis
+   systemctl status redis --no-pager || systemctl status redis-server --no-pager
+   redis-cli ping   # Debe responder PONG
+
+   # Si Redis no corre:  sudo systemctl start redis
+
+   # Limpiar cache de metricas (opcional)
+   redis-cli KEYS "metrics_cache_*" | xargs -r redis-cli DEL
+
+=============================================================================
+PASO 6: REINICIAR SERVICIOS Y VALIDAR
+=============================================================================
+   # 6A) Reiniciar en orden
+   sudo systemctl restart gunicorn
+   sudo systemctl restart nginx
+
+   # 6B) Verificar estado
+   sudo systemctl status gunicorn --no-pager
+   sudo systemctl status nginx --no-pager
+
+   # 6C) Ping basico al sitio
+   curl -I https://tu-dominio
+
+   # 6D) VALIDACIONES DE v1.5.7.2 — MULTI-DOCUMENTO EN TIMELINE
+   # -------------------------------------------------------
+   #
+   # [ ] SUBIR DOCUMENTOS
+   #     - Login como asesor/admin
+   #     - Abrir perfil de cualquier recluta
+   #     - Click en "Linea de Seguimiento"
+   #     - Click en "Gestion de Documentos"
+   #     - Subir al menos 2 PDFs
+   #     - Deben aparecer en la lista con nombre y tamano
+   #
+   # [ ] VINCULAR MULTIPLES DOCUMENTOS A UN EVENTO
+   #     - En la linea de seguimiento, click en "Agregar Evento" o editar uno existente
+   #     - En la seccion "Documentos adjuntos" deben aparecer CHECKBOXES (no un select)
+   #     - Seleccionar 2 o mas documentos marcando sus checkboxes
+   #     - Guardar el evento
+   #     - La tarjeta del evento debe mostrar chips rojos con los nombres de ambos docs
+   #
+   # [ ] PORTAL PUBLICO — MULTIPLES DOCUMENTOS
+   #     - Abrir portal publico (sin login)
+   #     - Consultar folio de un recluta con evento que tenga 2+ documentos
+   #     - En la linea de seguimiento del portal, el evento debe mostrar
+   #       chips rojos con nombre y boton de descarga por cada documento
+   #     - Hacer click en cada chip — debe descargarse el PDF correspondiente
+   #
+   # [ ] RETROCOMPATIBILIDAD — EVENTO CON UN SOLO DOCUMENTO
+   #     - Evento con solo 1 documento: boton de descarga icono en el header (igual que antes)
+   #     - NO debe mostrar chips en esos eventos
+   #
+   # [ ] ADMIN — TARJETA CON MULTIPLES DOCUMENTOS
+   #     - En el panel admin, la tarjeta del evento debe mostrar los chips rojos
+   #       con los nombres de todos los documentos adjuntos
+   #
+   # -------------------------------------------------------
+
+   # 6E) Revisar stash si se guardo antes:
+   git stash list
+   # Decidir si aplicar:  git stash pop
+
+=============================================================================
+PASO 7: PERMISOS (ULTIMO PASO - SIEMPRE EJECUTAR)
+=============================================================================
+   # 7A) Base de datos
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chmod 755 /var/www/template_app/instance/
+   sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
+
+   # 7B) Uploads (fotos, documentos)
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo chmod -R 755 /var/www/template_app/uploads/
+
+   # 7C) Estaticos y templates
+   sudo chown -R www-data:www-data /var/www/template_app/static/
+   sudo chown -R www-data:www-data /var/www/template_app/templates/
+
+   # 7D) Verificacion final
+   curl -I https://tu-dominio
+   echo "===> DESPLIEGUE v1.5.7.2 COMPLETO. PERMISOS ACTUALIZADOS. <==="
+
+=============================================================================
+CAMBIOS EN ESTA VERSION — DETALLE TECNICO
+=============================================================================
+   *** PROBADO Y FUNCIONANDO EN DESARROLLO ***
+
+   VERSION: 1.5.7.2 — 2026-02-18
+
+   1) PANEL ADMINISTRATIVO PARA GERENTES
+      - Nueva seccion "Panel Administrativo" exclusiva para el rol gerente.
+      - El gerente ve y reasigna los reclutas de sus propios asesores unicamente.
+      - No puede ver ni modificar datos de equipos de otros gerentes.
+      - Funciona igual que el Panel Administrativo del admin pero con scope limitado.
+      - Sin migracion de BD requerida (usa tablas existentes).
+
+   ARCHIVOS NUEVOS:
+   * routes/gerente_panel.py         — Blueprint con 4 endpoints /gerente/panel/*:
+                                        GET  /gerente/panel/support-data
+                                        GET  /gerente/panel/reclutas
+                                        POST /gerente/panel/reclutas/bulk-assign
+                                        POST /gerente/panel/reclutas/<id>/assign
+   * static/js/gerente-panel.js      — Modulo JS del panel: carga, renderiza, filtra y
+                                        reasigna reclutas del equipo del gerente.
+
+   ARCHIVOS MODIFICADOS:
+   * app_factory.py                  — Registro del blueprint gerente_panel_bp.
+   * templates/index.html            — Nueva seccion #gerente-panel-section con tabla,
+                                        filtros y paginacion. Nuevo nav item en el HTML base.
+   * static/js/main.js               — updateGerenteNavigation() agrega "Panel Administrativo",
+                                        updateNavigationByRole() oculta .nav-gerente-only.
+                                       ??? NEW: handleGerentePanelSection() inicializa el panel
+                                        cuando se navega a gerente-panel-section.
+   * static/css/styles.css           — Reglas .nav-gerente-only / body.gerente-view.
+   * templates/base.html             — Carga gerente-panel.js como modulo ES6.
+
+   2) MULTI-DOCUMENTO POR EVENTO EN LINEA DE SEGUIMIENTO
+      - Nueva funcionalidad: cada evento de timeline puede tener N documentos adjuntos
+        (antes solo permitia 1 documento por evento).
+      - Tabla de asociacion many-to-many: evento_recluta_documento
+      - Los datos legacy (documento_id existente) se migran automaticamente a la nueva tabla.
+      - Retrocompatibilidad total: campos documento_id y documento singular siguen funcionando
+        para codigo existente.
+
+   2) PANEL ADMIN — SELECTOR DE DOCUMENTOS MULTIPLE
+      - El select de un solo documento fue reemplazado por checkboxes en el formulario de evento.
+      - Cada documento del recluta aparece como un checkbox seleccionable.
+      - Al guardar, se envian todos los IDs seleccionados como documento_ids[].
+      - Las tarjetas de evento en el admin muestran chips rojos con los documentos adjuntos.
+
+   3) PORTAL PUBLICO — VISUALIZACION DE MULTIPLES DOCUMENTOS
+      - 1 documento: boton icono de descarga en el header de la tarjeta (igual que antes).
+      - 2+ documentos: chips rojos con nombre + icono descarga debajo del header.
+      - Cada chip es clickeable e inicia la descarga individual del documento.
+
+   ARCHIVOS MODIFICADOS:
+   * models/evento_recluta.py       — Tabla evento_recluta_documento, relacion documentos,
+                                      serialize() actualizado con lista documentos[]
+   * routes/api.py                  — create_timeline_event y update_timeline_event aceptan
+                                      documento_ids[] (lista) con fallback a documento_id
+   * templates/components/modals.html — Selector reemplazado por contenedor de checkboxes
+   * static/js/reclutas.js          — loadDocumentosForSelect() genera checkboxes,
+                                      saveTimelineItemApi() envia documento_ids[],
+                                      editTimelineItem() preselecciona multiples,
+                                      renderTimelineItem() muestra chips de docs
+   * static/js/client.js            — renderTimelineCard() soporta item.documentos[],
+                                      1 doc = boton en header, 2+ docs = chips debajo
+
+   NUEVAS TABLAS:
+   * evento_recluta_documento       — Asociacion many-to-many (evento_id, documento_id)
+                                      con CASCADE en ambas FKs
+
+   MIGRACION:
+   * ID: f3a9b2c1d0e4
+   * Archivo: migrations/versions/f3a9b2c1d0e4_add_evento_recluta_documento_association.py
+   * Comando: flask db upgrade   (ejecutado en PASO 4B)
+   * Migra automaticamente relaciones legacy documento_id existentes a la nueva tabla
+
+=============================================================================
+TROUBLESHOOTING
+=============================================================================
+A) Error de autenticacion en git pull:
+   git remote set-url origin https://<TOKEN>@github.com/smookymolina/template_app.git
+   git remote -v   # verificar
+
+B) Error 500 despues del pull:
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo systemctl restart gunicorn
+
+C) "table already exists" al ejecutar flask db upgrade:
+   # La tabla ya fue creada por db.create_all (normal en este proyecto).
+   # Marcarla como aplicada sin ejecutar:
+   flask db stamp f3a9b2c1d0e4
+   # Verificar:
+   flask db current
+
+D) Los checkboxes no aparecen en el formulario del evento (solo dice "Sin documentos"):
+   - Verificar que el recluta tiene documentos subidos en "Gestion de Documentos"
+   - Verificar en consola del navegador: debe cargar GET /api/reclutas/{id}/documentos (200)
+   - Si hay error 500: revisar que la tabla evento_recluta_documento existe (PASO 4C)
+
+E) En el portal publico solo aparece 1 documento (el primero):
+   - Limpiar cache del navegador (Ctrl+Shift+R) — puede estar usando JS viejo
+   - Verificar que client.js carga la version nueva (Network tab -> client.js -> sin 304 viejo)
+   - Verificar respuesta de /api/tracking/{folio}/timeline: debe incluir "documentos": [{...},{...}]
+
+F) Migracion de datos legacy no se ejecuto (eventos viejos sin documentos en la nueva tabla):
+   # Ejecutar migracion manual de datos:
+   sqlite3 instance/template_app.db \
+     "INSERT OR IGNORE INTO evento_recluta_documento (evento_id, documento_id)
+      SELECT id, documento_id FROM evento_recluta WHERE documento_id IS NOT NULL;"
+   echo "Migracion manual completada"
+
+G) CSS o JS con cache viejo:
+   sudo rm -rf /var/cache/nginx/*
+   sudo systemctl restart nginx
+   # Hard refresh: Ctrl+Shift+R
+
+H) Error de autenticacion en git pull:
+   git remote set-url origin https://<TOKEN>@github.com/smookymolina/template_app.git
+
+I) Panel de Gerente no muestra reclutas:
+   - Verificar que main.js incluya handleGerentePanelSection() y
+     el case en handleSpecialSections('gerente-panel-section')
+   - Hard refresh del navegador (Ctrl+Shift+R) para evitar JS cacheado
+
+=============================================================================
+ROLLBACK — SI ALGO FALLA DESPUES DEL DESPLIEGUE
+=============================================================================
+   # Restaurar base de datos:
+   cp "$BACKUP_DIR/template_app.db" instance/template_app.db
+
+   # Restaurar uploads:
+   tar -xzf "$BACKUP_DIR/uploads.tar.gz" -C /var/www/template_app/
+
+   # Regresar al branch anterior:
+   git checkout 1.5.7.1
+
+   # Reinstalar dependencias:
+   source .venv/bin/activate
+   python -m pip install -r requirements.txt --no-cache-dir
+
+   # Reiniciar servicios:
+   sudo systemctl restart gunicorn && sudo systemctl restart nginx
+
+   # Restaurar permisos:
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+
+   echo "===> ROLLBACK A v1.5.7.1 COMPLETO. VERIFICAR EN EL NAVEGADOR. <==="
+
+=============================================================================
+NOTAS PERMANENTES (NO CAMBIAR ENTRE VERSIONES)
+=============================================================================
+- SIEMPRE hacer PASO 1 (backup) ANTES de cualquier cambio.
+- SIEMPRE ejecutar PASO 7 (permisos) AL FINAL, sin excepcion.
+- NUNCA hacer merge manual en produccion.
+- NUNCA eliminar la BD directamente — restaurar desde backup.
+- NUNCA usar --no-verify ni force push en produccion.
+- El backup permite rollback inmediato si algo falla.
+- Redis debe estar corriendo para metricas y notificaciones en tiempo real.
+- Los archivos estaticos pueden estar en cache del navegador despues de un update.
+- La variable $TS del PASO 1 debe usarse en los comandos siguientes del mismo shell.
+=============================================================================

@@ -21,12 +21,16 @@ from models.usuario import Usuario
 from models.recluta import Recluta
 
 # --- Configuración ---
-ADMIN_EMAIL = "admin@example.com"
+NUM_ADMINS = 2
 ADMIN_PASS = "Str0ngP@ssw0rd!_2026"
 
-NUM_GERENTES = 2
+GERENTES_CONFIG = [
+    {"email": "gerente.roberto@example.com", "nombre": "Roberto Gerente Regional"},
+    {"email": "gerente.elena@example.com", "nombre": "Elena Directora de Reclutamiento"}
+]
+NUM_GERENTES = len(GERENTES_CONFIG)
 ASESORES_POR_GERENTE = 5
-RECLUTAS_POR_ASESOR = 10
+RECLUTAS_POR_ASESOR = 5
 USER_PASS = "Password123"
 
 def main():
@@ -39,30 +43,32 @@ def main():
         print("🚀 INICIANDO INYECCIÓN DE USUARIOS")
         print("=" * 60)
 
-        # 1. Crear Administrador
-        admin = Usuario.query.filter_by(email=ADMIN_EMAIL).first()
-        if not admin:
-            print(f"🔧 Creando administrador: {ADMIN_EMAIL}")
-            admin = Usuario(
-                email=ADMIN_EMAIL,
-                nombre="Administrador Principal",
-                rol='admin',
-                is_active=True
-            )
-            admin.password = ADMIN_PASS
-            db.session.add(admin)
-        else:
-            print(f"✅ Administrador ya existe: {ADMIN_EMAIL}")
+        # 1. Crear Administradores
+        for i in range(NUM_ADMINS):
+            admin_email = f"admin{i+1}@example.com"
+            admin = Usuario.query.filter_by(email=admin_email).first()
+            if not admin:
+                print(f"🔧 Creando administrador: {admin_email}")
+                admin = Usuario(
+                    email=admin_email,
+                    nombre=f"Administrador {i+1}",
+                    rol='admin',
+                    is_active=True
+                )
+                admin.password = ADMIN_PASS
+                db.session.add(admin)
+            else:
+                print(f"✅ Administrador ya existe: {admin_email}")
 
         # 2. Crear Jerarquía
-        for i in range(NUM_GERENTES):
-            gerente_email = f"gerente.{i+1}@example.com"
+        for i, config in enumerate(GERENTES_CONFIG):
+            gerente_email = config["email"]
             gerente = Usuario.query.filter_by(email=gerente_email).first()
             if not gerente:
                 print(f"  🔧 Creando gerente: {gerente_email}")
                 gerente = Usuario(
                     email=gerente_email,
-                    nombre=fake.name(),
+                    nombre=config["nombre"],
                     rol='gerente',
                     is_active=True
                 )
@@ -103,7 +109,6 @@ def main():
                             asesor_id=asesor.id
                         )
                         db.session.add(recluta)
-                    # No se imprime si ya existe para no saturar la salida
 
         print("\n💾 Guardando todos los cambios en la base de datos...")
         try:
@@ -118,10 +123,17 @@ def main():
         print("\n" + "=" * 60)
         print("🎉 INYECCIÓN DE DATOS COMPLETADA")
         print("=" * 60)
-        print("\n🔑 CREDENCIALES DEL ADMINISTRADOR:")
-        print(f"   📧 Correo: {ADMIN_EMAIL}")
-        print(f"   🔑 Contraseña: {ADMIN_PASS}")
+        print("\n🔑 CREDENCIALES DE ACCESO:")
+        print(f"   👮 ADMINS (Pass: {ADMIN_PASS}):")
+        for i in range(NUM_ADMINS):
+            print(f"      - admin{i+1}@example.com")
+        
+        print(f"\n   👔 GERENTES (Pass: {USER_PASS}):")
+        for config in GERENTES_CONFIG:
+            print(f"      - {config['email']}")
         print("\n" + "=" * 60)
+
+
 
 if __name__ == '__main__':
     # Instalar dependencias si es necesario

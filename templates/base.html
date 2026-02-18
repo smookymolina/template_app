@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Sistema de GestiÃ³n de Reclutas{% endblock %}</title>
+    <title>{% block title %}Sistema de Gestion de Reclutas{% endblock %}</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v={{ v }}">
@@ -48,25 +48,26 @@
     <script type="module" src="{{ url_for('static', filename='js/ui.js') }}?v={{ v }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/auth.js') }}?v={{ v }}"></script>
 
-    <!-- 📊 TRACKER DE ACTIVIDAD - Mide tiempo de uso REAL (clicks, scroll, teclas) -->
+    <!-- TRACKER DE ACTIVIDAD -->
     <script src="{{ url_for('static', filename='js/activity-tracker.js') }}?v={{ v }}"></script>
 
     <script type="module" src="{{ url_for('static', filename='js/main.js') }}?v={{ v }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/configuracion.js') }}?v={{ v }}"></script>
     <script type="module" src="{{ url_for('static', filename='js/reclutas.js') }}?v={{ v }}"></script>
 
-    <!-- ðŸ‘¤ GESTIÃ“N DE USUARIOS (admin.js) -->
+    <!-- GESTION DE USUARIOS (admin.js) -->
     <script type="module" src="{{ url_for('static', filename='js/admin.js') }}?v={{ v }}"></script>
 
-    <!-- ðŸŽ¯ MÃ‰TRICAS ADMIN V2.0 -->
+    <!-- METRICAS ADMIN V2.0 -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/metricas-admin-v2.css') }}?v={{ v }}">
     <script src="{{ url_for('static', filename='js/metricas-admin-v2.js') }}?v={{ v }}"></script>
 
-    <!-- ðŸ”’ PANEL ADMINISTRATIVO DE RECLUTAS - SOLO ADMIN -->
+    <!-- PANEL ADMINISTRATIVO DE RECLUTAS - SOLO ADMIN -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/admin-reclutas-management.css') }}?v={{ v }}">
     <script type="module" src="{{ url_for('static', filename='js/admin-reclutas-management.js') }}?v={{ v }}"></script>
+
+    <!-- PANEL ADMINISTRATIVO DE RECLUTAS - SOLO GERENTE -->
+    <script type="module" src="{{ url_for('static', filename='js/gerente-panel.js') }}?v={{ v }}"></script>
     {% endblock %}
 </body>
 </html>
-
-

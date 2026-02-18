@@ -1477,6 +1477,11 @@ function updateGerenteNavigation() {
                 </a>
             </li>
             <li>
+                <a href="#" data-section="gerente-panel-section">
+                    <i class="fas fa-shield-alt"></i> Panel Administrativo
+                </a>
+            </li>
+            <li>
                 <a href="#" data-section="configuracion-section">
                     <i class="fas fa-cog"></i> Configuración
                 </a>
@@ -1581,6 +1586,11 @@ function updateNavigationByRole(userOrRole = null) {
         adminLinks.forEach(link => {
             link.style.display = 'none';
         });
+
+        const gerenteLinks = document.querySelectorAll('.nav-gerente-only');
+        gerenteLinks.forEach(link => {
+            link.style.display = 'none';
+        });
     }
 
     let resolvedRole = null;
@@ -1629,6 +1639,11 @@ function updateNavigationByRole(userOrRole = null) {
     const adminOnlyElements = document.querySelectorAll('.nav-admin-only');
     adminOnlyElements.forEach(element => {
         element.style.display = isAdmin ? 'block' : 'none';
+    });
+
+    const gerenteOnlyElements = document.querySelectorAll('.nav-gerente-only');
+    gerenteOnlyElements.forEach(element => {
+        element.style.display = isGerente ? 'list-item' : 'none';
     });
 }
 
@@ -1773,25 +1788,27 @@ function showTargetSection(sectionId) {
 /**
  * ✅ MANEJAR SECCIONES ESPECIALES
  */
-function handleSpecialSections(sectionId) {
-    if (sectionId === 'reclutas-section') {
-        // Forzar la recarga de datos cada vez que se visita la sección
-        if (Reclutas && typeof Reclutas.loadAndDisplayReclutas === 'function') {
-            console.log('🔄 Recargando datos de la sección de reclutas...');
-            Reclutas.loadAndDisplayReclutas();
-        }
-    } else if (sectionId === 'estadisticas-section') {
-        handleEstadisticasSection();
-    } else if (sectionId === 'calendario-section') {
-        handleCalendarioSection();
-    } else if (sectionId === 'configuracion-section') {
-        handleConfiguracionSection();
-    } else if (sectionId === 'gestion-gerentes-section') {
-        handleGestionGerentesSection();
-    } else if (sectionId === 'admin-reclutas-management') {
-        handleAdminReclutasManagementSection();
-    }
-}
+  function handleSpecialSections(sectionId) {
+      if (sectionId === 'reclutas-section') {
+          // Forzar la recarga de datos cada vez que se visita la sección
+          if (Reclutas && typeof Reclutas.loadAndDisplayReclutas === 'function') {
+              console.log('🔄 Recargando datos de la sección de reclutas...');
+              Reclutas.loadAndDisplayReclutas();
+          }
+      } else if (sectionId === 'estadisticas-section') {
+          handleEstadisticasSection();
+      } else if (sectionId === 'calendario-section') {
+          handleCalendarioSection();
+      } else if (sectionId === 'configuracion-section') {
+          handleConfiguracionSection();
+      } else if (sectionId === 'gestion-gerentes-section') {
+          handleGestionGerentesSection();
+      } else if (sectionId === 'admin-reclutas-management') {
+          handleAdminReclutasManagementSection();
+      } else if (sectionId === 'gerente-panel-section') {
+          handleGerentePanelSection();
+      }
+  }
 
 /**
  * ✅ MANEJAR SECCIÓN DE ESTADÍSTICAS
@@ -2002,9 +2019,9 @@ function handleGestionGerentesSection() {
 /**
  * ✅ MANEJAR SECCIÓN DE PANEL ADMINISTRATIVO DE RECLUTAS
  */
-function handleAdminReclutasManagementSection() {
-    const currentUser = getCurrentUser();
-    console.log('🔒 Accediendo a Panel Administrativo de Reclutas, usuario:', currentUser?.rol);
+  function handleAdminReclutasManagementSection() {
+      const currentUser = getCurrentUser();
+      console.log('🔒 Accediendo a Panel Administrativo de Reclutas, usuario:', currentUser?.rol);
 
     if (currentUser?.rol !== 'admin') {
         showNotification('Acceso denegado. Solo los administradores pueden acceder al panel administrativo.', 'error');
@@ -2022,8 +2039,30 @@ function handleAdminReclutasManagementSection() {
     } else {
         console.error('❌ No se pudo cargar el módulo de Panel Administrativo de Reclutas.');
         showError('No se pudo cargar el módulo de gestión administrativa de reclutas.');
-    }
-}
+      }
+  }
+
+  function handleGerentePanelSection() {
+      const currentUser = getCurrentUser();
+      console.log('🛡️ Accediendo a Panel de Gerente, usuario:', currentUser?.rol);
+
+      if (currentUser?.rol !== 'gerente') {
+          showNotification('Acceso denegado. Solo los gerentes pueden acceder a este panel.', 'error');
+          showSection('reclutas-section');
+          return;
+      }
+
+      if (window.initializeGerentePanel && typeof window.initializeGerentePanel === 'function') {
+          console.log('🚀 Inicializando Panel de Gerente...');
+          window.initializeGerentePanel();
+      } else if (window.GerentePanel && typeof window.GerentePanel.init === 'function') {
+          console.log('🚀 Inicializando Panel de Gerente (fallback)...');
+          window.GerentePanel.init();
+      } else {
+          console.error('❌ No se pudo cargar el módulo de Panel de Gerente.');
+          showError('No se pudo cargar el módulo de Panel de Gerente.');
+      }
+  }
 
 /**
  * ✅ ACTUALIZAR NAVEGACIÓN ACTIVA

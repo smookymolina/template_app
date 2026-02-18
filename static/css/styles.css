@@ -74,6 +74,15 @@ body.admin-view .header-actions .nav-admin-only {
     list-style: none;
 }
 
+/* ===== NAVEGACIÓN EXCLUSIVA DE GERENTE ===== */
+.nav-gerente-only {
+    display: none !important;
+}
+
+body.gerente-view .nav-gerente-only {
+    display: list-item !important;
+}
+
 /* ===== FILTROS ESPECÍFICOS POR ROLES ===== */
 .gerente-only-filter {
     display: none !important;

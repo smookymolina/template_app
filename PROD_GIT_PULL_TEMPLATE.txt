@@ -1,0 +1,343 @@
+###########################################################################
+#                                                                         #
+#   TEMPLATE ESTANDARIZADO DE ACTUALIZACION EN PRODUCCION                 #
+#   Duplicar este archivo, rellenar los bloques [FILL] y ejecutar.        #
+#   Linux / Nginx + Gunicorn / SQLite o MySQL                             #
+#                                                                         #
+###########################################################################
+
+# =========================================================================
+# BLOQUE DE VERSION  ← RELLENAR ANTES DE USAR
+# =========================================================================
+# VERSION      : [x.x.x.x]
+# BRANCH       : [nombre del branch destino]
+# FECHA        : [YYYY-MM-DD]
+# PROBADO EN DESARROLLO : [SI / NO]
+# DESCRIPCION  : [Una linea que resume el cambio principal]
+# =========================================================================
+
+
+# =========================================================================
+# ██████╗  █████╗  ██████╗██╗  ██╗██╗   ██╗██████╗
+# ██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██║   ██║██╔══██╗
+# ██████╔╝███████║██║     █████╔╝ ██║   ██║██████╔╝
+# ██╔══██╗██╔══██║██║     ██╔═██╗ ██║   ██║██╔═══╝
+# ██████╔╝██║  ██║╚██████╗██║  ██╗╚██████╔╝██║
+# ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝
+#
+#   *** SIN BACKUP, NO CONTINUAR ***
+#   *** ESTO ES OBLIGATORIO ***
+#   *** PRIMER PASO SIEMPRE ***
+# =========================================================================
+
+=============================================================================
+PASO 1: BACKUP COMPLETO (CRITICO - OBLIGATORIO ANTES DE CUALQUIER CAMBIO)
+=============================================================================
+
+   cd /var/www/template_app
+   TS=$(date +%Y%m%d_%H%M%S)
+   BACKUP_DIR=/var/backups/template_app/$TS
+   mkdir -p "$BACKUP_DIR"
+
+   # 1A) BASE DE DATOS (PRIORIDAD MAXIMA)
+   # -------------------------------------------------------
+   # SQLite (predeterminado):
+   cp instance/template_app.db "$BACKUP_DIR/template_app.db"
+   echo "[OK] Base de datos respaldada"
+
+   # MySQL (si aplica):
+   # set -a && [ -f .env ] && . ./.env && set +a
+   # mysqldump -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h "${MYSQL_HOST}" "${MYSQL_DB}" \
+   #   > "$BACKUP_DIR/db.sql"
+   # echo "[OK] MySQL respaldado"
+
+   # 1B) ARCHIVOS SUBIDOS (fotos y documentos)
+   # -------------------------------------------------------
+   tar -czf "$BACKUP_DIR/uploads.tar.gz" uploads/
+   echo "[OK] Uploads respaldados"
+
+   # 1C) ESTADO DE MIGRACIONES
+   # -------------------------------------------------------
+   source .venv/bin/activate
+   flask db current > "$BACKUP_DIR/db_current.txt" 2>&1 || \
+     echo "No migrations applied" > "$BACKUP_DIR/db_current.txt"
+   echo "[OK] Estado de migraciones guardado"
+
+   # 1D) EXPORT DE DATOS CSV (recomendado)
+   # -------------------------------------------------------
+   python scripts/export_data.py 2>/dev/null && \
+     LATEST=$(ls -dt backup_* 2>/dev/null | head -1) && \
+     [ -n "$LATEST" ] && mv "$LATEST" "$BACKUP_DIR/" && echo "[OK] CSV exportado"
+
+   # VERIFICAR QUE EL BACKUP EXISTE ANTES DE CONTINUAR
+   ls -lh "$BACKUP_DIR"
+   echo ""
+   echo "===> BACKUP COMPLETO EN: $BACKUP_DIR <=="
+   echo "===> CONTINUA SOLO SI VES LOS ARCHIVOS ARRIBA <=="
+
+=============================================================================
+PASO 1B: RUTA RAPIDA — COPIAR Y PEGAR COMPLETO (post-backup)
+=============================================================================
+   # EJECUTAR SOLO DESPUES DEL PASO 1 COMPLETADO Y VERIFICADO
+
+   cd /var/www/template_app
+   git status -sb
+   git stash push -u -m "prod-pre-update-$TS"
+   git fetch --all --prune
+   git checkout [BRANCH]  2>/dev/null || git checkout -b [BRANCH] origin/[BRANCH]
+   git pull --ff-only origin [BRANCH]
+   source .venv/bin/activate
+   python -m pip install -r requirements.txt --no-cache-dir
+   flask db upgrade 2>&1 | tee "$BACKUP_DIR/migration.log"
+   sudo systemctl restart gunicorn
+   sudo systemctl restart nginx
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo chmod 755 /var/www/template_app/instance/
+   sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
+   sudo chown -R www-data:www-data /var/www/template_app/static/
+   curl -I https://[TU-DOMINIO]
+   echo "=== DESPLIEGUE COMPLETO ==="
+
+=============================================================================
+PASO 2: VERIFICAR ESTADO DEL REPOSITORIO
+=============================================================================
+   cd /var/www/template_app
+
+   git rev-parse --show-toplevel          # Confirmar directorio correcto
+   git status -sb                         # Ver cambios locales
+   git branch --show-current              # Ver branch actual
+   git remote -v                          # Verificar remote
+
+   # Si hay cambios locales no commiteados:
+   git stash push -u -m "prod-pre-update-$TS"
+
+=============================================================================
+PASO 3: AUTENTICACION Y GIT PULL
+=============================================================================
+   cd /var/www/template_app
+
+   # 3A) Si git pide autenticacion (token expirado o primera vez):
+   #   git remote set-url origin https://<TOKEN>@github.com/smookymolina/template_app.git
+   #   Generar token: GitHub > Settings > Developer settings >
+   #     Personal access tokens > Tokens (classic) > scope: repo
+
+   git fetch --all --prune
+   git checkout [BRANCH] 2>/dev/null || git checkout -b [BRANCH] origin/[BRANCH]
+   git pull --ff-only origin [BRANCH]
+   # Si falla --ff-only: DETENERSE. No hacer merge en produccion sin revision manual.
+
+=============================================================================
+PASO 4: DEPENDENCIAS Y BASE DE DATOS
+=============================================================================
+   cd /var/www/template_app
+   source .venv/bin/activate
+
+   # 4A) Actualizar dependencias Python
+   python -m pip install --upgrade pip
+   python -m pip install -r requirements.txt --no-cache-dir
+
+   # 4B) Migraciones de Flask-Migrate
+   flask db upgrade 2>&1 | tee "$BACKUP_DIR/migration.log"
+   cat "$BACKUP_DIR/migration.log"
+
+   # 4C) CAMBIOS MANUALES EN BD PARA ESTA VERSION:
+   # -------------------------------------------------------
+   # [FILL] Describir aqui los cambios manuales si aplica
+   #
+   # EJEMPLO — Nueva tabla (si flask db upgrade ya la creo, omitir):
+   #   python -c "from app_factory import create_app; app=create_app(); \
+   #     app.app_context().push(); from models import db; db.create_all(); \
+   #     print('Tablas creadas')"
+   #
+   # EJEMPLO — Columna nueva en SQLite:
+   #   sqlite3 instance/template_app.db \
+   #     "ALTER TABLE [tabla] ADD COLUMN [columna] [TIPO] DEFAULT [valor];"
+   #
+   # EJEMPLO — Columna nueva en MySQL:
+   #   mysql -u$MYSQL_USER -p$MYSQL_PASSWORD $MYSQL_DB -e \
+   #     "ALTER TABLE [tabla] ADD COLUMN [columna] [TIPO] DEFAULT [valor];"
+   #
+   # [FILL] NUEVAS TABLAS EN ESTA VERSION:
+   #   - [nombre_tabla]: [descripcion breve]
+   #
+   # [FILL] COLUMNAS NUEVAS EN ESTA VERSION:
+   #   - [tabla].[columna]: [tipo] — [descripcion]
+   #
+   # -------------------------------------------------------
+
+   # 4D) Verificar esquema
+   python scripts/diagnostico_db.py 2>/dev/null || echo "Script no disponible"
+
+=============================================================================
+PASO 5: VERIFICAR SERVICIOS
+=============================================================================
+   # Redis
+   systemctl status redis --no-pager || systemctl status redis-server --no-pager
+   redis-cli ping   # Debe responder PONG
+
+   # Si Redis no corre:  sudo systemctl start redis
+
+   # Limpiar cache de metricas (opcional)
+   redis-cli KEYS "metrics_cache_*" | xargs -r redis-cli DEL
+
+   # MySQL (solo si aplica)
+   # systemctl status mysql --no-pager
+
+=============================================================================
+PASO 6: REINICIAR SERVICIOS Y VALIDAR
+=============================================================================
+   # 6A) Reiniciar en orden
+   sudo systemctl restart gunicorn
+   sudo systemctl restart nginx
+
+   # 6B) Verificar estado
+   sudo systemctl status gunicorn --no-pager
+   sudo systemctl status nginx --no-pager
+
+   # 6C) Ping basico al sitio
+   curl -I https://[TU-DOMINIO]
+
+   # 6D) LISTA DE VALIDACIONES ESPECIFICAS DE ESTA VERSION:
+   # -------------------------------------------------------
+   # [FILL] Describir aqui las validaciones funcionales
+   #
+   # FORMATO SUGERIDO:
+   # [ ] [NOMBRE DE FUNCIONALIDAD]
+   #     - Paso 1 para validar
+   #     - Paso 2 para validar
+   #     - Resultado esperado
+   #
+   # -------------------------------------------------------
+
+   # 6E) Revisar stash si se guardo antes:
+   git stash list
+   # Decidir si aplicar:  git stash pop
+
+=============================================================================
+PASO 7: PERMISOS (ULTIMO PASO - SIEMPRE EJECUTAR)
+=============================================================================
+   # 7A) Base de datos
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chmod 755 /var/www/template_app/instance/
+   sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
+
+   # 7B) Uploads (fotos, documentos)
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo chmod -R 755 /var/www/template_app/uploads/
+
+   # 7C) Estaticos y templates
+   sudo chown -R www-data:www-data /var/www/template_app/static/
+   sudo chown -R www-data:www-data /var/www/template_app/templates/
+
+   # 7D) Verificacion final
+   curl -I https://[TU-DOMINIO]
+   echo "===> DESPLIEGUE COMPLETO. PERMISOS ACTUALIZADOS. <==="
+
+=============================================================================
+CAMBIOS EN ESTA VERSION — DETALLE TECNICO  [FILL]
+=============================================================================
+   *** [PROBADO EN DESARROLLO: SI/NO] ***
+
+   VERSION: [x.x.x.x] — [YYYY-MM-DD]
+
+   1) [NOMBRE DEL CAMBIO PRINCIPAL]
+      - [Descripcion del cambio]
+      - [Fix o nueva funcion]
+
+   2) [OTRO CAMBIO SI APLICA]
+      - [Descripcion]
+
+   ARCHIVOS MODIFICADOS:
+   * [archivo]  — [que cambio]
+   * [archivo]  — [que cambio]
+
+   NUEVAS TABLAS / COLUMNAS:
+   * [tabla].[columna] — [descripcion del cambio]
+
+   MIGRACION:
+   * ID: [revision_id de Alembic, si aplica]
+   * Comando: flask db upgrade   (ejecutado en PASO 4B)
+   * Manual requerido: [SI detallar / NO]
+
+=============================================================================
+TROUBLESHOOTING
+=============================================================================
+A) Error de autenticacion en git pull:
+   git remote set-url origin https://<TOKEN>@github.com/smookymolina/template_app.git
+   git remote -v   # verificar
+
+B) Error 500 despues del pull:
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo systemctl restart gunicorn
+
+C) Migracion falla con "table already exists":
+   # La tabla ya existe (db.create_all la creo antes), es seguro ignorar.
+   # Para marcar como aplicada sin ejecutar:
+   flask db stamp [revision_id]
+
+D) Migracion falla con "no such column" o "KeyError":
+   # El historial de migraciones no coincide con la BD actual.
+   # Opcion 1 — Solo crear lo que falta (seguro):
+   python -c "from app_factory import create_app; app=create_app(); \
+     app.app_context().push(); from models import db; db.create_all()"
+   # Opcion 2 — Marcar estado actual y continuar:
+   flask db stamp head
+
+E) Servicio Gunicorn no levanta:
+   sudo journalctl -u gunicorn -n 50 --no-pager
+   sudo systemctl status gunicorn --no-pager
+
+F) CSS o JS con cache viejo en el navegador:
+   sudo rm -rf /var/cache/nginx/*
+   sudo systemctl restart nginx
+   # Hard refresh en el cliente: Ctrl+Shift+R
+
+G) Redis no responde (PONG):
+   sudo systemctl start redis
+   sudo systemctl enable redis
+
+H) [FILL] ERROR ESPECIFICO DE ESTA VERSION:
+   # [Descripcion del error conocido]
+   # CAUSA: [causa]
+   # SOLUCION: [comandos]
+
+=============================================================================
+ROLLBACK — SI ALGO FALLA DESPUES DEL DESPLIEGUE
+=============================================================================
+   # Restaurar base de datos:
+   cp "$BACKUP_DIR/template_app.db" instance/template_app.db
+
+   # Restaurar uploads:
+   tar -xzf "$BACKUP_DIR/uploads.tar.gz" -C /var/www/template_app/
+
+   # Regresar al branch anterior:
+   git checkout [BRANCH_ANTERIOR]
+
+   # Reinstalar dependencias del branch anterior:
+   source .venv/bin/activate
+   python -m pip install -r requirements.txt --no-cache-dir
+
+   # Reiniciar servicios:
+   sudo systemctl restart gunicorn && sudo systemctl restart nginx
+
+   # Restaurar permisos:
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+
+   echo "===> ROLLBACK COMPLETO. VERIFICAR EN EL NAVEGADOR. <==="
+
+=============================================================================
+NOTAS PERMANENTES (NO CAMBIAR ENTRE VERSIONES)
+=============================================================================
+- SIEMPRE hacer PASO 1 (backup) ANTES de cualquier cambio.
+- SIEMPRE ejecutar PASO 7 (permisos) AL FINAL, sin excepcion.
+- NUNCA hacer merge manual en produccion.
+- NUNCA eliminar la BD directamente — restaurar desde backup.
+- NUNCA usar --no-verify ni force push en produccion.
+- El backup permite rollback inmediato si algo sale mal.
+- Redis debe estar corriendo para metricas y notificaciones en tiempo real.
+- Los archivos estaticos pueden estar en cache del navegador despues de un update.
+- La variable $TS del PASO 1 debe usarse en los comandos siguientes del mismo shell.
+=============================================================================
