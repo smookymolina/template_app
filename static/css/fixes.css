@@ -2294,3 +2294,515 @@ input:checked + .slider:before {
         font-size: 14px;
     }
 }
+
+/* ===== REDISEÑO GESTION DE RECLUTAS ===== */
+#reclutas-section {
+    --reclutas-accent: var(--primary-color);
+    --reclutas-accent-soft: rgba(16, 182, 174, 0.18);
+    --reclutas-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.82), rgba(226, 246, 245, 0.78));
+    --reclutas-stroke: rgba(255, 255, 255, 0.55);
+    position: relative;
+    border-radius: 22px;
+    padding: 22px;
+    background: var(--reclutas-bg);
+    border: 1px solid var(--reclutas-stroke);
+    box-shadow: 0 18px 34px rgba(4, 36, 38, 0.14);
+    overflow: hidden;
+}
+
+body.admin-view #reclutas-section {
+    --reclutas-accent: #0fb6ae;
+}
+
+body.gerente-view #reclutas-section {
+    --reclutas-accent: #f59e0b;
+    --reclutas-accent-soft: rgba(245, 158, 11, 0.2);
+}
+
+body.asesor-view #reclutas-section {
+    --reclutas-accent: #2dbf71;
+    --reclutas-accent-soft: rgba(45, 191, 113, 0.18);
+}
+
+#reclutas-section::before,
+#reclutas-section::after {
+    content: "";
+    position: absolute;
+    border-radius: 999px;
+    filter: blur(2px);
+    pointer-events: none;
+}
+
+#reclutas-section::before {
+    width: 240px;
+    height: 240px;
+    right: -70px;
+    top: -90px;
+    background: radial-gradient(circle, var(--reclutas-accent-soft), transparent 68%);
+}
+
+#reclutas-section::after {
+    width: 200px;
+    height: 200px;
+    left: -60px;
+    bottom: -80px;
+    background: radial-gradient(circle, rgba(14, 107, 189, 0.12), transparent 70%);
+}
+
+#reclutas-section .section-header,
+#reclutas-section .reclutas-container,
+#reclutas-section .role-welcome-popup {
+    position: relative;
+    z-index: 1;
+}
+
+#reclutas-section .section-header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 18px;
+    padding: 18px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.76);
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(8px);
+}
+
+#reclutas-section .section-header h3 {
+    font-size: 30px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+#reclutas-section .section-header h3 i {
+    color: var(--reclutas-accent);
+}
+
+#reclutas-section .section-actions {
+    gap: 12px;
+}
+
+#reclutas-section .search-container {
+    min-width: 320px;
+}
+
+#reclutas-section .search-container input {
+    height: 50px;
+    border-radius: 999px;
+    border: 1px solid rgba(5, 28, 33, 0.16);
+    background: rgba(255, 255, 255, 0.86);
+    padding-left: 46px;
+    font-size: 15px;
+}
+
+#reclutas-section .search-container i {
+    color: var(--reclutas-accent);
+}
+
+#reclutas-section .btn-primary,
+#reclutas-section .btn-secondary,
+#reclutas-section .filter-button {
+    border-radius: 12px;
+    min-height: 46px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+#reclutas-section .btn-primary:hover,
+#reclutas-section .btn-secondary:hover,
+#reclutas-section .filter-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.12);
+}
+
+#reclutas-section .card {
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    background: rgba(255, 255, 255, 0.68);
+    backdrop-filter: blur(7px);
+    box-shadow: 0 14px 32px rgba(7, 45, 52, 0.12);
+}
+
+#reclutas-section .card-content {
+    padding: 18px;
+}
+
+#reclutas-section .filter-controls {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(170px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(245, 249, 251, 0.88);
+    border: 1px solid rgba(10, 45, 50, 0.08);
+}
+
+#reclutas-section .filter-group {
+    margin: 0;
+}
+
+#reclutas-section .filter-group label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4a5568;
+    margin-bottom: 6px;
+}
+
+#reclutas-section .filter-group select,
+#reclutas-section .filter-group input,
+#reclutas-section .filter-button {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 10px;
+    border: 1px solid rgba(5, 28, 33, 0.16);
+    background: #fff;
+}
+
+#reclutas-section .reclutas-table-shell {
+    border-radius: 14px;
+    border: 1px solid rgba(9, 43, 48, 0.12);
+    background: #fff;
+    overflow: auto;
+    max-height: 63vh;
+}
+
+#reclutas-section #reclutas-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+#reclutas-section #reclutas-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: linear-gradient(180deg, rgba(241, 248, 250, 0.98), rgba(234, 245, 247, 0.98));
+    color: #0c2f36;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    border-bottom: 1px solid rgba(8, 52, 60, 0.12);
+}
+
+#reclutas-section #reclutas-table td {
+    border-bottom: 1px solid rgba(13, 63, 73, 0.08);
+    padding-top: 14px;
+    padding-bottom: 14px;
+}
+
+#reclutas-section #reclutas-table tbody tr {
+    transition: transform .18s ease, background-color .2s ease;
+}
+
+#reclutas-section #reclutas-table tbody tr:hover {
+    background: linear-gradient(90deg, rgba(242, 252, 252, 1), rgba(249, 254, 254, 1));
+    transform: translateX(3px);
+}
+
+#reclutas-section #reclutas-table .badge {
+    padding: 7px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+#reclutas-section #reclutas-table .folio-display {
+    border-radius: 999px;
+    border: 1px dashed rgba(8, 53, 61, 0.28);
+    background: rgba(246, 250, 252, 0.95);
+    font-weight: 700;
+    padding: 7px 12px;
+}
+
+#reclutas-section #reclutas-table .actions-column {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#reclutas-section #reclutas-table .action-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    border: 1px solid rgba(4, 45, 55, 0.12);
+    background: #fff;
+}
+
+#reclutas-section #reclutas-table .action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.14);
+}
+
+#reclutas-section .reclutas-pagination {
+    margin-top: 14px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.74);
+    border: 1px solid rgba(5, 31, 36, 0.1);
+}
+
+#reclutas-section .pagination-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+}
+
+@media (max-width: 1200px) {
+    #reclutas-section .filter-controls {
+        grid-template-columns: repeat(3, minmax(160px, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    #reclutas-section {
+        padding: 14px;
+    }
+
+    #reclutas-section .section-header {
+        grid-template-columns: 1fr;
+    }
+
+    #reclutas-section .section-header h3 {
+        font-size: 24px;
+    }
+
+    #reclutas-section .search-container {
+        min-width: 100%;
+    }
+
+    #reclutas-section .filter-controls {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    #reclutas-section .filter-controls {
+        grid-template-columns: 1fr;
+    }
+
+    #reclutas-section .card-content {
+        padding: 12px;
+    }
+
+    #reclutas-section .reclutas-table-shell {
+        max-height: 56vh;
+    }
+}
+
+/* ===== REDISEÑO GLOBAL PARA TODAS LAS SECCIONES ===== */
+#dashboard-section .dashboard-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+#dashboard-section .dashboard-content-section {
+    --section-accent: var(--primary-color);
+    --section-accent-rgb: 16, 182, 174;
+    position: relative;
+    border-radius: 22px;
+    padding: 22px;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.84), rgba(231, 246, 245, 0.76));
+    border: 1px solid rgba(255, 255, 255, 0.62);
+    box-shadow: 0 16px 34px rgba(8, 41, 45, 0.12);
+    overflow: hidden;
+}
+
+body.admin-view #dashboard-section .dashboard-content-section {
+    --section-accent: #0fb6ae;
+    --section-accent-rgb: 15, 182, 174;
+}
+
+body.gerente-view #dashboard-section .dashboard-content-section {
+    --section-accent: #f59e0b;
+    --section-accent-rgb: 245, 158, 11;
+}
+
+body.asesor-view #dashboard-section .dashboard-content-section {
+    --section-accent: #2dbf71;
+    --section-accent-rgb: 45, 191, 113;
+}
+
+#dashboard-section .dashboard-content-section::before {
+    content: "";
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    top: -100px;
+    right: -85px;
+    border-radius: 999px;
+    background: radial-gradient(circle, rgba(var(--section-accent-rgb), 0.22), transparent 70%);
+    pointer-events: none;
+}
+
+#dashboard-section .dashboard-content-section > * {
+    position: relative;
+    z-index: 1;
+}
+
+#dashboard-section .dashboard-content-section .section-header,
+#dashboard-section .dashboard-content-section .section-header-v2 {
+    border-radius: 16px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.74);
+    backdrop-filter: blur(7px);
+}
+
+#dashboard-section .dashboard-content-section .section-header h2,
+#dashboard-section .dashboard-content-section .section-header h3,
+#dashboard-section .dashboard-content-section .section-header-v2 h3 {
+    letter-spacing: -0.02em;
+}
+
+#dashboard-section .dashboard-content-section .section-header i,
+#dashboard-section .dashboard-content-section .section-header-v2 i {
+    color: var(--section-accent);
+}
+
+#dashboard-section .dashboard-content-section .card,
+#dashboard-section .dashboard-content-section .content-card,
+#dashboard-section .dashboard-content-section .chart-container-v2,
+#dashboard-section .dashboard-content-section .kpi-card-v2,
+#dashboard-section .dashboard-content-section .admin-management-controls,
+#dashboard-section .dashboard-content-section .calendar-sidebar,
+#dashboard-section .dashboard-content-section .calendar-main {
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.78);
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 12px 26px rgba(6, 39, 45, 0.1);
+}
+
+#dashboard-section .dashboard-content-section .card-content,
+#dashboard-section .dashboard-content-section .card-body-custom,
+#dashboard-section .dashboard-content-section .tabs-content-container,
+#dashboard-section .dashboard-content-section .tab-content-v2 {
+    padding: 16px;
+}
+
+#dashboard-section .dashboard-content-section .filter-controls,
+#dashboard-section .dashboard-content-section .search-filters,
+#dashboard-section .dashboard-content-section .section-toolbar {
+    border-radius: 14px;
+    border: 1px solid rgba(9, 46, 53, 0.08);
+    background: rgba(245, 250, 251, 0.92);
+    padding: 12px;
+    gap: 10px;
+}
+
+#dashboard-section .dashboard-content-section input[type="text"],
+#dashboard-section .dashboard-content-section input[type="email"],
+#dashboard-section .dashboard-content-section input[type="password"],
+#dashboard-section .dashboard-content-section input[type="tel"],
+#dashboard-section .dashboard-content-section input[type="date"],
+#dashboard-section .dashboard-content-section select,
+#dashboard-section .dashboard-content-section textarea {
+    border-radius: 10px;
+    border: 1px solid rgba(5, 30, 36, 0.16);
+    background: rgba(255, 255, 255, 0.96);
+}
+
+#dashboard-section .dashboard-content-section .btn-primary,
+#dashboard-section .dashboard-content-section .btn-secondary,
+#dashboard-section .dashboard-content-section .btn-warning,
+#dashboard-section .dashboard-content-section .btn-danger,
+#dashboard-section .dashboard-content-section .btn-icon-v2,
+#dashboard-section .dashboard-content-section .btn-primary-v2,
+#dashboard-section .dashboard-content-section .btn-secondary-v2,
+#dashboard-section .dashboard-content-section .btn-action {
+    border-radius: 12px;
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+
+#dashboard-section .dashboard-content-section .btn-primary:hover,
+#dashboard-section .dashboard-content-section .btn-secondary:hover,
+#dashboard-section .dashboard-content-section .btn-warning:hover,
+#dashboard-section .dashboard-content-section .btn-danger:hover,
+#dashboard-section .dashboard-content-section .btn-icon-v2:hover,
+#dashboard-section .dashboard-content-section .btn-primary-v2:hover,
+#dashboard-section .dashboard-content-section .btn-secondary-v2:hover,
+#dashboard-section .dashboard-content-section .btn-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+#dashboard-section .dashboard-content-section table {
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+#dashboard-section .dashboard-content-section table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: linear-gradient(180deg, rgba(241, 248, 250, 0.98), rgba(234, 245, 247, 0.98));
+    border-bottom: 1px solid rgba(8, 50, 58, 0.12);
+}
+
+#dashboard-section .dashboard-content-section table tbody tr {
+    transition: background-color .2s ease, transform .18s ease;
+}
+
+#dashboard-section .dashboard-content-section table tbody tr:hover {
+    background-color: rgba(240, 251, 250, 0.96);
+}
+
+#dashboard-section .dashboard-content-section .pagination {
+    border-radius: 12px;
+    border: 1px solid rgba(5, 31, 36, 0.1);
+    background: rgba(255, 255, 255, 0.76);
+    padding: 10px 12px;
+}
+
+#dashboard-section .dashboard-content-section .pagination .pagination-btn {
+    border-radius: 10px;
+}
+
+#calendario-section .calendar-grid .day {
+    border-radius: 12px;
+}
+
+#estadisticas-section .metricas-tabs-navigation {
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.75);
+    padding: 8px;
+}
+
+#estadisticas-section .tab-button-v2 {
+    border-radius: 12px;
+}
+
+#estadisticas-section .kpi-card-v2 {
+    overflow: hidden;
+}
+
+#configuracion-section .config-option,
+#configuracion-section .sessions-header,
+#gestion-gerentes-section .gerentes-actions,
+#admin-reclutas-management .bulk-actions,
+#gerente-panel-section .bulk-actions {
+    border-radius: 12px;
+    border: 1px solid rgba(8, 48, 58, 0.1);
+    background: rgba(252, 255, 255, 0.84);
+    padding: 10px 12px;
+}
+
+@media (max-width: 900px) {
+    #dashboard-section .dashboard-content-section {
+        padding: 14px;
+        border-radius: 16px;
+    }
+
+    #dashboard-section .dashboard-content-section .section-header,
+    #dashboard-section .dashboard-content-section .section-header-v2 {
+        padding: 12px;
+    }
+}
