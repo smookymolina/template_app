@@ -518,85 +518,79 @@ const Reclutas = {
         });
     },
 
-    showAdminWelcome: function() {
-        const reclutasSection = document.getElementById('reclutas-section');
-        if (reclutasSection && !reclutasSection.querySelector('.admin-welcome')) {
-            const welcomeDiv = document.createElement('div');
-            welcomeDiv.className = 'admin-welcome';
-            welcomeDiv.style.cssText = `
-                background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-                color: white !important;
-                padding: 15px;
-                border-radius: var(--border-radius);
-                margin-bottom: 20px;
-                text-align: center;
-                border: 2px solid transparent;
-                box-shadow: var(--shadow-sm);
-            `;
-            welcomeDiv.innerHTML = `
-                <h4 style="color: white !important; margin: 0 0 8px 0;"><i class="fas fa-crown"></i> Panel de Administrador</h4>
-                <p style="color: white !important; margin: 0; opacity: 0.95;">Gestiona todos los reclutas, asigna asesores y supervisa el proceso completo de reclutamiento.</p>
-            `;
+    clearLegacyWelcomeMessages: function() {
+        document.querySelectorAll('.admin-welcome, .gerente-welcome, .asesor-welcome')
+            .forEach(el => el.remove());
+    },
 
-            const sectionHeader = reclutasSection.querySelector('.section-header');
-            if (sectionHeader && sectionHeader.nextSibling) {
-                reclutasSection.insertBefore(welcomeDiv, sectionHeader.nextSibling);
-            }
+    showRoleWelcomePopup: function({ role, icon, title, message }) {
+        this.clearLegacyWelcomeMessages();
+
+        const popupKey = `role_welcome_popup_closed_${role}`;
+        if (sessionStorage.getItem(popupKey) === 'true') {
+            return;
         }
+
+        const currentPopup = document.querySelector('.role-welcome-popup');
+        if (currentPopup) {
+            if (currentPopup.dataset.role === role) {
+                return;
+            }
+            currentPopup.remove();
+        }
+
+        const popup = document.createElement('div');
+        popup.className = `role-welcome-popup role-welcome-popup--${role}`;
+        popup.dataset.role = role;
+        popup.setAttribute('role', 'alert');
+
+        popup.innerHTML = `
+            <button type="button" class="role-welcome-popup__close" aria-label="Cerrar mensaje">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="role-welcome-popup__title">
+                <i class="${icon}"></i>
+                <span>${title}</span>
+            </div>
+            <p class="role-welcome-popup__message">${message}</p>
+        `;
+
+        const closeButton = popup.querySelector('.role-welcome-popup__close');
+        if (closeButton) {
+            closeButton.addEventListener('click', () => {
+                sessionStorage.setItem(popupKey, 'true');
+                popup.remove();
+            });
+        }
+
+        document.body.appendChild(popup);
+    },
+
+    showAdminWelcome: function() {
+        this.showRoleWelcomePopup({
+            role: 'admin',
+            icon: 'fas fa-crown',
+            title: 'Panel de Administrador',
+            message: 'Gestiona todos los reclutas, asigna asesores y supervisa el proceso completo de reclutamiento.'
+        });
     },
 
     showGerenteWelcome: function() {
-        const reclutasSection = document.getElementById('reclutas-section');
-        if (reclutasSection && !reclutasSection.querySelector('.gerente-welcome')) {
-            const welcomeDiv = document.createElement('div');
-            welcomeDiv.className = 'gerente-welcome';
-            welcomeDiv.style.cssText = `
-                background: linear-gradient(135deg, #f59e0b, #d97706);
-                color: white !important;
-                padding: 15px;
-                border-radius: var(--border-radius);
-                margin-bottom: 20px;
-                text-align: center;
-                border: 2px solid transparent;
-                box-shadow: var(--shadow-sm);
-            `;
-            welcomeDiv.innerHTML = `
-                <h4 style="color: white !important; margin: 0 0 8px 0;"><i class="fas fa-user-tie"></i> Panel de Gerente</h4>
-                <p style="color: white !important; margin: 0; opacity: 0.95;">Supervisa el proceso completo de reclutamiento y gestiona asesores. Tienes acceso a métricas globales y distribución.</p>
-            `;
-
-            const sectionHeader = reclutasSection.querySelector('.section-header');
-            if (sectionHeader && sectionHeader.nextSibling) {
-                reclutasSection.insertBefore(welcomeDiv, sectionHeader.nextSibling);
-            }
-        }
+        this.showRoleWelcomePopup({
+            role: 'gerente',
+            icon: 'fas fa-user-tie',
+            title: 'Panel de Gerente',
+            message: 'Supervisa el proceso completo de reclutamiento y gestiona asesores. Tienes acceso a métricas globales y distribución.'
+        });
     },
 
     showAsesorWelcome: function() {
-        const reclutasSection = document.getElementById('reclutas-section');
-        if (reclutasSection && !reclutasSection.querySelector('.asesor-welcome')) {
-            const welcomeDiv = document.createElement('div');
-            welcomeDiv.className = 'asesor-welcome';
-            welcomeDiv.style.cssText = `
-                background: linear-gradient(135deg, #28a745, #20c997);
-                color: white !important;
-                padding: 15px;
-                border-radius: var(--border-radius);
-                margin-bottom: 20px;
-                text-align: center;
-                border: 2px solid transparent;
-                box-shadow: var(--shadow-sm);
-            `;
-            welcomeDiv.innerHTML = `
-                <h4 style="color: white !important; margin: 0 0 8px 0;"><i class="fas fa-handshake"></i> Panel de Asesor</h4>
-                <p style="color: white !important; margin: 0; opacity: 0.95;">Gestiona tus reclutas asignados y programa entrevistas para tus candidatos.</p>
-            `;
-
-            const sectionHeader = reclutasSection.querySelector('.section-header');
-            if (sectionHeader && sectionHeader.nextSibling) {
-                reclutasSection.insertBefore(welcomeDiv, sectionHeader.nextSibling);
-            }
-        }
+        this.showRoleWelcomePopup({
+            role: 'asesor',
+            icon: 'fas fa-handshake',
+            title: 'Panel de Asesor',
+            message: 'Gestiona tus reclutas asignados y programa entrevistas para tus candidatos.'
+        });
     },
 
     /**

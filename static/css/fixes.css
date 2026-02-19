@@ -2107,3 +2107,190 @@ input:checked + .slider:before {
         flex-direction: column;
     }
 }
+
+/* ===== DASHBOARD NAV: ESTILO DE SCROLLER Y PESTANAS ===== */
+.dashboard-nav {
+    flex: 1;
+    margin: 0 20px;
+    position: relative;
+}
+
+.dashboard-nav ul {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 4px 6px 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) rgba(0, 0, 0, 0.12);
+}
+
+.dashboard-nav ul::-webkit-scrollbar {
+    height: 10px;
+}
+
+.dashboard-nav ul::-webkit-scrollbar-button:horizontal {
+    width: 0;
+}
+
+.dashboard-nav ul::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.08);
+    border-radius: 999px;
+}
+
+.dashboard-nav ul::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, var(--primary-color), #0ca6a0);
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.dashboard-nav ul::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, #0ca6a0, var(--primary-color));
+}
+
+.dashboard-nav li {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+.dashboard-nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    color: var(--text-color);
+    text-decoration: none;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.65);
+    transition: var(--transition);
+}
+
+.dashboard-nav a i {
+    margin-right: 0;
+}
+
+.dashboard-nav a:hover {
+    transform: translateY(-1px);
+    background: rgba(16, 182, 174, 0.14);
+    border-color: rgba(16, 182, 174, 0.35);
+}
+
+.dashboard-nav li.active a,
+.dashboard-nav a.active {
+    background: linear-gradient(135deg, var(--primary-color), #0ca6a0);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(16, 182, 174, 0.22);
+}
+
+@media (max-width: 768px) {
+    .dashboard-nav {
+        width: 100%;
+        margin: 12px 0;
+    }
+
+    .dashboard-nav ul {
+        padding: 4px 4px 10px;
+        gap: 8px;
+    }
+
+    .dashboard-nav a {
+        padding: 10px 14px;
+    }
+}
+
+/* ===== POPUP DE BIENVENIDA POR ROL ===== */
+.role-welcome-popup {
+    position: fixed;
+    top: 92px;
+    right: 22px;
+    z-index: 2500;
+    width: min(460px, calc(100vw - 28px));
+    border-radius: 14px;
+    padding: 16px 18px 14px 42px;
+    color: #fff;
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    animation: rolePopupSlideIn .28s ease-out;
+}
+
+.role-welcome-popup--admin {
+    background: linear-gradient(135deg, var(--primary-color), #0ca6a0);
+}
+
+.role-welcome-popup--gerente {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.role-welcome-popup--asesor {
+    background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.role-welcome-popup__close {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.24);
+}
+
+.role-welcome-popup__close:hover {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.role-welcome-popup__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 6px;
+}
+
+.role-welcome-popup__message {
+    margin: 0;
+    opacity: 0.96;
+    font-size: 16px;
+    line-height: 1.4;
+}
+
+@keyframes rolePopupSlideIn {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .role-welcome-popup {
+        top: 76px;
+        right: 12px;
+        width: calc(100vw - 24px);
+        padding: 14px 14px 12px 40px;
+    }
+
+    .role-welcome-popup__title {
+        font-size: 18px;
+    }
+
+    .role-welcome-popup__message {
+        font-size: 14px;
+    }
+}
