@@ -2201,19 +2201,31 @@ const Reclutas = {
             
             // âœ… SIEMPRE RENDERIZAR TODAS LAS COLUMNAS - CSS se encarga de ocultar
             row.innerHTML = `
-                <td><img src="${fotoUrl}" alt="${recluta.nombre}" class="recluta-foto profile-pic-clickable" title="Clic para ver en grande" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;"></td>
-                <td>${recluta.nombre}</td>
-                <td>${recluta.email}</td>
-                <td>${recluta.telefono}</td>
-                <td>${recluta.puesto || 'No especificado'}</td>
-                <td>
+                <td data-label="">
+                    <img src="${fotoUrl}" alt="${this.escapeHtml(recluta.nombre || 'Recluta')}" class="recluta-foto profile-pic-clickable" title="Clic para ver en grande" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                </td>
+                <td data-label="Nombre">
+                    <span class="cell-truncate" title="${this.escapeHtml(recluta.nombre || 'N/A')}">${this.escapeHtml(recluta.nombre || 'N/A')}</span>
+                </td>
+                <td data-label="Email">
+                    <span class="cell-truncate" title="${this.escapeHtml(recluta.email || 'N/A')}">${this.escapeHtml(recluta.email || 'N/A')}</span>
+                </td>
+                <td data-label="Teléfono">
+                    <span class="cell-truncate" title="${this.escapeHtml(recluta.telefono || 'N/A')}">${this.escapeHtml(recluta.telefono || 'N/A')}</span>
+                </td>
+                <td data-label="Puesto">
+                    <span class="cell-truncate" title="${this.escapeHtml(recluta.puesto || 'No especificado')}">${this.escapeHtml(recluta.puesto || 'No especificado')}</span>
+                </td>
+                <td data-label="Folio">
                     <button type="button" class="folio-display copy-folio" data-folio="${this.escapeHtml(recluta.folio || 'N/A')}" title="Copiar folio">
                         ${this.escapeHtml(recluta.folio || 'N/A')}
                     </button>
                 </td>
-                <td><span class="badge ${badgeClass}">${recluta.estado}</span></td>
-                <td class="asesor-column">${recluta.asesor_nombre || 'No asignado'}</td>
-                <td class="actions-column">
+                <td data-label="Estado"><span class="badge ${badgeClass}">${this.escapeHtml(recluta.estado || 'N/A')}</span></td>
+                <td data-label="Asesor" class="asesor-column">
+                    <span class="cell-truncate" title="${this.escapeHtml(recluta.asesor_nombre || 'No asignado')}">${this.escapeHtml(recluta.asesor_nombre || 'No asignado')}</span>
+                </td>
+                <td data-label="Acciones" class="actions-column">
                     <button class="action-btn view-btn has-fa" title="Ver detalles" data-id="${recluta.id}">
                         <i class="fas fa-eye"></i>
                     </button>
@@ -5110,6 +5122,7 @@ document.dispatchEvent(new CustomEvent('reclutasModuleLoaded', {
 }));
 
 export default Reclutas;
+
 
 
 

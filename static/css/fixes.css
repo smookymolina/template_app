@@ -2494,6 +2494,14 @@ body.asesor-view #reclutas-section {
     padding-bottom: 14px;
 }
 
+#reclutas-section #reclutas-table .cell-truncate {
+    display: block;
+    max-width: 240px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 #reclutas-section #reclutas-table tbody tr {
     transition: transform .18s ease, background-color .2s ease;
 }
@@ -2590,6 +2598,79 @@ body.asesor-view #reclutas-section {
 
     #reclutas-section .reclutas-table-shell {
         max-height: 56vh;
+    }
+}
+
+@media (max-width: 768px) {
+    #reclutas-section .reclutas-table-shell {
+        overflow: visible;
+        max-height: none;
+        border: 0;
+        background: transparent;
+    }
+
+    #reclutas-section #reclutas-table thead {
+        display: none;
+    }
+
+    #reclutas-section #reclutas-table,
+    #reclutas-section #reclutas-table tbody,
+    #reclutas-section #reclutas-table tr,
+    #reclutas-section #reclutas-table td {
+        display: block;
+        width: 100%;
+    }
+
+    #reclutas-section #reclutas-table tbody tr {
+        margin: 12px 0;
+        border-radius: 14px;
+        border: 1px solid rgba(9, 43, 48, 0.12);
+        background: #fff;
+        box-shadow: 0 10px 18px rgba(7, 45, 52, 0.12);
+        overflow: hidden;
+    }
+
+    #reclutas-section #reclutas-table td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        border-bottom: 1px dashed rgba(13, 63, 73, 0.12);
+    }
+
+    #reclutas-section #reclutas-table td::before {
+        content: attr(data-label);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 700;
+        color: #0c2f36;
+        opacity: 0.7;
+    }
+
+    #reclutas-section #reclutas-table td[data-label=""]::before {
+        display: none;
+        content: '';
+    }
+
+    #reclutas-section #reclutas-table td:last-child {
+        border-bottom: none;
+    }
+
+    #reclutas-section #reclutas-table .cell-truncate {
+        max-width: 60vw;
+    }
+
+    #reclutas-section #reclutas-table td[data-label="Acciones"] {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    #reclutas-section #reclutas-table .actions-column {
+        justify-content: flex-start;
+        flex-wrap: wrap;
     }
 }
 

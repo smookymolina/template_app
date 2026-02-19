@@ -212,23 +212,43 @@ async loadReclutas() {
 
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>
+                <td data-label="">
                     <input type="checkbox" class="recluta-checkbox"
                            data-id="${recluta.id}"
                            ${this.selectedReclutas.has(recluta.id) ? 'checked' : ''}>
                 </td>
-                <td><code>${escapeHtml(recluta.folio || 'S/F')}</code></td>
-                <td>${escapeHtml(recluta.nombre || 'Nombre no disponible')}</td>
-                <td>${escapeHtml(recluta.email || 'Sin email')}</td>
-                <td>${escapeHtml(recluta.telefono || 'Sin teléfono')}</td>
-                <td>
+                <td data-label="Folio"><code>${escapeHtml(recluta.folio || 'S/F')}</code></td>
+                <td data-label="Nombre">
+                    <span class="cell-truncate" title="${escapeHtml(recluta.nombre || 'Nombre no disponible')}">
+                        ${escapeHtml(recluta.nombre || 'Nombre no disponible')}
+                    </span>
+                </td>
+                <td data-label="Email">
+                    <span class="cell-truncate" title="${escapeHtml(recluta.email || 'Sin email')}">
+                        ${escapeHtml(recluta.email || 'Sin email')}
+                    </span>
+                </td>
+                <td data-label="Tel�fono">
+                    <span class="cell-truncate" title="${escapeHtml(recluta.telefono || 'Sin teléfono')}">
+                        ${escapeHtml(recluta.telefono || 'Sin teléfono')}
+                    </span>
+                </td>
+                <td data-label="Estado">
                     <span class="status-badge status-${estadoSlug}">
                         ${escapeHtml(estadoEtiqueta)}
                     </span>
                 </td>
-                <td>${escapeHtml(recluta.asesor_nombre || 'Sin asignar')}</td>
-                <td>${escapeHtml(fechaRegistro)}</td>
-                <td>
+                <td data-label="Asesor">
+                    <span class="cell-truncate" title="${escapeHtml(recluta.asesor_nombre || 'Sin asignar')}">
+                        ${escapeHtml(recluta.asesor_nombre || 'Sin asignar')}
+                    </span>
+                </td>
+                <td data-label="Fecha Registro">
+                    <span class="cell-truncate" title="${escapeHtml(fechaRegistro)}">
+                        ${escapeHtml(fechaRegistro)}
+                    </span>
+                </td>
+                <td data-label="Acciones">
                     <div class="action-buttons">
                         <select class="single-asesor-select" data-id="${recluta.id}"
                                 title="Selecciona un nuevo asesor para ${escapeHtml(recluta.nombre || 'este recluta')}">

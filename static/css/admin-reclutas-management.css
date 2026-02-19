@@ -193,6 +193,14 @@ body.dark-mode {
     color: var(--admin-panel-text, #1f2933);
 }
 
+.admin-table .cell-truncate {
+    display: block;
+    max-width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .admin-table tbody tr:hover {
     background: var(--admin-panel-hover, #eef2f7);
 }
@@ -655,12 +663,83 @@ input[type="checkbox"] {
     }
 
     .admin-table-container {
-        overflow-x: auto;
+        overflow-x: visible;
         -webkit-overflow-scrolling: touch;
     }
 
     .admin-table {
-        min-width: 900px;
+        min-width: unset;
+        border: 0;
+    }
+
+    .admin-table thead {
+        display: none;
+    }
+
+    .admin-table,
+    .admin-table tbody,
+    .admin-table tr,
+    .admin-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .admin-table tbody tr {
+        margin: 14px 12px;
+        border-radius: 14px;
+        border: 1px solid var(--admin-panel-divider, #d0d5dd);
+        background: var(--admin-panel-background, #f8fafc);
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+    }
+
+    .admin-table td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        border-bottom: 1px dashed rgba(15, 23, 42, 0.12);
+    }
+
+    .admin-table td::before {
+        content: attr(data-label);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 600;
+        color: var(--admin-panel-text, #1f2933);
+        opacity: 0.7;
+    }
+
+    .admin-table td[data-label=""]::before {
+        display: none;
+        content: '';
+    }
+
+    .admin-table td:last-child {
+        border-bottom: none;
+    }
+
+    .admin-table .cell-truncate {
+        max-width: 60vw;
+    }
+
+    .admin-table td[data-label="Acciones"] {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .admin-table td[data-label="Acciones"] .action-buttons {
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        min-width: unset;
+        position: relative;
+    }
+
+    .admin-table td[data-label="Acciones"] .action-buttons::before {
+        display: none;
     }
 }
 
