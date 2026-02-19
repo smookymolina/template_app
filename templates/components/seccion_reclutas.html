@@ -81,28 +81,30 @@
                     {% endif %}
                 </div>
                 
-                <table id="reclutas-table">
-    <thead>
-        <tr>
-            <th width="60">Foto</th>
-            <th>Nombre</th>
-            <th>Email</th>
-            <th>Teléfono</th>
-            <th>Puesto</th>
-            <th width="120">Folio</th>
-            <th width="100">Estado</th>
-            <th id="asesor-header" class="asesor-column">Asesor</th>
-            <th width="120">Acciones</th>
-        </tr>
-    </thead>
-    <tbody id="reclutas-list">
-        <tr>
-            <td colspan="9" style="text-align: center;">Cargando reclutas...</td>
-        </tr>
-    </tbody>
-</table>
+                <div class="reclutas-table-shell">
+                    <table id="reclutas-table">
+                        <thead>
+                            <tr>
+                                <th width="60">Foto</th>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>Teléfono</th>
+                                <th>Puesto</th>
+                                <th width="120">Folio</th>
+                                <th width="100">Estado</th>
+                                <th id="asesor-header" class="asesor-column">Asesor</th>
+                                <th width="120">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reclutas-list">
+                            <tr>
+                                <td colspan="9" style="text-align: center;">Cargando reclutas...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
                 
-                <div class="pagination">
+                <div class="pagination reclutas-pagination">
                     <button class="pagination-btn" id="prev-page" disabled><i class="fas fa-chevron-left"></i></button>
                     <div id="pagination-numbers">
                         <span class="current-page">1</span> de <span id="total-pages">1</span>
