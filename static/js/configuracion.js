@@ -139,9 +139,10 @@ class ConfigurationManager {
         this.confirmNewPasswordInput = document.getElementById('confirm-new-password-input');
         
         // Configuraciones de apariencia
-        
         this.primaryColorRadios = document.querySelectorAll('input[name="primary-color"]');
         this.customColorInput = document.getElementById('custom-primary-color');
+        this.secondaryColorRadios = document.querySelectorAll('input[name="secondary-accent-color"]');
+        this.customSecondaryColorInput = document.getElementById('custom-secondary-accent-color');
         
         // Elementos de foto de perfil
         this.userPhotoFile = document.getElementById('user-photo-file');
@@ -174,9 +175,18 @@ class ConfigurationManager {
         this.primaryColorRadios.forEach(radio => {
             radio.addEventListener('change', () => this.handleColorChange(radio.value));
         });
-        
+
         if (this.customColorInput) {
-            this.customColorInput.addEventListener('change', () => this.handleCustomColorChange());
+            this.customColorInput.addEventListener('input', () => this.handleCustomColorChange());
+        }
+
+        // Eventos de color de acento secundario
+        this.secondaryColorRadios.forEach(radio => {
+            radio.addEventListener('change', () => this.handleSecondaryColorChange(radio.value));
+        });
+
+        if (this.customSecondaryColorInput) {
+            this.customSecondaryColorInput.addEventListener('input', () => this.handleCustomSecondaryColorChange());
         }
         
         // Eventos de configuraciones de notificaciones
@@ -396,6 +406,47 @@ class ConfigurationManager {
         if (window.UI && typeof window.UI.changePrimaryColor === 'function') {
             window.UI.changePrimaryColor(customColor);
         }
+    }
+
+    handleSecondaryColorChange(color) {
+        if (window.UI && typeof window.UI.changeSecondaryAccentColor === 'function') {
+            window.UI.changeSecondaryAccentColor(color);
+        } else {
+            document.documentElement.style.setProperty('--secondary-accent-color', color);
+        }
+
+        // Actualizar selección visual
+        this.secondaryColorRadios.forEach(radio => {
+            const option = radio.closest('.secondary-color-option');
+            if (option) option.classList.toggle('selected', radio.value === color);
+        });
+
+        if (this.customSecondaryColorInput) {
+            this.customSecondaryColorInput.value = color;
+        }
+
+        this.saveSetting('secondary_accent_color', color);
+        this.syncUIChanges();
+    }
+
+    handleCustomSecondaryColorChange() {
+        const color = this.customSecondaryColorInput.value;
+
+        if (window.UI && typeof window.UI.changeSecondaryAccentColor === 'function') {
+            window.UI.changeSecondaryAccentColor(color);
+        } else {
+            document.documentElement.style.setProperty('--secondary-accent-color', color);
+        }
+
+        // Deseleccionar presets
+        this.secondaryColorRadios.forEach(radio => {
+            radio.checked = false;
+            const option = radio.closest('.secondary-color-option');
+            if (option) option.classList.remove('selected');
+        });
+
+        this.saveSetting('secondary_accent_color', color);
+        this.syncUIChanges();
     }
 
     handleNotificationSettings() {

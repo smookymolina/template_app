@@ -15,12 +15,14 @@ const CONFIG = {
     STORAGE_KEYS: {
         THEME: 'darkMode',
         PRIMARY_COLOR: 'primaryColor',
+        SECONDARY_ACCENT_COLOR: 'secondaryAccentColor',
         CALENDAR_EVENTS: 'calendarEvents'
     },
-    
+
     // Valores por defecto
     DEFAULTS: {
         PRIMARY_COLOR: '#007bff',
+        SECONDARY_ACCENT_COLOR: '#0ca6a0',
         SECONDARY_COLOR: '#6c757d',
         SUCCESS_COLOR: '#28a745',
         DANGER_COLOR: '#dc3545',

@@ -2824,6 +2824,27 @@ const Reclutas = {
     /**
      * Habilita el modo de edición en el modal de detalles
      */
+    /**
+     * Convierte una fecha a formato YYYY-MM-DD para inputs date
+     * Evita desfases por zona horaria
+     */
+    formatDateForInput: function(value) {
+        if (!value) return '';
+        if (typeof value === 'string') {
+            const datePart = value.split('T')[0].split(' ')[0];
+            if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+                return datePart;
+            }
+        }
+
+        const dateObj = new Date(value);
+        if (Number.isNaN(dateObj.valueOf())) return '';
+
+        const offset = dateObj.getTimezoneOffset();
+        const localDate = new Date(dateObj.getTime() - offset * 60 * 1000);
+        return localDate.toISOString().split('T')[0];
+    },
+
     enableEditMode: function() {
         // Intentar obtener el ID del recluta de múltiples fuentes
         let reclutaId = this.currentReclutaId;
@@ -2865,6 +2886,11 @@ const Reclutas = {
         document.getElementById('edit-recluta-puesto').value = recluta.puesto || '';
         document.getElementById('edit-recluta-estado').value = recluta.estado || '';
         document.getElementById('edit-recluta-notas').value = recluta.notas || '';
+        const fechaInput = document.getElementById('edit-recluta-fecha');
+        if (fechaInput) {
+            fechaInput.value = this.formatDateForInput(recluta.fecha_registro);
+        }
+
 
         // Cambiar vista
         viewButtons.style.display = 'none';
@@ -2969,6 +2995,15 @@ const Reclutas = {
             estado: estadoValue,
             notas: getTrimmedValue('edit-recluta-notas', reclutaActual.notas)
         };
+
+        const fechaRegistroValue = getTrimmedValue('edit-recluta-fecha', '');
+        if (fechaRegistroValue) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaRegistroValue)) {
+                showError('Formato de fecha invalido. Usa YYYY-MM-DD');
+                return;
+            }
+            reclutaData.fecha_registro = fechaRegistroValue;
+        }
 
         // Normalizar telefono (evita errores de validacion por formatos con letras/extensiones)
         if (reclutaData.telefono) {

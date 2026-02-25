@@ -4,6 +4,9 @@
     --primary-dark: #0056b3;
     --primary-light: #e9f2f9;
     --primary-hover: #0056b3;
+    /* Color de acento secundario (gradiente del nav activo, scrollbar, etc.) */
+    --secondary-accent-color: #0ca6a0;
+    --secondary-accent-color-rgb: 12, 166, 160;
     /* Colores adicionales para la paleta */
     --color-option-blue: #007bff;
     --color-option-green: #28a745;
@@ -54,9 +57,24 @@ body.dark-mode {
     --light-color: #1e1e2c;
     --dark-color: #f8f9fa;
     --text-color: #e9ecef;
+    --text-primary: #e9ecef;
+    --text-secondary: #adb5bd;
     --text-light: #adb5bd;
     --border-color: #4b4b4b;
+    --border-light: #3f3f3f;
+    --card-background: #1e1e2c;
+    --input-background: #2a2b3d;
+    --input-hover-background: #31324a;
+    --table-header-bg: #2a2b3d;
+    --table-hover: #2f3050;
+    --table-stripe: #252836;
+    --code-background: #2a2b3d;
+    --code-color: #e9ecef;
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
     background-color: #181924 !important;
+    color-scheme: dark;
 }
 
 /* ===== NAVEGACIÓN ESPECÍFICA POR ROLES ===== */
@@ -2450,10 +2468,6 @@ body.modal-open {
     background-color: #c82333;
     border-color: #bd2130;
     transform: scale(1.05);
-}
-
-/* Estilos removidos - ya están definidos arriba */
-    color: var(--text-light);
 }
 
 .interview-actions .btn-icon-small {

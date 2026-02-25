@@ -9,7 +9,8 @@
       "Bash(flask db:*)",
       "Bash(python -m flask db:*)",
       "Bash(python:*)",
-      "Bash(.venv/Scripts/python.exe:*)"
+      "Bash(.venv/Scripts/python.exe:*)",
+      "Bash(node:*)"
     ]
   }
 }

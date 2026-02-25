@@ -558,59 +558,7 @@ textarea {
     z-index: 1001;
 }
 
-/* Variables globales y estilos base */
-:root {
-    --primary-color: #007bff;
-    --primary-dark: #0056b3;
-    --primary-light: #e9f2f9;
-    --secondary-color: #6c757d;
-    --success-color: #28a745;
-    --warning-color: #ffc107;
-    --danger-color: #dc3545;
-    --light-color: #f8f9fa;
-    --dark-color: #343a40;
-    --text-color: #333;
-    --text-light: #6c757d;
-    --border-color: #dee2e6;
-    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.1);
-    --border-radius: 8px;
-    --transition: all 0.3s ease;
-    --font-family: 'Poppins', sans-serif;
-}
-
-/* Modo oscuro */
-body.dark-mode {
-    --primary-light: #252836;
-    --light-color: #1e1e2c;
-    --dark-color: #f8f9fa;
-    --text-color: #e9ecef;
-    --text-light: #adb5bd;
-    --border-color: #4b4b4b;
-    background-color: #181924 !important;
-}
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: var(--font-family);
-    background-color: var(--primary-light);
-    color: var(--text-color);
-    line-height: 1.6;
-    transition: var(--transition);
-}
-
-.container {
-    width: 100%;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-}
+/* Nota: variables :root y body.dark-mode definidas en styles.css */
 
 /* Notificaciones */
 .notification {
@@ -2143,13 +2091,13 @@ input:checked + .slider:before {
 }
 
 .dashboard-nav ul::-webkit-scrollbar-thumb {
-    background: linear-gradient(90deg, var(--primary-color), #0ca6a0);
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-accent-color));
     border-radius: 999px;
     border: 2px solid rgba(255, 255, 255, 0.8);
 }
 
 .dashboard-nav ul::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(90deg, #0ca6a0, var(--primary-color));
+    background: linear-gradient(90deg, var(--secondary-accent-color), var(--primary-color));
 }
 
 .dashboard-nav li {
@@ -2182,7 +2130,7 @@ input:checked + .slider:before {
 
 .dashboard-nav li.active a,
 .dashboard-nav a.active {
-    background: linear-gradient(135deg, var(--primary-color), #0ca6a0);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-accent-color));
     border-color: transparent;
     color: #fff;
     box-shadow: 0 10px 20px rgba(16, 182, 174, 0.22);
@@ -2220,7 +2168,7 @@ input:checked + .slider:before {
 }
 
 .role-welcome-popup--admin {
-    background: linear-gradient(135deg, var(--primary-color), #0ca6a0);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-accent-color));
 }
 
 .role-welcome-popup--gerente {
@@ -2298,7 +2246,7 @@ input:checked + .slider:before {
 /* ===== REDISEÑO GESTION DE RECLUTAS ===== */
 #reclutas-section {
     --reclutas-accent: var(--primary-color);
-    --reclutas-accent-soft: rgba(16, 182, 174, 0.18);
+    --reclutas-accent-soft: rgba(var(--secondary-accent-color-rgb), 0.18);
     --reclutas-bg: linear-gradient(160deg, rgba(255, 255, 255, 0.82), rgba(226, 246, 245, 0.78));
     --reclutas-stroke: rgba(255, 255, 255, 0.55);
     position: relative;
@@ -2311,7 +2259,8 @@ input:checked + .slider:before {
 }
 
 body.admin-view #reclutas-section {
-    --reclutas-accent: #0fb6ae;
+    --reclutas-accent: var(--secondary-accent-color);
+    --reclutas-accent-soft: rgba(var(--secondary-accent-color-rgb), 0.18);
 }
 
 body.gerente-view #reclutas-section {
@@ -2683,7 +2632,7 @@ body.asesor-view #reclutas-section {
 
 #dashboard-section .dashboard-content-section {
     --section-accent: var(--primary-color);
-    --section-accent-rgb: 16, 182, 174;
+    --section-accent-rgb: var(--secondary-accent-color-rgb);
     position: relative;
     border-radius: 22px;
     padding: 22px;
@@ -2694,8 +2643,8 @@ body.asesor-view #reclutas-section {
 }
 
 body.admin-view #dashboard-section .dashboard-content-section {
-    --section-accent: #0fb6ae;
-    --section-accent-rgb: 15, 182, 174;
+    --section-accent: var(--secondary-accent-color);
+    --section-accent-rgb: var(--secondary-accent-color-rgb);
 }
 
 body.gerente-view #dashboard-section .dashboard-content-section {
@@ -2886,4 +2835,418 @@ body.asesor-view #dashboard-section .dashboard-content-section {
     #dashboard-section .dashboard-content-section .section-header-v2 {
         padding: 12px;
     }
+}
+
+/* =====================================================================
+   PASO 4: CORRECCIONES MÓVIL COMPLETAS
+   ===================================================================== */
+
+/* --- Header responsive mejorado --- */
+@media (max-width: 768px) {
+    header {
+        padding: 10px 0;
+    }
+
+    .header-container {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+    }
+
+    .logo-container h1 {
+        font-size: 16px;
+    }
+
+    .logo-container i {
+        font-size: 18px;
+        margin-right: 6px;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: auto;
+    }
+
+    .header-button {
+        padding: 6px 8px;
+        font-size: 13px;
+    }
+
+    .header-button span {
+        display: none;
+    }
+
+    .header-button i {
+        margin-right: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-container {
+        padding: 0 8px;
+    }
+
+    .logo-container h1 {
+        font-size: 14px;
+    }
+}
+
+/* --- Dashboard header y perfil en móvil --- */
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .profile-section {
+        justify-content: flex-start;
+        margin-bottom: 0;
+        width: 100%;
+    }
+
+    .profile-pic-container {
+        width: 56px;
+        height: 56px;
+        margin-right: 12px;
+    }
+
+    .profile-info h2 {
+        font-size: 15px;
+    }
+
+    .profile-role {
+        font-size: 12px;
+    }
+
+    .profile-dropdown {
+        width: 100%;
+    }
+
+    .profile-dropdown-button {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .dropdown-content {
+        width: 100%;
+        left: 0;
+        right: 0;
+    }
+}
+
+/* --- Modales en móvil --- */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 10px auto;
+        max-height: calc(100vh - 20px);
+        overflow-y: auto;
+    }
+
+    .modal-lg .modal-content {
+        width: 100%;
+        margin: 0;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .modal-footer button {
+        width: 100%;
+    }
+}
+
+/* --- Sección de estadísticas en móvil --- */
+@media (max-width: 640px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .stat-card {
+        padding: 15px;
+    }
+
+    .charts-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- Configuración en móvil --- */
+@media (max-width: 768px) {
+    .config-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- Section header en móvil --- */
+@media (max-width: 640px) {
+    #reclutas-section .section-header {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    #reclutas-section .section-header h3 {
+        font-size: 20px;
+    }
+
+    #reclutas-section .section-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    #reclutas-section .search-container {
+        min-width: unset;
+        width: 100%;
+    }
+}
+
+/* =====================================================================
+   PASO 5: DARK MODE EN SECCIONES GLASSMORPHIC
+   ===================================================================== */
+
+/* Secciones del dashboard con glassmorphism en dark mode */
+body.dark-mode #dashboard-section .dashboard-content-section {
+    background: linear-gradient(160deg, rgba(30, 30, 44, 0.95), rgba(37, 40, 54, 0.92));
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.5);
+    color: var(--text-color);
+}
+
+body.dark-mode #dashboard-section .dashboard-content-section::before {
+    opacity: 0.4;
+}
+
+/* Section headers en dark mode */
+body.dark-mode #dashboard-section .dashboard-content-section .section-header,
+body.dark-mode #dashboard-section .dashboard-content-section .section-header-v2 {
+    background: rgba(37, 40, 54, 0.85);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode #dashboard-section .dashboard-content-section .section-header h2,
+body.dark-mode #dashboard-section .dashboard-content-section .section-header h3,
+body.dark-mode #dashboard-section .dashboard-content-section .section-header-v2 h3 {
+    color: var(--text-color);
+}
+
+/* Cards y contenidos en dark mode */
+body.dark-mode #dashboard-section .dashboard-content-section .card,
+body.dark-mode #dashboard-section .dashboard-content-section .content-card,
+body.dark-mode #dashboard-section .dashboard-content-section .chart-container-v2,
+body.dark-mode #dashboard-section .dashboard-content-section .kpi-card-v2,
+body.dark-mode #dashboard-section .dashboard-content-section .admin-management-controls,
+body.dark-mode #dashboard-section .dashboard-content-section .calendar-sidebar,
+body.dark-mode #dashboard-section .dashboard-content-section .calendar-main {
+    background: rgba(37, 40, 54, 0.92);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Filter controls en dark mode */
+body.dark-mode #dashboard-section .dashboard-content-section .filter-controls,
+body.dark-mode #dashboard-section .dashboard-content-section .search-filters,
+body.dark-mode #dashboard-section .dashboard-content-section .section-toolbar {
+    background: rgba(42, 43, 61, 0.9);
+    border-color: rgba(255, 255, 255, 0.07);
+}
+
+/* Inputs dentro del dashboard en dark mode */
+body.dark-mode #dashboard-section .dashboard-content-section input[type="text"],
+body.dark-mode #dashboard-section .dashboard-content-section input[type="email"],
+body.dark-mode #dashboard-section .dashboard-content-section input[type="password"],
+body.dark-mode #dashboard-section .dashboard-content-section input[type="tel"],
+body.dark-mode #dashboard-section .dashboard-content-section input[type="date"],
+body.dark-mode #dashboard-section .dashboard-content-section select,
+body.dark-mode #dashboard-section .dashboard-content-section textarea {
+    background: rgba(42, 43, 61, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+}
+
+/* Tablas en dark mode */
+body.dark-mode #dashboard-section .dashboard-content-section table thead th {
+    background: linear-gradient(180deg, rgba(42, 43, 61, 0.98), rgba(37, 40, 54, 0.98));
+    color: var(--text-color);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode #dashboard-section .dashboard-content-section table tbody tr:hover {
+    background-color: rgba(42, 43, 61, 0.8);
+}
+
+body.dark-mode #dashboard-section .dashboard-content-section table td {
+    border-bottom-color: rgba(255, 255, 255, 0.07);
+    color: var(--text-color);
+}
+
+/* Paginación en dark mode */
+body.dark-mode #dashboard-section .dashboard-content-section .pagination {
+    background: rgba(37, 40, 54, 0.85);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Sección de reclutas en dark mode */
+body.dark-mode #reclutas-section {
+    background: linear-gradient(160deg, rgba(30, 30, 44, 0.95), rgba(37, 40, 54, 0.92));
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode #reclutas-section .section-header {
+    background: rgba(37, 40, 54, 0.85);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode #reclutas-section .card {
+    background: rgba(37, 40, 54, 0.9);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode #reclutas-section .filter-controls {
+    background: rgba(42, 43, 61, 0.9);
+    border-color: rgba(255, 255, 255, 0.07);
+}
+
+body.dark-mode #reclutas-section .reclutas-table-shell {
+    background: rgba(30, 30, 44, 0.95);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode #reclutas-section #reclutas-table th {
+    background: linear-gradient(180deg, rgba(42, 43, 61, 0.98), rgba(37, 40, 54, 0.98));
+    color: var(--text-color);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+body.dark-mode #reclutas-section #reclutas-table td {
+    border-bottom-color: rgba(255, 255, 255, 0.07);
+}
+
+body.dark-mode #reclutas-section #reclutas-table td::before {
+    color: var(--text-light);
+}
+
+body.dark-mode #reclutas-section #reclutas-table tbody tr:hover {
+    background: linear-gradient(90deg, rgba(42, 43, 61, 0.9), rgba(37, 40, 54, 0.9));
+}
+
+body.dark-mode #reclutas-section #reclutas-table .action-btn {
+    background: rgba(42, 43, 61, 0.9);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+}
+
+body.dark-mode #reclutas-section #reclutas-table .folio-display {
+    background: rgba(42, 43, 61, 0.9);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: var(--primary-color);
+}
+
+body.dark-mode #reclutas-section .reclutas-pagination {
+    background: rgba(37, 40, 54, 0.85);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode #reclutas-section .search-container input {
+    background: rgba(42, 43, 61, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+}
+
+body.dark-mode #reclutas-section .filter-group select,
+body.dark-mode #reclutas-section .filter-group input {
+    background: rgba(37, 40, 54, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+}
+
+/* Config y otras secciones en dark mode */
+body.dark-mode #configuracion-section .config-option,
+body.dark-mode #configuracion-section .sessions-header,
+body.dark-mode #gestion-gerentes-section .gerentes-actions,
+body.dark-mode #admin-reclutas-management .bulk-actions,
+body.dark-mode #gerente-panel-section .bulk-actions {
+    background: rgba(42, 43, 61, 0.9);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: var(--text-color);
+}
+
+/* Tarjetas de recluta en mobile dark mode */
+@media (max-width: 768px) {
+    body.dark-mode #reclutas-section #reclutas-table tbody tr {
+        background: rgba(37, 40, 54, 0.95);
+        border-color: rgba(255, 255, 255, 0.1);
+        box-shadow: 0 10px 18px rgba(0, 0, 0, 0.4);
+    }
+
+    body.dark-mode #reclutas-section #reclutas-table td {
+        border-bottom-color: rgba(255, 255, 255, 0.07);
+        color: var(--text-color);
+    }
+}
+
+/* Notificación en dark mode */
+body.dark-mode .notification {
+    background-color: var(--light-color);
+    color: var(--text-color);
+}
+
+/* Dropdown en dark mode */
+body.dark-mode .profile-dropdown-button {
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+/* Sidebar del calendario en dark mode */
+body.dark-mode .calendar-sidebar,
+body.dark-mode .calendar-main {
+    background-color: var(--light-color);
+    color: var(--text-color);
+}
+
+body.dark-mode .calendar-day {
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+body.dark-mode .calendar-day.today {
+    background-color: rgba(0, 123, 255, 0.2);
+}
+
+body.dark-mode .day-name {
+    color: var(--text-color);
+}
+
+/* Scroll del nav en dark mode */
+body.dark-mode .dashboard-nav ul::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+body.dark-mode .dashboard-nav ul::-webkit-scrollbar-thumb {
+    border-color: rgba(30, 30, 44, 0.8);
+}
+
+body.dark-mode .dashboard-nav a {
+    background: rgba(37, 40, 54, 0.7);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+}
+
+body.dark-mode .dashboard-nav a:hover {
+    background: rgba(42, 43, 61, 0.9);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+body.dark-mode .dashboard-nav li.active a,
+body.dark-mode .dashboard-nav a.active {
+    color: #fff;
 }

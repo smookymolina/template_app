@@ -57,6 +57,22 @@ const UI = {
     theme: {
         headerToggle: null,
         settingsSlider: null,
+        /**
+         * Obtiene las claves de almacenamiento para el tema.
+         * Prioriza la clave por usuario cuando estÃ¡ disponible.
+         */
+        getStorageKeys: function() {
+            const keys = [CONFIG.STORAGE_KEYS.THEME];
+            try {
+                const userEmail = (typeof Auth !== 'undefined' && Auth?.currentUser?.email) ? Auth.currentUser.email : null;
+                if (userEmail) {
+                    keys.unshift(`${CONFIG.STORAGE_KEYS.THEME}_${userEmail}`);
+                }
+            } catch (error) {
+                console.warn('No se pudo resolver la clave de tema por usuario:', error);
+            }
+            return keys;
+        },
 
         /**
          * Inicializa el sistema de temas.
@@ -79,7 +95,9 @@ const UI = {
          */
         apply: function(isDark) {
             document.body.classList.toggle('dark-mode', isDark);
+            document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
             this.updateControls(isDark);
+            document.dispatchEvent(new CustomEvent('darkModeToggled', { detail: { isDark } }));
         },
 
         /**
@@ -95,6 +113,10 @@ const UI = {
             }
             if (this.settingsSlider) {
                 this.settingsSlider.checked = isDark;
+            }
+            const legacyToggle = document.getElementById('dark-theme-toggle');
+            if (legacyToggle) {
+                legacyToggle.checked = isDark;
             }
         },
 
@@ -119,7 +141,10 @@ const UI = {
             try {
                 // La preferencia se guarda de forma general, no por usuario,
                 // para mantener la consistencia al iniciar sesión.
-                localStorage.setItem(CONFIG.STORAGE_KEYS.THEME, isDark.toString());
+                const keys = this.getStorageKeys();
+                keys.forEach(key => {
+                    localStorage.setItem(key, isDark.toString());
+                });
             } catch (error) {
                 console.error('❌ Error al guardar preferencia de tema:', error);
             }
@@ -131,7 +156,14 @@ const UI = {
          */
         load: function() {
             try {
-                return localStorage.getItem(CONFIG.STORAGE_KEYS.THEME) === 'true';
+                const keys = this.getStorageKeys();
+                for (const key of keys) {
+                    const stored = localStorage.getItem(key);
+                    if (stored !== null) {
+                        return stored === 'true';
+                    }
+                }
+                return false;
             } catch (error) {
                 console.error('❌ Error al cargar preferencia de tema:', error);
                 return false; // Fallback a modo claro
@@ -147,6 +179,10 @@ const UI = {
             }
             if (this.settingsSlider) {
                 this.settingsSlider.addEventListener('change', () => this.toggle());
+            }
+            const legacyToggle = document.getElementById('dark-theme-toggle');
+            if (legacyToggle && legacyToggle !== this.settingsSlider) {
+                legacyToggle.addEventListener('change', () => this.toggle());
             }
         }
     },
@@ -208,6 +244,52 @@ const UI = {
 },
 
     /**
+     * Cambia el color de acento secundario de la interfaz
+     * @param {string} color - Color en formato hexadecimal (#RRGGBB)
+     */
+    changeSecondaryAccentColor: function(color) {
+        if (!color || !this.isValidColor(color)) {
+            console.warn('⚠️ Color secundario no válido:', color);
+            return;
+        }
+        try {
+            document.documentElement.style.setProperty('--secondary-accent-color', color);
+            // Actualizar también el equivalente RGB para usar en rgba()
+            const r = parseInt(color.slice(1, 3), 16);
+            const g = parseInt(color.slice(3, 5), 16);
+            const b = parseInt(color.slice(5, 7), 16);
+            document.documentElement.style.setProperty('--secondary-accent-color-rgb', `${r}, ${g}, ${b}`);
+            document.dispatchEvent(new CustomEvent('secondaryAccentColorChanged', { detail: { color } }));
+
+            const isAuthAvailable = typeof Auth !== 'undefined' && Auth !== null;
+            const isAuthenticated = isAuthAvailable && typeof Auth.isAuthenticated === 'function' ? Auth.isAuthenticated() : false;
+
+            if (isAuthAvailable && isAuthenticated && Auth.currentUser?.email) {
+                const key = `${CONFIG.STORAGE_KEYS.SECONDARY_ACCENT_COLOR}_${Auth.currentUser.email}`;
+                localStorage.setItem(key, color);
+            } else {
+                localStorage.setItem(CONFIG.STORAGE_KEYS.SECONDARY_ACCENT_COLOR, color);
+            }
+
+            // Actualizar controles del picker secundario
+            document.querySelectorAll('.secondary-color-option').forEach(option => {
+                option.classList.remove('selected');
+                const input = option.querySelector('input');
+                if (input && input.value === color) {
+                    option.classList.add('selected');
+                    input.checked = true;
+                }
+            });
+            const customSecondaryInput = document.getElementById('custom-secondary-accent-color');
+            if (customSecondaryInput) customSecondaryInput.value = color;
+
+            console.log(`🎨 Color secundario ${color} aplicado`);
+        } catch (error) {
+            console.error('❌ Error al cambiar color secundario:', error);
+        }
+    },
+
+    /**
      * Carga las preferencias de tema guardadas
      */
     loadSavedTheme: function() {
@@ -221,35 +303,49 @@ const UI = {
         const isAuthAvailable = typeof Auth !== 'undefined' && Auth !== null;
         const currentUser = isAuthAvailable ? Auth.currentUser : null;
         
+        let savedSecondaryColor = null;
+
         if (currentUser && currentUser.email) {
             // Usuario autenticado: cargar configuración específica
             const userThemeKey = `${CONFIG.STORAGE_KEYS.THEME}_${currentUser.email}`;
             const userColorKey = `${CONFIG.STORAGE_KEYS.PRIMARY_COLOR}_${currentUser.email}`;
-            
+            const userSecondaryKey = `${CONFIG.STORAGE_KEYS.SECONDARY_ACCENT_COLOR}_${currentUser.email}`;
+
             savedTheme = localStorage.getItem(userThemeKey);
             savedColor = localStorage.getItem(userColorKey);
-            
+            savedSecondaryColor = localStorage.getItem(userSecondaryKey);
+
             console.log(`👤 Cargando configuración para: ${currentUser.email}`);
         } else {
             // Sin usuario: cargar configuración temporal o por defecto
             savedTheme = localStorage.getItem(CONFIG.STORAGE_KEYS.THEME);
             savedColor = localStorage.getItem(CONFIG.STORAGE_KEYS.PRIMARY_COLOR);
-            
+            savedSecondaryColor = localStorage.getItem(CONFIG.STORAGE_KEYS.SECONDARY_ACCENT_COLOR);
+
             console.log('🌐 Cargando configuración temporal');
         }
-        
-        // Aplicar tema
-        const isDarkMode = savedTheme === 'true';
-        this.toggleDarkMode(isDarkMode);
-        
+
+        // Aplicar tema (priorizar clave por usuario si existe)
+        const isDarkMode = this.theme && typeof this.theme.load === 'function'
+            ? this.theme.load()
+            : savedTheme === 'true';
+        this.theme.apply(isDarkMode);
+
         // Aplicar color primario
         if (savedColor && this.isValidColor(savedColor)) {
             this.changePrimaryColor(savedColor);
         } else {
             this.changePrimaryColor(CONFIG.DEFAULTS.PRIMARY_COLOR);
         }
-        
-        console.log(`✅ Tema cargado: ${isDarkMode ? 'oscuro' : 'claro'}, Color: ${savedColor || 'default'}`);
+
+        // Aplicar color secundario de acento
+        if (savedSecondaryColor && this.isValidColor(savedSecondaryColor)) {
+            this.changeSecondaryAccentColor(savedSecondaryColor);
+        } else {
+            this.changeSecondaryAccentColor(CONFIG.DEFAULTS.SECONDARY_ACCENT_COLOR);
+        }
+
+        console.log(`✅ Tema cargado: ${isDarkMode ? 'oscuro' : 'claro'}, Color: ${savedColor || 'default'}, Acento: ${savedSecondaryColor || 'default'}`);
         
     } catch (error) {
         console.error('❌ Error al cargar configuraciones:', error);
@@ -344,6 +440,11 @@ initializeForUser: function(usuario) {
             const primaryColor = settings.primary_color || settings.primaryColor;
             if (primaryColor) {
                 this.changePrimaryColor(primaryColor);
+            }
+
+            const secondaryColor = settings.secondary_accent_color || settings.secondaryAccentColor;
+            if (secondaryColor && typeof this.changeSecondaryAccentColor === 'function') {
+                this.changeSecondaryAccentColor(secondaryColor);
             }
 
             if (Object.prototype.hasOwnProperty.call(settings, 'dark_mode') && this.theme && typeof this.theme.apply === 'function') {
@@ -537,8 +638,14 @@ resetUIToDefault: function() {
         document.documentElement.style.setProperty('--primary-dark', this.darkenColor(defaultColor, 20));
         document.documentElement.style.setProperty('--primary-light', this.lightenColor(defaultColor, 80));
         
-        // 2. Remover modo oscuro
-        document.body.classList.remove('dark-mode');
+        // 2. Remover modo oscuro (y sincronizar estado visual)
+        if (this.theme && typeof this.theme.apply === 'function') {
+            this.theme.apply(false);
+        } else {
+            document.body.classList.remove('dark-mode');
+            document.documentElement.setAttribute('data-theme', 'light');
+            document.dispatchEvent(new CustomEvent('darkModeToggled', { detail: { isDark: false } }));
+        }
         
         // 3. Resetear selecciones de colores
         document.querySelectorAll('.color-option').forEach(option => {
@@ -553,10 +660,10 @@ resetUIToDefault: function() {
         }
         
         // 5. Resetear toggle de tema oscuro
-        const darkThemeToggle = document.getElementById('dark-theme-toggle');
-        if (darkThemeToggle) {
-            darkThemeToggle.checked = false;
-        }
+        const darkThemeToggle = document.getElementById('dark-theme-slider');
+        if (darkThemeToggle) darkThemeToggle.checked = false;
+        const legacyToggle = document.getElementById('dark-theme-toggle');
+        if (legacyToggle) legacyToggle.checked = false;
         
         // 6. Resetear otros toggles de configuración
         const configToggles = document.querySelectorAll('#email-notifications, #interview-reminders');
@@ -606,26 +713,8 @@ initializeWithAuth: function() {
  */
 initAuthDependentEvents: function() {
     console.log('🔧 Inicializando eventos dependientes de Auth...');
-    
-    // Toggle modo oscuro con validación de Auth
-    const darkModeToggle = document.getElementById('dark-mode-toggle');
-    if (darkModeToggle) {
-        // Remover listeners anteriores para evitar duplicados
-        darkModeToggle.removeEventListener('click', this._darkModeHandler);
-        
-        // Crear handler con validación
-        this._darkModeHandler = () => {
-            if (typeof Auth !== 'undefined' && Auth.isAuthenticated && Auth.isAuthenticated()) {
-                this.toggleDarkMode();
-            } else {
-                console.warn('⚠️ Debe autenticarse para cambiar el tema');
-                darkModeToggle.checked = !darkModeToggle.checked; // Revertir cambio
-            }
-        };
-        
-        darkModeToggle.addEventListener('click', this._darkModeHandler);
-    }
-    
+    // El tema ya está manejado por theme.init() en initCommonEvents.
+    // Esta función solo configura eventos que realmente requieren Auth.
     console.log('✅ Eventos dependientes de Auth inicializados');
 },
 
@@ -860,7 +949,7 @@ window.testDarkMode = function() {
     
     if (headerToggle) {
         console.log('🔄 Testeando toggle...');
-        UI.toggleDarkMode();
+        UI.theme.toggle();
         
         setTimeout(() => {
             const isNowDark = body.classList.contains('dark-mode');

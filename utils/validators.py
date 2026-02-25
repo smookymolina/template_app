@@ -35,6 +35,7 @@ def validate_login_data(data):
     if not password:
         errors['password'] = 'La contraseña es requerida'
     
+
     if errors:
         raise ValidationError(errors)
     
@@ -165,6 +166,21 @@ def validate_recluta_data(data, is_update=False):
         except (ValueError, TypeError):
             errors['asesor_id'] = 'ID de asesor inválido'
     
+    # Validar fecha_registro si est? presente (YYYY-MM-DD o ISO con hora)
+    normalized_fecha_registro = None
+    if 'fecha_registro' in data:
+        fecha_registro = data.get('fecha_registro')
+        if fecha_registro in (None, ''):
+            pass
+        elif isinstance(fecha_registro, str):
+            fecha_str = fecha_registro.split('T')[0].split(' ')[0]
+            if not validate_date_format(fecha_str):
+                errors['fecha_registro'] = 'Formato de fecha inv?lido. Use YYYY-MM-DD'
+            else:
+                normalized_fecha_registro = fecha_str
+        else:
+            errors['fecha_registro'] = 'Formato de fecha inv?lido. Use YYYY-MM-DD'
+
     if errors:
         raise ValidationError(errors)
     
@@ -186,6 +202,12 @@ def validate_recluta_data(data, is_update=False):
             else:
                 validated_data[field] = data[field].strip() if isinstance(data[field], str) else data[field]
     
+    if normalized_fecha_registro is not None:
+        try:
+            validated_data['fecha_registro'] = datetime.strptime(normalized_fecha_registro, '%Y-%m-%d')
+        except ValueError:
+            raise ValidationError({'fecha_registro': 'Formato de fecha inv?lido. Use YYYY-MM-DD'})
+
     return validated_data
 
 def validate_entrevista_data(data, is_update=False):
