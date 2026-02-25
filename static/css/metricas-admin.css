@@ -306,10 +306,10 @@
 
 /* Tarjeta de Asesor dentro del Equipo */
 .asesor-equipo-card {
-    background: white;
+    background: var(--card-bg, white);
     border-radius: 8px;
     padding: 1rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-color, #d1d5db);
     transition: all 0.3s ease;
     position: relative;
 }
@@ -433,10 +433,10 @@
 
 /* Asesor Independiente Card */
 .asesor-independiente-card {
-    background: white;
+    background: var(--card-bg, white);
     border-radius: 10px;
     padding: 1.25rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--border-color, #d1d5db);
     transition: all 0.3s ease;
     border-left: 4px solid #10b981;
 }

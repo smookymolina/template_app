@@ -10,7 +10,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 1.5rem 0;
-    border-bottom: 2px solid #f1f5f9;
+    border-bottom: 2px solid var(--border-color, #f1f5f9);
     margin-bottom: 2rem;
 }
 
@@ -24,7 +24,7 @@
     margin: 0;
     font-size: 1.75rem;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--text-primary, #1e293b);
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -38,7 +38,7 @@
 }
 
 .last-update {
-    color: #64748b;
+    color: var(--text-secondary, #64748b);
     font-weight: 500;
 }
 
@@ -62,23 +62,23 @@
 .action-separator {
     width: 1px;
     height: 24px;
-    background: #e2e8f0;
+    background: var(--border-color, #e2e8f0);
 }
 
 /* 🎛️ BOTONES V2 */
 .btn-icon-v2 {
     padding: 0.75rem;
-    border: 2px solid #e2e8f0;
-    background: white;
+    border: 2px solid var(--border-color, #e2e8f0);
+    background: var(--card-background, white);
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
-    color: #64748b;
+    color: var(--text-secondary, #64748b);
 }
 
 .btn-icon-v2:hover {
-    border-color: #3b82f6;
-    color: #3b82f6;
+    border-color: var(--primary-color, #3b82f6);
+    color: var(--primary-color, #3b82f6);
     transform: translateY(-1px);
 }
 
@@ -2133,4 +2133,66 @@
 
 #actividad-error-container .alert .btn {
     margin-left: auto;
+}\
+
+/* ?? SOPORTE PARA MODO OSCURO M�TRICAS V2 */
+.dark-mode .section-header-v2 { border-bottom-color: #334155; }
+.dark-mode .action-separator { background: #334155; }
+.dark-mode .section-title-v2 { color: var(--text-primary); }
+
+/* Tabs */
+.dark-mode .tabs-container-v2 { background: #1e293b; border-bottom-color: #334155; }
+.dark-mode .tab-button-v2 { color: #94a3b8; }
+.dark-mode .tab-button-v2:hover { background: #334155; }
+.dark-mode .tab-button-v2.active { color: #3b82f6; }
+
+/* KPI Cards */
+.dark-mode .kpi-card-v2 { background: #1e293b; border-color: #334155; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3); }
+.dark-mode .kpi-number { color: var(--text-primary); }
+.dark-mode .kpi-label { color: #94a3b8; }
+.dark-mode .kpi-icon-v2 { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+
+/* Chart Cards & Sections */
+.dark-mode .chart-card,
+.dark-mode .distribucion-section,
+.dark-mode .insights-section,
+.dark-mode .historical-data-section,
+.dark-mode .summary-card,
+.dark-mode .highlight-card,
+.dark-mode .insight-card-v2 { 
+    background: #1e293b !important; 
+    border-color: #334155 !important; 
+    color: var(--text-primary) !important;
 }
+
+.dark-mode .chart-header h4, 
+.dark-mode .highlight-header h4,
+.dark-mode .insight-header h5 { color: var(--text-primary); }
+
+/* Tables */
+.dark-mode .data-table-v2 { color: var(--text-primary); }
+.dark-mode .data-table-v2 thead th { background: #0f172a; border-bottom-color: #334155; color: #94a3b8; }
+.dark-mode .data-table-v2 tbody td { border-bottom-color: #334155; }
+.dark-mode .data-table-v2 tbody tr:hover { background: #334155; }
+
+/* Forms & Selects */
+.dark-mode .form-select-v2,
+.dark-mode .search-input-v2 { 
+    background: #0f172a; 
+    border-color: #334155; 
+    color: var(--text-primary); 
+}
+
+/* Activity Tab */
+.dark-mode .usuario-online-card,
+.dark-mode .accion-card,
+.dark-mode .usuario-inactivo-card {
+    background: #1e293b;
+    border-color: #334155;
+    color: var(--text-primary);
+}
+.dark-mode .usuario-nombre { color: var(--text-primary); }
+.dark-mode .usuario-email { color: #94a3b8; }
+.dark-mode .period-btn { background: #0f172a; border-color: #334155; color: #94a3b8; }
+.dark-mode .period-btn.active { background: #3b82f6; border-color: #3b82f6; color: white; }
+\\

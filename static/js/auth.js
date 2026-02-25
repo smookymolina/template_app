@@ -239,7 +239,7 @@ const Auth = {
     
 /**
  * Limpia completamente el estado del usuario y configuraciones
- * ✅ FUNCIÓN MEJORADA - Limpieza más completa
+ * ✅ FUNCIÓN MEJORADA - Limpieza más completa pero preservando tema visual
  */
 clearUserState: function() {
     console.log('🧹 Iniciando limpieza completa de estado de usuario...');
@@ -247,9 +247,8 @@ clearUserState: function() {
     // 1. Limpiar usuario actual
     this.currentUser = null;
 
-    // 2. Limpiar localStorage relacionado con usuario
+    // 2. Limpiar localStorage relacionado con usuario (excepto el tema global)
     const userKeys = [
-        CONFIG.STORAGE_KEYS.THEME,
         CONFIG.STORAGE_KEYS.PRIMARY_COLOR,
         'user_preferences',
         'dashboard_settings',
@@ -268,14 +267,12 @@ clearUserState: function() {
         }
     });
 
-    // 2.1. ✅ NUEVO: Limpiar configuraciones específicas por usuario
+    // 2.1. Limpiar configuraciones específicas por usuario (ej. app_theme_usuario@mail.com)
     try {
         const allKeys = Object.keys(localStorage);
         const userSpecificKeys = allKeys.filter(key =>
-            key.includes('_user_') ||
-            key.includes('@') ||
-            key.endsWith('_settings') ||
-            key.startsWith('user_')
+            (key.includes('_user_') || key.includes('@') || key.startsWith('user_')) &&
+            !key.includes('config_') // Preservar configs globales si existen
         );
 
         userSpecificKeys.forEach(key => {
@@ -294,55 +291,51 @@ clearUserState: function() {
         console.warn('⚠️ Error limpiando sessionStorage:', e);
     }
 
-    // 4. Resetear configuraciones CSS a valores por defecto
+    // 4. Resetear UI a valores seguros preservando el tema actual
     this.resetUIToDefault();
 
     // 5. Limpiar elementos DOM dinámicos
     this.cleanupDynamicElements();
 
-    // 6. ✅ NUEVO: Limpiar fotos de perfil en UI
+    // 6. Limpiar fotos de perfil en UI
     this.clearProfileImages();
 
-    // 7. ✅ NUEVO: Notificar a otros módulos de la limpieza
+    // 7. Notificar a otros módulos de la limpieza
     this.notifyCleanupComplete();
 
     console.log('✅ Limpieza completa de estado finalizada');
 },
 
 /**
- * Resetea la UI a configuración por defecto
- * ✅ NUEVA FUNCIÓN
+ * Resetea la UI a configuración por defecto preservando el tema oscuro/claro
  */
 resetUIToDefault: function() {
-    console.log('🎨 Reseteando UI a configuración por defecto...');
+    console.log('🎨 Reseteando UI (preservando tema visual)...');
     
-    // Resetear variables CSS
+    // Resetear variables CSS de color primario únicamente
     const root = document.documentElement;
-    root.style.setProperty('--primary-color', '#007bff');
+    const defaultColor = '#007bff';
+    root.style.setProperty('--primary-color', defaultColor);
     root.style.setProperty('--primary-dark', '#0056b3');
     root.style.setProperty('--primary-light', '#e9f2f9');
     
-    // Remover modo oscuro
-    document.body.classList.remove('dark-mode');
+    // Sincronizar UI.theme si está disponible para asegurar que los controles reflejen la realidad
+    if (window.UI && window.UI.theme && typeof window.UI.theme.load === 'function') {
+        const currentTheme = window.UI.theme.load();
+        window.UI.theme.apply(currentTheme);
+    }
     
-    // Resetear selecciones de color
+    // Resetear selecciones de color en el panel de configuración
     document.querySelectorAll('.color-option').forEach(option => {
         option.classList.remove('selected');
+        const input = option.querySelector('input');
+        if (input && input.value === defaultColor) {
+            option.classList.add('selected');
+            input.checked = true;
+        }
     });
     
-    // Seleccionar color por defecto
-    const defaultColorOption = document.querySelector('input[name="primary-color"][value="#007bff"]');
-    if (defaultColorOption) {
-        defaultColorOption.parentElement.classList.add('selected');
-    }
-    
-    // Resetear toggle de tema oscuro
-    const darkToggle = document.getElementById('dark-theme-toggle');
-    if (darkToggle) {
-        darkToggle.checked = false;
-    }
-    
-    console.log('✅ UI reseteada a configuración por defecto');
+    console.log('✅ UI reseteada (Colores devueltos a default, Tema preservado)');
 },
 
 /**

@@ -73,8 +73,45 @@ body.dark-mode {
     --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+    
+    /* Scrollbar variables */
+    --scrollbar-bg: #1e1e2c;
+    --scrollbar-thumb: #3f3f3f;
+    --scrollbar-thumb-hover: #4b4b4b;
+
     background-color: #181924 !important;
     color-scheme: dark;
+}
+
+/* ===== SCROLLBAR ESTILO GLOBAL ===== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--scrollbar-bg, #f1f1f1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb, #888);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover, #555);
+}
+
+body.dark-mode ::-webkit-scrollbar-track {
+    background: #181924;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+    background: #3f3f3f;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: #4b4b4b;
 }
 
 /* ===== NAVEGACIÓN ESPECÍFICA POR ROLES ===== */
@@ -6926,3 +6963,29 @@ body.login-page.dark-mode .tracking-pill {
         padding: 12px;
     }
 }
+\
+
+/* ?? ESTILO UNIFICADO PARA BOTONES EN DASHBOARD */
+.dashboard-content-section .btn-primary, 
+.dashboard-content-section .btn-secondary, 
+.dashboard-content-section .btn-warning, 
+.dashboard-content-section .btn-danger, 
+.dashboard-content-section .btn-icon-v2, 
+.dashboard-content-section .btn-primary-v2, 
+.dashboard-content-section .btn-secondary-v2, 
+.dashboard-content-section .btn-action {
+    border-radius: 12px !important;
+    transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease !important;
+}
+
+.dashboard-content-section .btn-primary:hover, 
+.dashboard-content-section .btn-secondary:hover, 
+.dashboard-content-section .btn-warning:hover, 
+.dashboard-content-section .btn-danger:hover, 
+.dashboard-content-section .btn-icon-v2:hover, 
+.dashboard-content-section .btn-primary-v2:hover, 
+.dashboard-content-section .btn-secondary-v2:hover, 
+.dashboard-content-section .btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}\\

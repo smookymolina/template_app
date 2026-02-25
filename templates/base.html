@@ -17,6 +17,32 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/fichas-calculator.css') }}?v={{ v }}">
     <link rel="icon" href="{{ url_for('static', filename='img/freted.png') }}" type="image/png">
     {% block extra_css %}{% endblock %}
+
+    <!-- Script para prevenir Flash of Unstyled Content (FOUC) -->
+    <script>
+        (function() {
+            try {
+                // Detectar preferencia guardada (general o por usuario si es posible)
+                const themeKey = 'app_theme'; 
+                // Nota: No podemos saber el usuario aquí fácilmente sin pasar variables de Flask, 
+                // pero podemos buscar en todas las claves posibles o usar la general.
+                let isDark = localStorage.getItem(themeKey) === 'true';
+                
+                // Si no hay preferencia, usar la del sistema
+                if (localStorage.getItem(themeKey) === null) {
+                    isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                }
+                
+                if (isDark) {
+                    document.documentElement.classList.add('dark-mode');
+                    document.body && document.body.classList.add('dark-mode');
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                }
+            } catch (e) {
+                console.error('Error in early theme application:', e);
+            }
+        })();
+    </script>
 </head>
 <body class="{% block body_class %}{% endblock %}">
     <!-- Header -->

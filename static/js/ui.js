@@ -59,14 +59,15 @@ const UI = {
         settingsSlider: null,
         /**
          * Obtiene las claves de almacenamiento para el tema.
-         * Prioriza la clave por usuario cuando estÃ¡ disponible.
+         * Prioriza la clave por usuario cuando está disponible.
          */
         getStorageKeys: function() {
             const keys = [CONFIG.STORAGE_KEYS.THEME];
             try {
-                const userEmail = (typeof Auth !== 'undefined' && Auth?.currentUser?.email) ? Auth.currentUser.email : null;
-                if (userEmail) {
-                    keys.unshift(`${CONFIG.STORAGE_KEYS.THEME}_${userEmail}`);
+                // Verificar si Auth está disponible globalmente
+                const isAuthAvailable = typeof window.Auth !== 'undefined' && window.Auth?.currentUser?.email;
+                if (isAuthAvailable) {
+                    keys.unshift(`${CONFIG.STORAGE_KEYS.THEME}_${window.Auth.currentUser.email}`);
                 }
             } catch (error) {
                 console.warn('No se pudo resolver la clave de tema por usuario:', error);
@@ -86,6 +87,23 @@ const UI = {
             const savedTheme = this.load();
             this.apply(savedTheme);
             this.addEventListeners();
+            
+            // Escuchar cambios en la preferencia del sistema
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+                // Solo aplicar si no hay una preferencia guardada explícitamente
+                const keys = this.getStorageKeys();
+                let hasExplicitPreference = false;
+                for (const key of keys) {
+                    if (localStorage.getItem(key) !== null) {
+                        hasExplicitPreference = true;
+                        break;
+                    }
+                }
+                if (!hasExplicitPreference) {
+                    this.apply(e.matches);
+                }
+            });
+            
             console.log('✅ Sistema de temas inicializado.');
         },
 
@@ -95,6 +113,7 @@ const UI = {
          */
         apply: function(isDark) {
             document.body.classList.toggle('dark-mode', isDark);
+            document.documentElement.classList.toggle('dark-mode', isDark);
             document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
             this.updateControls(isDark);
             document.dispatchEvent(new CustomEvent('darkModeToggled', { detail: { isDark } }));
@@ -139,8 +158,6 @@ const UI = {
          */
         save: function(isDark) {
             try {
-                // La preferencia se guarda de forma general, no por usuario,
-                // para mantener la consistencia al iniciar sesión.
                 const keys = this.getStorageKeys();
                 keys.forEach(key => {
                     localStorage.setItem(key, isDark.toString());
@@ -151,8 +168,8 @@ const UI = {
         },
 
         /**
-         * Carga la preferencia de tema desde localStorage.
-         * @returns {boolean} - Devuelve true si el modo oscuro estaba guardado, de lo contrario false.
+         * Carga la preferencia de tema desde localStorage o sistema.
+         * @returns {boolean} - Devuelve true si el modo oscuro debe activarse.
          */
         load: function() {
             try {
@@ -163,10 +180,11 @@ const UI = {
                         return stored === 'true';
                     }
                 }
-                return false;
+                // Si no hay nada guardado, usar preferencia del sistema
+                return window.matchMedia('(prefers-color-scheme: dark)').matches;
             } catch (error) {
                 console.error('❌ Error al cargar preferencia de tema:', error);
-                return false; // Fallback a modo claro
+                return false; 
             }
         },
 
@@ -325,10 +343,8 @@ const UI = {
             console.log('🌐 Cargando configuración temporal');
         }
 
-        // Aplicar tema (priorizar clave por usuario si existe)
-        const isDarkMode = this.theme && typeof this.theme.load === 'function'
-            ? this.theme.load()
-            : savedTheme === 'true';
+        // Aplicar tema (usar la lógica centralizada de theme.load)
+        const isDarkMode = this.theme.load();
         this.theme.apply(isDarkMode);
 
         // Aplicar color primario
