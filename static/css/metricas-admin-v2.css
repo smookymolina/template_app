@@ -696,26 +696,67 @@
 
 /* ðŸ“± RESPONSIVE DESIGN */
 @media (max-width: 768px) {
+    .section-header-v2 {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.25rem;
+        padding: 1rem 0;
+    }
+
+    .header-actions-v2 {
+        width: 100%;
+        justify-content: space-between;
+    }
+
     .header-content-v2 h3 {
         font-size: 1.5rem;
     }
 
     .kpis-grid-v2 {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
+        gap: 1rem;
     }
 
     .distribucion-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
+        gap: 1rem;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .chart-container-v2, .distribucion-stats {
+        width: 100% !important;
+    }
+
+    .insights-grid-v2,
+    .summary-cards-grid,
+    .highlights-grid,
+    .usuarios-online-grid,
+    .acciones-grid,
+    .usuarios-inactivos-grid,
+    .gerentes-grid-container {
+        grid-template-columns: 1fr !important;
+        gap: 1rem;
     }
 
     .tabs-container-v2 {
-        overflow-x: scroll;
+        overflow-x: auto;
+        display: flex;
         scrollbar-width: none;
         -ms-overflow-style: none;
+        padding: 0.5rem;
+        margin: 0 -1rem;
+        width: calc(100% + 2rem);
     }
 
     .tabs-container-v2::-webkit-scrollbar {
         display: none;
+    }
+
+    .tab-button-v2 {
+        flex: 0 0 auto;
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
     }
 
     .controls-row {
@@ -730,6 +771,31 @@
 
     .search-input-v2:focus {
         width: 100%;
+    }
+
+    /* Evitar que contenedores se corten */
+    .tab-content-v2 {
+        padding: 1rem 0;
+    }
+
+    .chart-container-large,
+    .chart-container-medium,
+    .chart-container-v2 {
+        padding: 1rem;
+        height: 300px; /* Altura fija para evitar colapsos */
+    }
+
+    .table-responsive-v2 {
+        margin: 0 -1rem;
+        width: calc(100% + 2rem);
+        padding: 0 1rem;
+    }
+
+    .kpi-card-v2, 
+    .insight-card-v2, 
+    .summary-card, 
+    .highlight-card {
+        padding: 1.25rem;
     }
 }
 
@@ -2135,7 +2201,7 @@
     margin-left: auto;
 }\
 
-/* ?? SOPORTE PARA MODO OSCURO MÉTRICAS V2 */
+/* ?? SOPORTE PARA MODO OSCURO Mï¿½TRICAS V2 */
 .dark-mode .section-header-v2 { border-bottom-color: #334155; }
 .dark-mode .action-separator { background: #334155; }
 .dark-mode .section-title-v2 { color: var(--text-primary); }
@@ -2196,3 +2262,55 @@
 .dark-mode .period-btn { background: #0f172a; border-color: #334155; color: #94a3b8; }
 .dark-mode .period-btn.active { background: #3b82f6; border-color: #3b82f6; color: white; }
 \\
+\
+
+/* ?? FIX DEFINITIVO DE DESBORDAMIENTO Mï¿½VIL */
+@media (max-width: 768px) {
+    /* Forzar que el contenedor principal no tenga scroll lateral propio si no es necesario */
+    .dashboard-content-section, #estadisticas-section {
+        padding: 10px !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+    }
+
+    /* Eliminar anchos mï¿½nimos que causan cortes */
+    .kpi-card-v2, .insight-card-v2, .summary-card, .chart-card, .highlight-card {
+        min-width: 0 !important;
+        width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Corregir las filas que usan flex y pueden salirse */
+    .controls-row, .header-actions-v2, .kpi-content-v2, .summary-data {
+        flex-wrap: wrap !important;
+    }
+
+    /* Asegurar que las imï¿½genes y avatares no empujen el contenedor */
+    .gerente-avatar-container, .gerente-foto {
+        max-width: 100% !important;
+    }
+
+    /* Grï¿½ficos responsivos */
+    .chart-container-large, .chart-container-medium {
+        width: 100% !important;
+        padding: 5px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Tablas: Forzar el contenedor de scroll para que NO corte el layout general */
+    .table-responsive-v2 {
+        display: block !important;
+        width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Ajustar fuentes para evitar que textos largos rompan cajas */
+    .kpi-number { font-size: 1.5rem !important; }
+    .section-title-v2 { font-size: 1.1rem !important; }
+}\\

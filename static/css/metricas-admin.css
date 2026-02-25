@@ -3151,3 +3151,42 @@ body.gerente-view .gerente-only {
         background: rgba(255,255,255,0.05);
     }
 }
+\
+
+/* ?? MEJORAS DE VISTA MÓVIL MÉTRICAS ADMIN */
+@media (max-width: 768px) {
+    .metricas-split, 
+    .kpi-consolidado,
+    .performance-metrics,
+    .insights-grid,
+    .gerentes-grid-container {
+        grid-template-columns: 1fr !important;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .ranking-card.gerente-ranking {
+        grid-template-columns: 1fr !important;
+        text-align: center;
+        padding: 1rem;
+    }
+
+    .performance-metrics {
+        justify-content: center;
+        flex-direction: row !important;
+        flex-wrap: wrap;
+    }
+
+    .insight-card {
+        width: 100%;
+    }
+
+    .equipo-detalle {
+        overflow-x: auto;
+    }
+
+    .metricas-propias, .metricas-equipo {
+        width: 100%;
+    }
+}\\

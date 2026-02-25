@@ -6989,3 +6989,46 @@ body.login-page.dark-mode .tracking-pill {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }\\
+\
+
+/* ?? MEJORAS DE ACCESIBILIDAD MÓVIL (AUDIT) */
+@media (max-width: 768px) {
+    /* Ajuste de Tabs de Dashboard para evitar amontonamiento */
+    .dashboard-nav ul {
+        display: flex;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+        padding-bottom: 5px;
+    }
+    
+    .dashboard-nav ul::-webkit-scrollbar {
+        display: none;
+    }
+    
+    .dashboard-nav li {
+        flex: 0 0 auto;
+        margin-right: 10px;
+    }
+    
+    /* Header más compacto en móvil */
+    header {
+        padding: 10px 15px;
+    }
+    
+    .header-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .user-profile-header {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    /* Botones más táctiles */
+    .btn-primary, .btn-secondary, .btn-danger, .btn-action {
+        min-height: 44px;
+        padding: 10px 15px;
+    }
+}\\
