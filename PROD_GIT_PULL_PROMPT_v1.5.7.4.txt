@@ -1,0 +1,445 @@
+###########################################################################
+#                                                                         #
+#   TEMPLATE ESTANDARIZADO DE ACTUALIZACION EN PRODUCCION                 #
+#   Linux / Nginx + Gunicorn / SQLite o MySQL                             #
+#                                                                         #
+###########################################################################
+
+# =========================================================================
+# BLOQUE DE VERSION
+# =========================================================================
+# VERSION      : 1.5.7.4
+# BRANCH       : 1.5.7.4
+# FECHA        : 2026-02-26
+# PROBADO EN DESARROLLO : SI
+# DESCRIPCION  : Dark mode, colores de acento secundario, tablas responsivas
+#                y mejoras de UI/CSS en panel admin y metricas
+# =========================================================================
+
+
+# =========================================================================
+# ██████╗  █████╗  ██████╗██╗  ██╗██╗   ██╗██████╗
+# ██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██║   ██║██╔══██╗
+# ██████╔╝███████║██║     █████╔╝ ██║   ██║██████╔╝
+# ██╔══██╗██╔══██║██║     ██╔═██╗ ██║   ██║██╔═══╝
+# ██████╔╝██║  ██║╚██████╗██║  ██╗╚██████╔╝██║
+# ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝
+#
+#   *** SIN BACKUP, NO CONTINUAR ***
+#   *** ESTO ES OBLIGATORIO ***
+#   *** PRIMER PASO SIEMPRE ***
+# =========================================================================
+
+=============================================================================
+PASO 1: BACKUP COMPLETO (CRITICO - OBLIGATORIO ANTES DE CUALQUIER CAMBIO)
+=============================================================================
+
+   cd /var/www/template_app
+   TS=$(date +%Y%m%d_%H%M%S)
+   BACKUP_DIR=/var/backups/template_app/$TS
+   mkdir -p "$BACKUP_DIR"
+
+   # 1A) BASE DE DATOS (PRIORIDAD MAXIMA)
+   # -------------------------------------------------------
+   # SQLite (predeterminado):
+   cp instance/template_app.db "$BACKUP_DIR/template_app.db"
+   echo "[OK] Base de datos respaldada"
+
+   # MySQL (si aplica):
+   # set -a && [ -f .env ] && . ./.env && set +a
+   # mysqldump -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h "${MYSQL_HOST}" "${MYSQL_DB}" \
+   #   > "$BACKUP_DIR/db.sql"
+   # echo "[OK] MySQL respaldado"
+
+   # 1B) ARCHIVOS SUBIDOS (fotos y documentos)
+   # -------------------------------------------------------
+   tar -czf "$BACKUP_DIR/uploads.tar.gz" uploads/
+   echo "[OK] Uploads respaldados"
+
+   # 1C) ESTADO DE MIGRACIONES
+   # -------------------------------------------------------
+   source .venv/bin/activate
+   flask db current > "$BACKUP_DIR/db_current.txt" 2>&1 || \
+     echo "No migrations applied" > "$BACKUP_DIR/db_current.txt"
+   echo "[OK] Estado de migraciones guardado"
+
+   # 1D) EXPORT DE DATOS CSV (recomendado)
+   # -------------------------------------------------------
+   python scripts/export_data.py 2>/dev/null && \
+     LATEST=$(ls -dt backup_* 2>/dev/null | head -1) && \
+     [ -n "$LATEST" ] && mv "$LATEST" "$BACKUP_DIR/" && echo "[OK] CSV exportado"
+
+   # VERIFICAR QUE EL BACKUP EXISTE ANTES DE CONTINUAR
+   ls -lh "$BACKUP_DIR"
+   echo ""
+   echo "===> BACKUP COMPLETO EN: $BACKUP_DIR <=="
+   echo "===> CONTINUA SOLO SI VES LOS ARCHIVOS ARRIBA <=="
+
+=============================================================================
+PASO 1B: RUTA RAPIDA — COPIAR Y PEGAR COMPLETO (post-backup)
+=============================================================================
+   # EJECUTAR SOLO DESPUES DEL PASO 1 COMPLETADO Y VERIFICADO
+
+   cd /var/www/template_app
+   git status -sb
+   git stash push -u -m "prod-pre-update-$TS"
+   git fetch --all --prune
+   git checkout 1.5.7.4 2>/dev/null || git checkout -b 1.5.7.4 origin/1.5.7.4
+   git pull --ff-only origin 1.5.7.4
+   source .venv/bin/activate
+   python -m pip install -r requirements.txt --no-cache-dir
+   sudo systemctl restart gunicorn
+   sudo systemctl restart nginx
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo chmod 755 /var/www/template_app/instance/
+   sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
+   sudo chown -R www-data:www-data /var/www/template_app/static/
+   sudo rm -rf /var/cache/nginx/*
+   sudo systemctl restart nginx
+   curl -I https://tu-dominio
+   echo "=== DESPLIEGUE v1.5.7.4 COMPLETO ==="
+
+=============================================================================
+PASO 2: VERIFICAR ESTADO DEL REPOSITORIO
+=============================================================================
+   cd /var/www/template_app
+
+   git rev-parse --show-toplevel          # Confirmar directorio correcto
+   git status -sb                         # Ver cambios locales
+   git branch --show-current              # Ver branch actual
+   git remote -v                          # Verificar remote
+
+   # Si hay cambios locales no commiteados:
+   git stash push -u -m "prod-pre-update-$TS"
+
+=============================================================================
+PASO 3: AUTENTICACION Y GIT PULL
+=============================================================================
+   cd /var/www/template_app
+
+   # 3A) Si git pide autenticacion (token expirado o primera vez):
+   #   git remote set-url origin https://<TOKEN>@github.com/smookymolina/template_app.git
+   #   Generar token: GitHub > Settings > Developer settings >
+   #     Personal access tokens > Tokens (classic) > scope: repo
+
+   git fetch --all --prune
+   git checkout 1.5.7.4 2>/dev/null || git checkout -b 1.5.7.4 origin/1.5.7.4
+   git pull --ff-only origin 1.5.7.4
+   # Si falla --ff-only: DETENERSE. No hacer merge en produccion sin revision manual.
+
+=============================================================================
+PASO 4: DEPENDENCIAS Y BASE DE DATOS
+=============================================================================
+   cd /var/www/template_app
+   source .venv/bin/activate
+
+   # 4A) Actualizar dependencias Python
+   python -m pip install --upgrade pip
+   python -m pip install -r requirements.txt --no-cache-dir
+
+   # 4B) Migraciones de Flask-Migrate
+   # -------------------------------------------------------
+   # *** NO HAY MIGRACIONES DE BASE DE DATOS EN ESTA VERSION ***
+   #
+   # v1.5.7.4 es una version de UI y CSS pura. No se agregaron,
+   # modificaron ni eliminaron tablas o columnas.
+   # El comando flask db upgrade es seguro de ejecutar (no-op):
+   flask db upgrade
+   # Debe imprimir "INFO  [alembic.runtime.migration] Running upgrade ..."
+   # o simplemente no hacer nada si ya estaba al dia.
+   #
+   # Unico cambio en capa de datos:
+   # utils/validators.py — validacion y normalizacion de fecha_registro
+   # en el endpoint de creacion/edicion de reclutas (no requiere migracion).
+   # -------------------------------------------------------
+
+   # 4C) Verificar esquema (sin cambios esperados)
+   python scripts/diagnostico_db.py 2>/dev/null || echo "Script no disponible"
+
+=============================================================================
+PASO 5: LIMPIAR CACHE (IMPORTANTE EN ESTA VERSION)
+=============================================================================
+   # Esta version tiene cambios grandes en CSS y JS estaticos.
+   # Limpiar cache de Nginx para forzar que los usuarios reciban los nuevos archivos.
+
+   # 5A) Cache de Nginx
+   sudo rm -rf /var/cache/nginx/*
+   sudo systemctl restart nginx
+
+   # 5B) Cache de Redis (metricas - opcional)
+   systemctl status redis --no-pager || systemctl status redis-server --no-pager
+   redis-cli ping   # Debe responder PONG
+   redis-cli KEYS "metrics_cache_*" | xargs -r redis-cli DEL
+
+   # 5C) Forzar nuevas versiones de estaticos (verificar en base.html que ?v= cambia)
+   grep -r "version\|?v=" templates/base.html | head -5
+
+=============================================================================
+PASO 6: REINICIAR SERVICIOS Y VALIDAR
+=============================================================================
+   # 6A) Reiniciar en orden
+   sudo systemctl restart gunicorn
+   sudo systemctl restart nginx
+
+   # 6B) Verificar estado
+   sudo systemctl status gunicorn --no-pager
+   sudo systemctl status nginx --no-pager
+
+   # 6C) Ping basico al sitio
+   curl -I https://tu-dominio
+
+   # 6D) VALIDACIONES DE v1.5.7.4 — UI Y DARK MODE
+   # -------------------------------------------------------
+   #
+   # [ ] DARK MODE — ACTIVAR Y PERSISTIR
+   #     - Login como cualquier usuario
+   #     - Ir a Configuracion > toggle de modo oscuro
+   #     - La app debe cambiar a fondo oscuro SIN parpadeo al cargar (anti-FOUC)
+   #     - Recargar la pagina: debe mantenerse en modo oscuro
+   #     - Cerrar sesion e iniciar otra: el tema debe mantenerse (per user key)
+   #
+   # [ ] DARK MODE — DETECCION DE PREFERENCIA DEL SISTEMA
+   #     - Si el SO tiene modo oscuro activado y NO se ha guardado preferencia:
+   #       la app debe abrirse directamente en modo oscuro
+   #     - Cambiar la preferencia en la app debe SOBRESCRIBIR la del sistema
+   #
+   # [ ] COLOR DE ACENTO SECUNDARIO
+   #     - Ir a Configuracion > seccion de colores/acento
+   #     - Debe aparecer un selector de acento secundario con opciones de color
+   #     - Cambiar el color: los elementos de acento secundario deben cambiar
+   #     - Recargar: el color debe persistir
+   #
+   # [ ] TABLAS DE RECLUTAS RESPONSIVAS (MOVIL)
+   #     - Abrir el panel de reclutas desde un movil o DevTools < 768px
+   #     - Las filas de la tabla deben transformarse en tarjetas apiladas
+   #     - Cada campo debe mostrar su etiqueta (Nombre:, Asesor:, etc.)
+   #     - Los nombres/correos largos deben truncarse con "..." (no desbordar)
+   #
+   # [ ] TABLA ADMIN DE RECLUTAS RESPONSIVA
+   #     - Mismo comportamiento en el Panel Administrativo (admin/gerente)
+   #     - Las tarjetas deben mostrar data-label en cada celda
+   #
+   # [ ] METRICAS EN DARK MODE
+   #     - Ir a la seccion de Metricas/Dashboard
+   #     - Con modo oscuro activo: cards, tablas, tabs y graficas deben
+   #       mostrarse con fondo oscuro, texto claro, sin fondo blanco visible
+   #
+   # [ ] FECHA DE REGISTRO EN MODAL DE NUEVO RECLUTA
+   #     - Crear un nuevo recluta
+   #     - El modal debe incluir un campo de fecha de registro (date input)
+   #     - Guardar con y sin fecha: no debe generar error 422/500
+   #
+   # [ ] NAV SCROLLER
+   #     - En el header de la app, las pestanas de navegacion deben tener
+   #       scrollbar estilizado (delgado, con color del acento)
+   #     - En movil, las pestanas deben ser deslizables horizontalmente
+   #
+   # -------------------------------------------------------
+
+   # 6E) Revisar stash si se guardo antes:
+   git stash list
+   # Decidir si aplicar:  git stash pop
+
+=============================================================================
+PASO 7: PERMISOS (ULTIMO PASO - SIEMPRE EJECUTAR)
+=============================================================================
+   # 7A) Base de datos
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chmod 755 /var/www/template_app/instance/
+   sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
+
+   # 7B) Uploads (fotos, documentos)
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo chmod -R 755 /var/www/template_app/uploads/
+
+   # 7C) Estaticos y templates
+   sudo chown -R www-data:www-data /var/www/template_app/static/
+   sudo chown -R www-data:www-data /var/www/template_app/templates/
+
+   # 7D) Verificacion final
+   curl -I https://tu-dominio
+   echo "===> DESPLIEGUE v1.5.7.4 COMPLETO. PERMISOS ACTUALIZADOS. <==="
+
+=============================================================================
+CAMBIOS EN ESTA VERSION — DETALLE TECNICO
+=============================================================================
+   *** PROBADO Y FUNCIONANDO EN DESARROLLO ***
+
+   VERSION: 1.5.7.4 — 2026-02-26
+
+   *** SIN MIGRACIONES DE BASE DE DATOS — SOLO CSS/JS/TEMPLATES ***
+
+   1) DARK MODE Y PERSISTENCIA DE TEMA
+      - Script anti-FOUC inyectado en <head> de base.html: aplica el tema
+        ANTES de que el browser pinte la pagina, eliminando el parpadeo blanco.
+      - El tema se guarda con clave por usuario (email) cuando hay sesion activa,
+        y con clave general cuando no la hay.
+      - Soporte para prefers-color-scheme: si el SO tiene modo oscuro y el
+        usuario no ha guardado una preferencia, la app usa la del sistema.
+      - El toggle aplica .dark-mode tanto a <body> como a <html> (documentElement)
+        y el atributo data-theme="dark" para compatibilidad con selectores CSS.
+      - Evento personalizado darkModeToggled disparado al cambiar el tema.
+      - Auth.clearUserState ahora preserva el tema global al cerrar sesion.
+
+   2) COLOR DE ACENTO SECUNDARIO
+      - Nueva variable CSS --secondary-accent-color disponible en toda la app.
+      - Seccion en Configuracion para elegir el color de acento secundario
+        (paleta predefinida + selector de color personalizado).
+      - Las variables :root se consolidaron en styles.css (antes duplicadas
+        en fixes.css). Fixes.css ahora solo referencia las variables.
+
+   3) TABLAS DE RECLUTAS RESPONSIVAS
+      - En pantallas < 768px las tablas de reclutas y del panel admin se
+        convierten en tarjetas apiladas con etiquetas por campo (data-label).
+      - Las celdas con texto largo (nombre, correo, empresa) usan .cell-truncate
+        para mostrar "..." sin desbordar el contenedor.
+      - admin-reclutas-management.js y reclutas.js actualizados para incluir
+        atributos data-label en cada celda de las filas generadas via JS.
+
+   4) DARK MODE EN METRICAS ADMIN
+      - Reglas .dark-mode extensas para metricas-admin-v2.css y metricas-admin.css:
+        cards, tablas, tabs, formularios y graficas adaptados al modo oscuro.
+
+   5) CAMPO FECHA DE REGISTRO EN MODAL DE RECLUTA
+      - El modal de nuevo/editar recluta ahora incluye un campo date input
+        para fecha_registro.
+      - reclutas.js normaliza y formatea la fecha antes de enviarla al API.
+      - utils/validators.py valida y normaliza fecha_registro (acepta YYYY-MM-DD
+        e ISO con hora), retornando un objeto datetime.
+
+   6) NAVEGACION — SCROLLER ESTILIZADO
+      - El scroller horizontal del nav (.dashboard-nav ul) tiene scrollbar
+        delgado con color del acento primario (scrollbar-color CSS).
+      - Compatible con Chrome (::-webkit-scrollbar) y Firefox (scrollbar-width).
+
+   ARCHIVOS NUEVOS:
+   * (ninguno)
+
+   ARCHIVOS MODIFICADOS:
+   * static/css/fixes.css                     — Consolidacion de variables,
+                                                reglas de nav scroller,
+                                                tablas responsivas movil,
+                                                dark-mode glassmorphic tweaks
+   * static/css/styles.css                    — Variables :root centralizadas,
+                                                reglas dark-mode globales
+   * static/css/metricas-admin-v2.css         — Dark mode para metricas v2
+   * static/css/metricas-admin.css            — Dark mode para metricas v1
+   * static/css/admin-reclutas-management.css — Tablas responsivas admin
+   * static/js/ui.js                          — Sistema de temas: per-user keys,
+                                                prefers-color-scheme, anti-FOUC,
+                                                darkModeToggled event
+   * static/js/auth.js                        — clearUserState preserva tema global
+   * static/js/config.js                      — Claves de almacenamiento de acento
+   * static/js/configuracion.js               — UI de acento secundario,
+                                                cambio/guardado de acento por usuario
+   * static/js/reclutas.js                    — fecha_registro input, data-labels
+                                                para tablas responsivas
+   * static/js/admin-reclutas-management.js   — data-labels para tablas responsivas
+   * templates/base.html                      — Script anti-FOUC en <head>
+   * templates/components/modals.html         — Campo date input fecha_registro
+   * templates/components/seccion_configuracion.html — UI acento secundario
+   * templates/components/seccion_reclutas.html — Ajustes de estructura HTML
+   * utils/validators.py                      — Validacion de fecha_registro
+
+   SIN CAMBIOS EN:
+   * models/                  — Sin cambios
+   * routes/                  — Sin cambios
+   * migrations/              — Sin migraciones nuevas
+   * requirements.txt         — Sin nuevas dependencias
+
+=============================================================================
+TROUBLESHOOTING
+=============================================================================
+A) Error de autenticacion en git pull:
+   git remote set-url origin https://<TOKEN>@github.com/smookymolina/template_app.git
+   git remote -v   # verificar
+
+B) Error 500 despues del pull:
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo systemctl restart gunicorn
+
+C) La app sigue en modo claro despues del pull (cache de CSS/JS):
+   sudo rm -rf /var/cache/nginx/*
+   sudo systemctl restart nginx
+   # En el navegador: Ctrl+Shift+R (hard refresh)
+   # Si persiste: DevTools > Network > "Disable cache" marcado
+
+D) El modo oscuro parpadea al cargar (FOUC):
+   - Verificar que templates/base.html tiene el script inline en el <head>
+     antes del </head>
+   - El script debe estar ANTES de cualquier link CSS
+   grep -A5 "prevenir Flash" /var/www/template_app/templates/base.html
+
+E) El color de acento secundario no persiste:
+   - Verificar en consola del navegador que CONFIG.STORAGE_KEYS tiene la
+     clave de acento secundario definida
+   - Limpiar localStorage del navegador y volver a configurar:
+     localStorage.clear() en consola (pierdes todas las preferencias)
+
+F) Las tablas de reclutas no se vuelven tarjetas en movil:
+   - Verificar que admin-reclutas-management.css se carga (Network tab)
+   - Verificar que las filas generadas por JS incluyen data-label en los <td>
+   - Hard refresh: Ctrl+Shift+R para descartar JS cacheado
+
+G) Campo fecha_registro da error 422 al guardar recluta:
+   - Verificar que el valor enviado es formato YYYY-MM-DD o vacio/null
+   - Revisar logs de gunicorn:
+     sudo journalctl -u gunicorn --no-pager -n 50
+
+H) Redis no responde:
+   sudo systemctl start redis
+   redis-cli ping   # debe responder PONG
+
+I) CSS o JS con cache viejo (general):
+   sudo rm -rf /var/cache/nginx/*
+   sudo systemctl restart nginx
+   # Hard refresh: Ctrl+Shift+R
+
+J) Panel de Gerente no muestra reclutas (herencia de v1.5.7.2):
+   - Verificar que main.js incluya handleGerentePanelSection()
+   - Hard refresh del navegador (Ctrl+Shift+R)
+
+=============================================================================
+ROLLBACK — SI ALGO FALLA DESPUES DEL DESPLIEGUE
+=============================================================================
+   # Restaurar base de datos:
+   cp "$BACKUP_DIR/template_app.db" instance/template_app.db
+
+   # Restaurar uploads:
+   tar -xzf "$BACKUP_DIR/uploads.tar.gz" -C /var/www/template_app/
+
+   # Regresar al branch anterior:
+   git checkout 1.5.7.2
+
+   # Reinstalar dependencias:
+   source .venv/bin/activate
+   python -m pip install -r requirements.txt --no-cache-dir
+
+   # Limpiar cache de Nginx:
+   sudo rm -rf /var/cache/nginx/*
+
+   # Reiniciar servicios:
+   sudo systemctl restart gunicorn && sudo systemctl restart nginx
+
+   # Restaurar permisos:
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+
+   echo "===> ROLLBACK A v1.5.7.2 COMPLETO. VERIFICAR EN EL NAVEGADOR. <==="
+
+=============================================================================
+NOTAS PERMANENTES (NO CAMBIAR ENTRE VERSIONES)
+=============================================================================
+- SIEMPRE hacer PASO 1 (backup) ANTES de cualquier cambio.
+- SIEMPRE ejecutar PASO 7 (permisos) AL FINAL, sin excepcion.
+- NUNCA hacer merge manual en produccion.
+- NUNCA eliminar la BD directamente — restaurar desde backup.
+- NUNCA usar --no-verify ni force push en produccion.
+- El backup permite rollback inmediato si algo falla.
+- Redis debe estar corriendo para metricas y notificaciones en tiempo real.
+- Los archivos estaticos pueden estar en cache del navegador despues de un update.
+- La variable $TS del PASO 1 debe usarse en los comandos siguientes del mismo shell.
+- En versiones de solo UI (como esta), el PASO 5 (limpiar cache Nginx) es critico.
+=============================================================================
