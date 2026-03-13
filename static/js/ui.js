@@ -153,25 +153,50 @@ const UI = {
         },
 
         /**
-         * Guarda la preferencia del tema en localStorage.
-         * @param {boolean} isDark - El estado del tema a guardar.
+         * Guarda la preferencia en localStorage con cookie como fallback
+         * (iOS Safari en modo privado bloquea localStorage).
+         * @param {boolean} isDark
          */
         save: function(isDark) {
+            const value = isDark.toString();
+            const keys = this.getStorageKeys();
+
+            // 1. Intentar localStorage (principal)
             try {
-                const keys = this.getStorageKeys();
-                keys.forEach(key => {
-                    localStorage.setItem(key, isDark.toString());
-                });
-            } catch (error) {
-                console.error('❌ Error al guardar preferencia de tema:', error);
+                keys.forEach(key => localStorage.setItem(key, value));
+            } catch (e) {
+                // localStorage bloqueado (modo privado, etc.) → usar cookie
+            }
+
+            // 2. Cookie como fallback universal (accesible incluso sin localStorage)
+            try {
+                const expires = new Date();
+                expires.setFullYear(expires.getFullYear() + 1);
+                document.cookie = `darkMode=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+            } catch (e) {
+                console.warn('⚠️ No se pudo guardar tema en cookie:', e);
             }
         },
 
         /**
-         * Carga la preferencia de tema desde localStorage o sistema.
-         * @returns {boolean} - Devuelve true si el modo oscuro debe activarse.
+         * Lee cookie de tema como fallback cuando localStorage no está disponible.
+         * @returns {string|null}
+         */
+        _cookieLoad: function() {
+            try {
+                const match = document.cookie.match(/(?:^|;\s*)darkMode=([^;]*)/);
+                return match ? match[1] : null;
+            } catch (e) {
+                return null;
+            }
+        },
+
+        /**
+         * Carga la preferencia de tema desde localStorage, cookie o sistema.
+         * @returns {boolean}
          */
         load: function() {
+            // 1. Intentar localStorage
             try {
                 const keys = this.getStorageKeys();
                 for (const key of keys) {
@@ -180,12 +205,18 @@ const UI = {
                         return stored === 'true';
                     }
                 }
-                // Si no hay nada guardado, usar preferencia del sistema
-                return window.matchMedia('(prefers-color-scheme: dark)').matches;
-            } catch (error) {
-                console.error('❌ Error al cargar preferencia de tema:', error);
-                return false; 
+            } catch (e) {
+                // localStorage no disponible
             }
+
+            // 2. Fallback: cookie
+            const cookieVal = this._cookieLoad();
+            if (cookieVal !== null) {
+                return cookieVal === 'true';
+            }
+
+            // 3. Preferencia del sistema
+            return window.matchMedia('(prefers-color-scheme: dark)').matches;
         },
 
         /**

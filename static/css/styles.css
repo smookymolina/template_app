@@ -52,6 +52,9 @@
 }
 
 /* ===== MODO OSCURO ===== */
+/* Variables en html.dark-mode para que el FOUC-prevention (que aplica la clase al <html>
+   antes de que body exista) ya active las variables CSS correctas desde el primer frame */
+html.dark-mode,
 body.dark-mode {
     --primary-light: #252836;
     --light-color: #1e1e2c;
@@ -73,12 +76,20 @@ body.dark-mode {
     --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
-    
+
     /* Scrollbar variables */
     --scrollbar-bg: #1e1e2c;
     --scrollbar-thumb: #3f3f3f;
     --scrollbar-thumb-hover: #4b4b4b;
+}
 
+/* Fondo oscuro aplicado desde el nivel html para eliminar el flash blanco antes de que body exista */
+html.dark-mode {
+    background-color: #181924;
+    color-scheme: dark;
+}
+
+body.dark-mode {
     background-color: #181924 !important;
     color-scheme: dark;
 }
@@ -1380,6 +1391,7 @@ td {
 .dark-mode .folio-display {
     background-color: #2a2b3d;
     border-color: #3f3f3f;
+    color: var(--primary-color);
 }
 
 /* ===== SISTEMA DE ROLES CORREGIDO ===== */
@@ -6991,7 +7003,7 @@ body.login-page.dark-mode .tracking-pill {
 }\\
 \
 
-/* ?? MEJORAS DE ACCESIBILIDAD M”VIL (AUDIT) */
+/* ?? MEJORAS DE ACCESIBILIDAD MÔøΩVIL (AUDIT) */
 @media (max-width: 768px) {
     /* Ajuste de Tabs de Dashboard para evitar amontonamiento */
     .dashboard-nav ul {
@@ -7011,7 +7023,7 @@ body.login-page.dark-mode .tracking-pill {
         margin-right: 10px;
     }
     
-    /* Header m·s compacto en mÛvil */
+    /* Header mÔøΩs compacto en mÔøΩvil */
     header {
         padding: 10px 15px;
     }
@@ -7026,9 +7038,93 @@ body.login-page.dark-mode .tracking-pill {
         justify-content: space-between;
     }
     
-    /* Botones m·s t·ctiles */
+    /* Botones mÔøΩs tÔøΩctiles */
     .btn-primary, .btn-secondary, .btn-danger, .btn-action {
         min-height: 44px;
         padding: 10px 15px;
     }
-}\\
+}
+
+/* ===== DARK MODE: FIXES MOBILE Y ELEMENTOS FALTANTES ===== */
+
+/* Input de folio en dark mode (landing/login) */
+.dark-mode #folio-input,
+.dark-mode #folio {
+    background-color: var(--input-background);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+.dark-mode #folio-input::placeholder,
+.dark-mode #folio::placeholder {
+    color: var(--text-secondary);
+}
+
+/* Labels y texto de formulario en dark mode */
+.dark-mode .form-group label {
+    color: var(--text-color);
+}
+
+.dark-mode .form-info {
+    color: var(--text-secondary);
+}
+
+/* Tracking result card en dark mode (mobile) */
+.dark-mode .tracking-result-card .tracking-label {
+    color: var(--text-secondary);
+}
+
+.dark-mode .tracking-result-card .tracking-value {
+    color: var(--text-color);
+}
+
+/* Login page dark mode: tabs y form inputs */
+body.login-page.dark-mode input[type="email"],
+body.login-page.dark-mode input[type="password"],
+body.login-page.dark-mode input[type="text"] {
+    background-color: rgba(42, 43, 61, 0.8);
+    color: var(--text-color);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+body.login-page.dark-mode input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+body.login-page.dark-mode .login-tab {
+    color: rgba(243, 164, 179, 0.7);
+}
+
+body.login-page.dark-mode .login-tab.active {
+    color: #f3a4b3;
+}
+
+body.login-page.dark-mode .form-group label,
+body.login-page.dark-mode .form-info,
+body.login-page.dark-mode .recovery-link-container a {
+    color: rgba(243, 164, 179, 0.8);
+}
+
+/* √çconos de input en dark mode */
+.dark-mode .input-icon-wrapper i {
+    color: var(--text-secondary);
+}
+
+/* Folio copied en dark mode */
+.dark-mode .folio-display.folio-copied {
+    background-color: rgba(16, 185, 129, 0.2);
+    border-color: #059669;
+    color: #34d399;
+}
+
+/* Mobile: asegurar que el modal de tracking se vea bien en dark mode */
+@media (max-width: 600px) {
+    .dark-mode .tracking-profile {
+        border-radius: 16px;
+        margin-bottom: 16px;
+    }
+
+    body.login-page.dark-mode .tracking-card.login-card {
+        padding: 20px;
+    }
+}

@@ -707,7 +707,7 @@
     }
 }
 
-/* Dark mode */
+/* Dark mode — tracking profile público */
 .dark-mode .tracking-profile {
     background: var(--light-color);
     border-color: var(--border-color);
@@ -717,13 +717,75 @@
     background: var(--light-color);
 }
 
+/* Folio: texto blanco explícito en ambos modos (el header siempre es gradiente morado).
+   color-scheme: light evita que el browser fuerce su propio modo oscuro sobre el gradiente */
+.tp-header {
+    color-scheme: light;
+}
+
+.tp-folio {
+    color: rgba(255, 255, 255, 0.9) !important;
+    background: rgba(255, 255, 255, 0.18) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Timeline cards en dark mode */
+.dark-mode .timeline-card {
+    background-color: var(--card-background);
+    border-color: var(--border-color);
+    color: var(--text-color);
+}
+
+.dark-mode .timeline-card-title {
+    color: var(--text-color);
+}
+
+.dark-mode .timeline-card-date {
+    color: var(--text-secondary);
+}
+
+/* Filtros de timeline en dark mode */
+.dark-mode .filter-btn {
+    background-color: var(--input-background);
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+
+.dark-mode .filter-btn:hover {
+    background-color: var(--input-hover-background);
+    border-color: var(--border-color);
+}
+
+/* Detalles del perfil */
 .dark-mode .tp-detail-item {
     background: rgba(255, 255, 255, 0.05);
     border-color: var(--border-color);
 }
 
+.dark-mode .tp-detail-label {
+    color: var(--text-secondary);
+}
+
 .dark-mode .tp-detail-value {
     color: var(--text-color);
+}
+
+/* Próxima entrevista en dark mode */
+.dark-mode .tp-interview {
+    background: linear-gradient(135deg, rgba(120, 60, 0, 0.35) 0%, rgba(160, 100, 0, 0.35) 100%);
+    border-color: rgba(251, 191, 36, 0.35);
+}
+
+.dark-mode .tp-interview-label {
+    color: #fcd34d;
+}
+
+.dark-mode .tp-interview-date {
+    color: #fde68a;
+}
+
+.dark-mode .tp-interview-type {
+    color: #fbbf24;
 }
 
 .dark-mode .tp-timeline-header h3 {
@@ -734,6 +796,11 @@
     background: var(--light-color);
     border-color: var(--border-color);
     color: var(--text-color);
+}
+
+/* Separador de timeline en dark mode */
+.dark-mode .timeline-filter-controls {
+    border-bottom-color: var(--border-color);
 }
 
 /* Modal de tracking con tamaño adaptativo */
