@@ -244,6 +244,16 @@ def register_context_processors(app):
 def register_request_hooks(app):
     """Registra ganchos de petición (before/after request)"""
     @app.before_request
+    def maintenance_mode():
+        """Intercepta todas las rutas públicas durante el modo mantenimiento.
+        Solo /admin, /auth y /static pasan libremente."""
+        from flask import request, render_template
+        path = request.path
+        allowed_prefixes = ('/admin', '/static', '/auth', '/favicon.ico')
+        if not any(path.startswith(prefix) for prefix in allowed_prefixes):
+            return render_template('mantenimiento.html'), 503
+
+    @app.before_request
     def log_request_info():
         """Log de información básica de la petición"""
         if app.debug:
