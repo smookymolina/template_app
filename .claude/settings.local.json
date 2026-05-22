@@ -10,7 +10,11 @@
       "Bash(python -m flask db:*)",
       "Bash(python:*)",
       "Bash(.venv/Scripts/python.exe:*)",
-      "Bash(node:*)"
-    ]
+      "Bash(node:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:canfindjob.com)"
+    ],
+    "deny": [],
+    "ask": []
   }
 }

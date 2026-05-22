@@ -8,16 +8,14 @@ def build_database_uri(default_db, *, db_env_keys=None):
     if url:
         return url
 
-    # Intentar MySQL primero
-    try:
-        import pymysql
+    # Intentar MySQL/MariaDB
+    user = os.environ.get('MYSQL_USER', 'root')
+    password = os.environ.get('MYSQL_PASSWORD', '')
+    host = os.environ.get('MYSQL_HOST')
+    port = os.environ.get('MYSQL_PORT', '3306')
 
+    if host:
         db_env_keys = db_env_keys or []
-        user = os.environ.get('MYSQL_USER', 'root')
-        password = os.environ.get('MYSQL_PASSWORD', '')
-        host = os.environ.get('MYSQL_HOST', '127.0.0.1')
-        port = os.environ.get('MYSQL_PORT', '3306')
-
         db_name = None
         for key in db_env_keys:
             value = os.environ.get(key)
@@ -35,18 +33,13 @@ def build_database_uri(default_db, *, db_env_keys=None):
         if credentials:
             credentials = f"{credentials}@"
 
-        # Verificar si MySQL está disponible
-        test_conn = pymysql.connect(host=host, port=int(port), user=user, password=password)
-        test_conn.close()
-
         return f"mysql+pymysql://{credentials}{host}:{port}/{db_name}?charset=utf8mb4"
 
-    except (ImportError, Exception):
-        # Fallback a SQLite
-        basedir = os.path.abspath(os.path.dirname(__file__))
-        instance_path = os.path.join(basedir, 'instance')
-        os.makedirs(instance_path, exist_ok=True)
-        return f"sqlite:///{os.path.join(instance_path, f'{default_db}.db')}"
+    # Fallback a SQLite si no hay MYSQL_HOST
+    basedir = os.path.abspath(os.path.dirname(__file__))
+    instance_path = os.path.join(basedir, 'instance')
+    os.makedirs(instance_path, exist_ok=True)
+    return f"sqlite:///{os.path.join(instance_path, f'{default_db}.db')}"
 
 def build_mysql_uri(default_db, *, db_env_keys=None):
     """Función legacy - mantiene compatibilidad"""
