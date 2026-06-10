@@ -1,0 +1,256 @@
+###########################################################################
+#                                                                         #
+#   TEMPLATE ESTANDARIZADO DE ACTUALIZACION EN PRODUCCION                 #
+#   Linux / Nginx + Gunicorn / SQLite o MySQL                             #
+#                                                                         #
+###########################################################################
+
+# =========================================================================
+# BLOQUE DE VERSION
+# =========================================================================
+# VERSION      : 1.5.8
+# BRANCH       : 1.5.8
+# FECHA        : 2026-06-10
+# PROBADO EN DESARROLLO : NO (INICIO DE FASE)
+# DESCRIPCION  : Nueva fase de desarrollo v1.5.8
+# =========================================================================
+
+
+# =========================================================================
+# ██████╗  █████╗  ██████╗██╗  ██╗██╗   ██╗██████╗
+# ██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██║   ██║██╔══██╗
+# ██████╔╝███████║██║     █████╔╝ ██║   ██║██████╔╝
+# ██╔══██╗██╔══██║██║     ██╔═██╗ ██║   ██║██╔═══╝
+# ██████╔╝██║  ██║╚██████╗██║  ██╗╚██████╔╝██║
+# ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝
+#
+#   *** SIN BACKUP, NO CONTINUAR ***
+#   *** ESTO ES OBLIGATORIO ***
+#   *** PRIMER PASO SIEMPRE ***
+# =========================================================================
+
+=============================================================================
+PASO 1: BACKUP COMPLETO (CRITICO - OBLIGATORIO ANTES DE CUALQUIER CAMBIO)
+=============================================================================
+
+   cd /var/www/template_app
+   TS=$(date +%Y%m%d_%H%M%S)
+   BACKUP_DIR=/var/backups/template_app/$TS
+   mkdir -p "$BACKUP_DIR"
+
+   # 1A) BASE DE DATOS (PRIORIDAD MAXIMA)
+   # -------------------------------------------------------
+   # SQLite (predeterminado):
+   cp instance/template_app.db "$BACKUP_DIR/template_app.db"
+   echo "[OK] Base de datos respaldada"
+
+   # MySQL (si aplica):
+   # set -a && [ -f .env ] && . ./.env && set +a
+   # mysqldump -u "${MYSQL_USER}" -p"${MYSQL_PASSWORD}" -h "${MYSQL_HOST}" "${MYSQL_DB}" \
+   #   > "$BACKUP_DIR/db.sql"
+   # echo "[OK] MySQL respaldado"
+
+   # 1B) ARCHIVOS SUBIDOS (fotos y documentos)
+   # -------------------------------------------------------
+   tar -czf "$BACKUP_DIR/uploads.tar.gz" uploads/
+   echo "[OK] Uploads respaldados"
+
+   # 1C) ESTADO DE MIGRACIONES
+   # -------------------------------------------------------
+   source .venv/bin/activate
+   flask db current > "$BACKUP_DIR/db_current.txt" 2>&1 || \
+     echo "No migrations applied" > "$BACKUP_DIR/db_current.txt"
+   echo "[OK] Estado de migraciones guardado"
+
+   # 1D) EXPORT DE DATOS CSV (recomendado)
+   # -------------------------------------------------------
+   python scripts/export_data.py 2>/dev/null && \
+     LATEST=$(ls -dt backup_* 2>/dev/null | head -1) && \
+     [ -n "$LATEST" ] && mv "$LATEST" "$BACKUP_DIR/" && echo "[OK] CSV exportado"
+
+   # VERIFICAR QUE EL BACKUP EXISTE ANTES DE CONTINUAR
+   ls -lh "$BACKUP_DIR"
+   echo ""
+   echo "===> BACKUP COMPLETO EN: $BACKUP_DIR <=="
+   echo "===> CONTINUA SOLO SI VES LOS ARCHIVOS ARRIBA <=="
+
+=============================================================================
+PASO 1B: RUTA RAPIDA — COPIAR Y PEGAR COMPLETO (post-backup)
+=============================================================================
+   # EJECUTAR SOLO DESPUES DEL PASO 1 COMPLETADO Y VERIFICADO
+
+   cd /var/www/template_app
+   git status -sb
+   git stash push -u -m "prod-pre-update-$TS"
+   git fetch --all --prune
+   git checkout 1.5.8 2>/dev/null || git checkout -b 1.5.8 origin/1.5.8
+   git pull --ff-only origin 1.5.8
+   source .venv/bin/activate
+   python -m pip install -r requirements.txt --no-cache-dir
+   sudo systemctl restart gunicorn
+   sudo systemctl restart nginx
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo chmod 755 /var/www/template_app/instance/
+   sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
+   sudo chown -R www-data:www-data /var/www/template_app/static/
+   sudo rm -rf /var/cache/nginx/*
+   sudo systemctl restart nginx
+   curl -I https://tu-dominio
+   echo "=== DESPLIEGUE v1.5.8 COMPLETO ==="
+
+=============================================================================
+PASO 2: VERIFICAR ESTADO DEL REPOSITORIO
+=============================================================================
+   cd /var/www/template_app
+
+   git rev-parse --show-toplevel          # Confirmar directorio correcto
+   git status -sb                         # Ver cambios locales
+   git branch --show-current              # Ver branch actual
+   git remote -v                          # Verificar remote
+
+   # Si hay cambios locales no commiteados:
+   git stash push -u -m "prod-pre-update-$TS"
+
+=============================================================================
+PASO 3: AUTENTICACION Y GIT PULL
+=============================================================================
+   cd /var/www/template_app
+
+   # 3A) Si git pide autenticacion (token expirado o primera vez):
+   #   git remote set-url origin https://<TOKEN>@github.com/smookymolina/template_app.git
+   #   Generar token: GitHub > Settings > Developer settings >
+   #     Personal access tokens > Tokens (classic) > scope: repo
+
+   git fetch --all --prune
+   git checkout 1.5.8 2>/dev/null || git checkout -b 1.5.8 origin/1.5.8
+   git pull --ff-only origin 1.5.8
+   # Si falla --ff-only: DETENERSE. No hacer merge en produccion sin revision manual.
+
+=============================================================================
+PASO 4: DEPENDENCIAS Y BASE DE DATOS
+=============================================================================
+   cd /var/www/template_app
+   source .venv/bin/activate
+
+   # 4A) Actualizar dependencias Python
+   python -m pip install --upgrade pip
+   python -m pip install -r requirements.txt --no-cache-dir
+
+   # 4B) Migraciones de Flask-Migrate
+   # -------------------------------------------------------
+   # [FILL] Agregar migraciones si es necesario
+   flask db upgrade
+   # -------------------------------------------------------
+
+   # 4C) Verificar esquema
+   python scripts/diagnostico_db.py 2>/dev/null || echo "Script no disponible"
+
+=============================================================================
+PASO 5: LIMPIAR CACHE
+=============================================================================
+   # 5A) Cache de Nginx
+   sudo rm -rf /var/cache/nginx/*
+   sudo systemctl restart nginx
+
+   # 5B) Cache de Redis
+   redis-cli ping   # Debe responder PONG
+   redis-cli KEYS "metrics_cache_*" | xargs -r redis-cli DEL
+
+   # 5C) Forzar nuevas versiones de estaticos
+   grep -r "version\|?v=" templates/base.html | head -5
+
+=============================================================================
+PASO 6: REINICIAR SERVICIOS Y VALIDAR
+=============================================================================
+   # 6A) Reiniciar en orden
+   sudo systemctl restart gunicorn
+   sudo systemctl restart nginx
+
+   # 6B) Verificar estado
+   sudo systemctl status gunicorn --no-pager
+   sudo systemctl status nginx --no-pager
+
+   # 6C) Ping basico al sitio
+   curl -I https://tu-dominio
+
+   # 6D) VALIDACIONES DE v1.5.8
+   # -------------------------------------------------------
+   # [FILL] Agregar validaciones especificas
+   # -------------------------------------------------------
+
+=============================================================================
+PASO 7: PERMISOS (ULTIMO PASO - SIEMPRE EJECUTAR)
+=============================================================================
+   # 7A) Base de datos
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chmod 755 /var/www/template_app/instance/
+   sudo chmod 664 /var/www/template_app/instance/*.db 2>/dev/null || true
+
+   # 7B) Uploads (fotos, documentos)
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+   sudo chmod -R 755 /var/www/template_app/uploads/
+
+   # 7C) Estaticos y templates
+   sudo chown -R www-data:www-data /var/www/template_app/static/
+   sudo chown -R www-data:www-data /var/www/template_app/templates/
+
+   # 7D) Verificacion final
+   curl -I https://tu-dominio
+   echo "===> DESPLIEGUE v1.5.8 COMPLETO. PERMISOS ACTUALIZADOS. <==="
+
+=============================================================================
+CAMBIOS EN ESTA VERSION — DETALLE TECNICO
+=============================================================================
+   *** INICIO DE FASE v1.5.8 ***
+
+   VERSION: 1.5.8 — 2026-06-10
+
+   1) ACTUALIZACION DE VERSION
+      - templates/index.html actualizado a v1.5.8
+      - docs/CHANGELOG.md actualizado
+
+   ARCHIVOS NUEVOS:
+   * PROD_GIT_PULL_PROMPT_v1.5.8.txt
+
+   ARCHIVOS MODIFICADOS:
+   * templates/index.html
+   * docs/CHANGELOG.md
+
+=============================================================================
+ROLLBACK — SI ALGO FALLA DESPUES DEL DESPLIEGUE
+=============================================================================
+   # Restaurar base de datos:
+   cp "$BACKUP_DIR/template_app.db" instance/template_app.db
+
+   # Restaurar uploads:
+   tar -xzf "$BACKUP_DIR/uploads.tar.gz" -C /var/www/template_app/
+
+   # Regresar al branch anterior:
+   git checkout 1.5.7.4
+
+   # Reinstalar dependencias:
+   source .venv/bin/activate
+   python -m pip install -r requirements.txt --no-cache-dir
+
+   # Limpiar cache de Nginx:
+   sudo rm -rf /var/cache/nginx/*
+
+   # Reiniciar servicios:
+   sudo systemctl restart gunicorn && sudo systemctl restart nginx
+
+   # Restaurar permisos:
+   sudo chown -R www-data:www-data /var/www/template_app/instance/
+   sudo chown -R www-data:www-data /var/www/template_app/uploads/
+
+   echo "===> ROLLBACK A v1.5.7.4 COMPLETO. VERIFICAR EN EL NAVEGADOR. <==="
+
+=============================================================================
+NOTAS PERMANENTES (NO CAMBIAR ENTRE VERSIONES)
+=============================================================================
+- SIEMPRE hacer PASO 1 (backup) ANTES de cualquier cambio.
+- SIEMPRE ejecutar PASO 7 (permisos) AL FINAL, sin excepcion.
+- NUNCA hacer merge manual en produccion.
+- NUNCA eliminar la BD directamente — restaurar desde backup.
+- NUNCA usar --no-verify ni force push en produccion.
+=============================================================================

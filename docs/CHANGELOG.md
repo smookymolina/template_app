@@ -7,6 +7,23 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ---
 
+## [1.5.8] - 2026-06-10
+
+### Agregado
+- Inicio de nueva fase de desarrollo v1.5.8
+
+---
+
+## [1.5.7.4] - 2026-02-26
+
+### Cambiado
+- Mejoras significativas en la interfaz de usuario (UI)
+- Implementación completa de Dark Mode
+- Optimización de archivos CSS y JS estáticos
+- Forzado de cache busting para recursos actualizados
+
+---
+
 ## [1.5.6.2] - 2026-01-20
 
 ### Agregado
